@@ -1,0 +1,94 @@
+{% load static %}
+
+<div class="wrapper">
+        <!-- Sidebar Holder -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <h3>
+                    <img src="{% static 'main/CORE2.png' %}" width="128" height="64"/>
+    
+                </h3>
+            </div>
+            {% if user.is_authenticated %}
+            <ul class="list-unstyled components">
+                
+                <p>{{ user.get_username }}</p>
+                <!--<li class="active">
+                    <a href="#homeSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">Home</a>
+                    <ul class="collapse list-unstyled" id="homeSubmenu">
+                        <li>
+                            <a href="#">Home 1</a>
+                        </li>
+                        <li>
+                            <a href="#">Home 2</a>
+                        </li>
+                        <li>
+                            <a href="#">Home 3</a>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="#">About</a>
+                    <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">Pages</a>
+                    <ul class="collapse list-unstyled" id="pageSubmenu">
+                        <li>
+                            <a href="#">Page 1</a>
+                        </li>
+                        <li>
+                            <a href="#">Page 2</a>
+                        </li>
+                        <li>
+                            <a href="#">Page 3</a>
+                        </li>
+                    </ul>
+                </li>-->
+                <li>
+                    <a href="/">Dashboard</a>
+                </li>
+            </ul>
+    
+            <ul class="list-unstyled CTAs">
+                <li>
+                    <a href="/settings" class="article">Settings</a>
+                </li>
+                <li>
+                    <a href="/logs" class="logs">Logs</a>
+                </li>
+                <li>
+                    <a href="/logout" class="download">Logout</a>
+                </li>
+            </ul>
+            {% else %}
+            <div></div>
+
+            {% endif %}
+        </nav>
+
+<!-- Page Content Holder -->
+<div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+    
+                <button type="button" id="sidebarCollapse" class="navbar-btn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <button class="btn btn-dark d-inline-block d-lg-none ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="fas fa-align-justify"></i>
+                </button>
+
+               
+                  
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+                    {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
