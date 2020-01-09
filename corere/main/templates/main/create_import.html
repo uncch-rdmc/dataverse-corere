@@ -1,0 +1,236 @@
+{% extends "main/layout.html" %}
+
+{% block content %}
+<h1>Do you want to create a new catalog or import from Dataverse?</h1>
+
+<br/>
+
+<div class="card page_content">
+    <div class="card-body">
+        <div class="custom-control custom-radio custom-control-inline" >
+            <input type="radio" class="custom-control-input" id="import_dataverse_f" name="import_dataverse">
+            <label class="custom-control-label" for="import_dataverse_f">Create New Catalog</label>
+        </div>
+
+        <div class="custom-control custom-radio custom-control-inline" >
+            <input type="radio" class="custom-control-input" id="import_dataverse_t" name="import_dataverse">
+            <label class="custom-control-label" for="import_dataverse_t">Import from Dataverse</label>
+        </div>
+        
+        <br/>
+        <br/>
+
+        {# https://dataverse-test.irss.unc.edu #}
+        {# 464acaa2-9e14-43d9-8f0a-851d0ce7afaa #}
+        {# https://dataverse-test.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/GIGT3J&version=DRAFT #}
+
+        <div id="import_enabled">
+            <div class="md-form form-lg">
+                <input value="https://dataverse-test.irss.unc.edu/dataset.xhtml?persistentId=doi:10.15139/S3/233JVI" type="text" id="dataverse_url" name="dataverse_url" class="form-control form-control-lg">
+                <label for="dataverse_url">Dataverse DOI URL (https://dataverse.edu/dataset.xhtml?persistentId=doi:10.3555/FK2/GIGT3J) </label>
+            </div>
+
+            <div class="md-form form-lg">
+                <input value="464acaa2-9e14-43d9-8f0a-851d0ce7afaa" type="text" id="dataverse_key" name="dataverse_key" class="form-control form-control-lg">
+                <label for="dataverse_key">Dataverse API Token</label>
+            </div>
+
+
+            <button type="button" class="btn btn-unique" id="import_enabled_go">Go</button>
+
+
+            <div class="md-form">
+                <textarea id="dataset_json" class="md-textarea form-control" rows="3"></textarea>
+                <label for="data_set_json">Dataset Info</label>
+            </div>
+
+            <h3>Select which files you want to download</h3>
+
+            <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="checkuncheck" checked>
+                    <label class="custom-control-label" for="checkuncheck">Check/Uncheck All Files</label>
+                  </div>
+
+            <br/><br/>
+
+            <div id="dbfiles">
+
+                    
+
+            </div>
+
+            <button type="button" class="btn btn-secondary" id="dbfiles_submit_btn">Submit</button>
+
+        </div>
+
+        <div id="import_disabled">
+                <a href="/create" class="btn btn-unique btn-next">Create New Catalog</a>
+        </div>        
+    </div>
+</div>
+
+
+
+<style>
+#import_enabled{
+    display:none;
+}
+#import_disabled{
+    display:none;
+}
+
+</style>
+
+<script>
+    //"https://dataverse-test.irss.unc.edu/dataset.xhtml?persistentId=doi:10.33563/FK2/GIGT3J&version=DRAFT".match("^.*/dataset.xhtml?.*(persistentId=.*)&$")
+    $(document).ready(function () {
+        $("input[name=import_dataverse]").change(function(){
+            if($("#import_dataverse_f").is(':checked')){
+                $("#import_enabled").fadeOut(function() { $("#import_disabled").fadeIn();});
+            }else if($("#import_dataverse_t").is(':checked')){
+                $("#import_disabled").fadeOut(function(){$("#import_enabled").fadeIn();});
+            }
+        });
+
+
+        var url;
+        var token;
+        var persistID;
+        var version;
+
+        $("#import_enabled_go").click(function(){
+            token = $("#dataverse_key").val();
+            var dataverse_url = $("#dataverse_url").val();
+            var matched = dataverse_url.match("^(.*)/dataset.xhtml?.*persistentId=(.*).*$");
+            if(!matched || matched.length !=3){
+                $("#Mymodal").modal('show');
+            }
+
+            url = matched[1];
+            persistID = matched[2];
+            version = "latest";
+
+            var tpersist = persistID.split("&");
+
+            if (tpersist.length > 1){
+                for(var i=0;i<tpersist.length;i++){
+                    if(tpersist[i].startsWith("doi")){
+                        persistID = tpersist[i];
+                    }else if(tpersist[i].startsWith("version=")){
+                        version = tpersist[i].split("=")[1].toLowerCase();
+                    }
+                }
+            }
+
+            $.get( url+"/api/datasets/:persistentId/versions/:"+version+"?persistentId="+persistID+"&key="+token, function( data ) {
+                $("#dataset_json").val(JSON.stringify(data));
+                console.log(data);
+
+                var files = data['data']['files'];
+
+                var dbfiles_output = "";
+
+                $.each(files, function(i,file){
+                    dbfiles_output += `
+                    <div class="form-check">
+                        <input data-filename="${file['label']}" name="${file['dataFile']['id']}" type="checkbox" class="form-check-input filled-in dbfiles" id="file_${i}" checked>
+                        <label class="form-check-label" for="file_${i}">${file['label']} (${file['dataFile']['originalFormatLabel']})</label>
+                    </div>
+                    `
+                });
+
+                $("#dbfiles").html(dbfiles_output);
+                
+            });
+            console.log(url,persistID, version);
+
+        });
+
+
+        $("#dbfiles_submit_btn").click(function(){
+            var fileIds = [];
+            var fileNames = [];
+            $( "input.dbfiles:checked").each(function(){ 
+                fileIds.push($(this).attr('name'));
+                fileNames.push($(this).data('filename'));
+            });
+
+            console.log(fileIds);
+
+            $.ajax({
+                type: "POST",
+                headers: {
+                            'X-CSRFToken': "{{csrf_token}}"
+                         },
+                url: "/create_import_init",
+                data: {import: true, url: url, persistID: persistID, token: token, 
+                        version:version, fileIds: fileIds, fileNames: fileNames
+                        },
+                success: function(data){
+                            //if(data == 0){ //TODO: Not sure what data this flask code expected
+                                window.location = "/create"
+                            //}
+
+                            console.log(data);
+                          }
+            });
+
+        });
+
+        $('#checkuncheck').change(function () {
+            if($(this).prop("checked")){
+                $('.dbfiles').attr('checked','checked');
+            }else{
+                $('.dbfiles').removeAttr('checked');
+            }
+        });
+
+
+        $("#import_dataverse_f").click();
+        $('#checkuncheck').prop('indeterminate', true);
+
+    });
+
+</script>
+
+
+
+
+
+<!-- Central Modal Medium Danger -->
+<div class="modal fade" id="Mymodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+  aria-hidden="true" data-backdrop="false">
+  <div class="modal-dialog modal-notify modal-danger" role="document">
+    <!--Content-->
+    <div class="modal-content">
+      <!--Header-->
+      <div class="modal-header">
+        <p class="heading lead">Error</p>
+
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true" class="white-text">&times;</span>
+        </button>
+      </div>
+
+      <!--Body-->
+      <div class="modal-body">
+        <div class="text-center">
+          <i class="fas fa-check fa-4x mb-3 animated rotateIn"></i>
+          <p>Unable to extrac the Dataverse DOI. Please check that you've inputted a correct url</p>
+        </div>
+      </div>
+
+      <!--Footer-->
+      <div class="modal-footer justify-content-center">
+        <a type="button" class="btn btn-outline-danger waves-effect" data-dismiss="modal">OK</a>
+      </div>
+    </div>
+    <!--/.Content-->
+  </div>
+</div>
+<!-- Central Modal Medium Danger-->
+
+{% endblock %}
+
+
+
