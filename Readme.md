@@ -43,6 +43,8 @@ https://binderhub.readthedocs.io/en/latest/
 
 ### Setting up CORE-RE server
 
+It is recommended that you run this (and all) python projects inside a virtual environment. See this page for more info https://docs.python.org/3/tutorial/venv.html .
+
 Install the latest version of Python 3 if you haven't already.
 
 Run the following command:
@@ -50,9 +52,9 @@ Run the following command:
 pip install -r requirements.txt
 ```
 
-Copy `env.sample.sh` to `env.sh`. Open `env.sh` and change parameters accordingly. See the file for more info on the parameters
+Copy `env.sample.sh` to `env.sh`. Open `env.sh` and change parameters accordingly. See the file for more info on the parameters.
 
-Before running django, run `env.sh` via `. env.sh` add the variables to your environment.
+Before running django, run `. env.sh` to export the variables to your environment.
 
 Finally, run your django manage.py to start the django server (change the settings path to a production file if needed):
 ```python
