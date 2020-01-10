@@ -1,12 +1,7 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
 from corere.main.models import User, Catalog
-import requests
-import urllib
-import os
-import time
-import json
-import base64
+import requests, urllib, os, time, json, base64, logging
 from os import walk
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import logout
@@ -15,15 +10,14 @@ from django.core.files.storage import default_storage
 
 OUTPUT = os.environ["UPLOAD_OUTPUT_PATH"]
 
+logger = logging.getLogger('corere')
+
 def index(request):
-    print(request.user.username)
+    logger.debug(request.user.username)
     if request.user.is_authenticated:
         return render(request, "main/index.html")
     else: 
         return render(request, "main/login.html")
-
-def logs(request):
-    return render(request, 'main/logs.html')
 
 #TODO: Ensure all return paths do what we want. They were changed after the port and may never have been exercised
 def create_import_init(request):
@@ -64,7 +58,7 @@ def create_import_init(request):
 
 def uploadfiles(request):
     if request.method == 'POST':
-        print(request.FILES)
+        logger.debug(request.FILES)
         file_obj = request.FILES.get('file')
         file_name = str(file_obj)
 
@@ -81,7 +75,7 @@ def logout_view(request):
     return redirect('/')
 
 def create_or_import(request):
-    print(request.user.username)
+    logger.debug(request.user.username)
     if request.user.is_authenticated:
         Catalog.objects.create(user_id=request.user)
         return render(request, "main/create_import.html")
@@ -89,7 +83,7 @@ def create_or_import(request):
        return redirect("/")
 
 def create_catalog(request):
-    print(request.user.username)
+    logger.debug(request.user.username)
     if request.user.is_authenticated:
         Catalog.objects.create(user_id=request.user)
         return render(request, "main/create.html")
@@ -97,7 +91,7 @@ def create_catalog(request):
        return redirect("/")
 
 def load(request):
-    print("test")
+    logger.debug("test")
     myfiles = []
 
     for (dirpath, dirnames, filenames) in walk('./temp/'):
@@ -116,7 +110,7 @@ def load(request):
                     myfiles.append(z)
 
   
-    print("test2")
+    logger.debug("test2")
     runtime = {
         "action": "create",
         "file_path": "runtime.txt",
@@ -177,7 +171,7 @@ git remote set-url origin {2}
 """.format(request.user.first_name, request.user.first_name+" "+request.user.last_name, settings.GIT_CONFIG_URL)
     }
 
-    print("test3")
+    logger.debug("test3")
     # jupyter labextension install @andreyodum/core2 
     myfiles.append(postBuild)
 
@@ -191,26 +185,26 @@ git remote set-url origin {2}
     headers = {'PRIVATE-TOKEN': ''+settings.GIT_PRIVATE_TOKEN+'',
                 'Content-Type': 'application/json'}
 
-    print("test4")
+    logger.debug("test4")
     username = "test"
     
-    print(GITLAB_API)
-    print(PRIVATE_TOKEN)
-    print(GITLAB_API+"/projects/"+urllib.parse.quote("root/"+username, safe='')+"/?"+PRIVATE_TOKEN)
+    logger.debug(GITLAB_API)
+    logger.debug(PRIVATE_TOKEN)
+    logger.debug(GITLAB_API+"/projects/"+urllib.parse.quote("root/"+username, safe='')+"/?"+PRIVATE_TOKEN)
     requests.delete(GITLAB_API+"/projects/"+urllib.parse.quote("root/"+username, safe='')+"/?"+PRIVATE_TOKEN)
     while 1:
         r_project = requests.post(GITLAB_API+"/projects/?"+PRIVATE_TOKEN, data={"name": username, "visibility":"public"})
         if r_project.status_code == 201:
             break
         time.sleep(1)
-    print("test5")
+    logger.debug("test5")
     if r_project.status_code != 201:
-        print(r_project.content)
+        logger.debug(r_project.content)
         raise ValueError
        #return "ERROR" + str(r_project.status_code) + " CONENTE: "+str(r_project.content)
     
     gitlabid = str(json.loads(r_project.content)['id'])
-    print("GITLABID" + gitlabid)
+    logger.debug("GITLABID" + gitlabid)
     
 
     r_put = requests.put(GITLAB_API+"projects/"+gitlabid+"/services/emails-on-push?&"+PRIVATE_TOKEN, 
@@ -224,7 +218,7 @@ git remote set-url origin {2}
         }
         )
 
-    print(r_commit.content)
+    logger.debug(r_commit.content)
     
     code = json.loads(r_commit.content)['id']
     return JsonResponse({"status":"Success","Code":code,"URI": settings.GIT_LAB_URL+"/root/"+username})

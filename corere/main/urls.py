@@ -8,8 +8,6 @@ urlpatterns = [
     path('create_import', views.create_or_import),
     path('create', views.create_catalog),
     path('load', views.load),
-
-    path('logs', views.logs), #delete this too? maybe also in django admin
     path('logout', views.logout_view),
 
     path('create_import_init', views.create_import_init),
