@@ -509,6 +509,11 @@ textarea.md-textarea {
             $('#core_progressbar').width("90%");
           }
           logme(msg)
+
+          //TODO: Right now the JupyterNotebook Kube config allows this iframe, but there are issues
+          //      with the same workspace being open in another window (though I'm not sure where?)
+          //
+          //      For now we should at least provide a link?
           if(phase == 'ready'){
             $('#core_progressbar').width("100%");
             evtSource.close();
@@ -516,6 +521,8 @@ textarea.md-textarea {
             //var origin = window.location.origin;
             //window.location = "/binder?url="+JSON.parse(message)['url']+""+lab+"/?token="+JSON.parse(message)['token']+"&ref="+origin;
             url = JSON.parse(message)['url']+""+lab+"/?token="+JSON.parse(message)['token']
+            console.log(url)
+
             $("#corealpha").attr('src', url);
             $("#corealpha").fadeIn();
             $("#core_progress").fadeOut();
