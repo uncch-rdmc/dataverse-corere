@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, resolve_url
 from django.conf import settings
 from corere.main.models import User, Catalog
 import requests, urllib, os, time, json, base64, logging
@@ -72,7 +72,7 @@ def uploadfiles(request):
 def logout_view(request):
     logout(request)
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
-    return redirect('/')
+    return redirect('proto_root')
 
 def create_or_import(request):
     logger.debug(request.user.username)
@@ -80,7 +80,7 @@ def create_or_import(request):
         Catalog.objects.create(user_id=request.user)
         return render(request, "main/create_import.html")
     else:
-       return redirect("/")
+       return redirect('proto_root')
 
 def create_catalog(request):
     logger.debug(request.user.username)
@@ -88,7 +88,7 @@ def create_catalog(request):
         Catalog.objects.create(user_id=request.user)
         return render(request, "main/create.html")
     else:
-       return redirect("/")
+       return redirect('proto_root')
 
 def load(request):
     logger.debug("test")

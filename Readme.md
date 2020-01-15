@@ -35,7 +35,7 @@ CentOS or RHEL is preferred, but is not required.
 
 The CORE-RE project consits of three components: CORE-RE server, binderhub server, and gitlab server.
 
-The latter two can be downlaoded  and set up using the following sites:
+The latter two can be downloaded and set up using the following sites:
 
 https://about.gitlab.com/
 https://binderhub.readthedocs.io/en/latest/
@@ -53,6 +53,8 @@ pip install -r requirements.txt
 ```
 
 Copy `env.sample.sh` to `env.sh`. Open `env.sh` and change parameters accordingly. See the file for more info on the parameters.
+
+You will also need to install a postgres database or use the commented sqlite database section of your settings file.
 
 Before running django, run `. env.sh` to export the variables to your environment.
 

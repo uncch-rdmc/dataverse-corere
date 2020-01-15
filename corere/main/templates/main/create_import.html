@@ -64,7 +64,7 @@
         </div>
 
         <div id="import_disabled">
-                <a href="/create" class="btn btn-unique btn-next">Create New Catalog</a>
+                <a href="create" class="btn btn-unique btn-next">Create New Catalog</a>
         </div>        
     </div>
 </div>
@@ -162,13 +162,13 @@
                 headers: {
                             'X-CSRFToken': "{{csrf_token}}"
                          },
-                url: "/create_import_init",
+                url: "create_import_init",
                 data: {import: true, url: url, persistID: persistID, token: token, 
                         version:version, fileIds: fileIds, fileNames: fileNames
                         },
                 success: function(data){
                             //if(data == 0){ //TODO: Not sure what data this flask code expected
-                                window.location = "/create"
+                                window.location = "create"
                             //}
 
                             console.log(data);

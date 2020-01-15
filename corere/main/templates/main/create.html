@@ -234,7 +234,7 @@
     <div class="card-body">
             <h2>Upload Files</h2>
 
-            <form action="/uploadfiles" name="file"
+            <form action="uploadfiles" name="file"
             class="dropzone"
             id="my-awesome-dropzone">                
             </form>
@@ -458,7 +458,7 @@ textarea.md-textarea {
         console.log("Launching...Please Wait");
         logme("===Launching DO NOT CLOSE!===\r\n");
 
-        $.get( "/load", function(data_json){
+        $.get( "load", function(data_json){
           console.log(data_json);
           if (data_json['status'] == "Success"){
             logme("==DOWNLOADED SUCCESFULLY==\r\n");
