@@ -29,3 +29,8 @@ export SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=
 # Values used for Github OAuth2.
 export SOCIAL_AUTH_GITHUB_OAUTH2_KEY=
 export SOCIAL_AUTH_GITHUB_OAUTH2_SECRET=
+
+#For the Postgres DB
+export POSTGRES_DB=corere
+export POSTGRES_USER=
+export POSTGRES_PASSWORD=
