@@ -32,6 +32,12 @@ INSTALLED_APPS = [
     'corere.main',
 ]
 
+INSTALLED_APPS_DEV = [
+    'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
+]
+
+INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEV
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
