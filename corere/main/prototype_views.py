@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, resolve_url
 from django.conf import settings
-from corere.main.models import User, Catalog
+from corere.main.models import User
 import requests, urllib, os, time, json, base64, logging
 from os import walk
 from django.http import JsonResponse, HttpResponse
@@ -15,9 +15,9 @@ logger = logging.getLogger('corere')
 def index(request):
     logger.debug(request.user.username)
     if request.user.is_authenticated:
-        return render(request, "main/index.html")
+        return render(request, "main/proto_index.html")
     else: 
-        return render(request, "main/login.html")
+        return render(request, "main/proto_login.html")
 
 #TODO: Ensure all return paths do what we want. They were changed after the port and may never have been exercised
 def create_import_init(request):
@@ -77,16 +77,16 @@ def logout_view(request):
 def create_or_import(request):
     logger.debug(request.user.username)
     if request.user.is_authenticated:
-        Catalog.objects.create(user_id=request.user)
-        return render(request, "main/create_import.html")
+        #Catalog.objects.create(user_id=request.user)
+        return render(request, "main/proto_create_import.html")
     else:
        return redirect('proto_root')
 
 def create_catalog(request):
     logger.debug(request.user.username)
     if request.user.is_authenticated:
-        Catalog.objects.create(user_id=request.user)
-        return render(request, "main/create.html")
+        #Catalog.objects.create(user_id=request.user)
+        return render(request, "main/proto_create.html")
     else:
        return redirect('proto_root')
 

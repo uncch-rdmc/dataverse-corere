@@ -1,29 +1,56 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django_fsm import FSMField, transition
+
+####################################################
+
+VERIFICATION_NEW = "new"
+VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
+VERIFICATION_MINOR_ISSUES = "minor_issues"
+VERIFICATION_MAJOR_ISSUES = "major_issues"
+VERIFICATION_SUCCESS_W_MOD = "success_w_mod"
+VERIFICATION_SUCCESS = "success"
+
+VERIFICATION_RESULT_CHOICES = (
+    (VERIFICATION_NEW, 'New'),
+    (VERIFICATION_NOT_ATTEMPTED, 'Not Attempted'),
+    (VERIFICATION_MINOR_ISSUES, 'Minor Issues'),
+    (VERIFICATION_MAJOR_ISSUES, 'Major Issues'),
+    (VERIFICATION_SUCCESS_W_MOD, 'Success with Modification'),
+    (VERIFICATION_SUCCESS, 'Success'),
+)
 
 class Verification(models.Model):
-    RESULT_CHOICES = (
-        ('', 'Not Attempted'),
-        ('', 'Minor Issues'),
-        ('', 'Major Issues'),
-        ('', 'Success with Modification'),
-        ('', 'Success'),
-    )
-    result = models.CharField(max_length=10, choices=RESULT_CHOICES)
-    date_time = models.DateTimeField() 
+    status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
+    #result = models.CharField(max_length=15, choices=VERIFICATION_RESULT_CHOICES)
     note_text = models.TextField() #TODO: Make this more usable as a list of issues
     software = models.TextField() #TODO: Make this more usable as a list of software
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+####################################################
+
+CURATION_NEW = 'new'
+CURATION_INCOM_MATERIALS = 'incom_materials'
+CURATION_MAJOR_ISSUES = 'major_issues'
+CURATION_MINOR_ISSUES = 'minor_issues'
+CURATION_NO_ISSUES = 'no_issues'
+
+CURATION_RESULT_CHOICES = (
+    (CURATION_NEW, 'New'),
+    (CURATION_INCOM_MATERIALS, 'Incomplete Materials'),
+    (CURATION_MAJOR_ISSUES, 'Major Issues'),
+    (CURATION_MINOR_ISSUES, 'Minor Issues'),
+    (CURATION_NO_ISSUES, 'No Issues'),
+)
 class Curation(models.Model):
-    RESULT_CHOICES = (
-        ('', 'Materials Incomplete'),
-        ('', 'Major Issues'),
-        ('', 'Minor Issues'),
-        ('', 'No Issues'),
-    )
-    result = models.CharField(max_length=10, choices=RESULT_CHOICES)
-    date_time = models.DateTimeField()
+    status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
+    #result = models.CharField(max_length=15, choices=CURATION_RESULT_CHOICES)
     note_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+####################################################
 
 #Stores metadata
 class File(models.Model):
@@ -31,28 +58,38 @@ class File(models.Model):
     md5 = models.CharField(max_length=32)
 
 class Submission(models.Model):
-    #MAD: SHOULD THIS HAVE A RESULT?
+    #Submission does not have a result in itself, it is captured 
     files = models.ForeignKey(File, on_delete=models.CASCADE, related_name='files')
-    date_time = models.DateTimeField() 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+####################################################
+
+MANUSCRIPT_NEW = 'new' 
+MANUSCRIPT_AWAITING = 'awaiting'
+MANUSCRIPT_PROCESSING = 'processing'
+MANUSCRIPT_COMPLETED = 'completed'
+
+MANUSCRIPT_STATUS_CHOICES = (
+    (MANUSCRIPT_NEW, 'New'),
+    (MANUSCRIPT_AWAITING, 'Awaiting Submission'),
+    (MANUSCRIPT_PROCESSING, 'Processing Submission'),
+    (MANUSCRIPT_COMPLETED, 'Completed'),
+)
 
 class Manuscript(models.Model):
-    pub_id = models.CharField(max_length=200, blank=False, null=False, db_index=True)
-    title = models.TextField(blank=False, null=False)
-    note_text = models.TextField()
-    doi = models.CharField(max_length=200, blank=False, null=False, db_index=True)
+    pub_id = models.CharField(max_length=200, default="", db_index=True)
+    title = models.TextField(blank=False, null=False, default="")
+    note_text = models.TextField(default="")
+    doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
-    submissions = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="submissions")
-    verifications = models.ForeignKey(Verification, on_delete=models.CASCADE, related_name="verifications")
-    curations = models.ForeignKey(Curation, on_delete=models.CASCADE, related_name="curations")
-
-    #If I use django fsm will we still use this field?
-    STATUS_CHOICES = (
-        ('awaiting', 'Awaiting'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
-    )
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
-    
+    submissions = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="submissions", blank=True, null=True)
+    verifications = models.ForeignKey(Verification, on_delete=models.CASCADE, related_name="verifications", blank=True, null=True)
+    curations = models.ForeignKey(Curation, on_delete=models.CASCADE, related_name="curations", blank=True, null=True)
+    status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+####################################################
 
 class User(AbstractUser):
     # This model inherits these fields from abstract user:
@@ -69,26 +106,3 @@ class User(AbstractUser):
     editor_manuscripts      = models.ManyToManyField(Manuscript, related_name="editor_manuscripts")
     curator_curations       = models.ManyToManyField(Curation, related_name="curator_curations")
     verifier_verifications  = models.ManyToManyField(Verification, related_name="verifier_verifications")
-
-#TODO: Delete this and fix prototype to no longer require it, as its not important for the prototype anyways
-class Catalog(models.Model):
-    #__tablename__ = 'catalog'
-    
-    user_id = models.ForeignKey('User', on_delete=models.SET_NULL, null=True) #Do we want orphans?
-    status = models.CharField(max_length=250, default="Draft")
-    status2 = models.CharField(max_length=250)
-    title = models.CharField(max_length=250)
-    number = models.CharField(max_length=250)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
-
-    collection = models.BooleanField( null=True)
-    publish_r = models.BooleanField( default=False)
-    publish_a = models.BooleanField( default=False)
-    published = models.BooleanField( default=False)
-    archive = models.BooleanField( default=False)
-
-
-    def __repr__(self):
-        return '["{}","{}","{}","{}","{}","{}","{}"."{}","{}","{}","{}","{}","{}"]'.format(self.id,self.user_id,self.status,self.status2, self.title, self.number,
-        self.created, self.updated, self.collection, self.publish_r, self.publish_a, self.published, self.archive)
