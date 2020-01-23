@@ -1,10 +1,12 @@
 from django.shortcuts import render, redirect
+#from django.http import HttpResponse
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 from django.db.models import Q
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Manuscript, User
+from .forms import ManuscriptForm
 
 def index(request):
     if request.user.is_authenticated:
@@ -16,6 +18,20 @@ def logout_view(request):
     logout(request)
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
     return redirect('/')
+
+def create_manuscript(request):
+    if request.method == 'POST':
+        form = ManuscriptForm(request.POST)
+        if form.is_valid():
+            #MAD: make this give an alert and return to the main page? 
+            form.save()
+            messages.add_message(request, messages.INFO, 'Your new manuscript has been created!')
+            return redirect('/')
+        else:
+            print(form.errors)
+    else:
+        form = ManuscriptForm()
+    return render(request, 'main/form_create_manuscript.html', {'form': form})
 
 class ManuscriptJson(BaseDatatableView):
     # The model we're going to show

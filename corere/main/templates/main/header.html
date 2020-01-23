@@ -1,0 +1,58 @@
+{% load static %}
+
+<div class="wrapper"> {# div ends in footer.html #}
+    <!-- Sidebar Holder -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3>
+                <img src="{% static 'main/CORE2.png' %}" width="128" height="64"/>
+
+            </h3>
+        </div>
+        {% if user.is_authenticated %}
+        <ul class="list-unstyled components">
+            
+            <p>{{ user.get_username }}</p>
+            <li>
+                <a href="">Dashboard</a>
+            </li>
+        </ul>
+
+        <ul class="list-unstyled CTAs">
+            <li>
+                <a href="logout" class="download">Logout</a>
+            </li>
+        </ul>
+        {% else %}
+        <div></div>
+
+        {% endif %}
+    </nav>
+
+    <!-- Page Content Holder -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+
+                <button type="button" id="sidebarCollapse" class="navbar-btn">
+                    {# why? #}
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <button class="btn btn-dark d-inline-block d-lg-none ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="fas fa-align-justify"></i>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+                    {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>

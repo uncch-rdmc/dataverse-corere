@@ -1,117 +1,123 @@
-{% extends "main/proto_layout.html" %}
+{% extends "main/layout.html" %}
 {% load i18n %}
 {% block content %}
 
 <script type="text/javascript">
-        var TESTMODEL_LIST_JSON_URL = '{% url "manuscript_table" %}';
-        // translations for datatables
+    var TESTMODEL_LIST_JSON_URL = '{% url "manuscript_table" %}';
+    // translations for datatables
 
-        var dt_language = {
-            "emptyTable":     "{% trans "No data available in table" %}",
-            "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
-            "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
-            "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
-            "infoPostFix":    "",
-            "thousands":      ",",
-            "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
-            "loadingRecords": "{% trans "Loading..." %}",
-            "processing":     "{% trans "Processing..." %}",
-            "search":         "{% trans "Search:" %}",
-            "zeroRecords":    "{% trans "No matching records found" %}",
-            "paginate": {
-                "first":      "{% trans "First" %}",
-                "last":       "{% trans "Last" %}",
-                "next":       "{% trans "Next" %}",
-                "previous":   "{% trans "Previous" %}"
-            },
-            "aria": {
-                "sortAscending":  "{% trans ": activate to sort column ascending" %}",
-                "sortDescending": "{% trans ": activate to sort column descending" %}"
-            }
+    var dt_language = {
+        "emptyTable":     "{% trans "No data available in table" %}",
+        "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
+        "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
+        "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
+        "infoPostFix":    "",
+        "thousands":      ",",
+        "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
+        "loadingRecords": "{% trans "Loading..." %}",
+        "processing":     "{% trans "Processing..." %}",
+        "search":         "{% trans "Search:" %}",
+        "zeroRecords":    "{% trans "No matching records found" %}",
+        "paginate": {
+            "first":      "{% trans "First" %}",
+            "last":       "{% trans "Last" %}",
+            "next":       "{% trans "Next" %}",
+            "previous":   "{% trans "Previous" %}"
+        },
+        "aria": {
+            "sortAscending":  "{% trans ": activate to sort column ascending" %}",
+            "sortDescending": "{% trans ": activate to sort column descending" %}"
         }
+    }
 
-        $(document).ready(function() {
-            var dt_table = $('.datatable').dataTable({
-                language: dt_language,  // global variable defined in html
-                order: [[ 7, "desc" ]],
-                lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-                columnDefs: [
-                    {
-                        orderable: true,
-                        searchable: true,
-                        className: "center",
-                        targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-                    },
-                    {
-                        data: 'pub_id',
-                        targets: [0]
-                    },
-                    {
-                        data: 'title',
-                        targets: [1]
-                    },
-                    {
-                        data: 'doi',
-                        targets: [2]
-                    },
-                    {
-                        data: 'open_data',
-                        targets: [3]
-                    },
-                    {
-                        data: 'note_text',
-                        targets: [4]
-                    },
-                    {
-                        data: 'status',
-                        targets: [5]
-                    },
-                    {
-                        data: 'created_at',
-                        targets: [6]
-                    },
-                    {
-                        data: 'updated_at',
-                        targets: [7]
-                    },
-                    {
-                        data: 'submissions',
-                        targets: [8]
-                    },
-                    {
-                        data: 'verifications',
-                        targets: [9]
-                    },
-                    {
-                        data: 'curations',
-                        targets: [10]
-                    }
-                ],
-                searching: true,
-                processing: true,
-                serverSide: true,
-                stateSave: true,
-                ajax: TESTMODEL_LIST_JSON_URL
-            });
+    $(document).ready(function() {
+        var dt_table = $('.datatable').dataTable({
+            language: dt_language,  // global variable defined in html
+            order: [[ 7, "desc" ]],
+            lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+            columnDefs: [
+                {
+                    orderable: true,
+                    searchable: true,
+                    className: "center",
+                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                },
+                {
+                    data: 'pub_id',
+                    targets: [0]
+                },
+                {
+                    data: 'title',
+                    targets: [1]
+                },
+                {
+                    data: 'doi',
+                    targets: [2]
+                },
+                {
+                    data: 'open_data',
+                    targets: [3]
+                },
+                {
+                    data: 'note_text',
+                    targets: [4]
+                },
+                {
+                    data: 'status',
+                    targets: [5]
+                },
+                {
+                    data: 'created_at',
+                    targets: [6]
+                },
+                {
+                    data: 'updated_at',
+                    targets: [7]
+                },
+                {
+                    data: 'submissions',
+                    targets: [8]
+                },
+                {
+                    data: 'verifications',
+                    targets: [9]
+                },
+                {
+                    data: 'curations',
+                    targets: [10]
+                }
+            ],
+            searching: true,
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            ajax: TESTMODEL_LIST_JSON_URL
         });
-    </script>
+    });
+</script>
 
-    <table id="settings" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            <th>{% trans 'pub_id' %}</th>
-            <th>{% trans 'title' %}</th>
-            <th>{% trans 'doi' %}</th>
-            <th>{% trans 'open_data' %}</th>
-            <th>{% trans 'note_text' %}</th>
-            <th>{% trans 'status' %}</th>
-            <th>{% trans 'created_at' %}</th>
-            <th>{% trans 'updated_at' %}</th>
-            <th>{% trans 'submissions' %}</th>
-            <th>{% trans 'verifications' %}</th>
-            <th>{% trans 'curations' %}</th>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+<table id="settings" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+    <thead>
+        <th>{% trans 'pub_id' %}</th>
+        <th>{% trans 'title' %}</th>
+        <th>{% trans 'doi' %}</th>
+        <th>{% trans 'open_data' %}</th>
+        <th>{% trans 'note_text' %}</th>
+        <th>{% trans 'status' %}</th>
+        <th>{% trans 'created_at' %}</th>
+        <th>{% trans 'updated_at' %}</th>
+        <th>{% trans 'submissions' %}</th>
+        <th>{% trans 'verifications' %}</th>
+        <th>{% trans 'curations' %}</th>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<a href="create_manuscript" class="btn btn-primary purple-gradient waves-effect waves-light"> 
+    <i class="fas fa-plus"></i> &nbsp;Create Manuscript
+</a>
+
+    
 
 {% endblock %}

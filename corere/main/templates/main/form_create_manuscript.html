@@ -1,0 +1,14 @@
+{% extends "main/layout.html" %}
+{% block content %}
+
+<form action="create_manuscript" method="post">
+    {% csrf_token %}
+    <table>
+        {{form}}
+    </table>
+    {% comment %} <label for="your_name">Your name: </label>
+    <input id="your_name" type="text" name="your_name" value=""> {% endcomment %}
+    <input type="submit" value="OK">
+</form>
+
+{% endblock content %}
