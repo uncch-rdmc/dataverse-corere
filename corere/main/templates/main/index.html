@@ -31,73 +31,118 @@
     }
 
     $(document).ready(function() {
-        var dt_table = $('.datatable').dataTable({
+        var dt_table = $('.datatable').DataTable({
             language: dt_language,  // global variable defined in html
-            order: [[ 7, "desc" ]],
+            order: [[ 8, "desc" ]],
             lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
             columnDefs: [
                 {
                     orderable: true,
                     searchable: true,
                     className: "center",
-                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
                 },
                 {
-                    data: 'pub_id',
+                    data: 'id',
                     targets: [0]
                 },
                 {
-                    data: 'title',
+                    data: 'pub_id',
                     targets: [1]
                 },
                 {
-                    data: 'doi',
+                    data: 'title',
                     targets: [2]
                 },
                 {
-                    data: 'open_data',
+                    data: 'doi',
                     targets: [3]
                 },
                 {
-                    data: 'note_text',
+                    data: 'open_data',
                     targets: [4]
                 },
                 {
-                    data: 'status',
+                    data: 'note_text',
                     targets: [5]
                 },
                 {
-                    data: 'created_at',
+                    data: 'status',
                     targets: [6]
                 },
                 {
-                    data: 'updated_at',
+                    data: 'created_at',
                     targets: [7]
                 },
                 {
-                    data: 'submissions',
+                    data: 'updated_at',
                     targets: [8]
                 },
                 {
-                    data: 'verifications',
+                    data: 'submissions',
                     targets: [9]
                 },
                 {
-                    data: 'curations',
+                    data: 'verifications',
                     targets: [10]
+                },
+                {
+                    data: 'curations',
+                    targets: [11]
                 }
             ],
             searching: true,
             processing: true,
             serverSide: true,
             stateSave: true,
+            select: 'single',
+            buttons: [
+                {% if user.is_curator %}
+                    {
+                        text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
+                        name: 'createManuscript',
+                        action: function ( e, dt, node, config ) {
+                            window.location.href = "manuscript/create";
+                        },
+                    },
+                    {
+                        text: 'Edit Manuscript',
+                        name: 'editManuscript',
+                        action: function ( e, dt, node, config ) {
+                            id = dt_table.rows( { selected: true } ).data()[0].id
+                            window.location.href = "manuscript/edit/"+id;
+                        },
+                        enabled: false
+                    },
+                {% endif %}
+                
+            ],
+            dom: 'Bfrtip',
             ajax: TESTMODEL_LIST_JSON_URL
-        });
+        })
+        //Here we set some buttons to enable only when a row is selected
+        .on( 'select', function ( e, dt, type, indexes ) {
+            var count = dt_table.rows( { selected: true } ).count();
+            dt_table.button('editManuscript:name').enable(true);
+
+            console.log('Table row selected');
+        } )
+        .on( 'deselect', function ( e, dt, type, indexes ) {
+            var count = dt_table.rows( { selected: true } ).count();
+            if(count == 0) {
+                dt_table.button('editManuscript:name').enable(false);
+            }
+            console.log('Table row deselected');
+        } );
+
     });
+
+
 </script>
 
 <table id="settings" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
     <thead>
+        <th>{% trans 'id' %}</th>
         <th>{% trans 'pub_id' %}</th>
         <th>{% trans 'title' %}</th>
         <th>{% trans 'doi' %}</th>
@@ -114,10 +159,8 @@
     </tbody>
 </table>
 
-<a href="create_manuscript" class="btn btn-primary purple-gradient waves-effect waves-light"> 
+{% comment %} <a href="create_manuscript" class="btn btn-primary purple-gradient waves-effect waves-light"> 
     <i class="fas fa-plus"></i> &nbsp;Create Manuscript
-</a>
-
-    
+</a> {% endcomment %}
 
 {% endblock %}

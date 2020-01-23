@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django_fsm import FSMField, transition
+import logging
+
+logger = logging.getLogger('corere')
 
 ####################################################
 
@@ -89,6 +92,13 @@ class Manuscript(models.Model):
     status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING)
+    def begin(self, user):
+        logger.debug(f"Manuscript transition: begin | Editor: {user}")
+        self.editors.add(user)
+        
+
 ####################################################
 
 class User(AbstractUser):
@@ -102,7 +112,7 @@ class User(AbstractUser):
     is_curator = models.BooleanField(default=False)
     is_verifier = models.BooleanField(default=False)
 
-    author_submissions      = models.ManyToManyField(Submission, related_name="author_submissions")
-    editor_manuscripts      = models.ManyToManyField(Manuscript, related_name="editor_manuscripts")
-    curator_curations       = models.ManyToManyField(Curation, related_name="curator_curations")
-    verifier_verifications  = models.ManyToManyField(Verification, related_name="verifier_verifications")
+    author_submissions      = models.ManyToManyField(Submission, related_name="authors", blank=True)
+    editor_manuscripts      = models.ManyToManyField(Manuscript, related_name="editors", blank=True)
+    curator_curations       = models.ManyToManyField(Curation, related_name="curators", blank=True)
+    verifier_verifications  = models.ManyToManyField(Verification, related_name="verifiers", blank=True)

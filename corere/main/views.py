@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 #from django.http import HttpResponse
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
@@ -10,7 +10,8 @@ from .forms import ManuscriptForm
 
 def index(request):
     if request.user.is_authenticated:
-        return render(request, "main/index.html")
+        args = {'user': request.user}
+        return render(request, "main/index.html", args)
     else:
         return render(request, "main/login.html")
 
@@ -19,26 +20,29 @@ def logout_view(request):
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
     return redirect('/')
 
-def create_manuscript(request):
+#MAD: Turn these into class-based views?
+#MAD: This does nothing to ensure someone is logged in and has the right permissions, etc
+def edit_manuscript(request, id=None):
+    if id:
+        manuscript = get_object_or_404(Manuscript, id=id)
+    else:
+        manuscript = Manuscript()
+    form = ManuscriptForm(request.POST or None, instance=manuscript)
     if request.method == 'POST':
-        form = ManuscriptForm(request.POST)
         if form.is_valid():
-            #MAD: make this give an alert and return to the main page? 
             form.save()
             messages.add_message(request, messages.INFO, 'Your new manuscript has been created!')
             return redirect('/')
         else:
             print(form.errors)
-    else:
-        form = ManuscriptForm()
-    return render(request, 'main/form_create_manuscript.html', {'form': form})
+    return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
 class ManuscriptJson(BaseDatatableView):
     # The model we're going to show
     model = Manuscript
 
     # define the columns that will be returned
-    columns = ['pub_id','title','doi','open_data','note_text','status','created_at','updated_at','submissions','verifications','curations']
+    columns = ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','submissions','verifications','curations']
 
     # define column names that will be used in sorting
     # order is important and should be same as order of columns
