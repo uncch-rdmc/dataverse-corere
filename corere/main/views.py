@@ -7,6 +7,8 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Manuscript, User
 from .forms import ManuscriptForm
+from django_fsm import can_proceed, has_transition_perm
+from django.core.exceptions import PermissionDenied
 
 def index(request):
     if request.user.is_authenticated:
@@ -23,15 +25,23 @@ def logout_view(request):
 #MAD: Turn these into class-based views?
 #MAD: This does nothing to ensure someone is logged in and has the right permissions, etc
 def edit_manuscript(request, id=None):
+    #print(request.__dict__)
     if id:
         manuscript = get_object_or_404(Manuscript, id=id)
+        message = 'Your manuscript has been updated!'
     else:
         manuscript = Manuscript()
+        message = 'Your new manuscript has been created!'
     form = ManuscriptForm(request.POST or None, instance=manuscript)
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            messages.add_message(request, messages.INFO, 'Your new manuscript has been created!')
+            if('submit_and_update_status' in request.POST): #MAD: This checks to see which form button was used. There is probably a more precise way to check
+                if (not can_proceed(manuscript.begin)) or (not has_transition_perm(manuscript.begin, request.user)): 
+                    raise PermissionDenied #MAD: Is this what we want?
+                manuscript.begin()
+                manuscript.save()
+            messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
             print(form.errors)
@@ -42,7 +52,7 @@ class ManuscriptJson(BaseDatatableView):
     model = Manuscript
 
     # define the columns that will be returned
-    columns = ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','submissions','verifications','curations']
+    columns = ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','editors','submissions','verifications','curations']
 
     # define column names that will be used in sorting
     # order is important and should be same as order of columns
@@ -56,9 +66,12 @@ class ManuscriptJson(BaseDatatableView):
 
     def render_column(self, row, column):
         # We want to render user as a custom column
-        if column == 'user':
+        if column == 'editors':
             # escape HTML for security reasons
-            return escape('{0} {1}'.format(row.customer_firstname, row.customer_lastname))
+            if(row.editors.count() > 0):
+                return escape('{0}'.format([editor.username for editor in row.editors.all()]))
+            else:
+                return ""
         else:
             return super(ManuscriptJson, self).render_column(row, column)
 

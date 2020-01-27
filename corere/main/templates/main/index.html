@@ -40,7 +40,7 @@
                     orderable: true,
                     searchable: true,
                     className: "center",
-                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
                 },
                 {
                     data: 'id',
@@ -79,16 +79,20 @@
                     targets: [8]
                 },
                 {
-                    data: 'submissions',
+                    data: 'editors',
                     targets: [9]
                 },
                 {
-                    data: 'verifications',
+                    data: 'submissions',
                     targets: [10]
                 },
                 {
-                    data: 'curations',
+                    data: 'verifications',
                     targets: [11]
+                },
+                {
+                    data: 'curations',
+                    targets: [12]
                 }
             ],
             searching: true,
@@ -151,6 +155,7 @@
         <th>{% trans 'status' %}</th>
         <th>{% trans 'created_at' %}</th>
         <th>{% trans 'updated_at' %}</th>
+        <th>{% trans 'editors' %}</th>
         <th>{% trans 'submissions' %}</th>
         <th>{% trans 'verifications' %}</th>
         <th>{% trans 'curations' %}</th>

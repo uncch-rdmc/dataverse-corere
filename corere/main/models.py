@@ -3,7 +3,24 @@ from django.contrib.auth.models import AbstractUser
 from django_fsm import FSMField, transition
 import logging
 
-logger = logging.getLogger('corere')
+logger = logging.getLogger('corere')  
+
+####################################################
+
+class User(AbstractUser):
+    # This model inherits these fields from abstract user:
+    # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
+
+    #NOTE: This approach won't scale great if we need real object-based permissions per manuscript.
+    #      But the requirements for the group are pretty well-defined to these roles and this keeps things simple.
+    is_author = models.BooleanField(default=False)
+    is_editor = models.BooleanField(default=False)
+    is_curator = models.BooleanField(default=False)
+    is_verifier = models.BooleanField(default=False)
+
+    #MAD: We probably need to manage relations between users. Editors will need to manage authors at least
+    #     Is this going to be a direct connection, or via a "publication" object or something?
+    #     Each editor will have multipe authors... and each author multiple editors?
 
 ####################################################
 
@@ -30,6 +47,7 @@ class Verification(models.Model):
     software = models.TextField() #TODO: Make this more usable as a list of software
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    verifiers = models.ManyToManyField(User, related_name="verifier_verifications", blank=True)
 
 ####################################################
 
@@ -52,6 +70,7 @@ class Curation(models.Model):
     note_text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    curators = models.ManyToManyField(User, related_name="curator_curations", blank=True)
 
 ####################################################
 
@@ -65,6 +84,7 @@ class Submission(models.Model):
     files = models.ForeignKey(File, on_delete=models.CASCADE, related_name='files')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    authors = models.ManyToManyField(User, related_name="author_submissions", blank=True)
 
 ####################################################
 
@@ -92,27 +112,17 @@ class Manuscript(models.Model):
     status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    editors = models.ManyToManyField(User, related_name="editor_manuscripts", blank=True)
 
-    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING)
-    def begin(self, user):
-        logger.debug(f"Manuscript transition: begin | Editor: {user}")
-        self.editors.add(user)
-        
+    ### django-fsm (workflow) related functions
 
-####################################################
+    def can_begin(self):
+        if(self.editors.count() == 0):
+            return False
+        return True
 
-class User(AbstractUser):
-    # This model inherits these fields from abstract user:
-    # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
-
-    #NOTE: This approach won't scale great if we need real object-based permissions per manuscript.
-    #      But the requirements for the group are pretty well-defined to these roles and this keeps things simple.
-    is_author = models.BooleanField(default=False)
-    is_editor = models.BooleanField(default=False)
-    is_curator = models.BooleanField(default=False)
-    is_verifier = models.BooleanField(default=False)
-
-    author_submissions      = models.ManyToManyField(Submission, related_name="authors", blank=True)
-    editor_manuscripts      = models.ManyToManyField(Manuscript, related_name="editors", blank=True)
-    curator_curations       = models.ManyToManyField(Curation, related_name="curators", blank=True)
-    verifier_verifications  = models.ManyToManyField(Verification, related_name="verifiers", blank=True)
+    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin], 
+                permission=lambda instance, user: user.is_curator)
+    def begin(self):
+        #Here add any additional actions related to the state change
+        pass
