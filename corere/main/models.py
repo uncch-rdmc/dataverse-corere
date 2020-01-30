@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django_fsm import FSMField, transition
 import logging
+import uuid
 
 logger = logging.getLogger('corere')  
 
@@ -100,7 +101,14 @@ MANUSCRIPT_STATUS_CHOICES = (
     (MANUSCRIPT_COMPLETED, 'Completed'),
 )
 
+
+def manuscript_directory_path(instance, filename):
+    #print(instance.__dict__)
+    # file will be uploaded to MEDIA_ROOT/manuscript_<id>/<filename>
+    return 'manuscript_{0}/{1}'.format(instance.uuid, filename)
+
 class Manuscript(models.Model):
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload.
     pub_id = models.CharField(max_length=200, default="", db_index=True)
     title = models.TextField(blank=False, null=False, default="")
     note_text = models.TextField(default="")
@@ -112,6 +120,7 @@ class Manuscript(models.Model):
     status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    manuscript_file = models.FileField(upload_to=manuscript_directory_path, blank=True)
     editors = models.ManyToManyField(User, related_name="editor_manuscripts", blank=True)
 
     ### django-fsm (workflow) related functions

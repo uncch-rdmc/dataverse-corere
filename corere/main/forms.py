@@ -3,7 +3,7 @@ from .models import Manuscript, User
 class ManuscriptForm(ModelForm):
     class Meta:
         model = Manuscript
-        fields = ['title','note_text','doi','open_data','editors']
+        fields = ['title','note_text','doi','open_data','editors','manuscript_file']
 
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)

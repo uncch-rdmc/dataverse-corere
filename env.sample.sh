@@ -34,3 +34,6 @@ export SOCIAL_AUTH_GITHUB_OAUTH2_SECRET=
 export POSTGRES_DB=corere
 export POSTGRES_USER=
 export POSTGRES_PASSWORD=
+
+#Location for local file uploads (Manuscripts, etc)
+export MEDIA_ROOT=

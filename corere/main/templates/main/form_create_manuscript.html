@@ -1,7 +1,9 @@
 {% extends "main/layout.html" %}
 {% block content %}
 
-<form action="{{id|default_if_none:""}}" method="post">
+{% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
+
+<form action="{{id|default_if_none:""}}" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <table>
         {{form}}
