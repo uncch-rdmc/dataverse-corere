@@ -6,9 +6,11 @@ from django.db.models import Q
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Manuscript, User
-from .forms import ManuscriptForm
+from .forms import ManuscriptForm, InvitationForm
 from django_fsm import can_proceed, has_transition_perm
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from invitations.utils import get_invitation_model
+from django.utils.crypto import get_random_string
 
 def index(request):
     if request.user.is_authenticated:
@@ -22,6 +24,40 @@ def logout_view(request):
     logout(request)
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
     return redirect('/')
+
+# MAD: How do we see this whole flow working?
+# Editor/Superuser enters an email into a form and clicks submit
+# Corere creates a user with no auth connected, and an email address, and the requested role(s).
+# Corere emails the user telling them to sign-up. This has a one-time 
+def add_user(request, id=None):
+    form = InvitationForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            email = form.cleaned_data['email']
+
+            Invitation = get_invitation_model()
+            invite = Invitation.create(email)#, inviter=request.user)
+
+            #In here, we create a "starter" user that will later be modified and connected to auth after the invite
+            user = User()
+            user.email = email
+            user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+            user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
+            user.invite_key = invite.key #to later reconnect the user we've created to the invite
+            user.save()
+            manuscript = Manuscript.objects.get(pk=id)
+            #TODO: We need to be able to set the Author as having access to the manuscript. But the permissions structure still needs to be nailed down
+
+            invite.send_invitation(request)
+            messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
+            return redirect('/')
+        else:
+            print(form.errors) #MAD: DO MORE?
+    return render(request, 'main/form_initialize_user.html', {'form': form})
+    # Will need the invitation model to be aware of the roles
+    # Also will need to be aware of the manuscript the author/editor/verifier is getting access to
+    # (Would be nice to allow multiple selection, but for now lets just do one?)
+
 
 #MAD: Turn these into class-based views?
 #MAD: This does nothing to ensure someone is logged in and has the right permissions, etc
@@ -46,7 +82,7 @@ def edit_manuscript(request, id=None):
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors)
+            print(form.errors) #MAD: DO MORE?
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
 def helper_manuscript_columns(user):
@@ -87,7 +123,6 @@ class ManuscriptJson(BaseDatatableView):
                 #begin custom 
                 allowed_cols = self.get_columns()
                 name_data = request_dict.get('columns[{0}][data]'.format(counter)) #Yes, this is actually the name
-                #print(name_data)
                 #TODO: This prevention of unspecified fields fails if the model field name is just numbers. Can we find a better fix?
                 if(not name_data.isdigit() and (name_data not in allowed_cols)):
                     raise SuspiciousOperation("Requested column not available: {0}".format(name_data))

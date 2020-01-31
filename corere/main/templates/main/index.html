@@ -63,7 +63,22 @@
                         enabled: false
                     },
                 {% endif %}
-                
+                {% if user.is_author %}
+                    {
+                        text: 'Invite/Add Author to Manuscript',
+                        name: 'addAuthor',
+                        action: function ( e, dt, node, config ) {
+                            // TODO: If column order ever changes this will blow up.
+                            // Before we were using the name but now that we don't provide column def it doesn't work
+                            // One option is to generate the columnDefs on the django side so that they can be picked up
+                            // If we do that, keep in mind that it may cause problems with javascript caching
+                            console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                            id = dt_table.rows( { selected: true } ).data()[0][0]
+                            window.location.href = "manuscript/addaccount/"+id;
+                        },
+                        enabled: false
+                    },
+                {% endif %}
             ],
             dom: 'Bfrtip',
             ajax: TESTMODEL_LIST_JSON_URL
@@ -72,13 +87,14 @@
         .on( 'select', function ( e, dt, type, indexes ) {
             var count = dt_table.rows( { selected: true } ).count();
             dt_table.button('editManuscript:name').enable(true);
-
+            dt_table.button('addAuthor:name').enable(true);
             console.log('Table row selected');
         } )
         .on( 'deselect', function ( e, dt, type, indexes ) {
             var count = dt_table.rows( { selected: true } ).count();
             if(count == 0) {
                 dt_table.button('editManuscript:name').enable(false);
+                dt_table.button('addAuthor:name').enable(false);
             }
             console.log('Table row deselected');
         } );

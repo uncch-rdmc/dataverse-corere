@@ -13,6 +13,7 @@ django-braces==1.14.0
 django-compressor==2.4
 django-datatables-view==1.19.1
 django-fsm==2.7.0
+django-invitations==1.9.2
 django-libsass==0.7
 django-oauth-toolkit==1.2.0
 django-rest-framework-social-oauth2==1.1.0

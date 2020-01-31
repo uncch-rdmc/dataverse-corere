@@ -13,6 +13,13 @@ LOGOUT_REDIRECT_URL = '/'
 MEDIA_ROOT = os.environ["MEDIA_ROOT"]
 #MEDIA_URL
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' #TODO: make configurable
+
+#Invitation related
+SITE_ID = 1
+INVITATIONS_EMAIL_MAX_LENGTH = 200
+#INVITATIONS_SIGNUP_REDIRECT
+
 #CUSTOM CORERE
 GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
 GIT_LAB_URL = os.environ["GIT_LAB_URL"]
@@ -28,10 +35,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites', #added for invitations
+    'invitations',
     'oauth2_provider',
     'social_django',
     'rest_framework_social_oauth2',
     'compressor',
+    
     'corere.main',
 ]
 

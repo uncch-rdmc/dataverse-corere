@@ -22,4 +22,5 @@ urlpatterns = [
     path('', include('corere.main.urls')),
     path('prototype/', include('corere.main.prototype_urls')),
     url(r'^auth/', include('rest_framework_social_oauth2.urls')), #Social OAuth2
+    url(r'^invitations/', include('invitations.urls', namespace='invitations')),
 ]

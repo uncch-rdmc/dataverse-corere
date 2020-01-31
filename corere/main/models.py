@@ -18,6 +18,7 @@ class User(AbstractUser):
     is_editor = models.BooleanField(default=False)
     is_curator = models.BooleanField(default=False)
     is_verifier = models.BooleanField(default=False)
+    invite_key = models.CharField(max_length=64, blank=True)
 
     #MAD: We probably need to manage relations between users. Editors will need to manage authors at least
     #     Is this going to be a direct connection, or via a "publication" object or something?
