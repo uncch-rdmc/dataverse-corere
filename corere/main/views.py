@@ -34,13 +34,13 @@ def edit_manuscript(request, id=None):
     else:
         manuscript = Manuscript()
         message = 'Your new manuscript has been created!'
-    form = ManuscriptForm(request.POST or None, request.FILES, instance=manuscript)
+    form = ManuscriptForm(request.POST or None, request.FILES or None, instance=manuscript)
     if request.method == 'POST':
         if form.is_valid():
             form.save()
             if('submit_and_update_status' in request.POST): #MAD: This checks to see which form button was used. There is probably a more precise way to check
                 if (not can_proceed(manuscript.begin)) or (not has_transition_perm(manuscript.begin, request.user)): 
-                    raise PermissionDenied #MAD: Is this what we want?
+                    raise PermissionDenied
                 manuscript.begin()
                 manuscript.save()
             messages.add_message(request, messages.INFO, message)
@@ -65,27 +65,16 @@ def helper_manuscript_columns(user):
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 class ManuscriptJson(BaseDatatableView):
-    # The model we're going to show
     model = Manuscript
 
-    # define the columns that will be returned
-    #columns = ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','editors','submissions','verifications','curations']
-
-    # define column names that will be used in sorting
-    # order is important and should be same as order of columns
-    # displayed by datatables. For non sortable columns use empty
-    # value like ''
-    #order_columns = ['updated_at', 'user', 'state', '', '']
-
-    # set max limit of records returned, this is used to protect our site if someone tries to attack our site
-    # and make it return huge amount of data
     max_display_length = 500
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
 
+    # pull from source mostly, except when noted. 
+    # Needed to disallow users from requesting columns from the model we do not wish to provide
     def extract_datatables_column_data(self):
-        # pull from source mostly, except when noted
         """ Helper method to extract columns data from request as passed by Datatables 1.10+
         """
         request_dict = self._querydict
@@ -95,10 +84,10 @@ class ManuscriptJson(BaseDatatableView):
             data_name_key = 'columns[{0}][name]'.format(counter)
 
             while data_name_key in request_dict:
-                #begin custom [to disallow users from requesting columns from the model we do not wish to provide]
+                #begin custom 
                 allowed_cols = self.get_columns()
                 name_data = request_dict.get('columns[{0}][data]'.format(counter)) #Yes, this is actually the name
-                print(name_data)
+                #print(name_data)
                 #TODO: This prevention of unspecified fields fails if the model field name is just numbers. Can we find a better fix?
                 if(not name_data.isdigit() and (name_data not in allowed_cols)):
                     raise SuspiciousOperation("Requested column not available: {0}".format(name_data))
@@ -129,23 +118,11 @@ class ManuscriptJson(BaseDatatableView):
             return super(ManuscriptJson, self).render_column(row, column)
 
     def filter_queryset(self, qs):
-        # use parameters passed in GET request to filter queryset
+        # use parameters passed in GET request to filter (search) queryset
 
-        # simple example:
         search = self.request.GET.get('search[value]', None)
         if search:
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(note_text__icontains=search)|Q(doi__icontains=search))
-
-        # # more advanced example using extra parameters
-        # filter_customer = self.request.GET.get('customer', None)
-
-        # if filter_customer:
-        #     customer_parts = filter_customer.split(' ')
-        #     qs_params = None
-        #     for part in customer_parts:
-        #         q = Q(customer_firstname__istartswith=part)|Q(customer_lastname__istartswith=part)
-        #         qs_params = qs_params | q if qs_params else q
-        #     qs = qs.filter(qs_params)
         return qs
     
     def prepare_results(self, qs):

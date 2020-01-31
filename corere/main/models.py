@@ -43,7 +43,6 @@ VERIFICATION_RESULT_CHOICES = (
 
 class Verification(models.Model):
     status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
-    #result = models.CharField(max_length=15, choices=VERIFICATION_RESULT_CHOICES)
     note_text = models.TextField() #TODO: Make this more usable as a list of issues
     software = models.TextField() #TODO: Make this more usable as a list of software
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,7 +66,6 @@ CURATION_RESULT_CHOICES = (
 )
 class Curation(models.Model):
     status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
-    #result = models.CharField(max_length=15, choices=CURATION_RESULT_CHOICES)
     note_text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,8 +101,7 @@ MANUSCRIPT_STATUS_CHOICES = (
 
 
 def manuscript_directory_path(instance, filename):
-    #print(instance.__dict__)
-    # file will be uploaded to MEDIA_ROOT/manuscript_<id>/<filename>
+    # file will be uploaded to MEDIA_ROOT/manuscript_<uuid>/<filename>
     return 'manuscript_{0}/{1}'.format(instance.uuid, filename)
 
 class Manuscript(models.Model):

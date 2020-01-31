@@ -33,68 +33,7 @@
     $(document).ready(function() {
         var dt_table = $('.datatable').DataTable({
             language: dt_language,  // global variable defined in html
-            //order: [[ 8, "desc" ]],
             lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-            {% comment %} columnDefs: [
-                {
-                    orderable: true,
-                    searchable: true,
-                    className: "center",
-                    targets: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-                },
-                {
-                    data: 'id',
-                    targets: [0]
-                },
-                {
-                    data: 'pub_id',
-                    targets: [1]
-                },
-                {
-                    data: 'title',
-                    targets: [2]
-                },
-                {
-                    data: 'doi',
-                    targets: [3]
-                },
-                {
-                    data: 'open_data',
-                    targets: [4]
-                },
-                {
-                    data: 'note_text',
-                    targets: [5]
-                },
-                {
-                    data: 'status',
-                    targets: [6]
-                },
-                {
-                    data: 'created_at',
-                    targets: [7]
-                },
-                {
-                    data: 'updated_at',
-                    targets: [8]
-                },
-                {
-                    data: 'editors',
-                    targets: [9]
-                },
-                {
-                    data: 'submissions',
-                    targets: [10]
-                },
-                {
-                    data: 'verifications',
-                    targets: [11]
-                },
-                {
-                    data: 'curations',
-                    targets: [12]
-                }
-            ], {% endcomment %}
             searching: true,
             processing: true,
             serverSide: true,
@@ -158,9 +97,5 @@
     <tbody>
     </tbody>
 </table>
-
-{% comment %} <a href="create_manuscript" class="btn btn-primary purple-gradient waves-effect waves-light"> 
-    <i class="fas fa-plus"></i> &nbsp;Create Manuscript
-</a> {% endcomment %}
 
 {% endblock %}
