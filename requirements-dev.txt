@@ -1,1 +1,2 @@
 graphviz==0.13.2 #for visualizing state transitions
+django-extensions==2.2.6

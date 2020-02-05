@@ -6,16 +6,27 @@ from django.db.models import Q
 from django.contrib.auth import logout
 from django.contrib import messages
 from .models import Manuscript, User
-from .forms import ManuscriptForm, InvitationForm
+from .forms import ManuscriptForm, InvitationForm, NewUserForm
 from django_fsm import can_proceed, has_transition_perm
 from django.core.exceptions import PermissionDenied, SuspiciousOperation
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
+from guardian.decorators import permission_required_or_403
+from guardian.shortcuts import get_objects_for_user, assign_perm
+from django.contrib.auth.models import Permission
+from . import constants as c
 
 def index(request):
     if request.user.is_authenticated:
+        #TODO: write own context processor to pass repeatedly-used constants, etc
+        #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
         args = {'user':     request.user, 
-                'columns':  helper_manuscript_columns(request.user)}
+                'columns':  helper_manuscript_columns(request.user),
+                'GROUP_EDITOR': c.GROUP_EDITOR,
+                'GROUP_AUTHOR': c.GROUP_AUTHOR,
+                'GROUP_VERIFIER': c.GROUP_VERIFIER,
+                'GROUP_CURATOR': c.GROUP_CURATOR,
+                }
         return render(request, "main/index.html", args)
     else:
         return render(request, "main/login.html")
@@ -29,6 +40,9 @@ def logout_view(request):
 # Editor/Superuser enters an email into a form and clicks submit
 # Corere creates a user with no auth connected, and an email address, and the requested role(s).
 # Corere emails the user telling them to sign-up. This has a one-time 
+
+# MAD: We should probably make permissions part of our constants as well
+@permission_required_or_403('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_user(request, id=None):
     form = InvitationForm(request.POST or None)
     if request.method == 'POST':
@@ -47,7 +61,8 @@ def add_user(request, id=None):
             user.save()
             manuscript = Manuscript.objects.get(pk=id)
             #TODO: We need to be able to set the Author as having access to the manuscript. But the permissions structure still needs to be nailed down
-
+            assign_perm('main.manage_authors_on_manuscript', user, manuscript)
+            assign_perm('main.view_manuscript', user, manuscript)
             invite.send_invitation(request)
             messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
             return redirect('/')
@@ -58,12 +73,26 @@ def add_user(request, id=None):
     # Also will need to be aware of the manuscript the author/editor/verifier is getting access to
     # (Would be nice to allow multiple selection, but for now lets just do one?)
 
+def account_signup(request, key=None):
+    user = get_object_or_404(User, invite_key=key)
+    user.username = ""
+    user.invite_key = ""
+    form = NewUserForm(request.POST or None, instance=user)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            messages.add_message(request, messages.INFO, "You have successfully created you CoReRe account!")
+            return redirect('/')
+        else:
+            print(form.errors) #MAD: DO MORE?
+    return render(request, 'main/form_new_user.html', {'form': form, 'key': key})
+
+    #from django.http import HttpResponse
+    #return HttpResponse(str(user.__dict__))
 
 #MAD: Turn these into class-based views?
-#MAD: This does nothing to ensure someone is logged in and has the right permissions, etc
+@permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def edit_manuscript(request, id=None):
-    # print(request.__dict__)
-    print(request.FILES)
     if id:
         manuscript = get_object_or_404(Manuscript, id=id)
         message = 'Your manuscript has been updated!'
@@ -89,17 +118,23 @@ def helper_manuscript_columns(user):
     # This defines the columns a user can view for a table.
     # TODO: Controll in a more centralized manner for security
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
+    
+    # MAD: I'm weary of programatically limiting access to data on an attribute level, but I'm not sure of a good way to do this in django, especially with all the other permissions systems in play
+    # MAD: This should be using guardian?
+
     columns = []
-    if(user.is_curator):
+    if(user.groups.filter(name=c.GROUP_CURATOR).exists()):
         columns += ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','editors','submissions','verifications','curations']
-    if(user.is_verifier):
+    if(user.groups.filter(name=c.GROUP_VERIFIER).exists()):
         columns += ['id','pub_id','title','doi','open_data']
-    if(user.is_author):
+    if(user.groups.filter(name=c.GROUP_AUTHOR).exists()):
         columns += ['id','pub_id','title','doi','open_data']
-    if(user.is_editor):
+    if(user.groups.filter(name=c.GROUP_EDITOR).exists()):
         columns += ['id','pub_id','title','doi','open_data']
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
+# Customizing django-datatables-view defaults
+# See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(BaseDatatableView):
     model = Manuscript
 
@@ -151,6 +186,10 @@ class ManuscriptJson(BaseDatatableView):
                 return ""
         else:
             return super(ManuscriptJson, self).render_column(row, column)
+
+    def get_initial_queryset(self):
+        #view_perm = Permission.objects.get(codename="view_manuscript")
+        return get_objects_for_user(self.request.user, "view_manuscript", klass=Manuscript) # Should use the model definition above?
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset

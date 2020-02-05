@@ -9,4 +9,5 @@ urlpatterns = [
     path('manuscript/edit/<int:id>', views.edit_manuscript),
     path('manuscript/addaccount/<int:id>', views.add_user),
     path('logout', views.logout_view),
+    path('account_signup/<str:key>', views.account_signup)
 ]

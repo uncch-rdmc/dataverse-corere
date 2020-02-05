@@ -1,0 +1,4 @@
+GROUP_EDITOR = "Editor"
+GROUP_AUTHOR = "Author"
+GROUP_VERIFIER = "Verifier"
+GROUP_CURATOR = "Curator"

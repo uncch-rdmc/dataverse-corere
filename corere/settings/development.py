@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 ALLOWED_HOSTS = []
 
-LOGIN_URL = 'login'
+LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
@@ -18,7 +18,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' #TODO: make con
 #Invitation related
 SITE_ID = 1
 INVITATIONS_EMAIL_MAX_LENGTH = 200
-#INVITATIONS_SIGNUP_REDIRECT
+INVITATIONS_SIGNUP_REDIRECT = '/account_signup'
+#INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True #TODO: This only works with allauth, which we don't use. Ideally you'd be able to retry the same key more than once.
 
 #CUSTOM CORERE
 GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
@@ -41,12 +42,13 @@ INSTALLED_APPS = [
     'social_django',
     'rest_framework_social_oauth2',
     'compressor',
-    
+    'guardian',
     'corere.main',
 ]
 
 INSTALLED_APPS_DEV = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
+    'django_extensions'
 ]
 
 INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEV
@@ -113,7 +115,7 @@ REST_FRAMEWORK = {
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
-    
+    'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend', #Standard django auth, used for admin
 )
 

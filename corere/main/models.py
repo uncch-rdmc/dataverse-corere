@@ -12,17 +12,15 @@ class User(AbstractUser):
     # This model inherits these fields from abstract user:
     # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
 
-    #NOTE: This approach won't scale great if we need real object-based permissions per manuscript.
-    #      But the requirements for the group are pretty well-defined to these roles and this keeps things simple.
-    is_author = models.BooleanField(default=False)
-    is_editor = models.BooleanField(default=False)
-    is_curator = models.BooleanField(default=False)
-    is_verifier = models.BooleanField(default=False)
-    invite_key = models.CharField(max_length=64, blank=True)
+    # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
 
-    #MAD: We probably need to manage relations between users. Editors will need to manage authors at least
+    invite_key = models.CharField(max_length=64, blank=True)
+    invited_by = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, blank=True)
+
+    #We probably need to manage relations between users. Editors will need to manage authors at least
     #     Is this going to be a direct connection, or via a "publication" object or something?
     #     Each editor will have multipe authors... and each author multiple editors?
+    #     ... maybe I'm overthinking this and instead anyone with editor on a manuscript can manage authors on the script
 
 ####################################################
 
@@ -106,7 +104,7 @@ def manuscript_directory_path(instance, filename):
     return 'manuscript_{0}/{1}'.format(instance.uuid, filename)
 
 class Manuscript(models.Model):
-    uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload.
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     pub_id = models.CharField(max_length=200, default="", db_index=True)
     title = models.TextField(blank=False, null=False, default="")
     note_text = models.TextField(default="")
