@@ -21,11 +21,4 @@ class InvitationForm(forms.Form):
 class NewUserForm(forms.ModelForm):
     class Meta:
         model = User
-        # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
         fields = ['username', 'email', 'first_name', 'last_name']
-        #MAD: How are we handling password with oauth2?
-
-    # class Meta:
-    #     model = get_invitation_model()
-    #     fields = ['email']
-    #     pass

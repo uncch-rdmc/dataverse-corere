@@ -13,21 +13,26 @@ from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from guardian.decorators import permission_required_or_403
 from guardian.shortcuts import get_objects_for_user, assign_perm
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, Group
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from . import constants as c
 
 def index(request):
     if request.user.is_authenticated:
-        #TODO: write own context processor to pass repeatedly-used constants, etc
-        #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
-        args = {'user':     request.user, 
-                'columns':  helper_manuscript_columns(request.user),
-                'GROUP_EDITOR': c.GROUP_EDITOR,
-                'GROUP_AUTHOR': c.GROUP_AUTHOR,
-                'GROUP_VERIFIER': c.GROUP_VERIFIER,
-                'GROUP_CURATOR': c.GROUP_CURATOR,
-                }
-        return render(request, "main/index.html", args)
+        if(request.user.invite_key): #user hasn't finished signing up if we are still holding their key
+            return redirect("/account_user_details")
+        else:
+            #TODO: write own context processor to pass repeatedly-used constants, etc
+            #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
+            args = {'user':     request.user, 
+                    'columns':  helper_manuscript_columns(request.user),
+                    'GROUP_EDITOR': c.GROUP_EDITOR,
+                    'GROUP_AUTHOR': c.GROUP_AUTHOR,
+                    'GROUP_VERIFIER': c.GROUP_VERIFIER,
+                    'GROUP_CURATOR': c.GROUP_CURATOR,
+                    }
+            return render(request, "main/index.html", args)
     else:
         return render(request, "main/login.html")
 
@@ -36,12 +41,11 @@ def logout_view(request):
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
     return redirect('/')
 
-# MAD: How do we see this whole flow working?
 # Editor/Superuser enters an email into a form and clicks submit
 # Corere creates a user with no auth connected, and an email address, and the requested role(s).
 # Corere emails the user telling them to sign-up. This has a one-time 
 
-# MAD: We should probably make permissions part of our constants as well
+# TODO: We should probably make permissions part of our constants as well
 @permission_required_or_403('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_user(request, id=None):
     form = InvitationForm(request.POST or None)
@@ -63,34 +67,42 @@ def add_user(request, id=None):
             #TODO: We need to be able to set the Author as having access to the manuscript. But the permissions structure still needs to be nailed down
             assign_perm('main.manage_authors_on_manuscript', user, manuscript)
             assign_perm('main.view_manuscript', user, manuscript)
+            author_group = Group.objects.get(name=c.GROUP_AUTHOR) 
+            author_group.user_set.add(user)
             invite.send_invitation(request)
             messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
             return redirect('/')
         else:
-            print(form.errors) #MAD: DO MORE?
+            print(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form})
     # Will need the invitation model to be aware of the roles
     # Also will need to be aware of the manuscript the author/editor/verifier is getting access to
     # (Would be nice to allow multiple selection, but for now lets just do one?)
 
-def account_signup(request, key=None):
+def account_associate_oauth(request, key=None):
+    logout(request)
     user = get_object_or_404(User, invite_key=key)
+    user.backend = 'django.contrib.auth.backends.ModelBackend' #As we didn't use authenticate
+    login(request, user)
     user.username = ""
     user.invite_key = ""
-    form = NewUserForm(request.POST or None, instance=user)
+
+    return render(request, 'main/new_user_oauth.html')
+
+@login_required()
+def account_user_details(request):
+    form = NewUserForm(request.POST or None, instance=request.user)
     if request.method == 'POST':
         if form.is_valid():
+            if(request.user.invite_key):
+                request.user.invite_key = "" #we clear out the invite_key now that we can associate the user
             form.save()
-            messages.add_message(request, messages.INFO, "You have successfully created you CoReRe account!")
             return redirect('/')
         else:
-            print(form.errors) #MAD: DO MORE?
-    return render(request, 'main/form_new_user.html', {'form': form, 'key': key})
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_user_details.html', {'form': form})
 
-    #from django.http import HttpResponse
-    #return HttpResponse(str(user.__dict__))
-
-#MAD: Turn these into class-based views?
+#TODO: Turn these into class-based views?
 @permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def edit_manuscript(request, id=None):
     if id:
@@ -111,7 +123,7 @@ def edit_manuscript(request, id=None):
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors) #MAD: DO MORE?
+            print(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
 def helper_manuscript_columns(user):
@@ -120,7 +132,7 @@ def helper_manuscript_columns(user):
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
     
     # MAD: I'm weary of programatically limiting access to data on an attribute level, but I'm not sure of a good way to do this in django, especially with all the other permissions systems in play
-    # MAD: This should be using guardian?
+    # also.. This should be using guardian?
 
     columns = []
     if(user.groups.filter(name=c.GROUP_CURATOR).exists()):
