@@ -16,6 +16,7 @@ from guardian.shortcuts import get_objects_for_user, assign_perm
 from django.contrib.auth.models import Permission, Group
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from . import constants as c
 
 def index(request):
@@ -52,38 +53,42 @@ def add_user(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
+            users = form.cleaned_data['existing_users']
 
-            Invitation = get_invitation_model()
-            invite = Invitation.create(email)#, inviter=request.user)
+            if(email):
+                Invitation = get_invitation_model()
+                invite = Invitation.create(email)#, inviter=request.user)
+                #In here, we create a "starter" user that will later be modified and connected to auth after the invite
+                user = User()
+                user.email = email
+                user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+                user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
+                user.invite_key = invite.key #to later reconnect the user we've created to the invite
+                user.invited_by=request.user
+                user.save()
+                author_group = Group.objects.get(name=c.GROUP_AUTHOR) 
+                author_group.user_set.add(user)
+                users.add(user) #add new user to the other uses provided
 
-            #In here, we create a "starter" user that will later be modified and connected to auth after the invite
-            user = User()
-            user.email = email
-            user.username = get_random_string(64).lower() #required field, we enter jibberish for now
-            user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
-            user.invite_key = invite.key #to later reconnect the user we've created to the invite
-            user.save()
+                #TODO: Think about doing this after everything else, incase something bombs
+                invite.send_invitation(request)
+                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
+            
             manuscript = Manuscript.objects.get(pk=id)
-            #TODO: We need to be able to set the Author as having access to the manuscript. But the permissions structure still needs to be nailed down
-            assign_perm('main.manage_authors_on_manuscript', user, manuscript)
-            assign_perm('main.view_manuscript', user, manuscript)
-            author_group = Group.objects.get(name=c.GROUP_AUTHOR) 
-            author_group.user_set.add(user)
-            invite.send_invitation(request)
-            messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
+            for u in users:
+                assign_perm('main.manage_authors_on_manuscript', u, manuscript)
+                assign_perm('main.view_manuscript', u, manuscript)
+                messages.add_message(request, messages.INFO, 'You have given {0} access to manuscript {1}!'.format(u.email, manuscript.title))
+
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form})
-    # Will need the invitation model to be aware of the roles
-    # Also will need to be aware of the manuscript the author/editor/verifier is getting access to
-    # (Would be nice to allow multiple selection, but for now lets just do one?)
 
 def account_associate_oauth(request, key=None):
     logout(request)
     user = get_object_or_404(User, invite_key=key)
-    user.backend = 'django.contrib.auth.backends.ModelBackend' #As we didn't use authenticate
-    login(request, user)
+    login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
     user.username = ""
     user.invite_key = ""
 

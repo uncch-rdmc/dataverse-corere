@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework_social_oauth2',
     'compressor',
     'guardian',
+    'django_select2',
     'corere.main',
 ]
 
