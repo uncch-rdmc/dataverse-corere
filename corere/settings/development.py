@@ -47,14 +47,21 @@ INSTALLED_APPS = [
     'corere.main',
 ]
 
+#TODO: Make this and middleware dev actually obey the DEBUG flag
 INSTALLED_APPS_DEV = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
-    'django_extensions'
+    'django_extensions',
+    'debug_toolbar',
 ]
 
 INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEV
 
-MIDDLEWARE = [
+# Note that middleware order matters https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#enabling-middleware
+MIDDLEWARE_DEV = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware'
+]
+
+MIDDLEWARE = MIDDLEWARE_DEV + [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -62,6 +69,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+#To have django-debug-toolbar show
+INTERNAL_IPS = [
+    # ...
+    '127.0.0.1',
+    # ...
 ]
 
 ROOT_URLCONF = 'corere.urls'
