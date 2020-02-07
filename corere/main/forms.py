@@ -25,7 +25,7 @@ class InvitationForm(forms.Form):
     # https://django-select2.readthedocs.io/en/latest/django_select2.html#module-django_select2.forms
     # TODO: Also, confirm that this django integration actually supports providing custom results
     # I think so if we initialize it ourselves? https://github.com/applegrew/django-select2/blob/master/docs/django_select2.rst#javascript
-    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
+    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
 
 class NewUserForm(forms.ModelForm):
     class Meta:

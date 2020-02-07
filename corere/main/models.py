@@ -14,13 +14,8 @@ class User(AbstractUser):
 
     # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
 
-    invite_key = models.CharField(max_length=64, blank=True)
+    invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
-
-    #We probably need to manage relations between users. Editors will need to manage authors at least
-    #     Is this going to be a direct connection, or via a "publication" object or something?
-    #     Each editor will have multipe authors... and each author multiple editors?
-    #     ... maybe I'm overthinking this and instead anyone with editor on a manuscript can manage authors on the script
 
 ####################################################
 
@@ -118,8 +113,17 @@ class Manuscript(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     manuscript_file = models.FileField(upload_to=manuscript_directory_path, blank=True)
 
+    def __str__(self):
+        return '{0}: {1}'.format(self.id, self.title)
+
+    class Meta:
+        permissions = [
+            ('manage_authors_on_manuscript', 'Can manage authors on manuscript')
+        ]
+
     ### django-fsm (workflow) related functions
 
+    # TODO: This breaks
     def can_begin(self):
         if(self.editors.count() == 0):
             return False

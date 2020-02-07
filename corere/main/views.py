@@ -129,12 +129,33 @@ def edit_manuscript(request, id=None):
                 manuscript.save()
             if not id:
                 # TODO: MAke this concatenation standardized
+                # TODO: These groups don't have permissions
                 group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
+                assign_perm('add_manuscript', group_manuscript_editor, manuscript) #does add even do anything on an object level?
+                assign_perm('change_manuscript', group_manuscript_editor, manuscript) 
+                assign_perm('delete_manuscript', group_manuscript_editor, manuscript) 
+                assign_perm('view_manuscript', group_manuscript_editor, manuscript) 
+                assign_perm('manage_authors_on_manuscript', group_manuscript_editor, manuscript) 
                 group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
+                assign_perm('change_manuscript', group_manuscript_author, manuscript) # TODO: Remove?
+                assign_perm('view_manuscript', group_manuscript_author, manuscript) 
+                assign_perm('manage_authors_on_manuscript', group_manuscript_author, manuscript) 
                 group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+                assign_perm('change_manuscript', group_manuscript_verifier, manuscript) 
+                assign_perm('view_manuscript', group_manuscript_verifier, manuscript) 
                 group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
+                # TODO: Should curators always get all this, or is this a superuser thing?
+                assign_perm('add_manuscript', group_manuscript_curator, manuscript) #does add even do anything on an object level?
+                assign_perm('change_manuscript', group_manuscript_curator, manuscript) 
+                assign_perm('delete_manuscript', group_manuscript_curator, manuscript) 
+                assign_perm('view_manuscript', group_manuscript_curator, manuscript) 
+                assign_perm('manage_authors_on_manuscript', group_manuscript_curator, manuscript) 
+
                 group_manuscript_editor.user_set.add(request.user) #TODO: Make this dynamic based upon the ROLE_GROUPs the user has
-            
+                
+                # assign_perm('main.manage_authors_on_manuscript', u, manuscript)
+                # assign_perm('main.view_manuscript', u, manuscript)
+
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:

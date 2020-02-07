@@ -24,7 +24,7 @@ urlpatterns = [
     path('prototype/', include('corere.main.prototype_urls')),
     url(r'^auth/', include('rest_framework_social_oauth2.urls')), #Social OAuth2
     url(r'^invitations/', include('invitations.urls', namespace='invitations')),
-    #url(r'^select2/', include('django_select2.urls')),
+    #url(r'^select2/', include('django_select2.urls')), #if you use any "Auto" fields.
 ]
 
 if settings.DEBUG:
