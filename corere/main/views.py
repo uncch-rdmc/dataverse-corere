@@ -65,6 +65,7 @@ def add_user(request, id=None):
                 user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
                 user.invite_key = invite.key #to later reconnect the user we've created to the invite
                 user.invited_by=request.user
+                user.set_unusable_password()
                 user.save()
                 author_group = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 author_group.user_set.add(user)
