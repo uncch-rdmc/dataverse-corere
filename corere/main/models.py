@@ -15,7 +15,7 @@ class User(AbstractUser):
     # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
 
     invite_key = models.CharField(max_length=64, blank=True)
-    invited_by = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, blank=True)
+    invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
     #We probably need to manage relations between users. Editors will need to manage authors at least
     #     Is this going to be a direct connection, or via a "publication" object or something?
@@ -117,7 +117,6 @@ class Manuscript(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     manuscript_file = models.FileField(upload_to=manuscript_directory_path, blank=True)
-    editors = models.ManyToManyField(User, related_name="editor_manuscripts", blank=True)
 
     ### django-fsm (workflow) related functions
 

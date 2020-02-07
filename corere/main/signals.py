@@ -19,23 +19,23 @@ def populate_models(sender, **kwargs):
                                     name='Can manage authors on manuscript',
                                     content_type=ct)
 
-    editor, created = Group.objects.get_or_create(name=c.GROUP_EDITOR)
+    editor, created = Group.objects.get_or_create(name=c.GROUP_ROLE_EDITOR)
     editor.permissions.clear() #First start from nothing
     editor.permissions.add(perm_manuscript_add) 
     # editor.permissions.add(perm_manuscript_change) #Editors are not able to edit 
     # editor.permissions.add(perm_manuscript_delete)
     # editor.permissions.add(perm_manuscript_view)
 
-    author, created = Group.objects.get_or_create(name=c.GROUP_AUTHOR)
+    author, created = Group.objects.get_or_create(name=c.GROUP_ROLE_AUTHOR)
     author.permissions.clear() #First start from nothing
     #author.permissions.add(perm_manuscript_view)
 
-    verifier, created = Group.objects.get_or_create(name=c.GROUP_VERIFIER)
+    verifier, created = Group.objects.get_or_create(name=c.GROUP_ROLE_VERIFIER)
     verifier.permissions.clear() #First start from nothing
     # verifier.permissions.add(perm_manuscript_change) #Should verifiers be able to see anything that isn't assigned at the object level?
     # verifier.permissions.add(perm_manuscript_view)
 
-    curator, created = Group.objects.get_or_create(name=c.GROUP_CURATOR)
+    curator, created = Group.objects.get_or_create(name=c.GROUP_ROLE_CURATOR)
     curator.permissions.clear() #First start from nothing
     curator.permissions.add(perm_manuscript_add)
     curator.permissions.add(perm_manuscript_change)

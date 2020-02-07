@@ -73,9 +73,7 @@ MIDDLEWARE = MIDDLEWARE_DEV + [
 
 #To have django-debug-toolbar show
 INTERNAL_IPS = [
-    # ...
     '127.0.0.1',
-    # ...
 ]
 
 ROOT_URLCONF = 'corere.urls'

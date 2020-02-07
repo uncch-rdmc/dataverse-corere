@@ -11,11 +11,11 @@ from django_select2.forms import Select2MultipleWidget
 class ManuscriptForm(forms.ModelForm):
     class Meta:
         model = Manuscript
-        fields = ['title','note_text','doi','open_data','editors','manuscript_file']
+        fields = ['title','note_text','doi','open_data','manuscript_file']#,'authors']
 
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)
-        self.fields['editors'].queryset = User.objects.filter(groups__name=c.GROUP_EDITOR) #MAD: check this in light of guardian
+        #self.fields['editors'].queryset = User.objects.filter(groups__name=c.GROUP_ROLE_EDITOR) #MAD: check this in light of guardian
 
 class InvitationForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
@@ -25,7 +25,7 @@ class InvitationForm(forms.Form):
     # https://django-select2.readthedocs.io/en/latest/django_select2.html#module-django_select2.forms
     # TODO: Also, confirm that this django integration actually supports providing custom results
     # I think so if we initialize it ourselves? https://github.com/applegrew/django-select2/blob/master/docs/django_select2.rst#javascript
-    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(groups__name=c.GROUP_AUTHOR), widget=Select2MultipleWidget)
+    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
 
 class NewUserForm(forms.ModelForm):
     class Meta:

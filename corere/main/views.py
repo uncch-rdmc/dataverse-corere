@@ -28,10 +28,10 @@ def index(request):
             #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
             args = {'user':     request.user, 
                     'columns':  helper_manuscript_columns(request.user),
-                    'GROUP_EDITOR': c.GROUP_EDITOR,
-                    'GROUP_AUTHOR': c.GROUP_AUTHOR,
-                    'GROUP_VERIFIER': c.GROUP_VERIFIER,
-                    'GROUP_CURATOR': c.GROUP_CURATOR,
+                    'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
+                    'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
+                    'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
+                    'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
                     }
             return render(request, "main/index.html", args)
     else:
@@ -53,7 +53,7 @@ def add_user(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
-            users = form.cleaned_data['existing_users']
+            users = list(form.cleaned_data['existing_users'])
 
             if(email):
                 Invitation = get_invitation_model()
@@ -66,9 +66,9 @@ def add_user(request, id=None):
                 user.invite_key = invite.key #to later reconnect the user we've created to the invite
                 user.invited_by=request.user
                 user.save()
-                author_group = Group.objects.get(name=c.GROUP_AUTHOR) 
+                author_group = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 author_group.user_set.add(user)
-                users.add(user) #add new user to the other uses provided
+                users.append(user) #add new user to the other uses provided
 
                 #TODO: Think about doing this after everything else, incase something bombs
                 invite.send_invitation(request)
@@ -108,7 +108,8 @@ def account_user_details(request):
     return render(request, 'main/form_user_details.html', {'form': form})
 
 #TODO: Turn these into class-based views?
-@permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+#MAD: This decorator gets in the way of creation. We need to do it inside
+#@permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def edit_manuscript(request, id=None):
     if id:
         manuscript = get_object_or_404(Manuscript, id=id)
@@ -125,6 +126,14 @@ def edit_manuscript(request, id=None):
                     raise PermissionDenied
                 manuscript.begin()
                 manuscript.save()
+            if not id:
+                # TODO: MAke this concatenation standardized
+                group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
+                group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
+                group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+                group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
+                group_manuscript_editor.user_set.add(request.user) #TODO: Make this dynamic based upon the ROLE_GROUPs the user has
+            
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
@@ -140,14 +149,14 @@ def helper_manuscript_columns(user):
     # also.. This should be using guardian?
 
     columns = []
-    if(user.groups.filter(name=c.GROUP_CURATOR).exists()):
-        columns += ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','editors','submissions','verifications','curations']
-    if(user.groups.filter(name=c.GROUP_VERIFIER).exists()):
-        columns += ['id','pub_id','title','doi','open_data']
-    if(user.groups.filter(name=c.GROUP_AUTHOR).exists()):
-        columns += ['id','pub_id','title','doi','open_data']
-    if(user.groups.filter(name=c.GROUP_EDITOR).exists()):
-        columns += ['id','pub_id','title','doi','open_data']
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+        columns += ['id','pub_id','title','doi','open_data','note_text','status','created_at','updated_at','authors','submissions','verifications','curations']
+    if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+        columns += ['id','pub_id','title','doi','open_data','authors']
+    if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
+        columns += ['id','pub_id','title','doi','open_data','authors']
+    if(user.groups.filter(name=c.GROUP_ROLE_EDITOR).exists()):
+        columns += ['id','pub_id','title','doi','open_data','authors']
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
@@ -163,8 +172,6 @@ class ManuscriptJson(BaseDatatableView):
     # pull from source mostly, except when noted. 
     # Needed to disallow users from requesting columns from the model we do not wish to provide
     def extract_datatables_column_data(self):
-        """ Helper method to extract columns data from request as passed by Datatables 1.10+
-        """
         request_dict = self._querydict
         col_data = []
         if not self.pre_camel_case_notation:
@@ -194,15 +201,12 @@ class ManuscriptJson(BaseDatatableView):
                 data_name_key = 'columns[{0}][name]'.format(counter)
         return col_data
 
-    def render_column(self, row, column):
-        if column == 'editors':
-            # escape HTML for security reasons
-            if(row.editors.count() > 0):
-                return escape('{0}'.format([editor.username for editor in row.editors.all()]))
-            else:
-                return ""
+    def render_column(self, obj, column):
+        if column == 'authors':
+            print(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(obj.id))
+            return escape('{0}'.format([user.username for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(obj.id))]))
         else:
-            return super(ManuscriptJson, self).render_column(row, column)
+            return super(ManuscriptJson, self).render_column(obj, column)
 
     def get_initial_queryset(self):
         #view_perm = Permission.objects.get(codename="view_manuscript")
