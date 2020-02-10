@@ -7,6 +7,8 @@ from corere.main.forms import ManuscriptForm
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm#, get_objects_for_user
 from django_fsm import can_proceed, has_transition_perm
+from django.core.exceptions import PermissionDenied
+from corere.main.utils import fsm_check_transition_perm
 
 def index(request):
     if request.user.is_authenticated:
@@ -40,14 +42,22 @@ def edit_manuscript(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            if('submit_and_update_status' in request.POST): #MAD: This checks to see which form button was used. There is probably a more precise way to check
-                if (not can_proceed(manuscript.begin)) or (not has_transition_perm(manuscript.begin, request.user)): 
+            if('submit_and_update_status' in request.POST): #This checks to see which form button was used. There is probably a more precise way to check
+                #print(request.user.groups.filter(name='c.GROUP_ROLE_VERIFIER').exists())
+                print("main has_transition_perm")
+                print(fsm_check_transition_perm(manuscript.begin, request.user))
+                if not fsm_check_transition_perm(manuscript.begin, request.user): 
+                    print("PermissionDenied")
                     raise PermissionDenied
-                manuscript.begin()
+                try:
+                    manuscript.begin()
+                except TransactionNotAllowed:
+                    #TODO: Do something better
+                    print("TransitionNotAllowed")
+                    raise
                 manuscript.save()
             if not id:
                 # TODO: MAke this concatenation standardized
-                # TODO: These groups don't have permissions
                 group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
                 assign_perm('add_manuscript', group_manuscript_editor, manuscript) #does add even do anything on an object level?
                 assign_perm('change_manuscript', group_manuscript_editor, manuscript) 
@@ -71,9 +81,6 @@ def edit_manuscript(request, id=None):
 
                 group_manuscript_editor.user_set.add(request.user) #TODO: Make this dynamic based upon the ROLE_GROUPs the user has
                 
-                # assign_perm('main.manage_authors_on_manuscript', u, manuscript)
-                # assign_perm('main.view_manuscript', u, manuscript)
-
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:

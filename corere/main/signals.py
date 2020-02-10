@@ -13,6 +13,7 @@ def populate_models(sender, **kwargs):
     perm_manuscript_change = Permission.objects.get(codename="change_manuscript")
     perm_manuscript_delete = Permission.objects.get(codename="delete_manuscript")
     perm_manuscript_view = Permission.objects.get(codename="view_manuscript")
+    #TODO: Add the manage author permission?
 
     editor, created = Group.objects.get_or_create(name=c.GROUP_ROLE_EDITOR)
     editor.permissions.clear() #First start from nothing

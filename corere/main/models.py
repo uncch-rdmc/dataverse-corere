@@ -125,16 +125,20 @@ class Manuscript(models.Model):
 
     ### django-fsm (workflow) related functions
 
-    
+    #Conditions
+    # - Authors needed
+    # - files uploaded (maybe)?
     def can_begin(self):
-        perm_string = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id)
-        if(get_users_with_perms(self,only_with_perms_in=perm_string) == 0):
+        # Are there any authors assigned to the manuscript?
+        group_string = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id)
+        count = User.objects.filter(groups__name=group_string).count()
+        if(count < 1):
             return False
         return True
 
-    # TODO: This breaks
-    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin])
-                #, permission=lambda instance, user: user.is_curator) #TODO: readdress this permission
+    #MAD: I'm not sure begin is even real?
+    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin],
+                permission=lambda instance, user: user.groups.filter(name='c.GROUP_ROLE_VERIFIER').exists())
     def begin(self):
         #Here add any additional actions related to the state change
         pass
