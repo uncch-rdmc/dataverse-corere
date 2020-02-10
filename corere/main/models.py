@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django_fsm import FSMField, transition
+from corere.main import constants as c
+from guardian.shortcuts import get_users_with_perms
 import logging
 import uuid
 
@@ -123,14 +125,16 @@ class Manuscript(models.Model):
 
     ### django-fsm (workflow) related functions
 
-    # TODO: This breaks
+    
     def can_begin(self):
-        if(self.editors.count() == 0):
+        perm_string = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id)
+        if(get_users_with_perms(self,only_with_perms_in=perm_string) == 0):
             return False
         return True
 
-    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin], 
-                permission=lambda instance, user: user.is_curator)
+    # TODO: This breaks
+    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin])
+                #, permission=lambda instance, user: user.is_curator) #TODO: readdress this permission
     def begin(self):
         #Here add any additional actions related to the state change
         pass

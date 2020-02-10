@@ -1,14 +1,14 @@
 from django.urls import path
 
-from . import views
+from corere.main.views import datatables, main, users
 
 urlpatterns = [ 
-    path('', views.index),
-    path('manuscript_table', views.ManuscriptJson.as_view(), name="manuscript_table"), #TODO: Make sure accessing this directly doesn't reveal anything
-    path('manuscript/create/', views.edit_manuscript),
-    path('manuscript/edit/<int:id>', views.edit_manuscript),
-    path('manuscript/addaccount/<int:id>', views.add_user),
-    path('logout', views.logout_view),
-    path('account_associate_oauth/<str:key>', views.account_associate_oauth),
-    path('account_user_details', views.account_user_details)
+    path('', main.index),
+    path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"), #TODO: Make sure accessing this directly doesn't reveal anything
+    path('manuscript/create/', main.edit_manuscript),
+    path('manuscript/edit/<int:id>', main.edit_manuscript),
+    path('manuscript/addaccount/<int:id>', users.add_user),
+    path('logout', users.logout_view),
+    path('account_associate_oauth/<str:key>', users.account_associate_oauth),
+    path('account_user_details', users.account_user_details)
 ]
