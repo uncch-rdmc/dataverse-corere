@@ -11,7 +11,7 @@ from django_select2.forms import Select2MultipleWidget
 class ManuscriptForm(forms.ModelForm):
     class Meta:
         model = Manuscript
-        fields = ['title','note_text','doi','open_data','manuscript_file']#,'authors']
+        fields = ['title','note_text','doi','open_data']#,'authors']
 
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)

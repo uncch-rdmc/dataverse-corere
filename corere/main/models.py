@@ -5,9 +5,23 @@ from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms
 import logging
 import uuid
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 
 logger = logging.getLogger('corere')  
+####################################################
 
+class AbstractCreateUpdateModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True)
+    last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True)
+
+    class Meta:
+        abstract = True
+
+    #TODO: Set up saving creator/editor, see https://www.agiliq.com/blog/2019/01/tracking-creator-of-django-objects/
+        
 ####################################################
 
 class User(AbstractUser):
@@ -37,13 +51,10 @@ VERIFICATION_RESULT_CHOICES = (
     (VERIFICATION_SUCCESS, 'Success'),
 )
 
-class Verification(models.Model):
+class Verification(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
-    note_text = models.TextField() #TODO: Make this more usable as a list of issues
     software = models.TextField() #TODO: Make this more usable as a list of software
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    verifiers = models.ManyToManyField(User, related_name="verifier_verifications", blank=True)
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verifications", blank=True, null=True)
 
 ####################################################
 
@@ -60,26 +71,15 @@ CURATION_RESULT_CHOICES = (
     (CURATION_MINOR_ISSUES, 'Minor Issues'),
     (CURATION_NO_ISSUES, 'No Issues'),
 )
-class Curation(models.Model):
+class Curation(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
-    note_text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    curators = models.ManyToManyField(User, related_name="curator_curations", blank=True)
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curations", blank=True, null=True)
 
 ####################################################
 
-#Stores metadata
-class File(models.Model):
-    title = models.TextField()
-    md5 = models.CharField(max_length=32)
-
-class Submission(models.Model):
+class Submission(AbstractCreateUpdateModel):
     #Submission does not have a result in itself, it is captured 
-    files = models.ForeignKey(File, on_delete=models.CASCADE, related_name='files')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    authors = models.ManyToManyField(User, related_name="author_submissions", blank=True)
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions", blank=True, null=True)
 
 ####################################################
 
@@ -95,25 +95,14 @@ MANUSCRIPT_STATUS_CHOICES = (
     (MANUSCRIPT_COMPLETED, 'Completed'),
 )
 
-
-def manuscript_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/manuscript_<uuid>/<filename>
-    return 'manuscript_{0}/{1}'.format(instance.uuid, filename)
-
-class Manuscript(models.Model):
+class Manuscript(AbstractCreateUpdateModel):
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     pub_id = models.CharField(max_length=200, default="", db_index=True)
     title = models.TextField(blank=False, null=False, default="")
     note_text = models.TextField(default="")
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
-    submissions = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="submissions", blank=True, null=True)
-    verifications = models.ForeignKey(Verification, on_delete=models.CASCADE, related_name="verifications", blank=True, null=True)
-    curations = models.ForeignKey(Curation, on_delete=models.CASCADE, related_name="curations", blank=True, null=True)
     status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    manuscript_file = models.FileField(upload_to=manuscript_directory_path, blank=True)
 
     def __str__(self):
         return '{0}: {1}'.format(self.id, self.title)
@@ -142,3 +131,79 @@ class Manuscript(models.Model):
     def begin(self):
         #Here add any additional actions related to the state change
         pass
+
+####################################################
+
+# See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
+# https://lukeplant.me.uk/blog/posts/avoid-django-genericforeignkey/
+
+
+FILE_TYPE_MANUSCRIPT = 'manuscript'
+FILE_TYPE_APPENDIX = 'appendix'
+FILE_TYPE_OTHER = 'other'
+
+FILE_TYPE_CHOICES = (
+    (FILE_TYPE_MANUSCRIPT, 'Manuscript'),
+    (FILE_TYPE_APPENDIX, 'Appendix'),
+    (FILE_TYPE_OTHER, 'Other'),
+)
+
+#TODO: This needs rework. Do we still need manuscript UUID? Does instance.owner.id work? Should we be using slugs?
+def manuscript_directory_path(instance, filename):
+    return 'manuscript_{0}/{1}_{2}/{3}'.format(instance.owner.manuscript.uuid, instance.owner._meta.model_name, instance.owner.id, filename)
+
+class File(AbstractCreateUpdateModel):
+    file = models.FileField(upload_to=manuscript_directory_path, blank=True) #TODO: Redo path, currently blows up because it uses manuscript uuid
+    type = models.CharField(max_length=12, choices=FILE_TYPE_CHOICES, default=FILE_TYPE_OTHER) 
+
+    owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
+    owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
+    owner_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE)
+
+    @property
+    def owner(self):
+        if self.owner_submission_id is not None:
+            return self.owner_submission
+        if self.owner_curation_id is not None:
+            return self.owner_curation
+        if self.owner_verification_id is not None:
+            return self.owner_verification
+        raise AssertionError("Neither 'owner_submission', 'owner_curation' or 'owner_verification' is set")
+
+    def save(self, *args, **kwargs):
+        owners = 0
+        owners += (self.owner_submission_id is not None)
+        owners += (self.owner_curation_id is not None)
+        owners += (self.owner_verification_id is not None)
+        if(owners > 1):
+            raise AssertionError("Multiple owners set")
+        super(File, self).save(*args, **kwargs)
+
+class Notes(AbstractCreateUpdateModel):
+    text = models.TextField(default="")
+
+    owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
+    owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
+    owner_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE)
+    owner_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE)
+
+    @property
+    def owner(self):
+        if self.owner_submission_id is not None:
+            return self.owner_submission
+        if self.owner_curation_id is not None:
+            return self.owner_curation
+        if self.owner_verification_id is not None:
+            return self.owner_verification
+        if self.owner_file_id is not None:
+            return self.owner_file
+        raise AssertionError("Neither 'owner_submission', 'owner_curation', 'owner_verification' or 'owner_file' is set")
+    
+    def save(self, *args, **kwargs):
+        owners = 0
+        owners += (self.owner_submission_id is not None)
+        owners += (self.owner_curation_id is not None)
+        owners += (self.owner_verification_id is not None)
+        if(owners > 1):
+            raise AssertionError("Multiple owners set")
+        super(Notes, self).save(*args, **kwargs)
