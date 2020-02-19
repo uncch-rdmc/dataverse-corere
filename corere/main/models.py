@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django_fsm import FSMField, transition
+from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms
 import logging
@@ -84,13 +84,15 @@ class Submission(AbstractCreateUpdateModel):
 ####################################################
 
 MANUSCRIPT_NEW = 'new' 
-MANUSCRIPT_AWAITING = 'awaiting'
+MANUSCRIPT_AWAITING_INITIAL = 'awaiting_init'
+MANUSCRIPT_AWAITING_RESUBMISSION = 'awaiting_resub'
 MANUSCRIPT_PROCESSING = 'processing'
 MANUSCRIPT_COMPLETED = 'completed'
 
 MANUSCRIPT_STATUS_CHOICES = (
     (MANUSCRIPT_NEW, 'New'),
-    (MANUSCRIPT_AWAITING, 'Awaiting Submission'),
+    (MANUSCRIPT_AWAITING_INITIAL, 'Awaiting Initial Submission'),
+    (MANUSCRIPT_AWAITING_RESUBMISSION, 'Awaiting Resubmission'),
     (MANUSCRIPT_PROCESSING, 'Processing Submission'),
     (MANUSCRIPT_COMPLETED, 'Completed'),
 )
@@ -99,10 +101,9 @@ class Manuscript(AbstractCreateUpdateModel):
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     pub_id = models.CharField(max_length=200, default="", db_index=True)
     title = models.TextField(blank=False, null=False, default="")
-    note_text = models.TextField(default="")
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
-    status = FSMField(max_length=10, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
+    status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):
         return '{0}: {1}'.format(self.id, self.title)
@@ -116,27 +117,37 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Conditions
     # - Authors needed
-    # - files uploaded (maybe)?
+    # - files uploaded
     def can_begin(self):
         # Are there any authors assigned to the manuscript?
         group_string = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id)
         count = User.objects.filter(groups__name=group_string).count()
         if(count < 1):
             return False
+
+        #TODO: Add check on file uploads (at least 1? 2?)
+            
         return True
 
-    #MAD: I'm not sure begin is even real?
-    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING, conditions=[can_begin],
-                permission=lambda instance, user: user.groups.filter(name='c.GROUP_ROLE_VERIFIER').exists())
+    #MAD: SHOULD THIS BE USING OBJECT PERMISSIONS INSTEAD OF GROUPS?
+    @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
+                permission=lambda instance, user: user.has_perm('change_manuscript',instance))        #.groups.filter(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).exists())
     def begin(self):
         #Here add any additional actions related to the state change
         pass
+
+    #These functions do not actually perform a transition, but are used to confirm certain actions can take place
+    #NOTE: RETURN_VALUE uses the return of the annotated function, and we just pass the status back
+    #      This is useful when we want to allow any status (e.g. we just wants to check perms and conditions)
+    @transition(field=status, source=MANUSCRIPT_NEW, target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_perm('change_manuscript',instance))
+    def edit_noop(self):
+        return self.status
 
 ####################################################
 
 # See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
 # https://lukeplant.me.uk/blog/posts/avoid-django-genericforeignkey/
-
 
 FILE_TYPE_MANUSCRIPT = 'manuscript'
 FILE_TYPE_APPENDIX = 'appendix'

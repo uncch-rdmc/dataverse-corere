@@ -3,8 +3,10 @@
 {% load auth_extras %}
 {% block content %}
 
+{% comment %} Manuscript Table {% endcomment %}
+
 <script type="text/javascript">
-    var TESTMODEL_LIST_JSON_URL = '{% url "manuscript_table" %}';
+    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
     // translations for datatables
 
     var dt_language = {
@@ -32,7 +34,7 @@
     }
 
     $(document).ready(function() {
-        var dt_table = $('.datatable').DataTable({
+        var dt_table = $('#manuscript_table').DataTable({
             language: dt_language,  // global variable defined in html
             lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
             searching: true,
@@ -57,9 +59,9 @@
                             // Before we were using the name but now that we don't provide column def it doesn't work
                             // One option is to generate the columnDefs on the django side so that they can be picked up
                             // If we do that, keep in mind that it may cause problems with javascript caching
+                            // Maybe we can parse the columns out of the headers on load
                             console.log(dt_table.rows( { selected: true } ).data()[0][0])
-                            id = dt_table.rows( { selected: true } ).data()[0][0]
-                            window.location.href = "manuscript/edit/"+id;
+                            window.location.href = "manuscript/edit/"+manuscript_id;
                         },
                         enabled: false
                     },
@@ -73,22 +75,26 @@
                             // Before we were using the name but now that we don't provide column def it doesn't work
                             // One option is to generate the columnDefs on the django side so that they can be picked up
                             // If we do that, keep in mind that it may cause problems with javascript caching
+                            // Maybe we can parse the columns out of the headers on load
                             console.log(dt_table.rows( { selected: true } ).data()[0][0])
-                            id = dt_table.rows( { selected: true } ).data()[0][0]
-                            window.location.href = "manuscript/addaccount/"+id;
+                            window.location.href = "manuscript/addaccount/"+manuscript_id;
                         },
                         enabled: false
                     },
                 {% endif %}
             ],
             dom: 'Bfrtip',
-            ajax: TESTMODEL_LIST_JSON_URL
+            ajax: MANUSCRIPT_LIST_JSON_URL
         })
-        //Here we set some buttons to enable only when a row is selected
         .on( 'select', function ( e, dt, type, indexes ) {
-            var count = dt_table.rows( { selected: true } ).count();
-            dt_table.button('editManuscript:name').enable(true);
-            dt_table.button('addAuthor:name').enable(true);
+            manuscript_id = dt_table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+            var avail_buttons = dt_table.rows( { selected: true } ).data()[0][12]; //MAGIC NUMS
+            for(var i in avail_buttons) {
+                dt_table.button(avail_buttons[i]+':name').enable(true);
+            }
+            document.getElementById("submission_table_wrapper").style.display = "block";
+            dt_submission.ajax.url("manuscript/"+ manuscript_id +"/submission_table").load();
+
             console.log('Table row selected');
         } )
         .on( 'deselect', function ( e, dt, type, indexes ) {
@@ -97,22 +103,103 @@
                 dt_table.button('editManuscript:name').enable(false);
                 dt_table.button('addAuthor:name').enable(false);
             }
+            document.getElementById("submission_table_wrapper").style.display = "none";
             console.log('Table row deselected');
         } );
 
     });
 
-
 </script>
 
-<table id="settings" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+<table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+    <caption>Manuscripts</caption>
     <thead>
-        {% for field in columns %}
+        {% for field in manuscript_columns %}
             <th>{{ field }}</th>
         {% endfor %}
     </thead>
     <tbody>
     </tbody>
 </table>
+
+{% comment %} Submission Table {% endcomment %}
+
+<script type="text/javascript">
+    // translations for datatables
+
+    {% comment %} Unneeded with definition above {% endcomment %}
+    {% comment %} var dt_language = {
+        "emptyTable":     "{% trans "No data available in table" %}",
+        "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
+        "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
+        "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
+        "infoPostFix":    "",
+        "thousands":      ",",
+        "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
+        "loadingRecords": "{% trans "Loading..." %}",
+        "processing":     "{% trans "Processing..." %}",
+        "search":         "{% trans "Search:" %}",
+        "zeroRecords":    "{% trans "No matching records found" %}",
+        "paginate": {
+            "first":      "{% trans "First" %}",
+            "last":       "{% trans "Last" %}",
+            "next":       "{% trans "Next" %}",
+            "previous":   "{% trans "Previous" %}"
+        },
+        "aria": {
+            "sortAscending":  "{% trans ": activate to sort column ascending" %}",
+            "sortDescending": "{% trans ": activate to sort column descending" %}"
+        }
+    } {% endcomment %}
+    dt_submission = null;
+
+    $(document).ready(function() {
+        dt_submission = $('#submission_table').DataTable({
+            language: dt_language,  // global variable defined in html
+            lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+            searching: true,
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            select: 'single',
+            buttons: [
+                
+            ],
+            dom: 'Bfrtip',
+            ajax: '{% url "submission_table" 0 %}' //MAD: Filler until manuscript is selected. Replace with something that doesn't do a query on load?
+        })
+        .on( 'select', function ( e, dt, type, indexes ) {
+            avail_buttons = dt_submission.rows( { selected: true } ).data()[0][12]; //MAGIC NUMS
+            for(var i in avail_buttons) {
+                dt_submission.button(avail_buttons[i]+':name').enable(true);
+            }
+
+            console.log('Table row selected');
+        } )
+        .on( 'deselect', function ( e, dt, type, indexes ) {
+            var count = dt_submission.rows( { selected: true } ).count();
+            if(count == 0) {
+                dt_submission.button('editManuscript:name').enable(false);
+                dt_submission.button('addAuthor:name').enable(false);
+            }
+            console.log('Table row deselected');
+        } );
+
+    });
+
+</script>
+
+<div id="submission_table_wrapper" style="display:none">
+    <table id="submission_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+    <caption>Submissions</caption>
+        <thead>
+            {% for field in submission_columns %}
+                <th>{{ field }}</th>
+            {% endfor %}
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}

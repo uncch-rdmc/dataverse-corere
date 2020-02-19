@@ -2,11 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main.models import Manuscript
 from corere.main import constants as c
-from corere.main.views.datatables import helper_manuscript_columns
+from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import ManuscriptForm
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm#, get_objects_for_user
-from django_fsm import can_proceed, has_transition_perm
+from django_fsm import can_proceed#, has_transition_perm
 from django.core.exceptions import PermissionDenied
 from corere.main.utils import fsm_check_transition_perm
 
@@ -18,7 +18,8 @@ def index(request):
             #TODO: write own context processor to pass repeatedly-used constants, etc
             #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
             args = {'user':     request.user, 
-                    'columns':  helper_manuscript_columns(request.user),
+                    'manuscript_columns':  helper_manuscript_columns(request.user),
+                    'submission_columns':  helper_submission_columns(request.user),
                     'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
                     'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
                     'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,

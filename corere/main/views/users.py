@@ -37,20 +37,19 @@ def add_user(request, id=None):
                 user.invited_by=request.user
                 user.set_unusable_password()
                 user.save()
-                author_group = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                author_group.user_set.add(user)
+                author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
+                author_role.user_set.add(user)
                 users.append(user) #add new user to the other uses provided
-
                 #TODO: Think about doing this after everything else, incase something bombs
                 invite.send_invitation(request)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
             
             manuscript = Manuscript.objects.get(pk=id)
             for u in users:
-                assign_perm('main.manage_authors_on_manuscript', u, manuscript)
-                assign_perm('main.view_manuscript', u, manuscript)
+                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
+                manu_author_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} access to manuscript {1}!'.format(u.email, manuscript.title))
-
+                print('You have given {0} access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?
