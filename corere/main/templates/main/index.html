@@ -55,7 +55,7 @@
                         text: 'Edit Manuscript',
                         name: 'editManuscript',
                         action: function ( e, dt, node, config ) {
-                            // TODO: If column order ever changes this will blow up.
+                            // TODO: If column order ever changes this and the ones below like it will blow up.
                             // Before we were using the name but now that we don't provide column def it doesn't work
                             // One option is to generate the columnDefs on the django side so that they can be picked up
                             // If we do that, keep in mind that it may cause problems with javascript caching
@@ -71,13 +71,28 @@
                         text: 'Invite/Add Author to Manuscript',
                         name: 'addAuthor',
                         action: function ( e, dt, node, config ) {
-                            // TODO: If column order ever changes this will blow up.
-                            // Before we were using the name but now that we don't provide column def it doesn't work
-                            // One option is to generate the columnDefs on the django side so that they can be picked up
-                            // If we do that, keep in mind that it may cause problems with javascript caching
-                            // Maybe we can parse the columns out of the headers on load
                             console.log(dt_table.rows( { selected: true } ).data()[0][0])
-                            window.location.href = "manuscript/addaccount/"+manuscript_id;
+                            window.location.href = "manuscript/"+manuscript_id+"/addauthor";
+                        },
+                        enabled: false
+                    },
+                {% endif %}
+                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                    {
+                        text: 'Add Curator to Manuscript',
+                        name: 'addCurator',
+                        action: function ( e, dt, node, config ) {
+                            console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                            window.location.href = "manuscript/"+manuscript_id+"/addcurator";
+                        },
+                        enabled: false
+                    },
+                    {
+                        text: 'Add Verifier to Manuscript',
+                        name: 'addVerifier',
+                        action: function ( e, dt, node, config ) {
+                            console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                            window.location.href = "manuscript/"+manuscript_id+"/addverifier";
                         },
                         enabled: false
                     },
@@ -88,7 +103,7 @@
         })
         .on( 'select', function ( e, dt, type, indexes ) {
             manuscript_id = dt_table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-            var avail_buttons = dt_table.rows( { selected: true } ).data()[0][12]; //MAGIC NUMS
+            var avail_buttons = dt_table.rows( { selected: true } ).data()[0][14]; //MAGIC NUMS
             for(var i in avail_buttons) {
                 dt_table.button(avail_buttons[i]+':name').enable(true);
             }
@@ -99,9 +114,11 @@
         } )
         .on( 'deselect', function ( e, dt, type, indexes ) {
             var count = dt_table.rows( { selected: true } ).count();
-            if(count == 0) {
+            if(count == 0) { //TODO: Make dynamic instead of hardcoded to all buttons if possible...
                 dt_table.button('editManuscript:name').enable(false);
                 dt_table.button('addAuthor:name').enable(false);
+                dt_table.button('addCurator:name').enable(false);
+                dt_table.button('addVerifier:name').enable(false);
             }
             document.getElementById("submission_table_wrapper").style.display = "none";
             console.log('Table row deselected');

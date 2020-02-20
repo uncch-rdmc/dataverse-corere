@@ -3,7 +3,7 @@ from guardian.decorators import permission_required_or_403
 from guardian.shortcuts import get_objects_for_user, assign_perm
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import InvitationForm, NewUserForm
+from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -18,8 +18,8 @@ from django.conf import settings
 
 # TODO: We should probably make permissions part of our constants as well
 @permission_required_or_403('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_user(request, id=None):
-    form = InvitationForm(request.POST or None)
+def add_author(request, id=None):
+    form = AuthorInvitationForm(request.POST or None)
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -48,8 +48,42 @@ def add_user(request, id=None):
             for u in users:
                 manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
                 manu_author_group.user_set.add(u)
-                messages.add_message(request, messages.INFO, 'You have given {0} access to manuscript {1}!'.format(u.email, manuscript.title))
-                print('You have given {0} access to manuscript {1}!'.format(u.email, manuscript.title))
+                messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
+                print('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
+            return redirect('/')
+        else:
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_initialize_user.html', {'form': form})
+
+@permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def add_curator(request, id=None):
+    form = CuratorInvitationForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            users = list(form.cleaned_data['existing_users'])
+            manuscript = Manuscript.objects.get(pk=id)
+            for u in users:
+                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
+                manu_author_group.user_set.add(u)
+                messages.add_message(request, messages.INFO, 'You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
+                print('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
+            return redirect('/')
+        else:
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_initialize_user.html', {'form': form})
+
+@permission_required_or_403('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def add_verifier(request, id=None):
+    form = VerifierInvitationForm(request.POST or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            users = list(form.cleaned_data['existing_users'])
+            manuscript = Manuscript.objects.get(pk=id)
+            for u in users:
+                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+                manu_author_group.user_set.add(u)
+                messages.add_message(request, messages.INFO, 'You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
+                print('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?

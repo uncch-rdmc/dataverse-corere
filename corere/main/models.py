@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms
@@ -54,7 +56,8 @@ VERIFICATION_RESULT_CHOICES = (
 class Verification(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
     software = models.TextField() #TODO: Make this more usable as a list of software
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verifications", blank=True, null=True)
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verifications", blank=True, null=True) #May be unneeded
 
 ####################################################
 
@@ -73,7 +76,8 @@ CURATION_RESULT_CHOICES = (
 )
 class Curation(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curations", blank=True, null=True)
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curations", blank=True, null=True) #May be unneeded
 
 ####################################################
 
@@ -103,6 +107,7 @@ class Manuscript(AbstractCreateUpdateModel):
     title = models.TextField(blank=False, null=False, default="")
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
+    environment_info = JSONField(encoder=DjangoJSONEncoder, default=list)
     status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):
@@ -110,7 +115,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
     class Meta:
         permissions = [
-            ('manage_authors_on_manuscript', 'Can manage authors on manuscript')
+            ('manage_authors_on_manuscript', 'Can manage authors on manuscript'),
+            ('manage_editors_on_manuscript', 'Can manage editors on manuscript'),
+            ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
+            ('manage_verifiers_on_manuscript', 'Can manage verifiers on manuscript'),
         ]
 
     ### django-fsm (workflow) related functions

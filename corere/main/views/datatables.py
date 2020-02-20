@@ -1,7 +1,7 @@
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from corere.main.models import Manuscript, Submission, User
 from corere.main import constants as c
-from guardian.shortcuts import get_objects_for_user
+from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
 from django.db.models import Q
 from guardian.shortcuts import get_perms
@@ -63,7 +63,7 @@ def helper_manuscript_columns(user):
 
     columns = []
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
+        columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','curators','verifiers','submissions','verifications','curations','buttons']
     if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         columns += ['id','pub_id','title','doi','open_data','authors']
     if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
@@ -84,16 +84,27 @@ class ManuscriptJson(CorereBaseDatatableView):
     def render_column(self, obj, column):
         if column == 'authors':
             return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(obj.id))])
+        if column == 'curators':
+            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(obj.id))])
+        if column == 'verifiers':
+            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(obj.id))])
         if column == 'buttons':
             user = self.request.user
             avail_buttons = []
             #fsm_check_transition_perm(manuscript.begin, request.user))
-            
+            print(get_perms(user, obj))
+            from django.contrib.auth.models import Permission
+            print(str(Permission.objects.filter(user=user)))
             #if(user.has_perm('change_manuscript', obj)):
             if(has_transition_perm(obj.edit_noop, user)):
                 avail_buttons.append('editManuscript')
-            if(user.has_perm('manage_authors_on_manuscript', obj)):
+            # MAD: The way permissions work for this is confusing and will lead to bugs. It'd be good to create a wrapper that checks perms in all the places / can handle app label / etc
+            if(user.has_perm('manage_authors_on_manuscript', obj) or user.has_perm('main.manage_authors_on_manuscript')):
                 avail_buttons.append('addAuthor')
+            if(user.has_perm('manage_curators_on_manuscript', obj) or user.has_perm('main.manage_curators_on_manuscript')):
+                avail_buttons.append('addCurator')
+            if(user.has_perm('manage_verifiers_on_manuscript', obj) or user.has_perm('main.manage_verifiers_on_manuscript')):
+                avail_buttons.append('addVerifier')
 
             return avail_buttons#escape(get_perms(self.request.user, obj))
         else:
@@ -119,7 +130,7 @@ def helper_submission_columns(user):
     # MAD: I'm weary of programatically limiting access to data on an attribute level, but I'm not sure of a good way to do this in django, especially with all the other permissions systems in play
     # also.. This should be using guardian?
 
-    columns = ['id']
+    columns = ['id','curation_status']
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
@@ -138,20 +149,8 @@ class SubmissionJson(CorereBaseDatatableView):
         return helper_submission_columns(self.request.user)
 
     def render_column(self, obj, column):
-        if column == 'authors':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(obj.id))])
-        if column == 'buttons':
-            user = self.request.user
-            avail_buttons = []
-            #fsm_check_transition_perm(manuscript.begin, request.user))
-            
-            #if(user.has_perm('change_manuscript', obj)):
-            if(has_transition_perm(obj.edit_noop, user)):
-                avail_buttons.append('editManuscript')
-            if(user.has_perm('manage_authors_on_manuscript', obj)):
-                avail_buttons.append('addAuthor')
-
-            return avail_buttons#escape(get_perms(self.request.user, obj))
+        if column == 'curation_status':
+            return '{0}'.format(obj.submission_curation.status)
         else:
             return super(SubmissionJson, self).render_column(obj, column)
 

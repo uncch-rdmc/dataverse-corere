@@ -17,7 +17,7 @@ class ManuscriptForm(forms.ModelForm):
         super(ManuscriptForm, self).__init__(*args, **kwargs)
         #self.fields['editors'].queryset = User.objects.filter(groups__name=c.GROUP_ROLE_EDITOR) #MAD: check this in light of guardian
 
-class InvitationForm(forms.Form):
+class AuthorInvitationForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
     # TODO: This select2 field should be replaced with a "Heavy" one that supports Ajax calls.
@@ -26,6 +26,12 @@ class InvitationForm(forms.Form):
     # TODO: Also, confirm that this django integration actually supports providing custom results
     # I think so if we initialize it ourselves? https://github.com/applegrew/django-select2/blob/master/docs/django_select2.rst#javascript
     existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
+
+class CuratorInvitationForm(forms.Form):
+    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=Select2MultipleWidget, required=False)
+
+class VerifierInvitationForm(forms.Form):
+    existing_users = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=Select2MultipleWidget, required=False)
 
 class NewUserForm(forms.ModelForm):
     class Meta:
