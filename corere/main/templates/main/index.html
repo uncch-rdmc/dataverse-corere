@@ -34,6 +34,132 @@
     }
 
     $(document).ready(function() {
+        //var builtColumns = [];
+        //var builtFields = [];
+        dt_man_ajax = $.ajax({
+            url: MANUSCRIPT_LIST_JSON_URL,
+            cache: false,
+            success: function (response) {
+                var columns_config = constructTable(response.data[0]);
+                console.log(response.data)
+                var dt_table = $('#manuscript_table').DataTable({
+                    language: dt_language,  // global variable defined in html
+                    lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+                    searching: true,
+                    processing: true,
+                    //serverSide: true, //currently broken, not sure if needed
+                    stateSave: true,
+                    select: 'single',
+                    columns: columns_config,
+                    dom: 'Bfrt',
+                    //dom: 'Bfrtip', //old setting which is broken, should understand better
+                    data: response.data.slice(1),
+                    buttons: [
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        {
+                            text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
+                            name: 'createManuscript',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "manuscript/create";
+                            },
+                        },
+                        {
+                            text: 'Edit Manuscript',
+                            name: 'editManuscript',
+                            action: function ( e, dt, node, config ) {
+                                // TODO: If column order ever changes this and the ones below like it will blow up.
+                                // Before we were using the name but now that we don't provide column def it doesn't work
+                                // One option is to generate the columnDefs on the django side so that they can be picked up
+                                // If we do that, keep in mind that it may cause problems with javascript caching
+                                // Maybe we can parse the columns out of the headers on load
+                                console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/edit/"+manuscript_id;
+                            },
+                            enabled: false
+                        },
+                    {% endif %}
+                    {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
+                        {
+                            text: 'Invite/Add Author to Manuscript',
+                            name: 'addAuthor',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/"+manuscript_id+"/addauthor";
+                            },
+                            enabled: false
+                        },
+                    {% endif %}
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        {
+                            text: 'Add Curator to Manuscript',
+                            name: 'addCurator',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/"+manuscript_id+"/addcurator";
+                            },
+                            enabled: false
+                        },
+                        {
+                            text: 'Add Verifier to Manuscript',
+                            name: 'addVerifier',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt_table.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/"+manuscript_id+"/addverifier";
+                            },
+                            enabled: false
+                        },
+                    {% endif %}
+                    ]
+                })
+                .on( 'select', function ( e, dt, type, indexes ) {
+                    manuscript_id = dt_table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+                    var avail_buttons = dt_table.rows( { selected: true } ).data()[0][11]; //MAGIC NUMS
+                    for(var i in avail_buttons) {
+                        console.log(avail_buttons[i])
+                        dt_table.button(avail_buttons[i]+':name').enable(true);
+                    }
+                    document.getElementById("submission_table_wrapper").style.display = "block";
+                    dt_submission.ajax.url("manuscript/"+ manuscript_id +"/submission_table");//.load();
+                    console.log("dt_sub_ajax");
+                    console.log(dt_sub_ajax);
+                    //dt_sub_ajax.url("manuscript/"+ manuscript_id +"/submission_table");//.load();
+                    console.log('Table row selected');
+                } )
+                .on( 'deselect', function ( e, dt, type, indexes ) {
+                    var count = dt_table.rows( { selected: true } ).count();
+                    if(count == 0) { //TODO: Make dynamic instead of hardcoded to all buttons if possible...
+                        dt_table.button('editManuscript:name').enable(false);
+                        dt_table.button('addAuthor:name').enable(false);
+                        dt_table.button('addCurator:name').enable(false);
+                        dt_table.button('addVerifier:name').enable(false);
+                    }
+                    document.getElementById("submission_table_wrapper").style.display = "none";
+                    console.log('Table row deselected');
+                } );
+            }
+        })
+    });
+
+    //What is the goal here?
+    // - Define array rendering
+    // - make table more dynamic
+    // - NAMES
+    function constructTable(columns) {
+        var columns_config = [];
+        console.log("CONSTRUCT TABLE")
+        for (var c in columns) {
+            var column_settings = {name: columns[c]}
+            if(columns[c] === 'buttons') {
+                column_settings.visible = false;
+            }
+            columns_config[c] = column_settings
+            console.log(column_settings);
+        }
+        console.log(columns_config);
+        return columns_config;
+    } 
+
+    {% comment %} $(document).ready(function() {
         var dt_table = $('#manuscript_table').DataTable({
             language: dt_language,  // global variable defined in html
             lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
@@ -42,6 +168,7 @@
             serverSide: true,
             stateSave: true,
             select: 'single',
+            columns: [null,null,null,null,null,null,null,null,null,null,null,null],
             buttons: [
                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                     {
@@ -103,8 +230,9 @@
         })
         .on( 'select', function ( e, dt, type, indexes ) {
             manuscript_id = dt_table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-            var avail_buttons = dt_table.rows( { selected: true } ).data()[0][14]; //MAGIC NUMS
+            var avail_buttons = dt_table.rows( { selected: true } ).data()[0][11]; //MAGIC NUMS
             for(var i in avail_buttons) {
+                console.log(avail_buttons[i])
                 dt_table.button(avail_buttons[i]+':name').enable(true);
             }
             document.getElementById("submission_table_wrapper").style.display = "block";
@@ -124,7 +252,7 @@
             console.log('Table row deselected');
         } );
 
-    });
+    }); {% endcomment %}
 
 </script>
 
@@ -142,33 +270,56 @@
 {% comment %} Submission Table {% endcomment %}
 
 <script type="text/javascript">
-    // translations for datatables
 
-    {% comment %} Unneeded with definition above {% endcomment %}
-    {% comment %} var dt_language = {
-        "emptyTable":     "{% trans "No data available in table" %}",
-        "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
-        "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
-        "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
-        "infoPostFix":    "",
-        "thousands":      ",",
-        "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
-        "loadingRecords": "{% trans "Loading..." %}",
-        "processing":     "{% trans "Processing..." %}",
-        "search":         "{% trans "Search:" %}",
-        "zeroRecords":    "{% trans "No matching records found" %}",
-        "paginate": {
-            "first":      "{% trans "First" %}",
-            "last":       "{% trans "Last" %}",
-            "next":       "{% trans "Next" %}",
-            "previous":   "{% trans "Previous" %}"
-        },
-        "aria": {
-            "sortAscending":  "{% trans ": activate to sort column ascending" %}",
-            "sortDescending": "{% trans ": activate to sort column descending" %}"
-        }
-    } {% endcomment %}
-    dt_submission = null;
+    $(document).ready(function() {
+        //var builtColumns = [];
+        //var builtFields = [];
+        
+       dt_sub_ajax = $.ajax({
+            
+            url: '{% url "submission_table" 0 %}',
+            cache: false,
+            success: function (response) {
+                console.log("TEST SUB SUCCESS")
+                var columns_config = constructTable(response.data[0]);
+                console.log(response.data)
+                dt_submission = $('#submission_table').DataTable({
+                    language: dt_language,  // global variable defined in html
+                    lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+                    searching: true,
+                    processing: true,
+                    //serverSide: true, //currently broken, not sure if needed
+                    stateSave: true,
+                    select: 'single',
+                    columns: columns_config,
+                    dom: 'Bfrt',
+                    //dom: 'Bfrtip', //old setting which is broken, should understand better
+                    data: response.data.slice(1),
+                    buttons: [
+                    
+                    ]
+                })
+                .on( 'select', function ( e, dt, type, indexes ) {
+                    avail_buttons = dt_submission.rows( { selected: true } ).data()[0][12]; //MAGIC NUMS
+                    for(var i in avail_buttons) {
+                        dt_submission.button(avail_buttons[i]+':name').enable(true);
+                    }
+
+                    console.log('Table row selected');
+                } )
+                .on( 'deselect', function ( e, dt, type, indexes ) {
+                    var count = dt_submission.rows( { selected: true } ).count();
+                    if(count == 0) {
+                        dt_submission.button('editManuscript:name').enable(false);
+                        dt_submission.button('addAuthor:name').enable(false);
+                    }
+                    console.log('Table row deselected');
+                } );
+            }
+        })
+    });
+
+    {% comment %} dt_submission = null;
 
     $(document).ready(function() {
         dt_submission = $('#submission_table').DataTable({
@@ -202,7 +353,7 @@
             console.log('Table row deselected');
         } );
 
-    });
+    }); {% endcomment %}
 
 </script>
 

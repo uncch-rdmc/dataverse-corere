@@ -43,6 +43,8 @@ class CorereBaseDatatableView(BaseDatatableView):
 
     def prepare_results(self, qs):
         data = []
+        #TODO: Confirm this works right with pagination
+        data.append(self.get_columns()) #add headers to grab in js for dynamic support
         for item in qs:
             if self.is_data_list:
                 data.append([self.render_column(item, column) for column in self._columns])
@@ -63,7 +65,7 @@ def helper_manuscript_columns(user):
 
     columns = []
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','curators','verifiers','submissions','verifications','curations','buttons']
+        columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','curators','verifiers','buttons']
     if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         columns += ['id','pub_id','title','doi','open_data','authors']
     if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
