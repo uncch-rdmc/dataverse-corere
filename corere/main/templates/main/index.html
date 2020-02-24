@@ -119,10 +119,10 @@
                         dt_table.button(avail_buttons[i]+':name').enable(true);
                     }
                     document.getElementById("submission_table_wrapper").style.display = "block";
-                    dt_submission.ajax.url("manuscript/"+ manuscript_id +"/submission_table");//.load();
-                    console.log("dt_sub_ajax");
-                    console.log(dt_sub_ajax);
-                    //dt_sub_ajax.url("manuscript/"+ manuscript_id +"/submission_table");//.load();
+                    if (typeof dt_submission !== 'undefined') {
+                        dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
+                    }
+                    updateSubmissionTable("manuscript/"+ manuscript_id +"/submission_table")
                     console.log('Table row selected');
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
@@ -271,13 +271,12 @@
 
 <script type="text/javascript">
 
-    $(document).ready(function() {
+    function updateSubmissionTable(url) {
         //var builtColumns = [];
         //var builtFields = [];
         
-       dt_sub_ajax = $.ajax({
-            
-            url: '{% url "submission_table" 0 %}',
+        $.ajax({
+            url: url,
             cache: false,
             success: function (response) {
                 console.log("TEST SUB SUCCESS")
@@ -317,7 +316,7 @@
                 } );
             }
         })
-    });
+    };
 
     {% comment %} dt_submission = null;
 
