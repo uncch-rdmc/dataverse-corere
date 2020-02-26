@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from corere.main.models import Manuscript
+from corere.main.models import Manuscript, Submission, Curation, Verification
 from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
-from corere.main.forms import ManuscriptForm
+from corere.main.forms import ManuscriptForm, SubmissionForm, CurationForm, VerificationForm
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm#, get_objects_for_user
 from django_fsm import can_proceed#, has_transition_perm
@@ -43,7 +43,7 @@ def edit_manuscript(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            if('submit_and_update_status' in request.POST): #This checks to see which form button was used. There is probably a more precise way to check
+            if(request.POST['submit'] == 'Save and Assign to Authors'): #This checks to see which form button was used. There is probably a more precise way to check
                 #print(request.user.groups.filter(name='c.GROUP_ROLE_VERIFIER').exists())
                 print("main has_transition_perm")
                 print(fsm_check_transition_perm(manuscript.begin, request.user))
@@ -52,13 +52,12 @@ def edit_manuscript(request, id=None):
                     raise PermissionDenied
                 try:
                     manuscript.begin()
+                    manuscript.save()
                 except TransactionNotAllowed:
                     #TODO: Do something better
                     print("TransitionNotAllowed")
                     raise
-                manuscript.save()
             if not id: # if create
-                print("NOID")
                 # Note these works alongside global permissions defined in signals.py
                 # TODO: Make this concatenation standardized
                 group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
@@ -71,15 +70,18 @@ def edit_manuscript(request, id=None):
                 assign_perm('change_manuscript', group_manuscript_author, manuscript) # TODO: Remove?
                 assign_perm('view_manuscript', group_manuscript_author, manuscript) 
                 assign_perm('manage_authors_on_manuscript', group_manuscript_author, manuscript) 
+                assign_perm('add_submission_to_manuscript', group_manuscript_author, manuscript) 
 
                 group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
                 assign_perm('change_manuscript', group_manuscript_verifier, manuscript) 
                 assign_perm('view_manuscript', group_manuscript_verifier, manuscript) 
+                assign_perm('add_curation_to_manuscript', group_manuscript_verifier, manuscript) 
 
                 group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
                 # TODO: Should curators always get all this, or is this a superuser thing?
                 assign_perm('change_manuscript', group_manuscript_curator, manuscript) 
                 assign_perm('view_manuscript', group_manuscript_curator, manuscript) 
+                assign_perm('add_verification_to_manuscript', group_manuscript_verifier, manuscript) 
 
                 group_manuscript_editor.user_set.add(request.user) #TODO: Should be dynamic on role, but right now only editors create manuscripts
                 
@@ -88,3 +90,93 @@ def edit_manuscript(request, id=None):
         else:
             print(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
+
+def edit_submission(request, manuscript_id=None, id=None):
+    if id:
+        submission = get_object_or_404(Submission, id=id)
+        message = 'Your submission has been updated!'
+    else:
+        submission = Submission()
+        submission.manuscript = get_object_or_404(Manuscript, id=manuscript_id)
+        message = 'Your new submission has been created!'
+    form = SubmissionForm(request.POST or None, request.FILES or None, instance=submission)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            # if not fsm_check_transition_perm(submission.begin, request.user): 
+            #     print("PermissionDenied")
+            #     raise PermissionDenied
+            # try:
+            #     manuscript.begin()
+            #     manuscript.save()
+            # except TransactionNotAllowed:
+            #     #TODO: Do something better
+            #     print("TransitionNotAllowed")
+            #     raise
+            
+            if not fsm_check_transition_perm(submission.submit, request.user): 
+                print("PermissionDenied")
+                raise PermissionDenied
+            try:
+                submission.submit()
+                submission.save()
+            except TransactionNotAllowed:
+                #TODO: Do something better
+                print("TransitionNotAllowed")
+                raise
+
+            # if(request.POST['submit'] == 'Submit for Review'):
+            #     submission.status = 'in_progress'
+            #     #this doesn't save, but I really should be using my fsm stuff here...
+            if not id: # if create do extra special things
+                pass
+
+            messages.add_message(request, messages.INFO, message)
+            return redirect('/')
+        else:
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_create_submission.html', {'form': form, 'id': id})
+
+def edit_curation(request, submission_id=None, id=None):
+    if id:
+        curation = get_object_or_404(Curation, id=id)
+        message = 'Your curation has been updated!'
+    else:
+        curation = Curation()
+        curation.submission = get_object_or_404(Submission, id=submission_id)
+        message = 'Your new curation has been created!'
+    form = CurationForm(request.POST or None, request.FILES or None, instance=curation)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+
+            if not id: # if create do extra special things
+                pass
+
+            messages.add_message(request, messages.INFO, message)
+            return redirect('/')
+        else:
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_create_curation.html', {'form': form, 'id': id})
+
+def edit_verification(request, submission_id=None, id=None):
+    if id:
+        verification = get_object_or_404(Verification, id=id)
+        message = 'Your verification has been updated!'
+    else:
+        verification = Verification()
+        verification.submission = get_object_or_404(Submission, id=submission_id)
+        message = 'Your new verification has been created!'
+    form = VerificationForm(request.POST or None, request.FILES or None, instance=verification)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+
+            if not id: # if create do extra special things
+                pass
+
+            messages.add_message(request, messages.INFO, message)
+            return redirect('/')
+        else:
+            print(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_create_verification.html', {'form': form, 'id': id})

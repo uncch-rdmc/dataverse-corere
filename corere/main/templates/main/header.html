@@ -5,7 +5,7 @@
     <nav id="sidebar">
         <div class="sidebar-header">
             <h3>
-                <img src="{% static 'main/CORE2.png' %}" width="128" height="64"/>
+                <a href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
 
             </h3>
         </div>
@@ -13,9 +13,9 @@
         <ul class="list-unstyled components">
             
             <p>{{ user.get_username }}</p>
-            <li>
+            {% comment %} <li>
                 <a href="/">Dashboard</a>
-            </li>
+            </li> {% endcomment %}
         </ul>
 
         <ul class="list-unstyled CTAs">

@@ -9,7 +9,7 @@ def social_pipeline_return_session_user(request, **kwargs):
 
 # This check is a port of the method in django-fsm
 # but it removes the other checks so that we can only check permissions first
-# TODO: Monkey patch this function into django-fsm, overriding the has_transition_perm method (double check its not used internally)
+# TODO: Maybe monkey patch this function into django-fsm, overriding the has_transition_perm method (double check its not used internally)
 def fsm_check_transition_perm(bound_method, user):
     """
     Returns True if model in state allows to call bound_method and user have rights on it

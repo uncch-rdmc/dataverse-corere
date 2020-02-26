@@ -5,18 +5,18 @@
         <nav id="sidebar">
             <div class="sidebar-header">
                 <h3>
-                    <img src="{% static 'main/CORE2.png' %}" width="128" height="64"/>
+                    <a href=""><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
     
                 </h3>
             </div>
             {% if user.is_authenticated %}
-            <ul class="list-unstyled components">
+            {% comment %} <ul class="list-unstyled components">
                 
                 <p>{{ user.get_username }}</p>
                 <li>
                     <a href="">Dashboard</a>
                 </li>
-            </ul>
+            </ul> {% endcomment %}
     
             <ul class="list-unstyled CTAs">
                 <li>

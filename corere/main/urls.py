@@ -11,6 +11,14 @@ urlpatterns = [
     path('manuscript/<int:id>/addauthor', users.add_author),
     path('manuscript/<int:id>/addcurator', users.add_curator),
     path('manuscript/<int:id>/addverifier', users.add_verifier),
+
+    path('manuscript/<int:manuscript_id>/createsubmission', main.edit_submission),
+    path('submission/<int:id>/edit', main.edit_submission),
+    path('submission/<int:submission_id>/createcuration', main.edit_curation),
+    path('curation/<int:id>/edit', main.edit_curation),
+    path('submission/<int:submission_id>/createverification', main.edit_verification),
+    path('verification/<int:id>/edit', main.edit_verification),
+
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
     path('account_user_details', users.account_user_details)

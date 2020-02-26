@@ -1,7 +1,7 @@
 #from django import forms
 from django import forms
 from django.forms import ModelMultipleChoiceField
-from .models import Manuscript, User
+from .models import Manuscript, Submission, Verification, Curation, User
 #from invitations.models import Invitation
 from invitations.utils import get_invitation_model
 from django.conf import settings
@@ -16,6 +16,31 @@ class ManuscriptForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)
         #self.fields['editors'].queryset = User.objects.filter(groups__name=c.GROUP_ROLE_EDITOR) #MAD: check this in light of guardian
+
+class SubmissionForm(forms.ModelForm):
+    class Meta:
+        model = Submission
+        fields = []
+
+    def __init__ (self, *args, **kwargs):
+        super(SubmissionForm, self).__init__(*args, **kwargs)
+
+class VerificationForm(forms.ModelForm):
+    class Meta:
+        model = Verification
+        fields = ['status']
+
+    def __init__ (self, *args, **kwargs):
+        super(VerificationForm, self).__init__(*args, **kwargs)
+
+class CurationForm(forms.ModelForm):
+    class Meta:
+        model = Curation
+        fields = ['status']
+
+    def __init__ (self, *args, **kwargs):
+        super(CurationForm, self).__init__(*args, **kwargs)
+
 
 class AuthorInvitationForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below

@@ -5,6 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms
+from django.db.models import Q
 import logging
 import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -57,7 +58,17 @@ class Verification(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
     software = models.TextField() #TODO: Make this more usable as a list of software
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verifications", blank=True, null=True) #May be unneeded
+
+    class Meta:
+        default_permissions = ()
+
+    ##### django-fsm (workflow) related functions #####
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[VERIFICATION_NEW], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_perm('change_verification_on_manuscript',instance.submission.manuscript))
+    def edit_noop(self):
+        return self.status
 
 ####################################################
 
@@ -74,16 +85,110 @@ CURATION_RESULT_CHOICES = (
     (CURATION_MINOR_ISSUES, 'Minor Issues'),
     (CURATION_NO_ISSUES, 'No Issues'),
 )
+
 class Curation(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curations", blank=True, null=True) #May be unneeded
+
+    class Meta:
+        default_permissions = ()
+
+    ##### django-fsm (workflow) related functions #####
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[CURATION_NEW], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_perm('change_curation_on_manuscript',instance.submission.manuscript))
+    def edit_noop(self):
+        return self.status
 
 ####################################################
 
+# Before we were just doing new/submitted as technically you can learn the status of the submission from its attached curation/verification.
+# But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
+
+SUBMISSION_NEW = 'new'
+SUBMISSION_IN_PROGRESS = 'in_progress'
+SUBMISSION_REVIEWED = 'reviewed'
+
+SUBMISSION_RESULT_CHOICES = (
+    (SUBMISSION_NEW, 'New'),
+    (SUBMISSION_IN_PROGRESS, 'In Progress'),
+    (SUBMISSION_REVIEWED, 'Reviewed'),
+)
+
 class Submission(AbstractCreateUpdateModel):
-    #Submission does not have a result in itself, it is captured 
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions", blank=True, null=True)
+    #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
+    status = FSMField(max_length=15, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
+
+    class Meta:
+        default_permissions = ()
+
+    ##### django-fsm (workflow) related functions #####
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[SUBMISSION_NEW], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_perm('change_submission',instance))
+    def edit_noop(self):
+        return self.status
+
+    #-----------------------
+
+    def can_submit(self):
+        return True
+
+    @transition(field=status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS, conditions=[can_submit],
+                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance)) #MAD: Used same perm as add, do we want that?
+    def submit(self):
+        self.manuscript.status = MANUSCRIPT_PROCESSING #MAD: This seems bad, should I use FSM for this too?
+        self.manuscript.save()
+        pass
+
+    #-----------------------
+
+    def can_add_curation(self):
+        if(self.manuscript.status != 'processing'):       
+            return False
+        try:
+            if(self.submission_curation):
+                print("There is a curation already")
+                return False
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            pass
+
+        return True
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_curation],
+        permission=lambda instance, user: user.has_perm('add_curation_to_manuscript',instance.manuscript))
+    def add_curation_noop(self):
+        return self.status
+
+    #-----------------------
+
+    def can_add_verification(self):
+        if(self.manuscript.status != 'processing'):       
+            return False
+        try:
+            if(self.submission_curation.status != CURATION_NO_ISSUES):
+                print("The curation had issues, so shouldn't be verified")
+                return False
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return False
+        try:
+            if(self.submission_verification):
+                print("There is a verification already")
+                return False
+        except Submission.submission_verification.RelatedObjectDoesNotExist:
+            pass
+
+        return True
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_verification],
+        permission=lambda instance, user: user.has_perm('add_verification_to_manuscript',instance.manuscript))
+    def add_verification_noop(self):
+        return self.status
 
 ####################################################
 
@@ -119,38 +224,71 @@ class Manuscript(AbstractCreateUpdateModel):
             ('manage_editors_on_manuscript', 'Can manage editors on manuscript'),
             ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
             ('manage_verifiers_on_manuscript', 'Can manage verifiers on manuscript'),
+            ('add_submission_to_manuscript', 'Can add submission to manuscript'),
+            # We track permissions of objects under the manuscript at the manuscript level, as we don't need to be more granular
+            # Technically curation/verification are added to a submission
+            ('add_curation_to_manuscript', 'Can add curation to manuscript'),
+            ('change_curation_on_manuscript', 'Can change curation on manuscript'),
+            ('add_verification_to_manuscript', 'Can add verification to manuscript'),
+            ('change_verification_on_manuscript', 'Can change verification on manuscript'),
         ]
 
-    ### django-fsm (workflow) related functions
+    ##### django-fsm (workflow) related functions #####
 
-    #Conditions
-    # - Authors needed
-    # - files uploaded
+    #Conditions: Authors needed, files uploaded [NOT DONE]
     def can_begin(self):
         # Are there any authors assigned to the manuscript?
         group_string = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id)
         count = User.objects.filter(groups__name=group_string).count()
         if(count < 1):
             return False
-
-        #TODO: Add check on file uploads (at least 1? 2?)
-            
         return True
 
-    #MAD: SHOULD THIS BE USING OBJECT PERMISSIONS INSTEAD OF GROUPS?
     @transition(field=status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
-                permission=lambda instance, user: user.has_perm('change_manuscript',instance))        #.groups.filter(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).exists())
+                permission=lambda instance, user: user.has_perm('change_manuscript',instance))
     def begin(self):
-        #Here add any additional actions related to the state change
-        pass
+        pass #Here add any additional actions related to the state change
 
-    #These functions do not actually perform a transition, but are used to confirm certain actions can take place
-    #NOTE: RETURN_VALUE uses the return of the annotated function, and we just pass the status back
-    #      This is useful when we want to allow any status (e.g. we just wants to check perms and conditions)
-    @transition(field=status, source=MANUSCRIPT_NEW, target=RETURN_VALUE(), conditions=[],
+    #-----------------------
+
+    def can_add_submission(self):
+        # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
+        #try:
+        if (self.manuscript_submissions.filter(Q(status='new')| Q(status='in_progress')).count() != 0):
+            return False
+        #except Manuscript.manuscript_submissions.RelatedObjectDoesNotExist:
+        #   pass
+        return True
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_add_submission],
+                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance))
+    def add_submission_noop(self):
+        return self.status
+
+    #-----------------------
+
+    #Conditions: Submission with status of new
+    def can_process(self):
+        if(self.manuscript_submissions.filter(status='new').count() != 1):
+            return False
+        return True
+
+    # Perm: ability to create/edit a submission
+    @transition(field=status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
+                permission=lambda instance, user: user.has_perm('change_manuscript',instance))
+    def process(self):
+        #update submission status here?
+        pass #Here add any additional actions related to the state change
+
+    #-----------------------
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source=[MANUSCRIPT_NEW, MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_perm('change_manuscript',instance))
     def edit_noop(self):
         return self.status
+
 
 ####################################################
 
