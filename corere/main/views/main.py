@@ -75,12 +75,12 @@ def edit_manuscript(request, id=None):
                 group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
                 assign_perm('change_manuscript', group_manuscript_verifier, manuscript) 
                 assign_perm('view_manuscript', group_manuscript_verifier, manuscript) 
-                assign_perm('add_curation_to_manuscript', group_manuscript_verifier, manuscript) 
+                assign_perm('curate_manuscript', group_manuscript_verifier, manuscript) 
 
                 group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
                 assign_perm('change_manuscript', group_manuscript_curator, manuscript) 
                 assign_perm('view_manuscript', group_manuscript_curator, manuscript) 
-                assign_perm('add_verification_to_manuscript', group_manuscript_verifier, manuscript) 
+                assign_perm('verify_manuscript', group_manuscript_verifier, manuscript) 
 
                 group_manuscript_editor.user_set.add(request.user) #TODO: Should be dynamic on role, but right now only editors create manuscripts
                 
@@ -106,15 +106,14 @@ def edit_submission(request, manuscript_id=None, id=None):
             if not fsm_check_transition_perm(submission.submit, request.user): 
                 print("PermissionDenied")
                 raise PermissionDenied
-            try:
+            try: #TODO: only do this if the reviewer selects a certain form button
                 submission.submit()
                 submission.save()
             except TransactionNotAllowed:
                 #TODO: Do something better
                 print("TransitionNotAllowed")
                 raise
-            if not id: # if create do extra special things
-                pass
+
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
@@ -133,9 +132,11 @@ def edit_curation(request, submission_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-
-            if not id: # if create do extra special things
-                pass
+            try:
+                curation.submission.review()
+                curation.submission.save()
+            except TransactionNotAllowed:
+                pass #We do not do review if the statuses don't align
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
@@ -155,9 +156,11 @@ def edit_verification(request, submission_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-
-            if not id: # if create do extra special things
-                pass
+            try: #TODO: only do this if the reviewer selects a certain form button
+                verification.submission.review()
+                verification.submission.save()
+            except TransactionNotAllowed:
+                pass #We do not do review if the statuses don't align
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')

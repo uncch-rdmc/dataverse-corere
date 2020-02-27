@@ -129,7 +129,7 @@ def helper_submission_columns(user):
     
     # MAD: This should be using guardian???
 
-    columns = ['id','submission_status','curation_status', 'verification_status', 'buttons']
+    columns = ['id','submission_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
@@ -147,13 +147,24 @@ class SubmissionJson(CorereBaseDatatableView):
     def get_columns(self):
         return helper_submission_columns(self.request.user)
 
+    #MAD: Can condense all these try/excepts into something more compact
     def render_column(self, submission, column):
         if column == 'submission_status':
             return submission.status
+        elif column == 'curation_id':
+            try:
+                return '{0}'.format(submission.submission_curation.id)
+            except Submission.submission_curation.RelatedObjectDoesNotExist:
+                return ''
         elif column == 'curation_status':
             try:
                 return '{0}'.format(submission.submission_curation.status)
             except Submission.submission_curation.RelatedObjectDoesNotExist:
+                return ''
+        elif column == 'verification_id':
+            try:
+                return '{0}'.format(submission.submission_verification.id)
+            except Submission.submission_verification.RelatedObjectDoesNotExist:
                 return ''
         elif column == 'verification_status':
             try:

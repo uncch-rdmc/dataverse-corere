@@ -66,7 +66,7 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=status, source=[VERIFICATION_NEW], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_perm('change_verification_on_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_perm('verify_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self.status
 
@@ -97,7 +97,7 @@ class Curation(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=status, source=[CURATION_NEW], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_perm('change_curation_on_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_perm('curate_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self.status
 
@@ -146,6 +146,45 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
+    def can_review(self):
+        #Note, the logic in here is decided whether you can even do a review, not whether its accepted
+        try:
+            if(self.submission_curation.status == CURATION_NEW):
+                return False
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return False
+
+        try:
+            if(self.submission_verification.status == VERIFICATION_NEW):
+                return False
+        except Submission.submission_verification.RelatedObjectDoesNotExist:
+            pass #we pass because you can review with just a curation
+
+        return True
+
+    @transition(field=status, source=SUBMISSION_IN_PROGRESS, target=RETURN_VALUE(), conditions=[can_review],
+                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance)
+                    or user.has_perm('verify_manuscript',instance)))
+    def review(self):
+        try:
+            if(self.submission_curation.status == CURATION_NO_ISSUES):
+                try:
+                    if(self.submission_verification.status == VERIFICATION_SUCCESS):
+                        self.manuscript.status = MANUSCRIPT_COMPLETED
+                        self.manuscript.save()
+                        return SUBMISSION_REVIEWED
+                except Submission.submission_verification.RelatedObjectDoesNotExist:
+                    return SUBMISSION_IN_PROGRESS
+
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return SUBMISSION_IN_PROGRESS
+            
+        self.manuscript.status = MANUSCRIPT_AWAITING_RESUBMISSION
+        self.manuscript.save()
+        return SUBMISSION_REVIEWED
+
+    #-----------------------
+
     def can_add_curation(self):
         if(self.manuscript.status != 'processing'):       
             return False
@@ -160,7 +199,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_curation],
-        permission=lambda instance, user: user.has_perm('add_curation_to_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_perm('curate_manuscript',instance.manuscript))
     def add_curation_noop(self):
         return self.status
 
@@ -186,7 +225,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_verification],
-        permission=lambda instance, user: user.has_perm('add_verification_to_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_perm('verify_manuscript',instance.manuscript))
     def add_verification_noop(self):
         return self.status
 
@@ -225,12 +264,11 @@ class Manuscript(AbstractCreateUpdateModel):
             ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
             ('manage_verifiers_on_manuscript', 'Can manage verifiers on manuscript'),
             ('add_submission_to_manuscript', 'Can add submission to manuscript'),
+            #('review_submission_on_manuscript', 'Can review submission on manuscript'),
             # We track permissions of objects under the manuscript at the manuscript level, as we don't need to be more granular
             # Technically curation/verification are added to a submission
-            ('add_curation_to_manuscript', 'Can add curation to manuscript'),
-            ('change_curation_on_manuscript', 'Can change curation on manuscript'),
-            ('add_verification_to_manuscript', 'Can add verification to manuscript'),
-            ('change_verification_on_manuscript', 'Can change verification on manuscript'),
+            ('curate_manuscript', 'Can curate manuscript/submission'),
+            ('verify_manuscript', 'Can verify manuscript/submission'),
         ]
 
     ##### django-fsm (workflow) related functions #####
