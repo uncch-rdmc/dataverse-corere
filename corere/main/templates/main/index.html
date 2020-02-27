@@ -108,7 +108,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     manuscript_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index]; //MAGIC NUMS
+                    var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     var createSubButton = false;
                     for(var i in avail_buttons) {
                         console.log(avail_buttons[i])
@@ -119,8 +119,7 @@
                         }
                     }
 
-                    //MAD: Why are we doing this here?
-                    document.getElementById("submission_table_wrapper").style.display = "block";
+                    document.getElementById("submission_table_wrapper").style.display = "block"; //show element
                     if (typeof dt_submission !== 'undefined') {
                         dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
                     }
@@ -130,13 +129,13 @@
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
                     var count = dt.rows( { selected: true } ).count();
-                    if(count == 0) { //TODO: Make dynamic instead of hardcoded to all buttons if possible...
+                    if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editManuscript:name').enable(false);
                         dt.button('addAuthor:name').enable(false);
                         dt.button('addCurator:name').enable(false);
                         dt.button('addVerifier:name').enable(false);
                     }
-                    document.getElementById("submission_table_wrapper").style.display = "none";
+                    document.getElementById("submission_table_wrapper").style.display = "none"; //hide element
                     console.log('Table row deselected');
                 } );
             }
@@ -268,7 +267,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    avail_buttons = dt.rows( { selected: true } ).data()[0][button_index]; //MAGIC NUMS
+                    avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
                     }
@@ -277,7 +276,7 @@
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
                     var count = dt.rows( { selected: true } ).count();
-                    if(count == 0) {
+                    if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editSubmission:name').enable(false);
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);
@@ -290,7 +289,6 @@
             }
             })
     };
-
 </script>
 
 <div id="submission_table_wrapper" style="display:none">

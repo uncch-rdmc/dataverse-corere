@@ -67,7 +67,7 @@ def edit_manuscript(request, id=None):
                 assign_perm('manage_authors_on_manuscript', group_manuscript_editor, manuscript) 
 
                 group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
-                assign_perm('change_manuscript', group_manuscript_author, manuscript) # TODO: Remove?
+                assign_perm('change_manuscript', group_manuscript_author, manuscript)
                 assign_perm('view_manuscript', group_manuscript_author, manuscript) 
                 assign_perm('manage_authors_on_manuscript', group_manuscript_author, manuscript) 
                 assign_perm('add_submission_to_manuscript', group_manuscript_author, manuscript) 
@@ -78,7 +78,6 @@ def edit_manuscript(request, id=None):
                 assign_perm('add_curation_to_manuscript', group_manuscript_verifier, manuscript) 
 
                 group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-                # TODO: Should curators always get all this, or is this a superuser thing?
                 assign_perm('change_manuscript', group_manuscript_curator, manuscript) 
                 assign_perm('view_manuscript', group_manuscript_curator, manuscript) 
                 assign_perm('add_verification_to_manuscript', group_manuscript_verifier, manuscript) 
@@ -103,16 +102,6 @@ def edit_submission(request, manuscript_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            # if not fsm_check_transition_perm(submission.begin, request.user): 
-            #     print("PermissionDenied")
-            #     raise PermissionDenied
-            # try:
-            #     manuscript.begin()
-            #     manuscript.save()
-            # except TransactionNotAllowed:
-            #     #TODO: Do something better
-            #     print("TransitionNotAllowed")
-            #     raise
             
             if not fsm_check_transition_perm(submission.submit, request.user): 
                 print("PermissionDenied")
@@ -124,13 +113,8 @@ def edit_submission(request, manuscript_id=None, id=None):
                 #TODO: Do something better
                 print("TransitionNotAllowed")
                 raise
-
-            # if(request.POST['submit'] == 'Submit for Review'):
-            #     submission.status = 'in_progress'
-            #     #this doesn't save, but I really should be using my fsm stuff here...
             if not id: # if create do extra special things
                 pass
-
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:

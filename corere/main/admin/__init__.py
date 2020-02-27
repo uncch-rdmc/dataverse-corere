@@ -4,8 +4,7 @@ from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdmin
 from .forms import GroupAdminForm
 
-# MAD: Rename more generically if we are using it on other models
-class GuardedManuscriptAdminCustom(GuardedModelAdmin):
+class GuardedModelAdminCustom(GuardedModelAdmin):
     obj_perms_manage_template = 'main/admin/guardian_obj_perms_manage_custom.html'
     pass
 
@@ -17,11 +16,11 @@ class UserAdmin(admin.ModelAdmin):
     fields = ('username', 'first_name', 'last_name', 'email', 'invite_key', 'invited_by', 'groups', 'user_permissions', 'is_superuser', 'is_staff', 'is_active', 'date_joined', 'last_login')
     filter_horizontal = ['groups','user_permissions']
 
-admin.site.register(Verification, GuardedManuscriptAdminCustom)
-admin.site.register(Curation, GuardedManuscriptAdminCustom)
+admin.site.register(Verification, GuardedModelAdminCustom)
+admin.site.register(Curation, GuardedModelAdminCustom)
 admin.site.register(File)
-admin.site.register(Submission, GuardedManuscriptAdminCustom)
-admin.site.register(Manuscript, GuardedManuscriptAdminCustom)
+admin.site.register(Submission, GuardedModelAdminCustom)
+admin.site.register(Manuscript, GuardedModelAdminCustom)
 #admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 admin.site.unregister(Group)

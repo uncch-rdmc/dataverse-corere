@@ -59,9 +59,8 @@ def helper_manuscript_columns(user):
     # This defines the columns a user can view for a table.
     # TODO: Controll in a more centralized manner for security
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
-    
-    # MAD: I'm weary of programatically limiting access to data on an attribute level, but I'm not sure of a good way to do this in django, especially with all the other permissions systems in play
-    # also.. This should be using guardian?
+
+    # MAD: This should be using guardian???
 
     columns = []
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
@@ -83,33 +82,33 @@ class ManuscriptJson(CorereBaseDatatableView):
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
 
-    def render_column(self, obj, column): #MAD: Rename obj here to manuscript?
+    def render_column(self, manuscript, column):
         if column == 'authors':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(obj.id))])
+            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))])
         elif column == 'curators':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(obj.id))])
+            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
         elif column == 'verifiers':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(obj.id))])
+            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))])
         elif column == 'buttons':
             user = self.request.user
             avail_buttons = []
 
-            if(has_transition_perm(obj.edit_noop, user)):
+            if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
             # MAD: The way permissions work for this is confusing and will lead to bugs. It'd be good to create a wrapper that checks perms in all the places / can handle app label / etc
             # Do we even use the non-object based manage permission? Should we leave that ability in here? Maybe for superuser?
-            if(user.has_perm('manage_authors_on_manuscript', obj) or user.has_perm('main.manage_authors_on_manuscript')):
+            if(user.has_perm('manage_authors_on_manuscript', manuscript) or user.has_perm('main.manage_authors_on_manuscript')):
                 avail_buttons.append('addAuthor')
-            if(user.has_perm('manage_curators_on_manuscript', obj) or user.has_perm('main.manage_curators_on_manuscript')):
+            if(user.has_perm('manage_curators_on_manuscript', manuscript) or user.has_perm('main.manage_curators_on_manuscript')):
                 avail_buttons.append('addCurator')
-            if(user.has_perm('manage_verifiers_on_manuscript', obj) or user.has_perm('main.manage_verifiers_on_manuscript')):
+            if(user.has_perm('manage_verifiers_on_manuscript', manuscript) or user.has_perm('main.manage_verifiers_on_manuscript')):
                 avail_buttons.append('addVerifier')
-            if(has_transition_perm(obj.add_submission_noop, user)):
+            if(has_transition_perm(manuscript.add_submission_noop, user)):
                 avail_buttons.append('createSubmission')
 
             return avail_buttons
         else:
-            return super(ManuscriptJson, self).render_column(obj, column)
+            return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
         #view_perm = Permission.objects.get(codename="view_manuscript")
@@ -128,8 +127,7 @@ def helper_submission_columns(user):
     # TODO: Controll in a more centralized manner for security
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
     
-    # MAD: I'm weary of programatically limiting access to data on an attribute level, but I'm not sure of a good way to do this in django, especially with all the other permissions systems in play
-    # also.. This should be using guardian?
+    # MAD: This should be using guardian???
 
     columns = ['id','submission_status','curation_status', 'verification_status', 'buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
@@ -149,69 +147,45 @@ class SubmissionJson(CorereBaseDatatableView):
     def get_columns(self):
         return helper_submission_columns(self.request.user)
 
-    def render_column(self, obj, column):
+    def render_column(self, submission, column):
         if column == 'submission_status':
-            return obj.status
+            return submission.status
         elif column == 'curation_status':
             try:
-                return '{0}'.format(obj.submission_curation.status)
+                return '{0}'.format(submission.submission_curation.status)
             except Submission.submission_curation.RelatedObjectDoesNotExist:
                 return ''
         elif column == 'verification_status':
             try:
-                return '{0}'.format(obj.submission_verification.status)
+                return '{0}'.format(submission.submission_verification.status)
             except Submission.submission_verification.RelatedObjectDoesNotExist:
                 return ''
         elif column == 'buttons': 
-            #MAD: ALL OF THE CHECKS IN HERE ARE BAD. SHOULD WE USE FSM? AT LEAST ACTUALLY REF CONSTANTS. 
-            # THEY SHOULD REF ACCESS TO THE INDIVIDUAL MANUSCRIPT AS WELL??!
-            
             user = self.request.user
             avail_buttons = []
 
-            if(has_transition_perm(obj.edit_noop, user)):
+            if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
 
-            if(has_transition_perm(obj.add_curation_noop, user)):
+            if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
-                if(has_transition_perm(obj.submission_curation.edit_noop, user)):
+                if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                     avail_buttons.append('editCuration')
             except Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
 
-            if(has_transition_perm(obj.add_verification_noop, user)):
+            if(has_transition_perm(submission.add_verification_noop, user)):
                 avail_buttons.append('createVerification')
             try:
-                if(has_transition_perm(obj.submission_verification.edit_noop, user)):
+                if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                     avail_buttons.append('editVerification')
             except Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
 
-            # ### edit curation - new curation
-            # try:
-            #     if(obj.submission_curation.status == 'new'):
-            #         avail_buttons.append('editCuration')
-            # except Submission.submission_curation.RelatedObjectDoesNotExist:
-            #     ### create curation - processing manuscript, no new curation
-            #     if(obj.manuscript.status == 'processing' and obj.status == 'in_progress'): #redundant to check both but ok
-            #         avail_buttons.append('createCuration')
-                
-            # ### edit verification - new verification
-            # try:
-            #     if(obj.submission_verification.status == 'new'):
-            #         avail_buttons.append('editVerification')
-            # except Submission.submission_verification.RelatedObjectDoesNotExist:
-            #     ### create verification - submitted (status not new) submission, submitted (status not new) curation
-            #     try:
-            #         if((obj.submission_curation.status == 'no_issues')):
-            #             avail_buttons.append('createVerification')
-            #     except Submission.submission_curation.RelatedObjectDoesNotExist:
-            #         pass
-
-            return avail_buttons#escape(get_perms(self.request.user, obj))
+            return avail_buttons#escape(get_perms(self.request.user, submission))
         else:
-            return super(SubmissionJson, self).render_column(obj, column)
+            return super(SubmissionJson, self).render_column(submission, column)
 
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['manuscript_id']

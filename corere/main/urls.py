@@ -4,8 +4,8 @@ from corere.main.views import datatables, main, users
 
 urlpatterns = [ 
     path('', main.index),
-    path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"), #TODO: Make sure accessing this directly doesn't reveal anything
-    path('manuscript/<int:manuscript_id>/submission_table', datatables.SubmissionJson.as_view(), name="submission_table"), #TODO: Make sure accessing this directly doesn't reveal anything
+    path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"),
+    path('manuscript/<int:manuscript_id>/submission_table', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create/', main.edit_manuscript),
     path('manuscript/<int:id>/edit', main.edit_manuscript),
     path('manuscript/<int:id>/addauthor', users.add_author),

@@ -19,7 +19,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' #TODO: make con
 SITE_ID = 1
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
-#INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True #TODO: This only works with allauth, which we don't use. Ideally you'd be able to retry the same key more than once.
 
 #CUSTOM CORERE
 GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
@@ -47,21 +46,18 @@ INSTALLED_APPS = [
     'corere.main',
 ]
 
-#TODO: Make this and middleware dev actually obey the DEBUG flag
-INSTALLED_APPS_DEV = [
+INSTALLED_APPS_DEBUG = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
     'django_extensions',
     'debug_toolbar',
 ]
 
-INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEV
-
 # Note that middleware order matters https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#enabling-middleware
-MIDDLEWARE_DEV = [
+MIDDLEWARE_DEBUG = [
     'debug_toolbar.middleware.DebugToolbarMiddleware'
 ]
 
-MIDDLEWARE = MIDDLEWARE_DEV + [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -70,6 +66,10 @@ MIDDLEWARE = MIDDLEWARE_DEV + [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if(DEBUG):
+    INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEBUG
+    MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
 
 #To have django-debug-toolbar show
 INTERNAL_IPS = [
