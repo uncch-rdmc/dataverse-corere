@@ -10,6 +10,7 @@ import logging
 import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from corere.main.middleware import local
 
 logger = logging.getLogger('corere')  
 ####################################################
@@ -20,10 +21,16 @@ class AbstractCreateUpdateModel(models.Model):
     creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True)
     last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        if hasattr(local, 'user'):
+            if(self.pk is None):
+                self.creator = local.user
+            else:
+                self.last_editor = local.user
+        return super(AbstractCreateUpdateModel, self).save(*args, **kwargs)
+
     class Meta:
         abstract = True
-
-    #TODO: Set up saving creator/editor, see https://www.agiliq.com/blog/2019/01/tracking-creator-of-django-objects/
         
 ####################################################
 
@@ -56,7 +63,7 @@ VERIFICATION_RESULT_CHOICES = (
 
 class Verification(AbstractCreateUpdateModel):
     status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
-    software = models.TextField() #TODO: Make this more usable as a list of software
+    software = models.TextField()
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
 
     class Meta:
@@ -251,7 +258,7 @@ class Manuscript(AbstractCreateUpdateModel):
     title = models.TextField(blank=False, null=False, default="")
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
-    environment_info = JSONField(encoder=DjangoJSONEncoder, default=list)
+    environment_info = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
     status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):

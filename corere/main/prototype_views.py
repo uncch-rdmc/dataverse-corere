@@ -19,7 +19,7 @@ def index(request):
     else: 
         return render(request, "main/proto_login.html")
 
-#TODO: Ensure all return paths do what we want. They were changed after the port and may never have been exercised
+#OLDDO: Ensure all return paths do what we want. They were changed after the port and may never have been exercised
 def create_import_init(request):
     if request.user.is_authenticated:
         if request.method == 'POST':

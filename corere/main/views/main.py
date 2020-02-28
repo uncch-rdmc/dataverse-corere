@@ -15,8 +15,6 @@ def index(request):
         if(request.user.invite_key): #user hasn't finished signing up if we are still holding their key
             return redirect("/account_user_details")
         else:
-            #TODO: write own context processor to pass repeatedly-used constants, etc
-            #https://stackoverflow.com/questions/433162/can-i-access-constants-in-settings-py-from-templates-in-django
             args = {'user':     request.user, 
                     'manuscript_columns':  helper_manuscript_columns(request.user),
                     'submission_columns':  helper_submission_columns(request.user),
@@ -29,7 +27,7 @@ def index(request):
     else:
         return render(request, "main/login.html")
 
-#TODO: Turn these into class-based views?
+#Maybe someday we should used class-based views
 #MAD: This decorator gets in the way of creation. We need to do it inside
 #@permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def edit_manuscript(request, id=None):
@@ -54,8 +52,7 @@ def edit_manuscript(request, id=None):
                     manuscript.begin()
                     manuscript.save()
                 except TransactionNotAllowed:
-                    #TODO: Do something better
-                    print("TransitionNotAllowed")
+                    print("TransitionNotAllowed") #Handle exception better
                     raise
             if not id: # if create
                 # Note these works alongside global permissions defined in signals.py
@@ -87,7 +84,7 @@ def edit_manuscript(request, id=None):
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            print(form.errors) #Handle exception better
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
 def edit_submission(request, manuscript_id=None, id=None):
@@ -110,14 +107,13 @@ def edit_submission(request, manuscript_id=None, id=None):
                 submission.submit()
                 submission.save()
             except TransactionNotAllowed:
-                #TODO: Do something better
-                print("TransitionNotAllowed")
+                print("TransitionNotAllowed") #Handle exception better
                 raise
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            print(form.errors) #Handle exception better
     return render(request, 'main/form_create_submission.html', {'form': form, 'id': id})
 
 def edit_curation(request, submission_id=None, id=None):
@@ -141,7 +137,7 @@ def edit_curation(request, submission_id=None, id=None):
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            print(form.errors) #Handle exception better
     return render(request, 'main/form_create_curation.html', {'form': form, 'id': id})
 
 def edit_verification(request, submission_id=None, id=None):
@@ -165,5 +161,5 @@ def edit_verification(request, submission_id=None, id=None):
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            print(form.errors) #Handle exception better
     return render(request, 'main/form_create_verification.html', {'form': form, 'id': id})
