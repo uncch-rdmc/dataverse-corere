@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, transition, RETURN_VALUE
@@ -178,6 +178,15 @@ class Submission(AbstractCreateUpdateModel):
                 try:
                     if(self.submission_verification.status == VERIFICATION_SUCCESS):
                         self.manuscript.status = MANUSCRIPT_COMPLETED
+                        # Delete existing groups when done for clean-up and reporting
+                        # TODO: Update django admin manuscript delete method to delete these groups as well.
+                        # It could be even better to extend the group model and have it connected to the manuscript...
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        # MAD: Are we leaving behind any permissions?
+
                         self.manuscript.save()
                         return SUBMISSION_REVIEWED
                 except Submission.submission_verification.RelatedObjectDoesNotExist:

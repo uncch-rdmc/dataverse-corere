@@ -10,8 +10,10 @@ urlpatterns = [
     path('manuscript/<int:id>/edit', main.edit_manuscript),
     path('manuscript/<int:id>/addauthor', users.add_author),
     path('manuscript/<int:id>/addcurator', users.add_curator),
+    path('manuscript/<int:id>/deletecurator/<int:user_id>', users.delete_curator),
     path('manuscript/<int:id>/addverifier', users.add_verifier),
-
+    path('manuscript/<int:id>/deleteverifier/<int:user_id>', users.delete_curator),
+    
     path('manuscript/<int:manuscript_id>/createsubmission', main.edit_submission),
     path('submission/<int:id>/edit', main.edit_submission),
     path('submission/<int:submission_id>/createcuration', main.edit_curation),

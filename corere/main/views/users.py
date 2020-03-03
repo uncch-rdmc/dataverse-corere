@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from guardian.decorators import permission_required_or_403
-from guardian.shortcuts import get_objects_for_user, assign_perm
+from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
 from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm
@@ -20,10 +20,13 @@ from django.conf import settings
 @permission_required_or_403('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_author(request, id=None):
     form = AuthorInvitationForm(request.POST or None)
+    group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+    manuscript = Manuscript.objects.get(pk=id)
+    manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
-            users = list(form.cleaned_data['existing_users'])
+            users = list(form.cleaned_data['users_to_add'])
 
             if(email):
                 Invitation = get_invitation_model()
@@ -44,50 +47,82 @@ def add_author(request, id=None):
                 invite.send_invitation(request)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
             
-            manuscript = Manuscript.objects.get(pk=id)
+            
             for u in users:
-                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
+                
                 manu_author_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 print('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'users': manu_author_group.user_set.all()})
 
 @permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_curator(request, id=None):
     form = CuratorInvitationForm(request.POST or None)
+    #MAD: I moved these outside... is that bad?
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
+    manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     if request.method == 'POST':
         if form.is_valid():
-            users = list(form.cleaned_data['existing_users'])
-            manuscript = Manuscript.objects.get(pk=id)
-            for u in users:
-                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-                manu_author_group.user_set.add(u)
+            users_to_add = list(form.cleaned_data['users_to_add'])
+            
+            for u in users_to_add:
+                manu_curator_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
                 print('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'users': manu_curator_group.user_set.all()})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def delete_curator(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
+    manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_curator_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/addcurator')
+    #from django.http import HttpResponse
+    #return HttpResponse("DELETE " + str(user_id))
 
 @permission_required_or_403('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_verifier(request, id=None):
     form = VerifierInvitationForm(request.POST or None)
+    #MAD: I moved these outside... is that bad?
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
+    manu_verifier_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     if request.method == 'POST':
         if form.is_valid():
-            users = list(form.cleaned_data['existing_users'])
-            manuscript = Manuscript.objects.get(pk=id)
+            users = list(form.cleaned_data['users_to_add'])
+            
             for u in users:
-                manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
-                manu_author_group.user_set.add(u)
+                manu_verifier_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
                 print('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'users': manu_verifier_group.user_set.all()})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@permission_required_or_403('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def delete_verifier(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
+    manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_verifier_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/addverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)
