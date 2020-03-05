@@ -1,5 +1,5 @@
 from django.contrib import admin
-from corere.main.models import Verification, Curation, File, Submission, Manuscript, User
+from corere.main.models import Verification, Curation, File, Submission, Manuscript, User, Note
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdmin
 from .forms import GroupAdminForm
@@ -19,6 +19,7 @@ class UserAdmin(admin.ModelAdmin):
 admin.site.register(Verification, GuardedModelAdminCustom)
 admin.site.register(Curation, GuardedModelAdminCustom)
 admin.site.register(File)
+admin.site.register(Note, GuardedModelAdminCustom)
 admin.site.register(Submission, GuardedModelAdminCustom)
 admin.site.register(Manuscript, GuardedModelAdminCustom)
 #admin.site.unregister(User)

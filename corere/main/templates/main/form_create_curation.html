@@ -11,5 +11,9 @@
     <input type="submit" name="submit" value="Save">
     <input type="submit" name="submit" value="Submit and Progress">
 </form>
+<a href='createnote'>Add note</a>
+{% for note in notes %}
+    <p>{{note.text}} by {{note.creator}}</p> 
+{% endfor %}
 
 {% endblock content %}

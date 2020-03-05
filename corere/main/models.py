@@ -4,13 +4,14 @@ from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
-from guardian.shortcuts import get_users_with_perms
+from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
 import logging
 import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from corere.main.middleware import local
+
 
 logger = logging.getLogger('corere')  
 ####################################################
@@ -206,7 +207,7 @@ class Submission(AbstractCreateUpdateModel):
             return False
         try:
             if(self.submission_curation):
-                print("There is a curation already")
+                #print("There is a curation already")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             pass
@@ -226,13 +227,13 @@ class Submission(AbstractCreateUpdateModel):
             return False
         try:
             if(self.submission_curation.status != CURATION_NO_ISSUES):
-                print("The curation had issues, so shouldn't be verified")
+                #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
         try:
             if(self.submission_verification):
-                print("There is a verification already")
+                #print("There is a verification already")
                 return False
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             pass
@@ -287,6 +288,38 @@ class Manuscript(AbstractCreateUpdateModel):
             ('verify_manuscript', 'Can verify manuscript/submission'),
         ]
 
+    def save(self, *args, **kwargs):
+        first_save = False
+        if not self.pk:
+            first_save = True
+        super(Manuscript, self).save(*args, **kwargs)
+        if first_save:
+            # Note these works alongside global permissions defined in signals.py
+            # TODO: Make this concatenation standardized
+            group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id))
+            assign_perm('change_manuscript', group_manuscript_editor, self) 
+            assign_perm('delete_manuscript', group_manuscript_editor, self) 
+            assign_perm('view_manuscript', group_manuscript_editor, self) 
+            assign_perm('manage_authors_on_manuscript', group_manuscript_editor, self) 
+
+            group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
+            assign_perm('change_manuscript', group_manuscript_author, self)
+            assign_perm('view_manuscript', group_manuscript_author, self) 
+            assign_perm('manage_authors_on_manuscript', group_manuscript_author, self) 
+            assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
+
+            group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
+            assign_perm('change_manuscript', group_manuscript_verifier, self) 
+            assign_perm('view_manuscript', group_manuscript_verifier, self) 
+            assign_perm('curate_manuscript', group_manuscript_verifier, self) 
+
+            group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
+            assign_perm('change_manuscript', group_manuscript_curator, self) 
+            assign_perm('view_manuscript', group_manuscript_curator, self) 
+            assign_perm('verify_manuscript', group_manuscript_verifier, self) 
+
+            group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
+            
     ##### django-fsm (workflow) related functions #####
 
     #Conditions: Authors needed, files uploaded [NOT DONE]
@@ -390,31 +423,59 @@ class File(AbstractCreateUpdateModel):
             raise AssertionError("Multiple owners set")
         super(File, self).save(*args, **kwargs)
 
-class Notes(AbstractCreateUpdateModel):
+#TODO:
+# - Multiple files?
+#   - Instead can I just allow note duplication?
+# - Scoping based upon permissions? groups?]
+#   - I want to say on creation which types of users can view the note
+#   - Could add object based view permissions to the groups? (e.g. these groups: c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
+#       - ... so on create, assign 1-4 perms per note
+#       - Let's think about how we'll be using this:
+#           - Creating notes: assing 'view note' object based perm to each group that has access
+#           - Displaying notes: Just call get_objects_for_user
+#               - ... not true when displaing notes connected to specific object. Gotta get all notes and check perms on each
+#           - Displaying scope of notes: use perm and get each group associated (reverse m2m lookup)
+# I should also be thinking about this in the context of tags?
+
+class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")
 
-    owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
-    owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
-    owner_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE)
-    owner_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE)
+    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='submission_notes')
+    parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='curation_notes')
+    parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='verification_notes')
+    parent_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE, related_name='file_notes')
+
+    #note this is not a "parent" relationship like above
+    manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE)
 
     @property
-    def owner(self):
-        if self.owner_submission_id is not None:
-            return self.owner_submission
-        if self.owner_curation_id is not None:
-            return self.owner_curation
-        if self.owner_verification_id is not None:
-            return self.owner_verification
-        if self.owner_file_id is not None:
-            return self.owner_file
-        raise AssertionError("Neither 'owner_submission', 'owner_curation', 'owner_verification' or 'owner_file' is set")
+    def parent(self):
+        if self.parent_submission_id is not None:
+            return self.parent_submission
+        if self.parent_curation_id is not None:
+            return self.parent_curation
+        if self.parent_verification_id is not None:
+            return self.parent_verification
+        if self.parent_file_id is not None:
+            return self.parent_file
+        raise AssertionError("Neither 'parent_submission', 'parent_curation', 'parent_verification' or 'parent_file' is set")
     
     def save(self, *args, **kwargs):
-        owners = 0
-        owners += (self.owner_submission_id is not None)
-        owners += (self.owner_curation_id is not None)
-        owners += (self.owner_verification_id is not None)
-        if(owners > 1):
-            raise AssertionError("Multiple owners set")
-        super(Notes, self).save(*args, **kwargs)
+        parents = 0
+        parents += (self.parent_submission_id is not None)
+        parents += (self.parent_curation_id is not None)
+        parents += (self.parent_verification_id is not None)
+        if(parents > 1):
+            raise AssertionError("Multiple parents set")
+
+        first_save = False
+        if not self.pk:
+            first_save = True
+        super(Note, self).save(*args, **kwargs)
+        if first_save:
+            group_prefixes = kwargs.pop('group_prefixes', [])
+            for prefix in group_prefixes:
+                group = Group.objects.get(name=prefix + " " + str(self.manuscript.id))
+                assign_perm('view_note', prefix, self) 
+
+    #TODO: If implementing fsm can_edit, base it upon the creator of the note

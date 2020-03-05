@@ -1,12 +1,14 @@
 #from django import forms
 from django import forms
 from django.forms import ModelMultipleChoiceField
-from .models import Manuscript, Submission, Verification, Curation, User
+from .models import Manuscript, Submission, Verification, Curation, User, Note
 #from invitations.models import Invitation
+from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
 from django.conf import settings
 from . import constants as c
 from django_select2.forms import Select2MultipleWidget
+from django.contrib.auth.models import Group
 
 class ManuscriptForm(forms.ModelForm):
     class Meta:
@@ -40,6 +42,26 @@ class CurationForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(CurationForm, self).__init__(*args, **kwargs)
 
+class NoteForm(forms.ModelForm):
+    class Meta:
+        model = Note
+        fields = ['text','scope']
+
+    SCOPE_OPTIONS = ((role,role) for role in c.get_roles())
+
+    scope = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple,
+                                          choices=SCOPE_OPTIONS, required=False)
+
+    def __init__ (self, *args, **kwargs):
+        super(NoteForm, self).__init__(*args, **kwargs)
+
+        existing_scope = []
+        for role in c.get_roles():
+            role_perms = get_perms(Group.objects.get(name=role), self.instance)
+            if('view_note' in role_perms):
+                existing_scope.append(role)
+        self.fields['scope'].initial = existing_scope
+        #print(self.fields['scope'].__dict__)
 
 class AuthorInvitationForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below

@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from corere.main.models import Manuscript, Submission, Curation, Verification
+from corere.main.models import Manuscript, Submission, Curation, Verification, Note
 from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
-from corere.main.forms import ManuscriptForm, SubmissionForm, CurationForm, VerificationForm
+from corere.main.forms import ManuscriptForm, SubmissionForm, CurationForm, VerificationForm, NoteForm
 from django.contrib.auth.models import Permission, Group
-from guardian.shortcuts import assign_perm#, get_objects_for_user
+from guardian.shortcuts import assign_perm, remove_perm#, get_objects_for_user
 from django_fsm import can_proceed#, has_transition_perm
 from django.core.exceptions import PermissionDenied
 from corere.main.utils import fsm_check_transition_perm
@@ -54,32 +54,6 @@ def edit_manuscript(request, id=None):
                 except TransactionNotAllowed:
                     print("TransitionNotAllowed") #Handle exception better
                     raise
-            if not id: # if create
-                # Note these works alongside global permissions defined in signals.py
-                # TODO: Make this concatenation standardized
-                group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
-                assign_perm('change_manuscript', group_manuscript_editor, manuscript) 
-                assign_perm('delete_manuscript', group_manuscript_editor, manuscript) 
-                assign_perm('view_manuscript', group_manuscript_editor, manuscript) 
-                assign_perm('manage_authors_on_manuscript', group_manuscript_editor, manuscript) 
-
-                group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
-                assign_perm('change_manuscript', group_manuscript_author, manuscript)
-                assign_perm('view_manuscript', group_manuscript_author, manuscript) 
-                assign_perm('manage_authors_on_manuscript', group_manuscript_author, manuscript) 
-                assign_perm('add_submission_to_manuscript', group_manuscript_author, manuscript) 
-
-                group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
-                assign_perm('change_manuscript', group_manuscript_verifier, manuscript) 
-                assign_perm('view_manuscript', group_manuscript_verifier, manuscript) 
-                assign_perm('curate_manuscript', group_manuscript_verifier, manuscript) 
-
-                group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-                assign_perm('change_manuscript', group_manuscript_curator, manuscript) 
-                assign_perm('view_manuscript', group_manuscript_curator, manuscript) 
-                assign_perm('verify_manuscript', group_manuscript_verifier, manuscript) 
-
-                group_manuscript_editor.user_set.add(request.user) #TODO: Should be dynamic on role, but right now only editors create manuscripts
                 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
@@ -96,10 +70,15 @@ def edit_submission(request, manuscript_id=None, id=None):
         submission.manuscript = get_object_or_404(Manuscript, id=manuscript_id)
         message = 'Your new submission has been created!'
     form = SubmissionForm(request.POST or None, request.FILES or None, instance=submission)
+    notes = []
+    for note in submission.submission_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            
             if not fsm_check_transition_perm(submission.submit, request.user): 
                 print("PermissionDenied")
                 raise PermissionDenied
@@ -114,7 +93,7 @@ def edit_submission(request, manuscript_id=None, id=None):
             return redirect('/')
         else:
             print(form.errors) #Handle exception better
-    return render(request, 'main/form_create_submission.html', {'form': form, 'id': id})
+    return render(request, 'main/form_create_submission.html', {'form': form, 'id': id, 'notes': notes })
 
 def edit_curation(request, submission_id=None, id=None):
     if id:
@@ -125,6 +104,12 @@ def edit_curation(request, submission_id=None, id=None):
         curation.submission = get_object_or_404(Submission, id=submission_id)
         message = 'Your new curation has been created!'
     form = CurationForm(request.POST or None, request.FILES or None, instance=curation)
+    notes = []
+    for note in curation.curation_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
     if request.method == 'POST':
         if form.is_valid():
             form.save()
@@ -138,7 +123,7 @@ def edit_curation(request, submission_id=None, id=None):
             return redirect('/')
         else:
             print(form.errors) #Handle exception better
-    return render(request, 'main/form_create_curation.html', {'form': form, 'id': id})
+    return render(request, 'main/form_create_curation.html', {'form': form, 'id': id, 'notes': notes})
 
 def edit_verification(request, submission_id=None, id=None):
     if id:
@@ -149,6 +134,12 @@ def edit_verification(request, submission_id=None, id=None):
         verification.submission = get_object_or_404(Submission, id=submission_id)
         message = 'Your new verification has been created!'
     form = VerificationForm(request.POST or None, request.FILES or None, instance=verification)
+    notes = []
+    for note in verification.verification_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
     if request.method == 'POST':
         if form.is_valid():
             form.save()
@@ -162,4 +153,41 @@ def edit_verification(request, submission_id=None, id=None):
             return redirect('/')
         else:
             print(form.errors) #Handle exception better
-    return render(request, 'main/form_create_verification.html', {'form': form, 'id': id})
+    return render(request, 'main/form_create_verification.html', {'form': form, 'id': id, 'notes': notes})
+
+def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+    if id:
+        note = get_object_or_404(Note, id=id)
+        message = 'Your note has been updated!'
+        re_url = '../edit'
+    else:
+        note = Note()
+        if(submission_id):
+            note.parent_submission = get_object_or_404(Submission, id=submission_id)
+        elif(curation_id):
+            note.parent_curation = get_object_or_404(Curation, id=curation_id)
+        elif(verification_id):
+            note.parent_verification = get_object_or_404(Verification, id=verification_id)
+        message = 'Your new note has been created!'
+        re_url = './edit'
+    form = NoteForm(request.POST or None, request.FILES or None, instance=note)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            #We go through all available role-groups and add/remove their permissions depending on whether they were selected
+            #TODO move to actual model save?
+            for role in c.get_roles():
+                group = Group.objects.get(name=role)
+                if role in form.cleaned_data['scope']:
+                    assign_perm('view_note', group, note) 
+                else:
+                    remove_perm('view_note', group, note)           
+            #user always has full permissions to their own note
+            assign_perm('view_note', request.user, note) 
+            assign_perm('change_note', request.user, note) 
+            assign_perm('delete_note', request.user, note) 
+            return redirect(re_url)
+        else:
+            print(form.errors) #Handle exception better
+
+    return render(request, 'main/form_create_note.html', {'form': form})
