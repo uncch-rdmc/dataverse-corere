@@ -72,8 +72,13 @@ class Verification(AbstractCreateUpdateModel):
 
     ##### django-fsm (workflow) related functions #####
 
+    def can_edit(self):
+        if(self.submission.status == SUBMISSION_IN_PROGRESS_VERIFICATION ):
+            return True
+        return False
+
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source=[VERIFICATION_NEW], target=RETURN_VALUE(), conditions=[],
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
         permission=lambda instance, user: user.has_perm('verify_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self.status
@@ -103,8 +108,16 @@ class Curation(AbstractCreateUpdateModel):
 
     ##### django-fsm (workflow) related functions #####
 
+    # DO: this is wrong, you should be able to edit even when a sub/cur/ver is not new
+    # I think we need additional tracking... We could add two versions of "SUBMISSION_IN_PROGRESS"?
+
+    def can_edit(self):
+        if(self.submission.status == SUBMISSION_IN_PROGRESS_CURATION ):
+            return True
+        return False
+
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source=[CURATION_NEW], target=RETURN_VALUE(), conditions=[],
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
         permission=lambda instance, user: user.has_perm('curate_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self.status
@@ -115,18 +128,20 @@ class Curation(AbstractCreateUpdateModel):
 # But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
 
 SUBMISSION_NEW = 'new'
-SUBMISSION_IN_PROGRESS = 'in_progress'
+SUBMISSION_IN_PROGRESS_CURATION = 'in_progress_curation'
+SUBMISSION_IN_PROGRESS_VERIFICATION = 'in_progress_verification'
 SUBMISSION_REVIEWED = 'reviewed'
 
 SUBMISSION_RESULT_CHOICES = (
     (SUBMISSION_NEW, 'New'),
-    (SUBMISSION_IN_PROGRESS, 'In Progress'),
+    (SUBMISSION_IN_PROGRESS_CURATION, 'In Progress - Curation'),
+    (SUBMISSION_IN_PROGRESS_VERIFICATION, 'In Progress - Verification'),
     (SUBMISSION_REVIEWED, 'Reviewed'),
 )
 
 class Submission(AbstractCreateUpdateModel):
     #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
-    status = FSMField(max_length=15, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
+    status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
 
     class Meta:
@@ -135,7 +150,7 @@ class Submission(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source=[SUBMISSION_NEW], target=RETURN_VALUE(), conditions=[],
+    @transition(field=status, source='[SUBMISSION_NEW]', target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_perm('change_submission',instance))
     def edit_noop(self):
         return self.status
@@ -145,7 +160,7 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit(self):
         return True
 
-    @transition(field=status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS, conditions=[can_submit],
+    @transition(field=status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, conditions=[can_submit],
                 permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance)) #MAD: Used same perm as add, do we want that?
     def submit(self):
         self.manuscript.status = MANUSCRIPT_PROCESSING #MAD: This seems bad, should I use FSM for this too?
@@ -170,9 +185,11 @@ class Submission(AbstractCreateUpdateModel):
 
         return True
 
-    @transition(field=status, source=SUBMISSION_IN_PROGRESS, target=RETURN_VALUE(), conditions=[can_review],
+    #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
+    #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
                 permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance)
-                    or user.has_perm('verify_manuscript',instance)))
+                    or user.has_perm('verify_manuscript',instance) )) #NOTE: I removed the ability for a curator to do this
     def review(self):
         try:
             if(self.submission_curation.status == CURATION_NO_ISSUES):
@@ -191,10 +208,10 @@ class Submission(AbstractCreateUpdateModel):
                         self.manuscript.save()
                         return SUBMISSION_REVIEWED
                 except Submission.submission_verification.RelatedObjectDoesNotExist:
-                    return SUBMISSION_IN_PROGRESS
+                    return SUBMISSION_IN_PROGRESS_VERIFICATION
 
         except Submission.submission_curation.RelatedObjectDoesNotExist:
-            return SUBMISSION_IN_PROGRESS
+            return SUBMISSION_IN_PROGRESS_CURATION
             
         self.manuscript.status = MANUSCRIPT_AWAITING_RESUBMISSION
         self.manuscript.save()
@@ -215,7 +232,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_curation],
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
         permission=lambda instance, user: user.has_perm('curate_manuscript',instance.manuscript))
     def add_curation_noop(self):
         return self.status
@@ -241,7 +258,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source=[SUBMISSION_IN_PROGRESS], target=RETURN_VALUE(), conditions=[can_add_verification],
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_add_verification],
         permission=lambda instance, user: user.has_perm('verify_manuscript',instance.manuscript))
     def add_verification_noop(self):
         return self.status
