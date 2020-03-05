@@ -79,15 +79,16 @@ def edit_submission(request, manuscript_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            if not fsm_check_transition_perm(submission.submit, request.user): 
-                print("PermissionDenied")
-                raise PermissionDenied
-            try: #TODO: only do this if the reviewer selects a certain form button
-                submission.submit()
-                submission.save()
-            except TransactionNotAllowed:
-                print("TransitionNotAllowed") #Handle exception better
-                raise
+            if(request.POST['submit'] == 'Submit for Review'): #This checks to see which form button was used. There is probably a more precise way to check
+                if not fsm_check_transition_perm(submission.submit, request.user): 
+                    print("PermissionDenied")
+                    raise PermissionDenied
+                try: #TODO: only do this if the reviewer selects a certain form button
+                    submission.submit()
+                    submission.save()
+                except TransactionNotAllowed:
+                    print("TransitionNotAllowed") #Handle exception better
+                    raise
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
@@ -113,11 +114,12 @@ def edit_curation(request, submission_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            try:
-                curation.submission.review()
-                curation.submission.save()
-            except TransactionNotAllowed:
-                pass #We do not do review if the statuses don't align
+            if(request.POST['submit'] == 'Submit and Progress'): #This checks to see which form button was used. There is probably a more precise way to check
+                try:
+                    curation.submission.review()
+                    curation.submission.save()
+                except TransactionNotAllowed:
+                    pass #We do not do review if the statuses don't align
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
@@ -143,11 +145,12 @@ def edit_verification(request, submission_id=None, id=None):
     if request.method == 'POST':
         if form.is_valid():
             form.save()
-            try: #TODO: only do this if the reviewer selects a certain form button
-                verification.submission.review()
-                verification.submission.save()
-            except TransactionNotAllowed:
-                pass #We do not do review if the statuses don't align
+            if(request.POST['submit'] == 'Submit and Progress'): #This checks to see which form button was used. There is probably a more precise way to check
+                try: 
+                    verification.submission.review()
+                    verification.submission.save()
+                except TransactionNotAllowed:
+                    pass #We do not do review if the statuses don't align
 
             messages.add_message(request, messages.INFO, message)
             return redirect('/')
@@ -191,3 +194,8 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
             print(form.errors) #Handle exception better
 
     return render(request, 'main/form_create_note.html', {'form': form})
+
+def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+    note = get_object_or_404(Note, id=id)
+    note.delete()
+    return redirect('../edit')

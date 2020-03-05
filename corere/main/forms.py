@@ -55,6 +55,7 @@ class NoteForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
 
+        #Populate scope field with existing roles
         existing_scope = []
         for role in c.get_roles():
             role_perms = get_perms(Group.objects.get(name=role), self.instance)

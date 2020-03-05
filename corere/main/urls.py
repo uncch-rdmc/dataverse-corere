@@ -20,15 +20,18 @@ urlpatterns = [
     path('submission/<int:submission_id>/createverification', main.edit_verification),
     path('submission/<int:submission_id>/createnote', main.edit_note),
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note),
+    path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note),
 
     path('curation/<int:id>/edit', main.edit_curation),
     path('curation/<int:curation_id>/createnote', main.edit_note),
     path('curation/<int:curation_id>/editnote/<int:id>', main.edit_note),
+    path('curation/<int:curation_id>/deletenote/<int:id>', main.delete_note),
 
     path('verification/<int:id>/edit', main.edit_verification),
     path('verification/<int:verification_id>/createnote', main.edit_note),
     path('verification/<int:verification_id>/editnote/<int:id>', main.edit_note),
-    
+    path('verification/<int:verification_id>/deletenote/<int:id>', main.delete_note),
+
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
     path('account_user_details', users.account_user_details)

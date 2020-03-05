@@ -1,5 +1,6 @@
 {% extends "main/layout.html" %}
 {% block content %}
+{% load concat %}
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 
@@ -13,7 +14,12 @@
 </form>
 <a href='createnote'>Add note</a>
 {% for note in notes %}
-    <p>{{note.text}} by {{note.creator}}</p> 
+    <p>{{note.text}} by {{note.creator}}
+    {% if user.username == note.creator.username %}
+
+        (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href={{ 'deletenote/'|concat:note.id}}>Delete</a>)
+    {% endif %}
+    </p> 
 {% endfor %}
 
 {% endblock content %}

@@ -17,7 +17,7 @@
     <p>{{note.text}} by {{note.creator}} 
     {% if user.username == note.creator.username %}
 
-        (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>)
+        (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href={{ 'deletenote/'|concat:note.id}}>Delete</a>)
     {% endif %}
     </p> 
 {% endfor %}
