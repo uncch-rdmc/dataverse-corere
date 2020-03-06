@@ -10,6 +10,19 @@ from . import constants as c
 from django_select2.forms import Select2MultipleWidget
 from django.contrib.auth.models import Group
 
+class ReadOnlyFormMixin(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(ReadOnlyFormMixin, self).__init__(*args, **kwargs)
+        
+        for key in self.fields.keys():
+            #print(key)
+            self.fields[key].widget.attrs['readonly'] = True #May not do anything in django 2
+            self.fields[key].disabled = True
+
+    def save(self, *args, **kwargs):
+        # do not do anything
+        pass
+
 class ManuscriptForm(forms.ModelForm):
     class Meta:
         model = Manuscript
@@ -17,6 +30,9 @@ class ManuscriptForm(forms.ModelForm):
 
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptForm):
+    pass
 
 class SubmissionForm(forms.ModelForm):
     class Meta:
@@ -26,13 +42,8 @@ class SubmissionForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(SubmissionForm, self).__init__(*args, **kwargs)
 
-class VerificationForm(forms.ModelForm):
-    class Meta:
-        model = Verification
-        fields = ['status']
-
-    def __init__ (self, *args, **kwargs):
-        super(VerificationForm, self).__init__(*args, **kwargs)
+class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
+    pass
 
 class CurationForm(forms.ModelForm):
     class Meta:
@@ -41,6 +52,20 @@ class CurationForm(forms.ModelForm):
 
     def __init__ (self, *args, **kwargs):
         super(CurationForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
+    pass
+
+class VerificationForm(forms.ModelForm):
+    class Meta:
+        model = Verification
+        fields = ['status']
+
+    def __init__ (self, *args, **kwargs):
+        super(VerificationForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationForm):
+    pass
 
 class NoteForm(forms.ModelForm):
     class Meta:

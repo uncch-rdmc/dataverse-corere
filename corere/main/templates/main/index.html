@@ -73,6 +73,15 @@
                             enabled: false
                         },
                     {% endif %}
+                        {
+                            text: 'View Manuscript',
+                            name: 'viewManuscript',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/"+manuscript_id+"/view";
+                            },
+                            enabled: false
+                        },
                     {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
                         {
                             text: 'Invite/Add Author to Manuscript',
@@ -117,6 +126,17 @@
                         } else {
                             dt.button(avail_buttons[i]+':name').enable(true);
                         }
+
+                        //If you can edit don't show view
+                        //maybe this should be done in python
+                        //TODO: Confirm these work as expected
+                        //if(avail_buttons[i] == 'editSubmission') {
+                        //    dt.button('viewSubmission:name').visible(false);
+                        //} else if(avail_buttons[i] == 'editCuration') {
+                        //    dt.button('viewCuration:name').visible(false);
+                        //} else if(avail_buttons[i] == 'editVerification') {
+                        //    dt.button('viewVerification:name').visible(false);
+                        //}
                     }
 
                     document.getElementById("submission_table_wrapper").style.display = "block"; //show element
@@ -131,6 +151,7 @@
                     var count = dt.rows( { selected: true } ).count();
                     if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editManuscript:name').enable(false);
+                        dt.button('viewManuscript:name').enable(false);
                         dt.button('addAuthor:name').enable(false);
                         dt.button('addCurator:name').enable(false);
                         dt.button('addVerifier:name').enable(false);
@@ -227,6 +248,15 @@
                             enabled: false
                         },
                     {% endif %}
+                    {
+                        text: 'View Submission',
+                        name: 'viewSubmission',
+                        action: function ( e, dt, node, config ) {
+                            console.log(dt.rows( { selected: true } ).data()[0][0])
+                            window.location.href = "submission/"+submission_id+"/view";
+                        },
+                        enabled: false
+                    },
                     {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
@@ -246,6 +276,17 @@
                             enabled: false
                         },
                     {% endif %}
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+                        {
+                            text: 'View Curation',
+                            name: 'viewCuration',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "curation/"+curation_id+"/view";
+                            },
+                            enabled: false
+                        },
+                    {% endif %}
                     {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Verification',
@@ -261,6 +302,17 @@
                             action: function ( e, dt, node, config ) {
                                 console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "verification/"+verification_id+"/edit";
+                            },
+                            enabled: false
+                        },
+                    {% endif %}
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+                        {
+                            text: 'View Verification',
+                            name: 'viewVerification',
+                            action: function ( e, dt, node, config ) {
+                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "verification/"+verification_id+"/view";
                             },
                             enabled: false
                         },
@@ -286,7 +338,10 @@
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);
                         dt.button('createVerification:name').enable(false);
-                        dt.button('editVerification:name').enable(false);                                                
+                        dt.button('editVerification:name').enable(false);                                     
+                        dt.button('viewSubmission:name').enable(false);
+                        dt.button('viewCuration:name').enable(false);
+                        dt.button('viewVerification:name').enable(false);                                      
                     }
                     console.log('Table row deselected');
                 } ).row(':last').select();

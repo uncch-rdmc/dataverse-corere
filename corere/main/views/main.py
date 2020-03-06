@@ -3,7 +3,7 @@ from django.contrib import messages
 from corere.main.models import Manuscript, Submission, Curation, Verification, Note
 from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
-from corere.main.forms import ManuscriptForm, SubmissionForm, CurationForm, VerificationForm, NoteForm
+from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm, remove_perm#, get_objects_for_user
 from django_fsm import can_proceed#, has_transition_perm
@@ -26,6 +26,14 @@ def index(request):
             return render(request, "main/index.html", args)
     else:
         return render(request, "main/login.html")
+
+def view_manuscript(request, id=None):
+    if id:
+        manuscript = get_object_or_404(Manuscript, id=id)
+        message = 'Your manuscript has been updated!'
+    form = ReadOnlyManuscriptForm(instance=manuscript)
+    #TODO: Add Notes
+    return render(request, 'main/form_view_manuscript.html', {'form': form, 'id': id})
 
 #Maybe someday we should used class-based views
 #MAD: This decorator gets in the way of creation. We need to do it inside
@@ -60,6 +68,17 @@ def edit_manuscript(request, id=None):
         else:
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
+
+def view_submission(request, manuscript_id=None, id=None):
+    submission = get_object_or_404(Submission, id=id)
+    form = ReadOnlySubmissionForm(instance=submission)
+    notes = []
+    for note in submission.submission_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
+    return render(request, 'main/form_view_submission.html', {'form': form, 'id': id, 'notes': notes })
 
 def edit_submission(request, manuscript_id=None, id=None):
     if id:
@@ -96,6 +115,17 @@ def edit_submission(request, manuscript_id=None, id=None):
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_submission.html', {'form': form, 'id': id, 'notes': notes })
 
+def view_curation(request, submission_id=None, id=None):
+    curation = get_object_or_404(Curation, id=id)
+    form = ReadOnlyCurationForm(instance=curation)
+    notes = []
+    for note in curation.curation_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
+    return render(request, 'main/form_view_curation.html', {'form': form, 'id': id, 'notes': notes })
+
 def edit_curation(request, submission_id=None, id=None):
     if id:
         curation = get_object_or_404(Curation, id=id)
@@ -126,6 +156,17 @@ def edit_curation(request, submission_id=None, id=None):
         else:
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_curation.html', {'form': form, 'id': id, 'notes': notes})
+
+def view_verification(request, submission_id=None, id=None):
+    verification = get_object_or_404(Verification, id=id)
+    form = ReadOnlyVerificationForm(instance=verification)
+    notes = []
+    for note in verification.verification_notes.all():
+        if request.user.has_perm('view_note', note):
+            notes.append(note)
+        else:
+            print("user did not have permission for note: " + note.text)
+    return render(request, 'main/form_view_verification.html', {'form': form, 'id': id, 'notes': notes })
 
 def edit_verification(request, submission_id=None, id=None):
     if id:

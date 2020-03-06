@@ -150,7 +150,7 @@ class Submission(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     #Does not actually change status, used just for permission checking
-    @transition(field=status, source='[SUBMISSION_NEW]', target=RETURN_VALUE(), conditions=[],
+    @transition(field=status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_perm('change_submission',instance))
     def edit_noop(self):
         return self.status

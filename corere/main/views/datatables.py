@@ -95,6 +95,8 @@ class ManuscriptJson(CorereBaseDatatableView):
 
             if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
+            else: #TODO: Bad should really do another perm check
+                avail_buttons.append('viewManuscript')
             # MAD: The way permissions work for this is confusing and will lead to bugs. It'd be good to create a wrapper that checks perms in all the places / can handle app label / etc
             # Do we even use the non-object based manage permission? Should we leave that ability in here? Maybe for superuser?
             if(user.has_perm('manage_authors_on_manuscript', manuscript) or user.has_perm('main.manage_authors_on_manuscript')):
@@ -177,12 +179,16 @@ class SubmissionJson(CorereBaseDatatableView):
 
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
+            else: #TODO: Bad should really do another perm check
+                avail_buttons.append('viewSubmission')
 
             if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
                 if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                     avail_buttons.append('editCuration')
+                else: #TODO: Bad should really do another perm check
+                    avail_buttons.append('viewCuration')
             except Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
 
@@ -191,6 +197,8 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                     avail_buttons.append('editVerification')
+                else: #TODO: Bad should really do another perm check
+                    avail_buttons.append('viewVerification')  
             except Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
 
