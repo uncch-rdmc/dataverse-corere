@@ -10,6 +10,9 @@ from django_fsm import can_proceed#, has_transition_perm
 from django.core.exceptions import PermissionDenied
 from corere.main.utils import fsm_check_transition_perm
 
+from django.http import HttpResponse
+from django.views import View
+
 def index(request):
     if request.user.is_authenticated:
         if(request.user.invite_key): #user hasn't finished signing up if we are still holding their key
@@ -69,6 +72,132 @@ def edit_manuscript(request, id=None):
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
+class CurationView(View):
+    output = "woah"
+    def dispatch(self, *args, **kwargs): 
+        #self.output = 'notblank'
+        return super(CurationView, self).dispatch(*args, **kwargs)
+    def get(self, request):
+        return HttpResponse(self.output)
+    def post(self, request):
+        return HttpResponse(self.output)
+
+#How do I see these broken down? One view per object with some mixins to pass in?
+
+#MAD: Right now this is just submission and not really broken up
+#TODO: Rename
+
+class GenericCorereObjectView(View):
+    transition_form_button_title = None
+    form = None
+    obj_class = None #should probably rename to make clear its not an instantiation
+    template = None
+    redirect = '/'
+    parent_reference_name = None
+    parent_id_name = None
+    parent_obj_class = None #should probably rename to make clear its not an instantiation
+    object_friendly_name = None
+    read_only = False
+    http_method_names = ['get', 'post']
+
+    def dispatch(self, *args, **kwargs): 
+        if kwargs.get('id'):
+            print ("HELLO " + str(self.parent_obj_class))
+            print ("HELLO " + self.redirect)
+            self.obj = get_object_or_404(self.obj_class, id=kwargs.get('id'))
+            self.message = 'Your '+self.object_friendly_name +' has been updated!'
+        elif kwargs.get(self.parent_id_name) and not self.read_only:
+            self.obj = self.obj_class()
+            setattr(self.obj, self.parent_reference_name, get_object_or_404(self.parent_obj_class, id=kwargs.get(self.parent_id_name)))
+            #self.object.manuscript = get_object_or_404(Manuscript, id=kwargs.get(self.parent_id_name))
+            self.message = 'Your new '+self.object_friendly_name +' has been created!'
+        else:
+            print("ERROR")
+        self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.obj)
+        return super(GenericCorereObjectView, self).dispatch(*args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template, {'form': self.form})#, 'id': self.id})#, 'notes': notes })
+
+    def post(self, request, *args, **kwargs):
+        if self.form.is_valid():
+            self.form.save()
+            if(request.POST['submit'] == self.transition_form_button_title): #This checks to see which form button was used. There is probably a more precise way to check
+                self.transition_if_allowed(request, *args, **kwargs)
+            messages.add_message(request, messages.INFO, self.message)
+            return redirect(self.redirect)
+        else:
+            print(form.errors) #Handle exception better
+        return render(request, self.template, {'form': form})#, 'id': id})#, 'notes': notes })
+
+
+
+    #### Custom class functions. You will want to override some of these. #####
+
+    # To do a tranisition on save. Different transitions are used for each object
+    def transition_if_allowed(self, request, *args, **kwargs):
+        pass
+
+class ReadOnlyCorereMixin(object):
+    read_only = True
+    http_method_names = ['get']
+
+################################################################################################
+
+class SubmissionEditView(GenericCorereObjectView):
+    transition_form_button_title = 'Submit for Review'
+    form = SubmissionForm
+    template = 'main/form_create_submission.html'
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_obj_class = Manuscript
+    object_friendly_name = 'submission'
+    obj_class = Submission
+
+    def transition_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.object.submit, request.user): 
+            print("PermissionDenied")
+            raise PermissionDenied
+        try: #TODO: only do this if the reviewer selects a certain form button
+            self.obj.submit()
+            self.obj.save()
+        except TransactionNotAllowed:
+            print("TransitionNotAllowed") #Handle exception better
+            raise
+
+class SubmissionReadView(ReadOnlyCorereMixin, SubmissionEditView):
+    form = ReadOnlySubmissionForm
+    template = 'main/form_view_submission.html'
+
+
+class CurationEditView(GenericCorereObjectView):
+    transition_form_button_title = 'Submit and Progress'
+    form = CurationForm
+    template = 'main/form_create_curation.html'
+    parent_reference_name = 'submission'
+    parent_id_name = "submission_id"
+    parent_obj_class = Submission
+    object_friendly_name = 'curation'
+    obj_class = Curation
+    redirect = '/'
+
+    def transition_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.obj.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
+            print("PermissionDenied")
+            raise PermissionDenied
+        try:
+            curation.submission.review()
+            curation.submission.save()
+        except TransactionNotAllowed:
+            print("Transaction Not Allowed") #MAD: Prolly remove after testing
+            pass #We do not do review if the statuses don't align
+
+class CurationReadView(ReadOnlyCorereMixin, CurationEditView):
+    form = ReadOnlyCurationForm
+    template = 'main/form_view_curation.html'
+
+################################################################################################
+
 def view_submission(request, manuscript_id=None, id=None):
     submission = get_object_or_404(Submission, id=id)
     form = ReadOnlySubmissionForm(instance=submission)
@@ -114,6 +243,8 @@ def edit_submission(request, manuscript_id=None, id=None):
         else:
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_submission.html', {'form': form, 'id': id, 'notes': notes })
+
+
 
 def view_curation(request, submission_id=None, id=None):
     curation = get_object_or_404(Curation, id=id)

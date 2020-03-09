@@ -38,5 +38,13 @@ urlpatterns = [
 
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
-    path('account_user_details', users.account_user_details)
+    path('account_user_details', users.account_user_details),
+
+    path('test', main.CurationView.as_view()),
+    path('testsub/<int:id>/edit',main.SubmissionEditView.as_view()),
+    path('testsub/<int:id>/view',main.SubmissionReadView.as_view()),
+    path('testsub/<int:manuscript_id>/createsubmission',main.SubmissionEditView.as_view()),
+    path('testcur/<int:id>/edit',main.CurationEditView.as_view()),
+    path('testcur/<int:id>/view',main.CurationReadView.as_view()),
+    path('testcur/<int:submission_id>/createcuration',main.CurationEditView.as_view())
 ]
