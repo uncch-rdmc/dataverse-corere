@@ -72,21 +72,6 @@ def edit_manuscript(request, id=None):
             print(form.errors) #Handle exception better
     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
-class CurationView(View):
-    output = "woah"
-    def dispatch(self, *args, **kwargs): 
-        #self.output = 'notblank'
-        return super(CurationView, self).dispatch(*args, **kwargs)
-    def get(self, request):
-        return HttpResponse(self.output)
-    def post(self, request):
-        return HttpResponse(self.output)
-
-#How do I see these broken down? One view per object with some mixins to pass in?
-
-#MAD: Right now this is just submission and not really broken up
-#TODO: Rename
-
 class GenericCorereObjectView(View):
     transition_form_button_title = None
     form = None
@@ -102,14 +87,12 @@ class GenericCorereObjectView(View):
 
     def dispatch(self, *args, **kwargs): 
         if kwargs.get('id'):
-            print ("HELLO " + str(self.parent_obj_class))
-            print ("HELLO " + self.redirect)
             self.obj = get_object_or_404(self.obj_class, id=kwargs.get('id'))
             self.message = 'Your '+self.object_friendly_name +' has been updated!'
-        elif kwargs.get(self.parent_id_name) and not self.read_only:
+        elif not self.read_only: #kwargs.get(self.parent_id_name) and 
             self.obj = self.obj_class()
-            setattr(self.obj, self.parent_reference_name, get_object_or_404(self.parent_obj_class, id=kwargs.get(self.parent_id_name)))
-            #self.object.manuscript = get_object_or_404(Manuscript, id=kwargs.get(self.parent_id_name))
+            if(self.parent_obj_class is not None):
+                setattr(self.obj, self.parent_reference_name, get_object_or_404(self.parent_obj_class, id=kwargs.get(self.parent_id_name)))
             self.message = 'Your new '+self.object_friendly_name +' has been created!'
         else:
             print("ERROR")
@@ -122,7 +105,7 @@ class GenericCorereObjectView(View):
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
             self.form.save()
-            if(request.POST['submit'] == self.transition_form_button_title): #This checks to see which form button was used. There is probably a more precise way to check
+            if(self.transition_form_button_title and request.POST['submit'] == self.transition_form_button_title): #This checks to see which form button was used. There is probably a more precise way to check
                 self.transition_if_allowed(request, *args, **kwargs)
             messages.add_message(request, messages.INFO, self.message)
             return redirect(self.redirect)
@@ -131,8 +114,7 @@ class GenericCorereObjectView(View):
         return render(request, self.template, {'form': form})#, 'id': id})#, 'notes': notes })
 
 
-
-    #### Custom class functions. You will want to override some of these. #####
+    ######## Custom class functions. You will want to override some of these. #########
 
     # To do a tranisition on save. Different transitions are used for each object
     def transition_if_allowed(self, request, *args, **kwargs):
@@ -143,6 +125,28 @@ class ReadOnlyCorereMixin(object):
     http_method_names = ['get']
 
 ################################################################################################
+
+class ManuscriptEditView(GenericCorereObjectView):
+    transition_form_button_title = 'Save and Assign to Authors'
+    form = ManuscriptForm
+    template = 'main/form_create_manuscript.html'
+    object_friendly_name = 'manuscript'
+    obj_class = Manuscript
+
+    def transition_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.obj.begin, request.user): 
+            print("PermissionDenied")
+            raise PermissionDenied
+        try: #TODO: only do this if the reviewer selects a certain form button
+            self.obj.begin()
+            self.obj.save()
+        except TransactionNotAllowed:
+            print("TransitionNotAllowed") #Handle exception better
+            raise
+
+class ManuscriptReadView(ReadOnlyCorereMixin, ManuscriptEditView):
+    form = ReadOnlyManuscriptForm
+    template = 'main/form_view_manuscript.html'
 
 class SubmissionEditView(GenericCorereObjectView):
     transition_form_button_title = 'Submit for Review'
@@ -155,7 +159,7 @@ class SubmissionEditView(GenericCorereObjectView):
     obj_class = Submission
 
     def transition_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submit, request.user): 
+        if not fsm_check_transition_perm(self.obj.submit, request.user): 
             print("PermissionDenied")
             raise PermissionDenied
         try: #TODO: only do this if the reviewer selects a certain form button
@@ -182,12 +186,12 @@ class CurationEditView(GenericCorereObjectView):
     redirect = '/'
 
     def transition_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.obj.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
-            print("PermissionDenied")
-            raise PermissionDenied
+        # if not fsm_check_transition_perm(self.obj.submission.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
+        #     print("PermissionDenied")
+        #     raise PermissionDenied
         try:
-            curation.submission.review()
-            curation.submission.save()
+            self.obj.submission.review()
+            self.obj.submission.save()
         except TransactionNotAllowed:
             print("Transaction Not Allowed") #MAD: Prolly remove after testing
             pass #We do not do review if the statuses don't align
@@ -195,6 +199,33 @@ class CurationEditView(GenericCorereObjectView):
 class CurationReadView(ReadOnlyCorereMixin, CurationEditView):
     form = ReadOnlyCurationForm
     template = 'main/form_view_curation.html'
+
+
+class VerificationEditView(GenericCorereObjectView):
+    transition_form_button_title = 'Submit and Progress'
+    form = VerificationForm
+    template = 'main/form_create_verification.html'
+    parent_reference_name = 'submission'
+    parent_id_name = "submission_id"
+    parent_obj_class = Submission
+    object_friendly_name = 'verification'
+    obj_class = Verification
+    redirect = '/'
+
+    def transition_if_allowed(self, request, *args, **kwargs):
+        # if not fsm_check_transition_perm(self.obj.submission.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
+        #     print("PermissionDenied")
+        #     raise PermissionDenied
+        try:
+            self.obj.submission.review()
+            self.obj.submission.save()
+        except TransactionNotAllowed:
+            print("Transaction Not Allowed") #MAD: Prolly remove after testing
+            pass #We do not do review if the statuses don't align
+
+class VerificationReadView(ReadOnlyCorereMixin, VerificationEditView):
+    form = ReadOnlyVerificationForm
+    template = 'main/form_view_verification.html'
 
 ################################################################################################
 

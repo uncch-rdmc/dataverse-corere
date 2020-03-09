@@ -40,11 +40,17 @@ urlpatterns = [
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
     path('account_user_details', users.account_user_details),
 
-    path('test', main.CurationView.as_view()),
+
+    path('testmanu/<int:id>/edit',main.ManuscriptEditView.as_view()),
+    path('testmanu/<int:id>/view',main.ManuscriptReadView.as_view()),
+    path('testmanu/create',main.ManuscriptEditView.as_view()),
     path('testsub/<int:id>/edit',main.SubmissionEditView.as_view()),
     path('testsub/<int:id>/view',main.SubmissionReadView.as_view()),
     path('testsub/<int:manuscript_id>/createsubmission',main.SubmissionEditView.as_view()),
     path('testcur/<int:id>/edit',main.CurationEditView.as_view()),
     path('testcur/<int:id>/view',main.CurationReadView.as_view()),
-    path('testcur/<int:submission_id>/createcuration',main.CurationEditView.as_view())
+    path('testcur/<int:submission_id>/createcuration',main.CurationEditView.as_view()),
+    path('testverif/<int:id>/edit',main.VerificationEditView.as_view()),
+    path('testverif/<int:id>/view',main.VerificationReadView.as_view()),
+    path('testverif/<int:submission_id>/createverification',main.VerificationEditView.as_view())
 ]
