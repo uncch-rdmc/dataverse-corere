@@ -17,7 +17,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/createsubmission', main.SubmissionEditView.as_view()),
 
     path('submission/<int:id>/edit', main.SubmissionEditView.as_view()),
-    path('submission/<int:id>/view', main.VerificationReadView.as_view()),
+    path('submission/<int:id>/view', main.SubmissionReadView.as_view()),
     path('submission/<int:submission_id>/createcuration', main.CurationEditView.as_view()),
     path('submission/<int:submission_id>/createverification', main.VerificationEditView.as_view()),
     path('submission/<int:submission_id>/createnote', main.edit_note),

@@ -85,7 +85,7 @@ class GenericCorereObjectView(View):
     read_only = False
     http_method_names = ['get', 'post']
 
-    def dispatch(self, *args, **kwargs): 
+    def dispatch(self, request, *args, **kwargs): 
         if kwargs.get('id'):
             self.obj = get_object_or_404(self.obj_class, id=kwargs.get('id'))
             self.message = 'Your '+self.object_friendly_name +' has been updated!'
@@ -97,20 +97,20 @@ class GenericCorereObjectView(View):
         else:
             print("ERROR")
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.obj)
-        return super(GenericCorereObjectView, self).dispatch(*args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        notes = []
+        self.notes = []
         try:
             self.obj_class._meta.get_field('notes')
             for note in self.obj.notes.all():
                 if request.user.has_perm('view_note', note):
-                    notes.append(note)
+                    self.notes.append(note)
                 else:
                     print("user did not have permission for note: " + note.text)
         except FieldDoesNotExist: #To catch models without notes (Manuscript)
             pass
-        return render(request, self.template, {'form': self.form, 'notes': notes })
+        return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template, {'form': self.form, 'notes': self.notes })
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
@@ -121,7 +121,7 @@ class GenericCorereObjectView(View):
             return redirect(self.redirect)
         else:
             print(form.errors) #Handle exception better
-        return render(request, self.template, {'form': form})#, 'id': id})#, 'notes': notes })
+        return render(request, self.template, {'form': self.form, 'notes': self.notes })
 
 
     ######## Custom class functions. You will want to override some of these. #########
