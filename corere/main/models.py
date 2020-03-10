@@ -457,10 +457,10 @@ class File(AbstractCreateUpdateModel):
 class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")
 
-    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='submission_notes')
-    parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='curation_notes')
-    parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='verification_notes')
-    parent_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE, related_name='file_notes')
+    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE)

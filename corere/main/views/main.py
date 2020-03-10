@@ -7,7 +7,7 @@ from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm, remove_perm#, get_objects_for_user
 from django_fsm import can_proceed#, has_transition_perm
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from corere.main.utils import fsm_check_transition_perm
 
 from django.http import HttpResponse
@@ -100,7 +100,17 @@ class GenericCorereObjectView(View):
         return super(GenericCorereObjectView, self).dispatch(*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form})#, 'id': self.id})#, 'notes': notes })
+        notes = []
+        try:
+            self.obj_class._meta.get_field('notes')
+            for note in self.obj.notes.all():
+                if request.user.has_perm('view_note', note):
+                    notes.append(note)
+                else:
+                    print("user did not have permission for note: " + note.text)
+        except FieldDoesNotExist: #To catch models without notes (Manuscript)
+            pass
+        return render(request, self.template, {'form': self.form, 'notes': notes })
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
@@ -123,6 +133,8 @@ class GenericCorereObjectView(View):
 class ReadOnlyCorereMixin(object):
     read_only = True
     http_method_names = ['get']
+
+
 
 ################################################################################################
 
