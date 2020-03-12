@@ -168,7 +168,6 @@ class Submission(AbstractCreateUpdateModel):
 
     def can_add_curation(self):
         if(self.manuscript.status != 'processing'):   
-            print("OH NO")    
             return False
         if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False

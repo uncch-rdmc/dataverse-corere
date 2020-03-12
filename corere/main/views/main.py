@@ -32,48 +32,6 @@ def index(request):
     else:
         return render(request, "main/login.html")
 
-# def view_manuscript(request, id=None):
-#     if id:
-#         manuscript = get_object_or_404(Manuscript, id=id)
-#         message = 'Your manuscript has been updated!'
-#     form = ReadOnlyManuscriptForm(instance=manuscript)
-#     #TODO: Add Notes
-#     return render(request, 'main/form_view_manuscript.html', {'form': form, 'id': id})
-
-# #Maybe someday we should used class-based views
-# #MAD: This decorator gets in the way of creation. We need to do it inside
-# #@permission_required_or_403('main.change_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-# def edit_manuscript(request, id=None):
-#     if id:
-#         manuscript = get_object_or_404(Manuscript, id=id)
-#         message = 'Your manuscript has been updated!'
-#     else:
-#         manuscript = Manuscript()
-#         message = 'Your new manuscript has been created!'
-#     form = ManuscriptForm(request.POST or None, request.FILES or None, instance=manuscript)
-#     if request.method == 'POST':
-#         if form.is_valid():
-#             form.save()
-#             if(request.POST['submit'] == 'Save and Assign to Authors'): #This checks to see which form button was used. There is probably a more precise way to check
-#                 #print(request.user.groups.filter(name='c.GROUP_ROLE_VERIFIER').exists())
-#                 print("main has_transition_perm")
-#                 print(fsm_check_transition_perm(manuscript.begin, request.user))
-#                 if not fsm_check_transition_perm(manuscript.begin, request.user): 
-#                     print("PermissionDenied")
-#                     raise PermissionDenied
-#                 try:
-#                     manuscript.begin()
-#                     manuscript.save()
-#                 except TransactionNotAllowed:
-#                     print("TransitionNotAllowed") #Handle exception better
-#                     raise
-                
-#             messages.add_message(request, messages.INFO, message)
-#             return redirect('/')
-#         else:
-#             print(form.errors) #Handle exception better
-#     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
-
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
     #TODO: Really should add comments to these to clarify what they actually do...
@@ -90,7 +48,6 @@ class GenericCorereObjectView(View):
     parent_reference_name = None
     parent_id_name = None
     parent_model = None
-
 
     def dispatch(self, request, *args, **kwargs): 
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
@@ -272,9 +229,11 @@ class SubmissionEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
 class SubmissionReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
     #For PermissionRequiredMixin
-    permission_required = "main.view_submission"
+    permission_required = "main.view_manuscript"
     accept_global_perms = True
     return_403 = True
+    def get_permission_object(self):
+        return self.object.manuscript
 
 
 class GenericCurationView(GenericCorereObjectView):
@@ -311,9 +270,11 @@ class CurationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Gene
 class CurationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericCurationView):
     form = ReadOnlyCurationForm
     #For PermissionRequiredMixin
-    permission_required = "main.view_curation"
+    permission_required = "main.view_manuscript"
     accept_global_perms = True
     return_403 = True
+    def get_permission_object(self):
+        return self.object.submission.manuscript
 
 class GenericVerificationView(GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
@@ -349,9 +310,11 @@ class VerificationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, 
 class VerificationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericVerificationView):
     form = ReadOnlyVerificationForm
     #For PermissionRequiredMixin
-    permission_required = "main.view_verification"
+    permission_required = "main.view_manuscript"
     accept_global_perms = True
     return_403 = True
+    def get_permission_object(self):
+        return self.object.submission.manuscript
     
 
 ################################################################################################

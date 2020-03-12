@@ -149,6 +149,7 @@ class SubmissionJson(CorereBaseDatatableView):
     def get_columns(self):
         return helper_submission_columns(self.request.user)
 
+    #TODO: These attributes need to be limited depending on permissions (e.g. you shouldn't be able to see a curation's status as an editor unless its been submitted)
     #MAD: Can condense all these try/excepts into something more compact
     def render_column(self, submission, column):
         if column == 'submission_status':
@@ -179,7 +180,7 @@ class SubmissionJson(CorereBaseDatatableView):
 
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
-            if(user.has_perm('view_submission', submission) or user.has_perm('main.view_submission')):
+            if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
                 avail_buttons.append('viewSubmission')
 
             if(has_transition_perm(submission.add_curation_noop, user)):
@@ -187,7 +188,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                     avail_buttons.append('editCuration')
-                if(user.has_perm('view_curation', submission.submission_curation) or user.has_perm('main.view_curation')):
+                if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
                     avail_buttons.append('viewCuration')
             except Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
@@ -197,7 +198,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                     avail_buttons.append('editVerification')
-                if(user.has_perm('view_verification', submission.submission_verification) or user.has_perm('main.view_verification')):
+                if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
                     avail_buttons.append('viewVerification')  
             except Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
@@ -208,8 +209,13 @@ class SubmissionJson(CorereBaseDatatableView):
 
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['manuscript_id']
+
         #view_perm = Permission.objects.get(codename="view_manuscript")
-        return get_objects_for_user(self.request.user, "view_submission", klass=Submission).filter(manuscript=manuscript_id) # Should use the model definition above?
+        #return get_objects_for_user(self.request.user, "view_submission", klass=Submission).filter(manuscript=manuscript_id) # Should use the model definition above?
+        manuscript = Manuscript.objects.get(id=manuscript_id)
+        if(self.request.user.has_perm('view_manuscript', manuscript) or user.has_perm('main.view_manuscript')):
+            return(Submission.objects.filter(manuscript=manuscript_id))
+
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset

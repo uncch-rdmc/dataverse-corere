@@ -82,7 +82,7 @@
                             },
                             enabled: false
                         },
-                    {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
+                    {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
                         {
                             text: 'Invite/Add Author to Manuscript',
                             name: 'addAuthor',
@@ -276,7 +276,6 @@
                             enabled: false
                         },
                     {% endif %}
-                    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
                         {
                             text: 'View Curation',
                             name: 'viewCuration',
@@ -286,7 +285,6 @@
                             },
                             enabled: false
                         },
-                    {% endif %}
                     {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Verification',
@@ -306,7 +304,6 @@
                             enabled: false
                         },
                     {% endif %}
-                    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
                         {
                             text: 'View Verification',
                             name: 'viewVerification',
@@ -316,7 +313,6 @@
                             },
                             enabled: false
                         },
-                    {% endif %}
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
