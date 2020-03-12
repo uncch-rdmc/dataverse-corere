@@ -108,9 +108,6 @@ class Curation(AbstractCreateUpdateModel):
 
     ##### django-fsm (workflow) related functions #####
 
-    # DO: this is wrong, you should be able to edit even when a sub/cur/ver is not new
-    # I think we need additional tracking... We could add two versions of "SUBMISSION_IN_PROGRESS"?
-
     def can_edit(self):
         if(self.submission.status == SUBMISSION_IN_PROGRESS_CURATION ):
             return True
@@ -151,7 +148,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_perm('change_submission',instance))
+        permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript))
     def edit_noop(self):
         return self.status
 
@@ -161,61 +158,11 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, conditions=[can_submit],
-                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance)) #MAD: Used same perm as add, do we want that?
+                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self):
         self.manuscript.status = MANUSCRIPT_PROCESSING #MAD: This seems bad, should I use FSM for this too?
         self.manuscript.save()
         pass
-
-    #-----------------------
-
-    def can_review(self):
-        #Note, the logic in here is decided whether you can even do a review, not whether its accepted
-        try:
-            if(self.submission_curation.status == CURATION_NEW):
-                return False
-        except Submission.submission_curation.RelatedObjectDoesNotExist:
-            return False
-
-        try:
-            if(self.submission_verification.status == VERIFICATION_NEW):
-                return False
-        except Submission.submission_verification.RelatedObjectDoesNotExist:
-            pass #we pass because you can review with just a curation
-
-        return True
-
-    #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
-    #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
-    @transition(field=status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
-                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance)
-                    or user.has_perm('verify_manuscript',instance) )) #NOTE: I removed the ability for a curator to do this
-    def review(self):
-        try:
-            if(self.submission_curation.status == CURATION_NO_ISSUES):
-                try:
-                    if(self.submission_verification.status == VERIFICATION_SUCCESS):
-                        self.manuscript.status = MANUSCRIPT_COMPLETED
-                        # Delete existing groups when done for clean-up and reporting
-                        # TODO: Update django admin manuscript delete method to delete these groups as well.
-                        # It could be even better to extend the group model and have it connected to the manuscript...
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        # MAD: Are we leaving behind any permissions?
-
-                        self.manuscript.save()
-                        return SUBMISSION_REVIEWED
-                except Submission.submission_verification.RelatedObjectDoesNotExist:
-                    return SUBMISSION_IN_PROGRESS_VERIFICATION
-
-        except Submission.submission_curation.RelatedObjectDoesNotExist:
-            return SUBMISSION_IN_PROGRESS_CURATION
-            
-        self.manuscript.status = MANUSCRIPT_AWAITING_RESUBMISSION
-        self.manuscript.save()
-        return SUBMISSION_REVIEWED
 
     #-----------------------
 
@@ -262,6 +209,59 @@ class Submission(AbstractCreateUpdateModel):
         permission=lambda instance, user: user.has_perm('verify_manuscript',instance.manuscript))
     def add_verification_noop(self):
         return self.status
+
+    #-----------------------
+
+    #MAD: This whole section may need to be split up to curation/verification to be like "can_submit"
+    #... not sure though
+
+    def can_review(self):
+        #Note, the logic in here is decided whether you can even do a review, not whether its accepted
+        try:
+            if(self.submission_curation.status == CURATION_NEW):
+                return False
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return False
+
+        try:
+            if(self.submission_verification.status == VERIFICATION_NEW):
+                return False
+        except Submission.submission_verification.RelatedObjectDoesNotExist:
+            pass #we pass because you can review with just a curation
+
+        return True
+
+    #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
+    #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
+    @transition(field=status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
+                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance)
+                    or user.has_perm('verify_manuscript',instance) ))
+    def review(self):
+        try:
+            if(self.submission_curation.status == CURATION_NO_ISSUES):
+                try:
+                    if(self.submission_verification.status == VERIFICATION_SUCCESS):
+                        self.manuscript.status = MANUSCRIPT_COMPLETED
+                        # Delete existing groups when done for clean-up and reporting
+                        # TODO: Update django admin manuscript delete method to delete these groups as well.
+                        # It could be even better to extend the group model and have it connected to the manuscript...
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
+                        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                        # MAD: Are we leaving behind any permissions?
+
+                        self.manuscript.save()
+                        return SUBMISSION_REVIEWED
+                except Submission.submission_verification.RelatedObjectDoesNotExist:
+                    return SUBMISSION_IN_PROGRESS_VERIFICATION
+
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return SUBMISSION_IN_PROGRESS_CURATION
+            
+        self.manuscript.status = MANUSCRIPT_AWAITING_RESUBMISSION
+        self.manuscript.save()
+        return SUBMISSION_REVIEWED
 
 ####################################################
 
@@ -325,14 +325,14 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('manage_authors_on_manuscript', group_manuscript_author, self) 
             assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
 
-            group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_verifier, self) 
-            assign_perm('view_manuscript', group_manuscript_verifier, self) 
-            assign_perm('curate_manuscript', group_manuscript_verifier, self) 
-
             group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
             assign_perm('change_manuscript', group_manuscript_curator, self) 
             assign_perm('view_manuscript', group_manuscript_curator, self) 
+            assign_perm('curate_manuscript', group_manuscript_curator, self) 
+
+            group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
+            assign_perm('change_manuscript', group_manuscript_verifier, self) 
+            assign_perm('view_manuscript', group_manuscript_verifier, self) 
             assign_perm('verify_manuscript', group_manuscript_verifier, self) 
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts

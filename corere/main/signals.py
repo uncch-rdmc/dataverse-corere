@@ -43,7 +43,6 @@ def populate_models(sender, **kwargs):
     curator.permissions.add(perm_manuscript_view)
     curator.permissions.add(perm_manuscript_manage_curators)
     curator.permissions.add(perm_manuscript_manage_verifiers)
-    curator.permissions.add(perm_manuscript_view)
     curator.permissions.add(perm_submission_view)   
     curator.permissions.add(perm_curation_view)   
     curator.permissions.add(perm_verification_view)   

@@ -55,7 +55,7 @@
                     //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
-                    {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                    {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
                             name: 'createManuscript',
