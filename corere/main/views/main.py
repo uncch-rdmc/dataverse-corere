@@ -7,7 +7,7 @@ from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm, remove_perm#, get_objects_for_user
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django_fsm import can_proceed#, has_transition_perm
+from django_fsm import can_proceed, has_transition_perm
 from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from corere.main.utils import fsm_check_transition_perm
 from django.core.exceptions import PermissionDenied
@@ -74,20 +74,23 @@ def index(request):
 #             print(form.errors) #Handle exception better
 #     return render(request, 'main/form_create_manuscript.html', {'form': form, 'id': id})
 
-#To use this at the very least you'll need to use the GetCreateObjectPermission.
+#To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
+    #TODO: Really should add comments to these to clarify what they actually do...
     transition_button_title = None
     form = None
     model = None
     template = 'main/form_object_generic.html'
     redirect = '/'
+    read_only = False
+    message = None
+    http_method_names = ['get', 'post'] #Used by the base View class
+    #For GetOrGenerateObjectMixin, instantiated here so they don't override.
+    #TODO: Can we do this better?
     parent_reference_name = None
     parent_id_name = None
     parent_model = None
-    read_only = False
-    http_method_names = ['get', 'post']
-    message = None
-    #object_friendly_name = None
+
 
     def dispatch(self, request, *args, **kwargs): 
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
@@ -103,12 +106,13 @@ class GenericCorereObjectView(View):
             pass
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
+#MAD: DO we need to check transition AGAIN on get/post?
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
-            self.form.save()
+            self.form.save() #Note: this is what saves a newly created model instance
             if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
                 self.transition_if_allowed(request, *args, **kwargs)
             messages.add_message(request, messages.INFO, self.message)
@@ -131,8 +135,16 @@ class ReadOnlyCorereMixin(object):
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
 #Maybe I'm missing something but for now this is the way its happening
-class GetCreateObjectPermission(object):
+#
+#Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
+class GetOrGenerateObjectMixin(object):
+    #TODO: Should this be instantiated?
     #object_friendly_name = None
+
+    #TODO: Instantiated in GenericCorereObjectView
+    # parent_reference_name = None
+    # parent_id_name = None
+    # parent_model = None
 
     def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
@@ -145,20 +157,38 @@ class GetCreateObjectPermission(object):
             self.message = 'Your new '+self.object_friendly_name +' has been created!'
         else:
             print("ERROR")
-        return super(GetCreateObjectPermission, self).dispatch(request, *args, **kwargs)
+        return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
     
 
+#A mixin that calls Django fsm has_transition_perm for an object
+#It expects that the object has been grabbed already, for example by GetCreateObjectMixin    
+#TODO: Can we collapse this with all the "transition_if_allowed" calls? Its pretty much repeating the same crap....
+#TODO: Should this be 403ing in the same way we are with the permission mixin? ... Looks like it does already!
+#TODO: Is this specifically for noop transitions? if so we should name it that way.
+class TransitionPermissionMixin(object):
+    #TODO: Should this be instantiated?
+    transition_method_name = None
+    transition_on_parent = False
+    def dispatch(self, request, *args, **kwargs):
+        if(self.transition_on_parent):
+            parent_object = getattr(self.object, self.parent_reference_name)
+            transition_method = getattr(parent_object, self.transition_method_name)
+        else:
+            transition_method = getattr(self.object, self.transition_method_name)
+        if(not has_transition_perm(transition_method, request.user)):
+            #TODO: Even if we don't collapse this with transition_if_allowed, we should still refer to it for erroring out in the correct ways
+            print("PermissionDenied")
+            raise PermissionDenied
+        return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
+    pass
 
-################################################################################################
-
-#via https://gist.github.com/ceolson01/206139a093b3617155a6
-
+#via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
     """
         group_required - list of strings
     """
-
-    groups_required = []
+    #TODO: Should this be instantiated?
+    #groups_required = []
 
     def dispatch(self, request, *args, **kwargs):
         #TODO: Maybe have this instead error when there are no groups, as we'd expect at least one?
@@ -192,24 +222,21 @@ class GenericManuscriptView(GenericCorereObjectView):
             print("TransitionNotAllowed") #Handle exception better
             raise
 
-class ManuscriptCreateView(GroupRequiredMixin, GetCreateObjectPermission, GenericManuscriptView):
+class ManuscriptCreateView(GroupRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
     form = ManuscriptForm
     groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
 
-class ManuscriptEditView(GetCreateObjectPermission, PermissionRequiredMixin, GenericManuscriptView):
+class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = ManuscriptForm
-    #For PermissionRequiredMixin
-    permission_required = "main.change_manuscript"
-    accept_global_perms = True
-    return_403 = True
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
 
-class ManuscriptReadView(GetCreateObjectPermission, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericManuscriptView):
+class ManuscriptReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
     #For PermissionRequiredMixin
     permission_required = "main.view_manuscript"
     accept_global_perms = True
     return_403 = True
-
 
 class GenericSubmissionView(GenericCorereObjectView):
     transition_button_title = 'Submit for Review'
@@ -231,18 +258,18 @@ class GenericSubmissionView(GenericCorereObjectView):
             print("TransitionNotAllowed") #Handle exception better
             raise
 
-class SubmissionCreateView(GroupRequiredMixin, GetCreateObjectPermission, GenericSubmissionView):
+class SubmissionCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
-    groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
+    #For TransitionPermissionMixin
+    transition_method_name = 'add_submission_noop'
+    transition_on_parent = True
 
-class SubmissionEditView(GetCreateObjectPermission, PermissionRequiredMixin, GenericSubmissionView):
+class SubmissionEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
-    #For PermissionRequiredMixin
-    permission_required = "main.change_submission"
-    accept_global_perms = True
-    return_403 = True
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
 
-class SubmissionReadView(GetCreateObjectPermission, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericSubmissionView):
+class SubmissionReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
     #For PermissionRequiredMixin
     permission_required = "main.view_submission"
@@ -270,18 +297,18 @@ class GenericCurationView(GenericCorereObjectView):
         except TransactionNotAllowed:
             pass #We do not do review if the statuses don't align
 
-class CurationCreateView(GroupRequiredMixin, GetCreateObjectPermission, GenericCurationView):
+class CurationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
-    groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
+    #For TransitionPermissionMixin
+    transition_method_name = 'add_curation_noop'
+    transition_on_parent = True
 
-class CurationEditView(GetCreateObjectPermission, PermissionRequiredMixin, GenericCurationView):
+class CurationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
-    #For PermissionRequiredMixin
-    permission_required = "main.change_curation"
-    accept_global_perms = True
-    return_403 = True
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
 
-class CurationReadView(GetCreateObjectPermission, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericCurationView):
+class CurationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericCurationView):
     form = ReadOnlyCurationForm
     #For PermissionRequiredMixin
     permission_required = "main.view_curation"
@@ -308,18 +335,18 @@ class GenericVerificationView(GenericCorereObjectView):
         except TransactionNotAllowed:
             pass #We do not do review if the statuses don't align
 
-class VerificationCreateView(GroupRequiredMixin, GetCreateObjectPermission, GenericVerificationView):
+class VerificationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = VerificationForm
-    groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
+    #For TransitionPermissionMixin
+    transition_method_name = 'add_verification_noop'
+    transition_on_parent = True
 
-class VerificationEditView(GetCreateObjectPermission, PermissionRequiredMixin, GenericVerificationView):
+class VerificationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
     form = VerificationForm
-    #For PermissionRequiredMixin
-    permission_required = "main.change_verification"
-    accept_global_perms = True
-    return_403 = True
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
 
-class VerificationReadView(GetCreateObjectPermission, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericVerificationView):
+class VerificationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericVerificationView):
     form = ReadOnlyVerificationForm
     #For PermissionRequiredMixin
     permission_required = "main.view_verification"

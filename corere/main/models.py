@@ -167,14 +167,11 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_curation(self):
-        if(self.manuscript.status != 'processing'):       
+        if(self.manuscript.status != 'processing'):   
+            print("OH NO")    
             return False
-        try:
-            if(self.submission_curation):
-                #print("There is a curation already")
-                return False
-        except Submission.submission_curation.RelatedObjectDoesNotExist:
-            pass
+        if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
+            return False
 
         return True
 
@@ -195,13 +192,8 @@ class Submission(AbstractCreateUpdateModel):
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
-        try:
-            if(self.submission_verification):
-                #print("There is a verification already")
-                return False
-        except Submission.submission_verification.RelatedObjectDoesNotExist:
-            pass
-
+        if(Verification.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
+            return False
         return True
 
     #Does not actually change status, used just for permission checking
