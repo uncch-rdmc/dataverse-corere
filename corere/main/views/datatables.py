@@ -1,11 +1,11 @@
 from django_datatables_view.base_datatable_view import BaseDatatableView
-from corere.main.models import Manuscript, Submission, User
 from corere.main import constants as c
+from corere.main import models as m
 from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
 from django.db.models import Q
 from guardian.shortcuts import get_perms
-from django_fsm import has_transition_perm# can_proceed,
+from django_fsm import has_transition_perm
 
 #Shared across our various datatables
 class CorereBaseDatatableView(BaseDatatableView):
@@ -17,7 +17,6 @@ class CorereBaseDatatableView(BaseDatatableView):
         if not self.pre_camel_case_notation:
             counter = 0
             data_name_key = 'columns[{0}][name]'.format(counter)
-
             while data_name_key in request_dict:
                 #begin custom 
                 allowed_cols = self.get_columns()
@@ -44,7 +43,7 @@ class CorereBaseDatatableView(BaseDatatableView):
     def prepare_results(self, qs):
         data = []
         #TODO: Confirm this works right with pagination
-        data.append(self.get_columns()) #add headers to grab in js for dynamic support
+        data.append(self.get_columns()) #adds headers to grab in js for dynamic support
         for item in qs:
             if self.is_data_list:
                 data.append([self.render_column(item, column) for column in self._columns])
@@ -59,9 +58,7 @@ def helper_manuscript_columns(user):
     # This defines the columns a user can view for a table.
     # TODO: Controll in a more centralized manner for security
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
-
     # MAD: This should be using guardian???
-
     columns = []
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','curators','verifiers','buttons']
@@ -76,7 +73,7 @@ def helper_manuscript_columns(user):
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
-    model = Manuscript
+    model = m.Manuscript
     max_display_length = 500
 
     def get_columns(self):
@@ -84,41 +81,36 @@ class ManuscriptJson(CorereBaseDatatableView):
 
     def render_column(self, manuscript, column):
         if column == 'authors':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))])
+            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))])
         elif column == 'curators':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
+            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
         elif column == 'verifiers':
-            return '{0}'.format([escape(user.username) for user in User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))])
+            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))])
         elif column == 'buttons':
             user = self.request.user
             avail_buttons = []
-
             if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
-            # MAD: The way permissions work for this is confusing and will lead to bugs. It'd be good to create a wrapper that checks perms in all the places / can handle app label / etc
-            # Do we even use the non-object based manage permission? Should we leave that ability in here? Maybe for superuser?
-            if(user.has_perm('view_manuscript', manuscript) or user.has_perm('main.view_manuscript')):
+            if(has_transition_perm(manuscript.view_noop, user)):
                 avail_buttons.append('viewManuscript')
-            if(user.has_perm('manage_authors_on_manuscript', manuscript) or user.has_perm('main.manage_authors_on_manuscript')):
+            # MAD: Should we change these to be transitions?
+            if(user.has_perm('manage_authors_on_manuscript', manuscript)):
                 avail_buttons.append('addAuthor')
-            if(user.has_perm('manage_curators_on_manuscript', manuscript) or user.has_perm('main.manage_curators_on_manuscript')):
+            if(user.has_perm('manage_curators_on_manuscript', manuscript)):
                 avail_buttons.append('addCurator')
-            if(user.has_perm('manage_verifiers_on_manuscript', manuscript) or user.has_perm('main.manage_verifiers_on_manuscript')):
+            if(user.has_perm('manage_verifiers_on_manuscript', manuscript)):
                 avail_buttons.append('addVerifier')
             if(has_transition_perm(manuscript.add_submission_noop, user)):
                 avail_buttons.append('createSubmission')
-
             return avail_buttons
         else:
             return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
-        #view_perm = Permission.objects.get(codename="view_manuscript")
-        return get_objects_for_user(self.request.user, "view_manuscript", klass=Manuscript) # Should use the model definition above?
+        return get_objects_for_user(self.request.user, "view_manuscript", klass=self.model)
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset
-
         search = self.request.GET.get('search[value]', None)
         if search:
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
@@ -126,11 +118,8 @@ class ManuscriptJson(CorereBaseDatatableView):
 
 def helper_submission_columns(user):
     # This defines the columns a user can view for a table.
-    # TODO: Controll in a more centralized manner for security
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
-    
     # MAD: This should be using guardian???
-
     columns = ['id','submission_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
@@ -143,14 +132,12 @@ def helper_submission_columns(user):
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 class SubmissionJson(CorereBaseDatatableView):
-    model = Submission
+    model = m.Submission
     max_display_length = 500
 
     def get_columns(self):
         return helper_submission_columns(self.request.user)
 
-    #TODO: These attributes need to be limited depending on permissions (e.g. you shouldn't be able to see a curation's status as an editor unless its been submitted)
-    #MAD: Can condense all these try/excepts into something more compact
     def render_column(self, submission, column):
         user = self.request.user
         if column == 'submission_status':
@@ -161,37 +148,33 @@ class SubmissionJson(CorereBaseDatatableView):
         elif column == 'curation_id':
             try:
                 return '{0}'.format(submission.submission_curation.id)
-            except Submission.submission_curation.RelatedObjectDoesNotExist:
+            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 return ''
         elif column == 'curation_status':
             try:
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
                     return '{0}'.format(submission.submission_curation.status)
-            except Submission.submission_curation.RelatedObjectDoesNotExist:
+            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
             return ''
         elif column == 'verification_id':
             try:
                 return '{0}'.format(submission.submission_verification.id)
-            except Submission.submission_verification.RelatedObjectDoesNotExist:
+            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 return ''
         elif column == 'verification_status':
             try:
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
                     return '{0}'.format(submission.submission_verification.status)
-            except Submission.submission_verification.RelatedObjectDoesNotExist:
+            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
             return ''
         elif column == 'buttons': 
-
             avail_buttons = []
-
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
-
             if(has_transition_perm(submission.view_noop, user)):
                 avail_buttons.append('viewSubmission')
-
             if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
@@ -199,9 +182,8 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editCuration')
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
-            except Submission.submission_curation.RelatedObjectDoesNotExist:
+            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
-
             if(has_transition_perm(submission.add_verification_noop, user)):
                 avail_buttons.append('createVerification')
             try:
@@ -209,26 +191,21 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editVerification')
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
-            except Submission.submission_verification.RelatedObjectDoesNotExist:
+            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
 
-            return avail_buttons#escape(get_perms(self.request.user, submission))
+            return avail_buttons
         else:
             return super(SubmissionJson, self).render_column(submission, column)
 
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['manuscript_id']
-
-        #view_perm = Permission.objects.get(codename="view_manuscript")
-        #return get_objects_for_user(self.request.user, "view_submission", klass=Submission).filter(manuscript=manuscript_id) # Should use the model definition above?
-        manuscript = Manuscript.objects.get(id=manuscript_id)
+        manuscript = m.Manuscript.objects.get(id=manuscript_id)
         if(self.request.user.has_perm('view_manuscript', manuscript) or self.request.user.has_perm('main.view_manuscript')):
-            return(Submission.objects.filter(manuscript=manuscript_id))
-
+            return(m.Submission.objects.filter(manuscript=manuscript_id))
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset
-
         search = self.request.GET.get('search[value]', None)
         if search:
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))

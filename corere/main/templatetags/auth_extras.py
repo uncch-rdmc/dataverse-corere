@@ -13,8 +13,4 @@ def has_group(user, group_name):
 
 @register.filter(name='has_global_perm')
 def has_global_perm(user, perm_name):
-    print(perm_name)
-    print(user.has_perm(perm_name)) 
     return user.has_perm(perm_name)
-    #perm = Permission.objects.get(name=perm_name) 
-    #return True if perm in user.permissions.all() else False

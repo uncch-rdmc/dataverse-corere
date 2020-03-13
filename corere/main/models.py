@@ -6,12 +6,11 @@ from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
-import logging
-import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from corere.main.middleware import local
-
+import logging
+import uuid
 
 logger = logging.getLogger('corere')  
 ####################################################
@@ -154,6 +153,9 @@ SUBMISSION_RESULT_CHOICES = (
     (SUBMISSION_REVIEWED, 'Reviewed'),
 )
 
+#TODO: We should probably have a "uniqueness" check on the object level for submissions incase two users click submit at the same time.
+#Our views do check transition permissions first so it'd have to be at the exact same time.
+#May also be needed for curation/verification, otherwise you may end up with one that is an orphan.
 class Submission(AbstractCreateUpdateModel):
     #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
     status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)

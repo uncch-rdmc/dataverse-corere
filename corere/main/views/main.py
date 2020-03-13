@@ -1,12 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from corere.main.models import Manuscript, Submission, Curation, Verification, Note
-from corere.main import models #bad to do both?
+from corere.main import models as m
 from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
-from guardian.shortcuts import assign_perm, remove_perm#, get_objects_for_user
+from guardian.shortcuts import assign_perm, remove_perm=
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import can_proceed, has_transition_perm
 from django.core.exceptions import PermissionDenied, FieldDoesNotExist
@@ -35,7 +34,6 @@ def index(request):
 
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
-    #TODO: Really should add comments to these to clarify what they actually do...
     transition_button_title = None
     form = None
     model = None
@@ -45,7 +43,6 @@ class GenericCorereObjectView(View):
     message = None
     http_method_names = ['get', 'post'] #Used by the base View class
     #For GetOrGenerateObjectMixin, instantiated here so they don't override.
-    #TODO: Can we do this better?
     parent_reference_name = None
     parent_id_name = None
     parent_model = None
@@ -64,7 +61,6 @@ class GenericCorereObjectView(View):
             pass
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
-#MAD: DO we need to check transition AGAIN on get/post?
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
 
@@ -78,7 +74,6 @@ class GenericCorereObjectView(View):
         else:
             print(form.errors) #Handle exception better
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
-
 
     ######## Custom class functions. You may want to override some of these. #########
 
@@ -99,7 +94,7 @@ class GetOrGenerateObjectMixin(object):
     #TODO: Should this be instantiated?
     #object_friendly_name = None
 
-    #TODO: Instantiated in GenericCorereObjectView
+    #Instantiated in GenericCorereObjectView
     # parent_reference_name = None
     # parent_id_name = None
     # parent_model = None
@@ -120,8 +115,6 @@ class GetOrGenerateObjectMixin(object):
 
 #A mixin that calls Django fsm has_transition_perm for an object
 #It expects that the object has been grabbed already, for example by GetCreateObjectMixin    
-#TODO: Can we collapse this with all the "transition_if_allowed" calls? Its pretty much repeating the same crap....
-#TODO: Should this be 403ing in the same way we are with the permission mixin? ... Looks like it does already!
 #TODO: Is this specifically for noop transitions? if so we should name it that way.
 class TransitionPermissionMixin(object):
     #TODO: Should this be instantiated?
@@ -142,14 +135,11 @@ class TransitionPermissionMixin(object):
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
-    """
-        group_required - list of strings
-    """
+    """ group_required - list of strings """
     #TODO: Should this be instantiated?
     #groups_required = []
 
     def dispatch(self, request, *args, **kwargs):
-        #TODO: Maybe have this instead error when there are no groups, as we'd expect at least one?
         if(len(self.groups_required)>0):
             if not request.user.is_authenticated:
                 raise PermissionDenied
@@ -167,7 +157,7 @@ class GroupRequiredMixin(object):
 class GenericManuscriptView(GenericCorereObjectView):
     transition_button_title = 'Save and Assign to Authors'
     object_friendly_name = 'manuscript'
-    model = Manuscript
+    model = m.Manuscript
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.begin, request.user): 
@@ -206,9 +196,9 @@ class GenericSubmissionView(GenericCorereObjectView):
     form = SubmissionForm
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
-    parent_model = Manuscript
+    parent_model = m.Manuscript
     object_friendly_name = 'submission'
-    model = Submission
+    model = m.Submission
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submit, request.user): 
@@ -242,9 +232,9 @@ class GenericCurationView(GenericCorereObjectView):
     form = CurationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
-    parent_model = Submission
+    parent_model = m.Submission
     object_friendly_name = 'curation'
-    model = Curation
+    model = m.Curation
     redirect = '/'
 
     def transition_if_allowed(self, request, *args, **kwargs):
@@ -278,9 +268,9 @@ class GenericVerificationView(GenericCorereObjectView):
     form = VerificationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
-    parent_model = Submission
+    parent_model = m.Submission
     object_friendly_name = 'verification'
-    model = Verification
+    model = m.Verification
     redirect = '/'
 
     def transition_if_allowed(self, request, *args, **kwargs):
@@ -314,17 +304,17 @@ class VerificationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, 
 
 def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
-        note = get_object_or_404(Note, id=id)
+        note = get_object_or_404(m.Note, id=id)
         message = 'Your note has been updated!'
         re_url = '../edit'
     else:
-        note = Note()
+        note = m.Note()
         if(submission_id):
-            note.parent_submission = get_object_or_404(Submission, id=submission_id)
+            note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
         elif(curation_id):
-            note.parent_curation = get_object_or_404(Curation, id=curation_id)
+            note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
         elif(verification_id):
-            note.parent_verification = get_object_or_404(Verification, id=verification_id)
+            note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
         message = 'Your new note has been created!'
         re_url = './edit'
     form = NoteForm(request.POST or None, request.FILES or None, instance=note)
