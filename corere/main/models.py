@@ -83,6 +83,15 @@ class Verification(AbstractCreateUpdateModel):
     def edit_noop(self):
         return self.status
 
+    #-----------------------
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance.submission.status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_perm('verify_manuscript',instance.submission.manuscript))
+                                            or (instance.submission.status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_perm('view_manuscript',instance.submission.manuscript))) )
+    def view_noop(self):
+        return self.status
+
 ####################################################
 
 CURATION_NEW = 'new'
@@ -119,6 +128,15 @@ class Curation(AbstractCreateUpdateModel):
     def edit_noop(self):
         return self.status
 
+    #-----------------------
+    
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance.submission.status == SUBMISSION_IN_PROGRESS_CURATION and user.has_perm('curate_manuscript',instance.submission.manuscript))
+                                            or (instance.submission.status != SUBMISSION_IN_PROGRESS_CURATION and user.has_perm('view_manuscript',instance.submission.manuscript))) )
+    def view_noop(self):
+        return self.status
+
 ####################################################
 
 # Before we were just doing new/submitted as technically you can learn the status of the submission from its attached curation/verification.
@@ -150,6 +168,15 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript))
     def edit_noop(self):
+        return self.status
+
+    #-----------------------
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance.status == SUBMISSION_NEW and user.has_perm('add_submission_to_manuscript',instance.manuscript))
+                                            or (instance.status != SUBMISSION_NEW and user.has_perm('view_manuscript',instance.manuscript))) )
+    def view_noop(self):
         return self.status
 
     #-----------------------
@@ -284,6 +311,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     class Meta:
         permissions = [
+            #TODO: This includes default CRUD permissions, but we should switch it to be explicit (other objects too)
             ('manage_authors_on_manuscript', 'Can manage authors on manuscript'),
             ('manage_editors_on_manuscript', 'Can manage editors on manuscript'),
             ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
@@ -382,6 +410,18 @@ class Manuscript(AbstractCreateUpdateModel):
     @transition(field=status, source=[MANUSCRIPT_NEW, MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_perm('change_manuscript',instance))
     def edit_noop(self):
+        return self.status
+
+    #-----------------------
+
+    #TODO: Address limitation with having only one manuscript version. If its being edited as part of a resubmission what do we do about viewing?
+    #      Do we just allow viewing whatever is there? Do we block it during certain states. Maybe it'll be less of an issue if we can put all versioned data in the submission?
+    #
+    #Does not actually change status, used just for permission checking
+    @transition(field=status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: (#(instance.status == MANUSCRIPT_NEW and user.has_perm('add_manuscript',instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+                                            (instance.status != MANUSCRIPT_NEW and user.has_perm('view_manuscript',instance))) )
+    def view_noop(self):
         return self.status
 
 

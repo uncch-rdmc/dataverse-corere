@@ -152,8 +152,12 @@ class SubmissionJson(CorereBaseDatatableView):
     #TODO: These attributes need to be limited depending on permissions (e.g. you shouldn't be able to see a curation's status as an editor unless its been submitted)
     #MAD: Can condense all these try/excepts into something more compact
     def render_column(self, submission, column):
+        user = self.request.user
         if column == 'submission_status':
-            return submission.status
+            if(has_transition_perm(submission.view_noop, user)):
+                return submission.status
+            else:
+                return ''
         elif column == 'curation_id':
             try:
                 return '{0}'.format(submission.submission_curation.id)
@@ -161,9 +165,11 @@ class SubmissionJson(CorereBaseDatatableView):
                 return ''
         elif column == 'curation_status':
             try:
-                return '{0}'.format(submission.submission_curation.status)
+                if(has_transition_perm(submission.submission_curation.view_noop, user)):
+                    return '{0}'.format(submission.submission_curation.status)
             except Submission.submission_curation.RelatedObjectDoesNotExist:
-                return ''
+                pass
+            return ''
         elif column == 'verification_id':
             try:
                 return '{0}'.format(submission.submission_verification.id)
@@ -171,16 +177,19 @@ class SubmissionJson(CorereBaseDatatableView):
                 return ''
         elif column == 'verification_status':
             try:
-                return '{0}'.format(submission.submission_verification.status)
+                if(has_transition_perm(submission.submission_verification.view_noop, user)):
+                    return '{0}'.format(submission.submission_verification.status)
             except Submission.submission_verification.RelatedObjectDoesNotExist:
-                return ''
+                pass
+            return ''
         elif column == 'buttons': 
-            user = self.request.user
+
             avail_buttons = []
 
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
-            if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
+
+            if(has_transition_perm(submission.view_noop, user)):
                 avail_buttons.append('viewSubmission')
 
             if(has_transition_perm(submission.add_curation_noop, user)):
@@ -188,7 +197,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                     avail_buttons.append('editCuration')
-                if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
+                if(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
             except Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
@@ -198,7 +207,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                     avail_buttons.append('editVerification')
-                if(user.has_perm('view_manuscript', submission.manuscript) or user.has_perm('main.view_manuscript')):
+                if(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
             except Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
@@ -213,7 +222,7 @@ class SubmissionJson(CorereBaseDatatableView):
         #view_perm = Permission.objects.get(codename="view_manuscript")
         #return get_objects_for_user(self.request.user, "view_submission", klass=Submission).filter(manuscript=manuscript_id) # Should use the model definition above?
         manuscript = Manuscript.objects.get(id=manuscript_id)
-        if(self.request.user.has_perm('view_manuscript', manuscript) or user.has_perm('main.view_manuscript')):
+        if(self.request.user.has_perm('view_manuscript', manuscript) or self.request.user.has_perm('main.view_manuscript')):
             return(Submission.objects.filter(manuscript=manuscript_id))
 
 

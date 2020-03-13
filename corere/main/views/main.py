@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main.models import Manuscript, Submission, Curation, Verification, Note
+from corere.main import models #bad to do both?
 from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #bad practice but I use them all...
@@ -179,21 +180,26 @@ class GenericManuscriptView(GenericCorereObjectView):
             print("TransitionNotAllowed") #Handle exception better
             raise
 
-class ManuscriptCreateView(GroupRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+class ManuscriptCreateView(GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
     form = ManuscriptForm
-    groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
+    #groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
+    #For PermissionRequiredMixin
+    permission_required = "main.add_manuscript"
+    accept_global_perms = True
+    return_403 = True
 
 class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = ManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class ManuscriptReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericManuscriptView):
+class ManuscriptReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
-    #For PermissionRequiredMixin
-    permission_required = "main.view_manuscript"
-    accept_global_perms = True
-    return_403 = True
+    #For TransitionPermissionMixin
+    transition_method_name = 'view_noop'
+
+
+    
 
 class GenericSubmissionView(GenericCorereObjectView):
     transition_button_title = 'Submit for Review'
@@ -226,15 +232,10 @@ class SubmissionEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class SubmissionReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericSubmissionView):
+class SubmissionReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
-    #For PermissionRequiredMixin
-    permission_required = "main.view_manuscript"
-    accept_global_perms = True
-    return_403 = True
-    def get_permission_object(self):
-        return self.object.manuscript
-
+    #For TransitionPermissionMixin
+    transition_method_name = 'view_noop'
 
 class GenericCurationView(GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
@@ -267,14 +268,10 @@ class CurationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Gene
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class CurationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericCurationView):
+class CurationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericCurationView):
     form = ReadOnlyCurationForm
-    #For PermissionRequiredMixin
-    permission_required = "main.view_manuscript"
-    accept_global_perms = True
-    return_403 = True
-    def get_permission_object(self):
-        return self.object.submission.manuscript
+    #For TransitionPermissionMixin
+    transition_method_name = 'view_noop'
 
 class GenericVerificationView(GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
@@ -307,14 +304,10 @@ class VerificationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, 
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class VerificationReadView(GetOrGenerateObjectMixin, PermissionRequiredMixin, ReadOnlyCorereMixin, GenericVerificationView):
+class VerificationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericVerificationView):
     form = ReadOnlyVerificationForm
-    #For PermissionRequiredMixin
-    permission_required = "main.view_manuscript"
-    accept_global_perms = True
-    return_403 = True
-    def get_permission_object(self):
-        return self.object.submission.manuscript
+    #For TransitionPermissionMixin
+    transition_method_name = 'view_noop'
     
 
 ################################################################################################
