@@ -5,7 +5,7 @@ from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
-from guardian.shortcuts import assign_perm, remove_perm=
+from guardian.shortcuts import assign_perm, remove_perm
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import can_proceed, has_transition_perm
 from django.core.exceptions import PermissionDenied, FieldDoesNotExist

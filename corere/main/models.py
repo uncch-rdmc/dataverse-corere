@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import FieldError
 from django_fsm import FSMField, transition, RETURN_VALUE
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms, assign_perm
@@ -69,6 +70,14 @@ class Verification(AbstractCreateUpdateModel):
     class Meta:
         default_permissions = ()
 
+    def save(self, *args, **kwargs):
+        try:
+            if(self.submission.status != SUBMISSION_IN_PROGRESS_VERIFICATION):
+                raise FieldError('A verification cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_VERIFICATION)
+        except Verification.submission.RelatedObjectDoesNotExist:
+            pass #this is caught in super
+        super(Verification, self).save(*args, **kwargs)
+
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
@@ -113,6 +122,14 @@ class Curation(AbstractCreateUpdateModel):
 
     class Meta:
         default_permissions = ()
+
+    def save(self, *args, **kwargs):
+        try:
+            if(self.submission.status != SUBMISSION_IN_PROGRESS_CURATION):
+                raise FieldError('A curation cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_CURATION)
+        except Curation.submission.RelatedObjectDoesNotExist:
+            pass #this is caught in super
+        super(Curation, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####
 
@@ -163,6 +180,15 @@ class Submission(AbstractCreateUpdateModel):
 
     class Meta:
         default_permissions = ()
+
+    def save(self, *args, **kwargs):
+        if not self.pk: #only first save
+            try:
+                if(Submission.objects.filter(manuscript=self.manuscript).exclude(status=SUBMISSION_REVIEWED).count() > 0):
+                    raise FieldError('A submission is already in progress for this manuscript')
+            except Submission.manuscript.RelatedObjectDoesNotExist:
+                pass #this is caught in super
+        super(Submission, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####
 
