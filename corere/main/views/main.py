@@ -205,7 +205,7 @@ class GenericSubmissionView(GenericCorereObjectView):
             print("PermissionDenied")
             raise PermissionDenied
         try: #TODO: only do this if the reviewer selects a certain form button
-            self.object.submit()
+            self.object.submit(request.user)
             self.object.save()
         except TransactionNotAllowed:
             print("TransitionNotAllowed") #Handle exception better
@@ -238,9 +238,9 @@ class GenericCurationView(GenericCorereObjectView):
     redirect = '/'
 
     def transition_if_allowed(self, request, *args, **kwargs):
-        # if not fsm_check_transition_perm(self.object.submission.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
-        #     print("PermissionDenied")
-        #     raise PermissionDenied
+        if not fsm_check_transition_perm(self.object.submission.review, request.user):
+            print("PermissionDenied")
+            raise PermissionDenied
         try:
             self.object.submission.review()
             self.object.submission.save()
@@ -274,9 +274,9 @@ class GenericVerificationView(GenericCorereObjectView):
     redirect = '/'
 
     def transition_if_allowed(self, request, *args, **kwargs):
-        # if not fsm_check_transition_perm(self.object.submission.review, request.user): #MAD: I left this in from submission even tho it wasn't in curation... maybe remove?
-        #     print("PermissionDenied")
-        #     raise PermissionDenied
+        if not fsm_check_transition_perm(self.object.submission.review, request.user):
+            print("PermissionDenied")
+            raise PermissionDenied
         try:
             self.object.submission.review()
             self.object.submission.save()

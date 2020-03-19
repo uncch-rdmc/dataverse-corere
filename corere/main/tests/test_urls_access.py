@@ -8,12 +8,13 @@ from corere.main import models as m
 from corere.main import constants as c
 from django.core.exceptions import FieldError
 from django.contrib.auth.models import Permission, Group
+from django_fsm import has_transition_perm, TransitionNotAllowed
 
 # Do I need to use a mock for my tests?
 # If not IDs are going to get bumped so I probably should
 # I really just want one Manuscript/Submission/Curation/Verification/Note for now
 # TODO: Should you really be able to directly set the the status?
-@unittest.skip("Don't want to test")
+#@unittest.skip("Don't want to test")
 class TestModels(TestCase):
     def setUp(self):
         self.user = m.User.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
@@ -35,7 +36,12 @@ class TestModels(TestCase):
         self.assertTrue('null value in column "manuscript_id" violates not-null constraint' in str(exc_sub1.exception))
 
         submission.manuscript = manuscript
+        with self.assertRaises(FieldError) as exc_sub2, transaction.atomic():
+            submission.save()
+        self.assertTrue('A submission cannot be created unless a manuscript status is set to await it' in str(exc_sub2.exception))
+        manuscript._status = m.MANUSCRIPT_AWAITING_INITIAL
         submission.save()
+
         sub_t = m.Submission.objects.get(id=submission.id)
         self.assertEqual(submission, sub_t)
         sub_note = m.Note()
@@ -44,11 +50,11 @@ class TestModels(TestCase):
         sub_note_t = m.Note.objects.get(id=sub_note.id)
         self.assertEqual(sub_note, sub_note_t)
 
-        with self.assertRaises(FieldError) as exc_sub2, transaction.atomic():
+        with self.assertRaises(FieldError) as exc_sub3, transaction.atomic():
             submission2bad = m.Submission()
             submission2bad.manuscript = manuscript
             submission2bad.save()
-        self.assertTrue('A submission is already in progress for this manuscript' in str(exc_sub2.exception))
+        self.assertTrue('A submission is already in progress for this manuscript' in str(exc_sub3.exception))
 
         #-------------------------------------------------
 
@@ -119,36 +125,189 @@ class TestModels(TestCase):
 class TestManuscriptWorkflow(TestCase):
     def setUp(self):
         self.editor = m.User.objects.create_user('editor') #gotta have a user to create a manuscript
-        local.user = self.editor #we will change this as different users edit the objects
-        self.manuscript = m.Manuscript()
-        self.manuscript.save()
-        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.editor)
-        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.editor)
-        
         self.author = m.User.objects.create_user('author')
-        Group.objects.get(name=c.GROUP_ROLE_AUTHOR).user_set.add(self.author)
-        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.author)
-
         self.curator = m.User.objects.create_user('curator')
-        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.curator)
-        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.curator)
-
         self.verifier = m.User.objects.create_user('verifier')
-        Group.objects.get(name=c.GROUP_ROLE_VERIFIER).user_set.add(self.verifier)
-        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.verifier)
+        self.all_users = [self.editor,self.author,self.curator,self.verifier]
+        local.user = self.editor #has to be set to something for saving (middleware uses it to set creator/updater).
 
     #MAD: So... I want this testing workflow directly? Do I want to also check various url access throughout?
     #Seems like it'll get too complicated. I want to test with the workflow that other users can't progress the flow
     #So maybe I should create a separate test for urls
-    @unittest.skip("Don't want to test")
-    def test_basic_manuscript_cycle_and_permisssions_direct(self):
-        local.user = self.author
+    #@unittest.skip("Don't want to test")
+    def test_basic_manuscript_cycle_and_fsm_permissions_direct(self):
+
+        #-------------- Create manuscript ----------------
+        manuscript = m.Manuscript()
+        manuscript.save()
+        #TODO: Ideally we should be doing this via normal code paths. At least we should test the add author/curator/verifier flows
+        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.editor)
+        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.editor)
+        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.curator)
+        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.curator)
+        Group.objects.get(name=c.GROUP_ROLE_VERIFIER).user_set.add(self.verifier)
+        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id)).user_set.add(self.verifier)
+
+        self.assertFalse(has_transition_perm(manuscript.begin, self.editor))
+        Group.objects.get(name=c.GROUP_ROLE_AUTHOR).user_set.add(self.author)
+        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.author)
+        self.assertTrue(has_transition_perm(manuscript.begin, self.editor))
+        manuscript.begin()
+        manuscript.save()
+        self.assertFalse(has_transition_perm(manuscript.begin, self.editor)) #Shouldn't be able to begin after begun
+
+        #################### ROUND 1 #####################
+
+        #-------------- Create submission ----------------
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))
         submission = m.Submission()
-        submission.manuscript = self.manuscript
-        submission.save()    
+        submission.manuscript = manuscript
+        submission.save()
+        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(submission.submit, self.author))   
+        submission.submit(self.author)
+        submission.save()
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(submission.submit, self.author))   
+        with self.assertRaises(TransitionNotAllowed):
+            submission.submit(self.author)
 
-        self.assertTrue(True)
+        #-------------- Create curation (pass) -----------
+        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+        self.assertTrue(has_transition_perm(submission.add_curation_noop, self.curator))
+        curation = m.Curation()
+        curation.submission = submission
+        curation.save()
+        self.assertTrue(has_transition_perm(curation.edit_noop, self.curator))
+        self.assertFalse(has_transition_perm(submission.review, self.curator))
+        curation._status = m.CURATION_NO_ISSUES
+        curation.save()
+        self.assertTrue(has_transition_perm(submission.review, self.curator))
+        submission.review()
+        submission.save()
+        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        #TODO: This doesn't fail because you call review again for verification
+        #      If we break up review we should check again... 
+        # with self.assertRaises(TransitionNotAllowed):
+        #     submission.review()
+
+        #--------- Create verification (fail) ------------
+        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        self.assertTrue(has_transition_perm(submission.add_verification_noop, self.verifier))
+        verification = m.Verification()
+        verification.submission = submission
+        verification.save()
+        self.assertTrue(has_transition_perm(verification.edit_noop, self.verifier))
+        self.assertFalse(has_transition_perm(submission.review, self.verifier))
+        verification._status = m.VERIFICATION_MINOR_ISSUES
+        verification.save()
+        self.assertTrue(has_transition_perm(submission.review, self.verifier))
+        submission.review()
+        submission.save()
+        self.assertEqual(submission._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
+        with self.assertRaises(TransitionNotAllowed):
+            submission.review()
+
+        #################### ROUND 2 #####################
+
+        #-------------- Create submission ----------------
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))
+        submission2 = m.Submission()
+        submission2.manuscript = manuscript
+        submission2.save()
+        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(submission2.submit, self.author))   
+        submission2.submit(self.author)
+        submission2.save()
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(submission2.submit, self.author))   
+        with self.assertRaises(TransitionNotAllowed):
+            submission2.submit(self.author)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_PROCESSING)
+
+        #-------------- Create curation (fail) -----------
+        self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+        self.assertTrue(has_transition_perm(submission2.add_curation_noop, self.curator))
+        curation2 = m.Curation()
+        curation2.submission = submission2
+        curation2.save()
+        self.assertTrue(has_transition_perm(curation2.edit_noop, self.curator))
+        self.assertFalse(has_transition_perm(submission2.review, self.curator))
+        curation2._status = m.CURATION_MINOR_ISSUES
+        curation2.save()
+        self.assertTrue(has_transition_perm(submission2.review, self.curator))
+        submission2.review()
+        submission2.save()
+        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
+
+        #################### ROUND 3 #####################
+
+        #-------------- Create submission ----------------
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))
+        submission3 = m.Submission()
+        submission3.manuscript = manuscript
+        submission3.save()
+        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(submission3.submit, self.author))   
+        submission3.submit(self.author)
+        submission3.save()
+        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(submission3.submit, self.author))   
+        with self.assertRaises(TransitionNotAllowed):
+            submission3.submit(self.author)
+
+        #-------------- Create curation (pass) -----------
+        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+        self.assertTrue(has_transition_perm(submission3.add_curation_noop, self.curator))
+        curation3 = m.Curation()
+        curation3.submission = submission3
+        curation3.save()
+        self.assertTrue(has_transition_perm(curation3.edit_noop, self.curator))
+        self.assertFalse(has_transition_perm(submission3.review, self.curator))
+        curation3._status = m.CURATION_NO_ISSUES
+        curation3.save()
+        self.assertTrue(has_transition_perm(submission3.review, self.curator))
+        submission3.review()
+        submission3.save()
+        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+
+        #--------- Create verification (pass) ------------
+        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        self.assertTrue(has_transition_perm(submission3.add_verification_noop, self.verifier))
+        verification3 = m.Verification()
+        verification3.submission = submission3
+        verification3.save()
+        self.assertTrue(has_transition_perm(verification3.edit_noop, self.verifier))
+        self.assertFalse(has_transition_perm(submission3.review, self.verifier))
+        verification3._status = m.VERIFICATION_SUCCESS
+        verification3.save()
+        self.assertTrue(has_transition_perm(submission3.review, self.verifier))
+        submission3.review()
+        submission3.save()
+        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_COMPLETED)
+
+        #TODO: Test that other users can't do the various transitions. Include canview canedit
 
     @unittest.skip("Don't want to test")
-    def test_basic_manuscript_cycle_and_permisssions_via_url(self):
+    def test_basic_manuscript_cycle_and_permissions_via_url(self):
+        
         pass
+
+    #Add a test related to the nested submission.submit/manuscript.process perms
+
+
+
+
+### Test Helpers ###
+
+# def get_url_success_users(self, url, users):
+#     success_users = []
+#     for u in users:
+
+#     return success_users
+
+# def get_transition_perm_success_users(self, transition, users):
+#     pass

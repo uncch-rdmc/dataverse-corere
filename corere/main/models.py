@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
-from django_fsm import FSMField, transition, RETURN_VALUE
+from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm
 from corere.main import constants as c
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
@@ -182,12 +182,14 @@ class Submission(AbstractCreateUpdateModel):
         default_permissions = ()
 
     def save(self, *args, **kwargs):
-        if not self.pk: #only first save
-            try:
+        try:
+            if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
                 if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=SUBMISSION_REVIEWED).count() > 0):
                     raise FieldError('A submission is already in progress for this manuscript')
-            except Submission.manuscript.RelatedObjectDoesNotExist:
-                pass #this is caught in super
+                if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
+                    raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
+        except Submission.manuscript.RelatedObjectDoesNotExist:
+            pass #this is caught in super
         super(Submission, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####
@@ -212,11 +214,18 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit(self):
         return True
 
-    @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, conditions=[can_submit],
+    @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, on_error=SUBMISSION_NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
-    def submit(self):
-        self.manuscript._status = MANUSCRIPT_PROCESSING #MAD: This seems bad, should I use FSM for this too?
-        self.manuscript.save()
+    def submit(self, user):
+        # self.manuscript._status = MANUSCRIPT_PROCESSING
+        # self.manuscript.save()
+        
+        # TODO: This code was switched from doing the above call to nesting transitions. Is there a better way? Does this work right?
+        if has_transition_perm(self.manuscript.process, user):
+            self.manuscript.process()
+            self.manuscript.save()
+        else:
+            print("ERROR") #TODO: Handle better
         pass
 
     #-----------------------
@@ -232,6 +241,7 @@ class Submission(AbstractCreateUpdateModel):
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
         permission=lambda instance, user: user.has_perm('curate_manuscript',instance.manuscript))
+    #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_curation_noop(self):
         return self._status
 
@@ -268,20 +278,18 @@ class Submission(AbstractCreateUpdateModel):
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
-
         try:
             if(self.submission_verification._status == VERIFICATION_NEW):
                 return False
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             pass #we pass because you can review with just a curation
-
         return True
 
     #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
     #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
-                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance)
-                    or user.has_perm('verify_manuscript',instance) ))
+                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance.manuscript)
+                    or user.has_perm('verify_manuscript',instance.manuscript) ))
     def review(self):
         try:
             if(self.submission_curation._status == CURATION_NO_ISSUES):
@@ -421,13 +429,15 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Conditions: Submission with status of new
     def can_process(self):
+        #print("OHNO: "+ str(self.manuscript_submissions.filter(_status='new').count()))
+
         if(self.manuscript_submissions.filter(_status='new').count() != 1):
             return False
         return True
 
     # Perm: ability to create/edit a submission
     @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
-                permission=lambda instance, user: user.has_perm('change_manuscript',instance))
+                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance))
     def process(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
