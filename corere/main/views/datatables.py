@@ -61,7 +61,7 @@ def helper_manuscript_columns(user):
     # MAD: This should be using guardian???
     columns = []
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-    columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','curators','verifiers','buttons']
+    columns += ['id','pub_id','title','doi','open_data','_status','created_at','updated_at','authors','curators','verifiers','buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','authors']
     # if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
@@ -142,7 +142,7 @@ class SubmissionJson(CorereBaseDatatableView):
         user = self.request.user
         if column == 'submission_status':
             if(has_transition_perm(submission.view_noop, user)):
-                return submission.status
+                return submission._status
             else:
                 return ''
         elif column == 'curation_id':
@@ -153,7 +153,7 @@ class SubmissionJson(CorereBaseDatatableView):
         elif column == 'curation_status':
             try:
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
-                    return '{0}'.format(submission.submission_curation.status)
+                    return '{0}'.format(submission.submission_curation._status)
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
             return ''
@@ -165,7 +165,7 @@ class SubmissionJson(CorereBaseDatatableView):
         elif column == 'verification_status':
             try:
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
-                    return '{0}'.format(submission.submission_verification.status)
+                    return '{0}'.format(submission.submission_verification._status)
             except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
             return ''

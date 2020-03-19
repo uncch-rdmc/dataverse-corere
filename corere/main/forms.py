@@ -48,7 +48,7 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
 class CurationForm(forms.ModelForm):
     class Meta:
         model = Curation
-        fields = ['status']
+        fields = ['_status']
 
     def __init__ (self, *args, **kwargs):
         super(CurationForm, self).__init__(*args, **kwargs)
@@ -59,7 +59,7 @@ class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
 class VerificationForm(forms.ModelForm):
     class Meta:
         model = Verification
-        fields = ['status']
+        fields = ['_status']
 
     def __init__ (self, *args, **kwargs):
         super(VerificationForm, self).__init__(*args, **kwargs)
