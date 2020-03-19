@@ -10,10 +10,6 @@ from django.core.exceptions import FieldError
 from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 
-# Do I need to use a mock for my tests?
-# If not IDs are going to get bumped so I probably should
-# I really just want one Manuscript/Submission/Curation/Verification/Note for now
-# TODO: Should you really be able to directly set the the status?
 #@unittest.skip("Don't want to test")
 class TestModels(TestCase):
     def setUp(self):
@@ -22,6 +18,7 @@ class TestModels(TestCase):
 
     #This tests ensures that manuscripts/submissions/curations/verifications/notes can be created.
     #Furthermore, it tests the restrictions related to creating and connecting these objects.
+    # TODO: Should you really be able to directly set the the status?
     def test_create_manuscript_objects(self):
         manuscript = m.Manuscript()
         manuscript.save()
@@ -128,12 +125,13 @@ class TestManuscriptWorkflow(TestCase):
         self.author = m.User.objects.create_user('author')
         self.curator = m.User.objects.create_user('curator')
         self.verifier = m.User.objects.create_user('verifier')
-        self.all_users = [self.editor,self.author,self.curator,self.verifier]
+        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.editor)
+        Group.objects.get(name=c.GROUP_ROLE_AUTHOR).user_set.add(self.author)
+        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.curator)
+        Group.objects.get(name=c.GROUP_ROLE_VERIFIER).user_set.add(self.verifier)
+        #self.all_users = [self.editor,self.author,self.curator,self.verifier]
         local.user = self.editor #has to be set to something for saving (middleware uses it to set creator/updater).
 
-    #MAD: So... I want this testing workflow directly? Do I want to also check various url access throughout?
-    #Seems like it'll get too complicated. I want to test with the workflow that other users can't progress the flow
-    #So maybe I should create a separate test for urls
     #@unittest.skip("Don't want to test")
     def test_basic_manuscript_cycle_and_fsm_permissions_direct(self):
 
@@ -141,15 +139,10 @@ class TestManuscriptWorkflow(TestCase):
         manuscript = m.Manuscript()
         manuscript.save()
         #TODO: Ideally we should be doing this via normal code paths. At least we should test the add author/curator/verifier flows
-        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.editor)
         Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.editor)
-        Group.objects.get(name=c.GROUP_ROLE_CURATOR).user_set.add(self.curator)
         Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.curator)
-        Group.objects.get(name=c.GROUP_ROLE_VERIFIER).user_set.add(self.verifier)
         Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id)).user_set.add(self.verifier)
-
-        self.assertFalse(has_transition_perm(manuscript.begin, self.editor))
-        Group.objects.get(name=c.GROUP_ROLE_AUTHOR).user_set.add(self.author)
+        self.assertFalse(has_transition_perm(manuscript.begin, self.editor))        
         Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.add(self.author)
         self.assertTrue(has_transition_perm(manuscript.begin, self.editor))
         manuscript.begin()
@@ -157,7 +150,6 @@ class TestManuscriptWorkflow(TestCase):
         self.assertFalse(has_transition_perm(manuscript.begin, self.editor)) #Shouldn't be able to begin after begun
 
         #################### ROUND 1 #####################
-
         #-------------- Create submission ----------------
         self.assertFalse(has_transition_perm(manuscript.process, self.author))
         submission = m.Submission()
@@ -291,23 +283,24 @@ class TestManuscriptWorkflow(TestCase):
 
         #TODO: Test that other users can't do the various transitions. Include canview canedit
 
-    @unittest.skip("Don't want to test")
+    @unittest.skip("Integration tests will have to come later")
     def test_basic_manuscript_cycle_and_permissions_via_url(self):
         
         pass
 
-    #Add a test related to the nested submission.submit/manuscript.process perms
-
-
-
+    #TODO: Add a test related to the nested submission.submit/manuscript.process perms
 
 ### Test Helpers ###
 
-# def get_url_success_users(self, url, users):
-#     success_users = []
-#     for u in users:
+#TODO: These are non-functional until we get integration tests set up
+def get_url_success_users(url, r_type, users):
+    success_users = []
+    for u in users:
+        #TOOD: change based upon get/post
+        result = self.client.get(url)
+        if(result.status_code == 200):
+            success_users.append(u)
+    return success_users
 
-#     return success_users
-
-# def get_transition_perm_success_users(self, transition, users):
-#     pass
+def get_transition_perm_success_users(transition, users):
+    pass
