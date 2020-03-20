@@ -7,13 +7,14 @@ from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm, remove_perm
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django_fsm import can_proceed, has_transition_perm
+from django_fsm import can_proceed, has_transition_perm, TransitionNotAllowed
 from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from corere.main.utils import fsm_check_transition_perm
 from django.core.exceptions import PermissionDenied
 
 from django.http import HttpResponse
 from django.views import View
+
 
 def index(request):
     if request.user.is_authenticated:
@@ -166,8 +167,8 @@ class GenericManuscriptView(GenericCorereObjectView):
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.begin()
             self.object.save()
-        except TransactionNotAllowed:
-            print("TransitionNotAllowed") #Handle exception better
+        except TransitionNotAllowed as e:
+            print("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
 class ManuscriptCreateView(GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
@@ -207,8 +208,8 @@ class GenericSubmissionView(GenericCorereObjectView):
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.submit(request.user)
             self.object.save()
-        except TransactionNotAllowed:
-            print("TransitionNotAllowed") #Handle exception better
+        except TransitionNotAllowed as e:
+            print("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
 class SubmissionCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
@@ -244,7 +245,7 @@ class GenericCurationView(GenericCorereObjectView):
         try:
             self.object.submission.review()
             self.object.submission.save()
-        except TransactionNotAllowed:
+        except TransitionNotAllowed:
             pass #We do not do review if the statuses don't align
 
 class CurationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
@@ -280,7 +281,7 @@ class GenericVerificationView(GenericCorereObjectView):
         try:
             self.object.submission.review()
             self.object.submission.save()
-        except TransactionNotAllowed:
+        except TransitionNotAllowed:
             pass #We do not do review if the statuses don't align
 
 class VerificationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):

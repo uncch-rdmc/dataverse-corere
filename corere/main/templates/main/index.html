@@ -41,18 +41,22 @@
             cache: false,
             success: function (response) {
                 var [columns_config, button_index] = constructTable(response.data[0]);
-                console.log(response.data)
-                $('#manuscript_table').DataTable({
+                var last_row;
+                //console.log(response.data)
+                var table = $('#manuscript_table').DataTable({
                     language: dt_language,  // global variable defined in html
-                    lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
                     searching: true,
                     processing: true,
-                    //serverSide: true, //currently broken, not sure if needed
+                                        //serverSide: true, //currently broken, not sure if needed
                     stateSave: true,
+                    paging: true,
                     select: 'single',
                     columns: columns_config,
-                    dom: 'Bfrt',
-                    //dom: 'Bfrtip', //old setting which is broken, should understand better
+                    dom: 'Bfrtpl',
+                    keys: true, //for keyboard
+                    rowId: 'id', //for retaining selected row
+                                        //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
                     {% if request.user|has_global_perm:'main.add_manuscript' %} 
@@ -67,7 +71,7 @@
                             text: 'Edit Manuscript',
                             name: 'editManuscript',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "manuscript/"+manuscript_id+"/edit";
                             },
                             enabled: false
@@ -77,7 +81,7 @@
                             text: 'View Manuscript',
                             name: 'viewManuscript',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "manuscript/"+manuscript_id+"/view";
                             },
                             enabled: false
@@ -87,7 +91,7 @@
                             text: 'Invite/Add Author to Manuscript',
                             name: 'addAuthor',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "manuscript/"+manuscript_id+"/addauthor";
                             },
                             enabled: false
@@ -98,7 +102,7 @@
                             text: 'Add Curator to Manuscript',
                             name: 'addCurator',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "manuscript/"+manuscript_id+"/addcurator";
                             },
                             enabled: false
@@ -107,7 +111,7 @@
                             text: 'Add Verifier to Manuscript',
                             name: 'addVerifier',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "manuscript/"+manuscript_id+"/addverifier";
                             },
                             enabled: false
@@ -120,23 +124,12 @@
                     var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     var createSubButton = false;
                     for(var i in avail_buttons) {
-                        console.log(avail_buttons[i])
+                        //console.log(avail_buttons[i])
                         if(avail_buttons[i] == 'createSubmission') {
                             createSubButton = true;
                         } else {
                             dt.button(avail_buttons[i]+':name').enable(true);
                         }
-
-                        //If you can edit don't show view
-                        //maybe this should be done in python
-                        //TODO: Confirm these work as expected
-                        //if(avail_buttons[i] == 'editSubmission') {
-                        //    dt.button('viewSubmission:name').visible(false);
-                        //} else if(avail_buttons[i] == 'editCuration') {
-                        //    dt.button('viewCuration:name').visible(false);
-                        //} else if(avail_buttons[i] == 'editVerification') {
-                        //    dt.button('viewVerification:name').visible(false);
-                        //}
                     }
 
                     document.getElementById("submission_table_wrapper").style.display = "block"; //show element
@@ -158,7 +151,21 @@
                     }
                     document.getElementById("submission_table_wrapper").style.display = "none"; //hide element
                     console.log('Table row deselected');
-                } );
+                } )
+                .on('key-focus', function (e, dt, cell, originalEvent) {
+                    //console.log('KEYFOCUS');
+                    //console.log(originalEvent);
+                    //console.log(originalEvent.type);
+                    //'key-focus' triggers on mouse events too, which we don't want
+                    if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
+                        console.log("YEA INSIDE")
+                        //dt.rows().deselect();
+                        dt.row( cell.index().row ).select();
+                        last_row = cell.index().row;
+                    }
+                });
+                var selected_row = table.cell( { focused: true } ).index().row
+                table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
             }
         })
     });

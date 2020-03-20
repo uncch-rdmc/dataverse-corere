@@ -10,6 +10,13 @@ from django.core.exceptions import FieldError
 from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 
+#TODO: Encapsulating all the previous TODOs:
+# - Test manuscript/file notes in test_create_manuscript_objects when available
+# - Add extra notes test that covers more edge-cases
+# - Test that other users can't do the various transitions. Include canview canedit. Maybe in test_basic_manuscript_cycle_and_fsm_permissions_direct
+# - Maybe add a test related to the nested submission.submit/manuscript.process perms
+# - Add Integration tests! Make sure each role can only do the things we want!
+
 #@unittest.skip("Don't want to test")
 class TestModels(TestCase):
     def setUp(self):
@@ -18,7 +25,6 @@ class TestModels(TestCase):
 
     #This tests ensures that manuscripts/submissions/curations/verifications/notes can be created.
     #Furthermore, it tests the restrictions related to creating and connecting these objects.
-    # TODO: Should you really be able to directly set the the status?
     def test_create_manuscript_objects(self):
         manuscript = m.Manuscript()
         manuscript.save()
@@ -110,14 +116,6 @@ class TestModels(TestCase):
             verification2bad.submission = submission
             verification2bad.save()
         self.assertTrue('duplicate key value violates unique constraint "main_verification_submission_id_key"' in str(exc_ver3.exception))
-
-    #Test general note restrictions not covered in the objects test
-    #TODO: Include manuscript and files when available
-    #TODO: Do this later, right now I'm worried we'll add more restrictions on the normal flow
-    #def test_notes(self):
-        #no more than one sub/cur/ver
-        #you can't put a something in the wrong slot
-        #you can't create a note without one?
 
 class TestManuscriptWorkflow(TestCase):
     def setUp(self):
@@ -281,14 +279,10 @@ class TestManuscriptWorkflow(TestCase):
         self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_COMPLETED)
 
-        #TODO: Test that other users can't do the various transitions. Include canview canedit
 
     @unittest.skip("Integration tests will have to come later")
     def test_basic_manuscript_cycle_and_permissions_via_url(self):
-        
         pass
-
-    #TODO: Add a test related to the nested submission.submit/manuscript.process perms
 
 ### Test Helpers ###
 

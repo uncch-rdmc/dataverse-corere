@@ -41,6 +41,7 @@ class CorereBaseDatatableView(BaseDatatableView):
         return col_data
 
     def prepare_results(self, qs):
+#MADTEST: subset of results here! (MISSING)
         data = []
         #TODO: Confirm this works right with pagination
         data.append(self.get_columns()) #adds headers to grab in js for dynamic support
@@ -51,7 +52,31 @@ class CorereBaseDatatableView(BaseDatatableView):
                 row = {col_data['data']: self.render_column(item, col_data['data']) for col_data in self.columns_data}
                 data.append(row)
 
+        
         return data
+
+    # pull from source, paging commented out for now
+    #TODO: Understand why the paging isn't pulling correctly from datatables. We will probably want this when the number of manuscripts gets large
+    def paging(self, qs):
+        """ Paging
+        """
+
+        return qs
+
+        # if self.pre_camel_case_notation:
+        #     limit = min(int(self._querydict.get('iDisplayLength', 10)), self.max_display_length)
+        #     start = int(self._querydict.get('iDisplayStart', 0))
+        # else:
+        #     limit = min(int(self._querydict.get('length', 10)), self.max_display_length)
+        #     start = int(self._querydict.get('start', 0))
+
+        # # if pagination is disabled ("paging": false)
+        # if limit == -1:
+        #     return qs
+
+        # offset = start + limit
+
+        # return qs[start:offset]
 
 
 def helper_manuscript_columns(user):
@@ -74,7 +99,7 @@ def helper_manuscript_columns(user):
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
     model = m.Manuscript
-    max_display_length = 500
+    max_display_length = 500 #MADTEST: This does impact if less than 10 but something else is getting in the way?
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
@@ -107,6 +132,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
+#MADTEST: All results here
         return get_objects_for_user(self.request.user, "view_manuscript", klass=self.model)
 
     def filter_queryset(self, qs):
