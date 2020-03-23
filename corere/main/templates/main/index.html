@@ -122,7 +122,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //We delay select until no events have fired for a bit so that we don't do a zillion queries
-                    //... and also jam up the submission table reloading
+                    //and also jam up the submission table reloading
                     clearTimeout(select_timeout); //clear existing timeout if needed
                     select_timeout = setTimeout(select_later, 100);
                 } )
@@ -135,7 +135,7 @@
                         dt.button('addCurator:name').enable(false);
                         dt.button('addVerifier:name').enable(false);
                     }
-                    //document.getElementById("submission_table").style.display = "none"; //hide element
+                    document.getElementById("submission_table_holder").style.display = "none"; //hide element
                     //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
@@ -156,8 +156,6 @@
 
 
                 function select_later() {
-                    console.log("SELECT LATER")
-
                     manuscript_id = table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
                     var avail_buttons = table.rows( { selected: true } ).data()[0][button_index];
                     var createSubButton = false;
@@ -169,8 +167,7 @@
                             table.button(avail_buttons[i]+':name').enable(true);
                         }
                     }
-
-                    //document.getElementById("submission_table").style.display = "block"; //show element
+                    document.getElementById("submission_table_holder").style.display = "block"; //show element
                     
                     if (typeof dt_submission !== 'undefined') {
                         console.log(dt_submission.context)
@@ -181,7 +178,6 @@
                         //}
                     }
                     createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
-
                     //console.log('Table row selected: ' + document.getElementById("submission_table").style.display);
                 }
             }
@@ -375,7 +371,7 @@
 </script>
 
 {% comment %} <div id="submission_table_wrapper" style="display:none"> {% endcomment %}
-<div style="display:block">
+<div style="display:block" id="submission_table_holder">
     <table id="submission_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
     <caption>Submissions</caption>
         <thead>
