@@ -42,6 +42,7 @@
             success: function (response) {
                 var [columns_config, button_index] = constructTable(response.data[0]);
                 var last_row;
+                var select_timeout;
                 //console.log(response.data)
                 var table = $('#manuscript_table').DataTable({
                     language: dt_language,  // global variable defined in html
@@ -120,25 +121,10 @@
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
-                    manuscript_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
-                    var createSubButton = false;
-                    for(var i in avail_buttons) {
-                        //console.log(avail_buttons[i])
-                        if(avail_buttons[i] == 'createSubmission') {
-                            createSubButton = true;
-                        } else {
-                            dt.button(avail_buttons[i]+':name').enable(true);
-                        }
-                    }
-
-                    document.getElementById("submission_table_wrapper").style.display = "block"; //show element
-                    if (typeof dt_submission !== 'undefined') {
-                        dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
-                    }
-                    createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
-
-                    console.log('Table row selected');
+                    //We delay select until no events have fired for a bit so that we don't do a zillion queries
+                    //... and also jam up the submission table reloading
+                    clearTimeout(select_timeout); //clear existing timeout if needed
+                    select_timeout = setTimeout(select_later, 100);
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
                     var count = dt.rows( { selected: true } ).count();
@@ -149,25 +135,58 @@
                         dt.button('addCurator:name').enable(false);
                         dt.button('addVerifier:name').enable(false);
                     }
-                    document.getElementById("submission_table_wrapper").style.display = "none"; //hide element
-                    console.log('Table row deselected');
+                    //document.getElementById("submission_table").style.display = "none"; //hide element
+                    //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
-                    //console.log('KEYFOCUS');
-                    //console.log(originalEvent);
-                    //console.log(originalEvent.type);
                     //'key-focus' triggers on mouse events too, which we don't want
                     if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
-                        console.log("YEA INSIDE")
                         //dt.rows().deselect();
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
                 });
-                var selected_row = table.cell( { focused: true } ).index().row
+                var selected_row = 0
+                if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
+                    selected_row = table.cell( { focused: true } ).index().row
+                } else { //select cell if none selected, allows instant keyboard use
+                    table.cell({ row: selected_row, column: 0 }).focus();
+                }
                 table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
+
+
+                function select_later() {
+                    console.log("SELECT LATER")
+
+                    manuscript_id = table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+                    var avail_buttons = table.rows( { selected: true } ).data()[0][button_index];
+                    var createSubButton = false;
+                    for(var i in avail_buttons) {
+                        //console.log(avail_buttons[i])
+                        if(avail_buttons[i] == 'createSubmission') {
+                            createSubButton = true;
+                        } else {
+                            table.button(avail_buttons[i]+':name').enable(true);
+                        }
+                    }
+
+                    //document.getElementById("submission_table").style.display = "block"; //show element
+                    
+                    if (typeof dt_submission !== 'undefined') {
+                        console.log(dt_submission.context)
+                        
+                        //if (dt_submission.context.length) {
+                        console.log("DESTROY")
+                        dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
+                        //}
+                    }
+                    createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
+
+                    //console.log('Table row selected: ' + document.getElementById("submission_table").style.display);
+                }
             }
         })
+
     });
 
     //What is the goal here?
@@ -177,7 +196,7 @@
     function constructTable(columns) {
         var columns_config = [];
         var button_index;
-        console.log("CONSTRUCT TABLE")
+        //console.log("CONSTRUCT TABLE")
         for (var c in columns) {
             var column_settings = {name: columns[c]}
             if(columns[c] === 'buttons') {
@@ -187,9 +206,9 @@
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
-            console.log(column_settings);
+            //console.log(column_settings);
         }
-        console.log(columns_config);
+        //console.log(columns_config);
         return [columns_config, button_index];
     } 
 
@@ -216,13 +235,14 @@
     }
 
     function createSubmissionTable(url, createSubButton) { 
+        console.log("Create sub outside")
         $.ajax({
             url: url,
             cache: false,
             success: function (response) {
-                console.log("TEST SUB SUCCESS")
+                console.log("Create sub inside")
                 var [columns_config, button_index] = constructTable(response.data[0]);
-                console.log(response.data)
+                //console.log(response.data)
                 var table = $('#submission_table').DataTable({
                     language: dt_language,  // global variable defined in html
                     lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
@@ -249,7 +269,7 @@
                             text: 'Edit Submission',
                             name: 'editSubmission',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "submission/"+submission_id+"/edit";
                             },
                             enabled: false
@@ -259,7 +279,7 @@
                         text: 'View Submission',
                         name: 'viewSubmission',
                         action: function ( e, dt, node, config ) {
-                            console.log(dt.rows( { selected: true } ).data()[0][0])
+                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                             window.location.href = "submission/"+submission_id+"/view";
                         },
                         enabled: false
@@ -277,7 +297,7 @@
                             text: 'Edit Curation',
                             name: 'editCuration',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "curation/"+curation_id+"/edit";
                             },
                             enabled: false
@@ -287,7 +307,7 @@
                             text: 'View Curation',
                             name: 'viewCuration',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "curation/"+curation_id+"/view";
                             },
                             enabled: false
@@ -305,7 +325,7 @@
                             text: 'Edit Verification',
                             name: 'editVerification',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "verification/"+verification_id+"/edit";
                             },
                             enabled: false
@@ -315,7 +335,7 @@
                             text: 'View Verification',
                             name: 'viewVerification',
                             action: function ( e, dt, node, config ) {
-                                console.log(dt.rows( { selected: true } ).data()[0][0])
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
                                 window.location.href = "verification/"+verification_id+"/view";
                             },
                             enabled: false
@@ -354,7 +374,8 @@
     };
 </script>
 
-<div id="submission_table_wrapper" style="display:none">
+{% comment %} <div id="submission_table_wrapper" style="display:none"> {% endcomment %}
+<div style="display:block">
     <table id="submission_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
     <caption>Submissions</caption>
         <thead>
@@ -365,6 +386,7 @@
         <tbody>
         </tbody>
     </table>
-</div>
+</div >
+{% comment %} </div> {% endcomment %}
 
 {% endblock %}
