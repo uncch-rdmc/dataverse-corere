@@ -15,6 +15,7 @@
     {% endif %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
+{% include "main/files.html" %}
 {% if read_only is not True %}
 <a href='createnote'>Add note</a> {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
 {% endif %}

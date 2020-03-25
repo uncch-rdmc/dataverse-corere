@@ -1,0 +1,66 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
+<script type="text/javascript">
+    Dropzone.options.dropdiv = {
+      url: "FAKE", //is replaced during file upload
+      //method: "post",
+      maxFilesize: 0, // MB
+      autoProcessQueue: false, //We first need to convert the files to base 64
+      addRemoveLinks: true,
+      headers: {
+          'X-CSRFToken': "{{csrf_token}}"
+      },
+      accept: function(file, done) {
+        if (file.name.indexOf(".zip") != -1) {
+          done("Cannot upload zip files!");
+        }
+        else { done(); }
+      },
+      //can this be done liked addedfile etc?
+      init: function () {
+        this.on("processing", function(file) {
+          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/114/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_TOKEN_ENV_MAD_DELETE }}";
+        });
+      },
+      addedfile: function(file) {
+          var _this=this,
+              reader = new FileReader();
+          reader.onload = function(event) {
+              base64 = event.target.result.split(',')[1]; //Strip headers
+              _this.processQueue();
+          };
+          reader.readAsDataURL(file);
+      },
+
+//MAD: What to try next? I tried decoding the base64 like our example did....
+//... maybe try taking the base64 string and putting it into the prototype code?
+//I do wonder if my current javascript code is busted... taking its strings into a base64 decoder blows up
+//I could try putting a super simple file through?
+//... I think there are base64 headers being added that need to get removed?
+//... looking at the output of readAsDataURL on 
+      sending: function (file, xhr, data) {
+        data.append("ref", "master");
+        data.append("content", base64);
+      },
+    
+
+      //success: function(file) {
+        //file.previewElement = Dropzone.createElement(this.options.previewTemplate);
+    
+    
+        //console.log(file)
+        // Now attach this new element some where in your page
+      //},
+    };
+
+</script>
+{% comment %}
+TODO:
+- Form action should be the upload path to gitlab
+- There is a "sending" call that dropzone uses right before the action, can append metadata etc there
+- Look at prototype_views/load for the code that sent files from corere to gitlab
+- I'll need to do functions before files are uploaded. Some things in the dropzone, some on object create actions, etc
+{% endcomment %}
+
+<div id="dropdiv" name="thing" class="dropzone dz-clickable" ></div>
