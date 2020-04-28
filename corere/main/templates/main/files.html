@@ -20,7 +20,7 @@
       //can this be done liked addedfile etc?
       init: function () {
         this.on("processing", function(file) {
-          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/114/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_TOKEN_ENV_MAD_DELETE }}";
+          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/115/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
         });
       },
       addedfile: function(file) {
@@ -33,12 +33,6 @@
           reader.readAsDataURL(file);
       },
 
-//MAD: What to try next? I tried decoding the base64 like our example did....
-//... maybe try taking the base64 string and putting it into the prototype code?
-//I do wonder if my current javascript code is busted... taking its strings into a base64 decoder blows up
-//I could try putting a super simple file through?
-//... I think there are base64 headers being added that need to get removed?
-//... looking at the output of readAsDataURL on 
       sending: function (file, xhr, data) {
         data.append("ref", "master");
         data.append("content", base64);
@@ -56,11 +50,38 @@
 
 </script>
 {% comment %}
+
+=== OLD BEFORE "BREAK" ===
+
+DO NOW:
+- Understand how jupyter is talking to gitlab. It looks to be using actual git not the api. Is it using a token somewhere?
+- Get repo structure stuff working
+
 TODO:
-- Form action should be the upload path to gitlab
-- There is a "sending" call that dropzone uses right before the action, can append metadata etc there
-- Look at prototype_views/load for the code that sent files from corere to gitlab
+- How am I handling tokens and auth???
+  - Admin accounts can generate an impersonation token
+    - We can do that with a short time-limit
+    - Is there a way we can generate these tokens on request from dropzone?
+  - CI may have one-time tokens.... but will that work?
+    - no, read-only currently
+  - create all users as external with access only to specific repo
+  - Concerns:
+    - Users can use token to get more permissions.
+  - can we whitelist api endpoints on the gitlab server?
+    - can go further and whitelist endpoints from IPs other than the ones we trust
+  - can we limit the branches a user can commit to:
+    - yes, we can protect every branch besides the currently active one.
+
+- Decide on my method for adding files. 
+  - Probably want to create a branch per submission?
+    - Does that mean files added on the manuscript are directly added to master?
+    - Do we want to merge our branch each time or just leave it hanging?
+      - ... Do we need to merge to take advantage of storage efficiencies?
+  - Can we do something ahead of time to check md5s or whatever and limit the data being re-uploaded?
+  - We'll also probably have different folders for the "types" of files.
+  - There seems to be no way to add files without creating a commit.
 - I'll need to do functions before files are uploaded. Some things in the dropzone, some on object create actions, etc
+
 {% endcomment %}
 
 <div id="dropdiv" name="thing" class="dropzone dz-clickable" ></div>

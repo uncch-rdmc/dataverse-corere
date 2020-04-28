@@ -11,6 +11,7 @@ from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
+from corere.main.utils import gitlab_create_user, gitlab_add_user_to_manuscript_repo
 
 # Editor/Superuser enters an email into a form and clicks submit
 # Corere creates a user with no auth connected, and an email address, and the requested role(s).
@@ -46,13 +47,14 @@ def add_author(request, id=None):
                 #TODO: Think about doing this after everything else, incase something bombs
                 invite.send_invitation(request)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
-            
+                gitlab_create_user(user)
+                gitlab_add_user_to_manuscript_repo(user, manuscript)
             
             for u in users:
-                
                 manu_author_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 print('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
+                
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?

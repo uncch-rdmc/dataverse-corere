@@ -181,8 +181,8 @@ git remote set-url origin {2}
     ### and setup GitLabRepoProvider with private token TO ENSURE THAT GITLAB PROJECTS ARE ALL PRIVATE
 
     GITLAB_API = settings.GIT_LAB_URL+"/"+settings.GIT_API_VERSION
-    PRIVATE_TOKEN = "private_token="+settings.GIT_PRIVATE_TOKEN
-    headers = {'PRIVATE-TOKEN': ''+settings.GIT_PRIVATE_TOKEN+'',
+    PRIVATE_TOKEN = "private_token="+settings.GIT_PRIVATE_ADMIN_TOKEN
+    headers = {'PRIVATE-TOKEN': ''+settings.GIT_PRIVATE_ADMIN_TOKEN+'',
                 'Content-Type': 'application/json'}
 
     logger.debug("test4")
