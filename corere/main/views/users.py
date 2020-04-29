@@ -11,7 +11,7 @@ from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
-from corere.main.utils import gitlab_create_user, gitlab_add_user_to_manuscript_repo
+from corere.main.utils import gitlab_create_user, gitlab_add_user_to_manuscript_repo, gitlab_update_user
 
 # Editor/Superuser enters an email into a form and clicks submit
 # Corere creates a user with no auth connected, and an email address, and the requested role(s).
@@ -142,7 +142,8 @@ def account_user_details(request):
         if form.is_valid():
             if(request.user.invite_key):
                 request.user.invite_key = "" #we clear out the invite_key now that we can associate the user
-            form.save()
+            user = form.save()
+            gitlab_update_user(user)
             return redirect('/')
         else:
             print(form.errors) #TODO: DO MORE?

@@ -40,7 +40,6 @@ def fsm_check_transition_perm(bound_method, user):
 def gitlab_create_user(django_user):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     gl.enable_debug()
-    #TODO: Once this issue is fixed, remove our random password generation. https://gitlab.com/gitlab-org/gitlab/-/issues/25802
     gitlab_user = gl.users.create({
                         'email': "fakeemail"+str(django_user.id)+"@odum.unc.edu", #we set this wrong as a security measure
                         'force_random_password': True,
@@ -49,18 +48,39 @@ def gitlab_create_user(django_user):
                         'external':True, 
                         'private_profile':True , 
                         'skip_confirmation':True,
+                         #TODO: Once this issue is fixed, remove our random password generation. https://gitlab.com/gitlab-org/gitlab/-/issues/25802
                         'password' : ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))})
     django_user.gitlab_id = gitlab_user.id                   
+    django_user.save()
 
 #TODO: Add update user command to update on users.account_user_details() changes
+def gitlab_update_user(django_user):
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    gl.enable_debug()
+    print(django_user.__dict__)
+
+    #TODO: is this efficient? I feel like it may be doing multiple calls under the hood...
+
+    gl_user = gl.users.get(django_user.gitlab_id)
+    if(not django_user.first_name or not django_user.last_name):
+        gl_user.name = django_user.first_name + " " + django_user.last_name
+    else: #this case should never hit on update, but just in case
+        gl_user.name = django_user.email
+    gl_user.username = django_user.username
+    gl_user.save()
+
 
 #https://docs.gitlab.com/ee/api/members.html#add-a-member-to-a-group-or-project
 #https://docs.gitlab.com/ee/api/members.html top has info on access levels
 #http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
 def gitlab_add_user_to_manuscript_repo(django_user, manuscript):
-    #required: id (project), user_id, access_level:30 (developer, needed to push code)
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    gl.enable_debug()
+    gl_project = gl.projects.get(manuscript.gitlab_id)
+    #TODO: what happens if a member already exists?
+    gl_project.members.create({'user_id': django_user.gitlab_id, 'access_level':
+                                 gitlab.DEVELOPER_ACCESS})
 
-    pass
 
 def gitlab_remove_user_from_manuscript_repo(django_user, manuscript):
     pass
@@ -82,5 +102,4 @@ def gitlab_create_manuscript_repo(manuscript):
 #
 # https://docs.gitlab.com/ee/api/users.html#create-an-impersonation-token
 def gitlab_generate_impersonation_token(self, token_user, timeout=1):
-    #os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
     pass
