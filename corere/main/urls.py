@@ -9,6 +9,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/submission_table', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create', main.ManuscriptCreateView.as_view()),
     path('manuscript/<int:id>/edit', main.ManuscriptEditView.as_view()),
+    path('manuscript/<int:id>/editfiles', main.ManuscriptEditFilesView.as_view()),
     path('manuscript/<int:id>/view', main.ManuscriptReadView.as_view()),
     path('manuscript/<int:id>/addauthor', users.add_author),
     path('manuscript/<int:id>/addcurator', users.add_curator),

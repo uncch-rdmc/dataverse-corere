@@ -34,6 +34,14 @@ class ManuscriptForm(forms.ModelForm):
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptForm):
     pass
 
+#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
+    class Meta:
+        model = Manuscript
+        fields = []#['title','doi','open_data']#,'authors']
+    pass
+
 class SubmissionForm(forms.ModelForm):
     class Meta:
         model = Submission

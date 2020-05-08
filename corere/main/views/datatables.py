@@ -116,6 +116,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             avail_buttons = []
             if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
+                avail_buttons.append('editManuscriptFiles')
             if(has_transition_perm(manuscript.view_noop, user)):
                 avail_buttons.append('viewManuscript')
             # MAD: Should we change these to be transitions?

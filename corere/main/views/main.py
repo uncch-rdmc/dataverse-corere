@@ -15,6 +15,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.views import View
 
+from corere.main.utils import gitlab_repo_get_file_folder_list
+
 
 def index(request):
     if request.user.is_authenticated:
@@ -51,6 +53,7 @@ class GenericCorereObjectView(View):
     def dispatch(self, request, *args, **kwargs): 
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
         self.notes = []
+        self.repo_dict_list = []
         try:
             self.model._meta.get_field('notes')
             for note in self.object.notes.all():
@@ -63,7 +66,8 @@ class GenericCorereObjectView(View):
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
+        return render(request, self.template, {'form': self.form, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list})
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
@@ -184,10 +188,33 @@ class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
+#No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+#TODO: See if this can be done cleaner
+class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericManuscriptView):
+    form = ManuscriptFilesForm
+    template = 'main/not_form_upload_files.html'
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
+    #repo_dict_list = gitlab_repo_get_file_folder_list(object)
+
+    #TODO: this can be done cleaner. Also, I should probably take the same approach as notes
+    def get(self, request, *args, **kwargs):
+        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
+        return super(ManuscriptEditFilesView, self).get(request,*args, **kwargs)
+        
+    #     #return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
+        #return render(request, self.template, {'form': self.form, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        #   'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': repo_dict_list})
+
 class ManuscriptReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
+
+    def get(self, request, *args, **kwargs):
+        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
+        return super(ManuscriptReadView, self).get(request,*args, **kwargs)
 
 
     

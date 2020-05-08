@@ -1,0 +1,8 @@
+Files: <br>
+<table id="filestable">
+{%for file in repo_dict_list%}
+<tr>
+    <td>{{ file.path }} </td>
+</tr>
+{% endfor %}
+</table>

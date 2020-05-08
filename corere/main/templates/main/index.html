@@ -77,6 +77,15 @@
                             },
                             enabled: false
                         },
+                        {
+                            text: 'Edit Manuscript Files',
+                            name: 'editManuscriptFiles',
+                            action: function ( e, dt, node, config ) {
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "manuscript/"+manuscript_id+"/editfiles";
+                            },
+                            enabled: false
+                        },
                     {% endif %}
                         {
                             text: 'View Manuscript',
@@ -130,6 +139,7 @@
                     var count = dt.rows( { selected: true } ).count();
                     if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editManuscript:name').enable(false);
+                        dt.button('editManuscriptFiles:name').enable(false);
                         dt.button('viewManuscript:name').enable(false);
                         dt.button('addAuthor:name').enable(false);
                         dt.button('addCurator:name').enable(false);
