@@ -9,22 +9,24 @@
     <table>
         {{form}}
     </table>
-    {% if read_only is not True %}
+    {% if not read_only %}
     <input type="submit" name="submit" value="Save">
     <input type="submit" name="submit" value="{{transition_text}}">
     {% endif %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
-{% comment %}{% include "main/files.html" %}{% endcomment %}
-{% if read_only is not True %}
+{% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}
+
+{% if not read_only %}
 <a href='createnote'>Add note</a> {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
 {% endif %}
 {% for note in notes %}
     <p>{{note.text}} by {{note.creator}} 
-    {% if read_only is not True %}
-    {% if user.username == note.creator.username %}
-        (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href={{ 'deletenote/'|concat:note.id}}>Delete</a>)
-    {% endif %}{% endif %}
+    {% if not read_only  %}
+        {% if user.username == note.creator.username %}
+            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href={{ 'deletenote/'|concat:note.id}}>Delete</a>)
+        {% endif %}
+    {% endif %}
     </p> 
 {% endfor %}
 {% include "main/file_list.html" %}

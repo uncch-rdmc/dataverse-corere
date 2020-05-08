@@ -37,7 +37,7 @@ def fsm_check_transition_perm(bound_method, user):
 #https://docs.gitlab.com/ee/api/users.html#user-creation
 def gitlab_create_user(django_user):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gl.enable_debug()
+    #gl.enable_debug()
     gitlab_user = gl.users.create({
                         'email': "fakeemail"+str(django_user.id)+"@odum.unc.edu", #we set this wrong as a security measure
                         'force_random_password': True,
@@ -54,7 +54,7 @@ def gitlab_create_user(django_user):
 #TODO: Add update user command to update on users.account_user_details() changes
 def gitlab_update_user(django_user):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gl.enable_debug()
+    #gl.enable_debug()
     print(django_user.__dict__)
 
     #TODO: is this efficient? I feel like it may be doing multiple calls under the hood...
@@ -73,7 +73,7 @@ def gitlab_update_user(django_user):
 #http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
 def gitlab_add_user_to_manuscript_repo(django_user, manuscript):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gl.enable_debug()
+    #gl.enable_debug()
     gl_project = gl.projects.get(manuscript.gitlab_id)
     #TODO: what happens if a member already exists?
     gl_project.members.create({'user_id': django_user.gitlab_id, 'access_level':
@@ -94,7 +94,7 @@ def gitlab_create_manuscript_repo(manuscript):
 def gitlab_repo_get_file_folder_list(manuscript):
     print(manuscript.__dict__)
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gl.enable_debug()
+    #gl.enable_debug()
     try:
         repo_tree = gl.projects.get(manuscript.gitlab_id).repository_tree()
     except gitlab.GitlabGetError:

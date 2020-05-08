@@ -49,25 +49,16 @@ class GenericCorereObjectView(View):
     parent_reference_name = None
     parent_id_name = None
     parent_model = None
+    notes = []
+    repo_dict_list = []
 
     def dispatch(self, request, *args, **kwargs): 
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
-        self.notes = []
-        self.repo_dict_list = []
-        try:
-            self.model._meta.get_field('notes')
-            for note in self.object.notes.all():
-                if request.user.has_perm('view_note', note):
-                    self.notes.append(note)
-                else:
-                    print("user did not have permission for note: " + note.text)
-        except FieldDoesNotExist: #To catch models without notes (Manuscript)
-            pass
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list})
+        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'repo_dict_list': self.repo_dict_list})
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
@@ -78,7 +69,8 @@ class GenericCorereObjectView(View):
             return redirect(self.redirect)
         else:
             print(form.errors) #Handle exception better
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
+        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'repo_dict_list': self.repo_dict_list})
 
     ######## Custom class functions. You may want to override some of these. #########
 
@@ -89,6 +81,24 @@ class GenericCorereObjectView(View):
 class ReadOnlyCorereMixin(object):
     read_only = True
     http_method_names = ['get']
+    
+class GitlabFilesMixin(object):
+    def dispatch(self, request, *args, **kwargs): 
+        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
+        return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
+
+class NotesMixin(object):
+    def dispatch(self, request, *args, **kwargs): 
+        # try:
+        self.model._meta.get_field('notes')
+        for note in self.object.notes.all():
+            if request.user.has_perm('view_note', note):
+                self.notes.append(note)
+            else:
+                print("user did not have permission for note: " + note.text)
+        # except FieldDoesNotExist: #To catch models without notes (Manuscript)
+        #     pass
+        return super(NotesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -191,35 +201,25 @@ class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericManuscriptView):
+class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView): #MAD: Delete readonly?
     form = ManuscriptFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
-    #repo_dict_list = gitlab_repo_get_file_folder_list(object)
 
-    #TODO: this can be done cleaner. Also, I should probably take the same approach as notes
     def get(self, request, *args, **kwargs):
-        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
-        return super(ManuscriptEditFilesView, self).get(request,*args, **kwargs)
-        
-    #     #return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only })
-        #return render(request, self.template, {'form': self.form, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-        #   'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': repo_dict_list})
+        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list})
 
-class ManuscriptReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericManuscriptView):
+class ManuscriptReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
-    def get(self, request, *args, **kwargs):
-        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
-        return super(ManuscriptReadView, self).get(request,*args, **kwargs)
-
 
     
 
-class GenericSubmissionView(GenericCorereObjectView):
+class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit for Review'
     form = SubmissionForm
     parent_reference_name = 'manuscript'
@@ -255,7 +255,7 @@ class SubmissionReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Re
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
-class GenericCurationView(GenericCorereObjectView):
+class GenericCurationView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
     form = CurationForm
     parent_reference_name = 'submission'
@@ -291,7 +291,7 @@ class CurationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  Rea
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
-class GenericVerificationView(GenericCorereObjectView):
+class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
     form = VerificationForm
     parent_reference_name = 'submission'
