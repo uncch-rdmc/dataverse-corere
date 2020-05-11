@@ -8,6 +8,7 @@
       maxFilesize: 0, // MB
       autoProcessQueue: false, //We first need to convert the files to base 64
       addRemoveLinks: true,
+      timeout: 30000000,
       headers: {
           'X-CSRFToken': "{{csrf_token}}"
       },
@@ -28,7 +29,9 @@
           var table = document.getElementById("filestable");
           var row = table.insertRow(0);
           var cell1 = row.insertCell(0);
-          cell1.innerHTML = args[1].file_path
+          var cell2 = row.insertCell(1);
+          cell1.innerHTML = "X"
+          cell2.innerHTML = args[1].file_path
           // Look at the output in you browser console, if there is something interesting
           console.log(args);
         });

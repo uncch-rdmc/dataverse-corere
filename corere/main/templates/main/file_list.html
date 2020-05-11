@@ -6,6 +6,9 @@ None
 
 {%for file in repo_dict_list%}
 <tr>
+    {% if not read_only %}
+    <td> X </td>
+    {% endif %}
     <td>{{ file.path }} </td>
 </tr>
 {% endfor %}

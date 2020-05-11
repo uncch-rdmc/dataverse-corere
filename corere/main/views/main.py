@@ -201,7 +201,7 @@ class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView): #MAD: Delete readonly?
+class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView): #MAD: Delete readonly?
     form = ManuscriptFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
