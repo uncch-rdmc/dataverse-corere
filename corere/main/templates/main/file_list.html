@@ -1,0 +1,15 @@
+<br> Files: <br>
+<table id="filestable">
+{% if not repo_dict_list %}
+None
+{% endif %}
+
+{%for file in repo_dict_list%}
+<tr>
+    {% if not read_only %}
+    <td> X </td>
+    {% endif %}
+    <td>{{ file.path }} </td>
+</tr>
+{% endfor %}
+</table>

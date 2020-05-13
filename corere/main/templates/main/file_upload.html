@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
+<script type="text/javascript">
+    Dropzone.options.dropdiv = {
+      url: "FAKE", //is replaced during file upload
+      //method: "post",
+      maxFilesize: 0, // MB
+      autoProcessQueue: false, //We first need to convert the files to base 64
+      addRemoveLinks: true,
+      timeout: 30000000,
+      headers: {
+          'X-CSRFToken': "{{csrf_token}}"
+      },
+      accept: function(file, done) {
+        if (file.name.indexOf(".zip") != -1) {
+          done("Cannot upload zip files!");
+        }
+        else { done(); }
+      },
+      //can this be done liked addedfile etc?
+      init: function () {
+        this.on("processing", function(file) {
+          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{manuscript_git_id}}/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
+        });
+        this.on('success', function() {
+          var args = Array.prototype.slice.call(arguments);
+          //var json = JSON.parse(arguments);
+          var table = document.getElementById("filestable");
+          var row = table.insertRow(0);
+          var cell1 = row.insertCell(0);
+          var cell2 = row.insertCell(1);
+          cell1.innerHTML = "X"
+          cell2.innerHTML = args[1].file_path
+          // Look at the output in you browser console, if there is something interesting
+          console.log(args);
+        });
+      },
+      addedfile: function(file) {
+          var _this=this,
+              reader = new FileReader();
+          reader.onload = function(event) {
+              base64 = event.target.result.split(',')[1]; //Strip headers
+              _this.processQueue();
+          };
+          reader.readAsDataURL(file);
+      },
+
+      sending: function (file, xhr, data) {
+        data.append("ref", "master");
+        data.append("content", base64);
+      },
+    
+
+      //success: function(file) {
+        //file.previewElement = Dropzone.createElement(this.options.previewTemplate);
+    
+    
+        //console.log(file)
+        // Now attach this new element some where in your page
+      //},
+    };
+
+</script>
+{% comment %}
+
+=== OLD BEFORE "BREAK" ===
+
+DO NOW:
+- Understand how jupyter is talking to gitlab. It looks to be using actual git not the api. Is it using a token somewhere?
+- Get repo structure stuff working
+
+TODO:
+- How am I handling tokens and auth???
+  - Admin accounts can generate an impersonation token
+    - We can do that with a short time-limit
+    - Is there a way we can generate these tokens on request from dropzone?
+  - CI may have one-time tokens.... but will that work?
+    - no, read-only currently
+  - create all users as external with access only to specific repo
+  - Concerns:
+    - Users can use token to get more permissions.
+  - can we whitelist api endpoints on the gitlab server?
+    - can go further and whitelist endpoints from IPs other than the ones we trust
+  - can we limit the branches a user can commit to:
+    - yes, we can protect every branch besides the currently active one.
+
+- Decide on my method for adding files. 
+  - Probably want to create a branch per submission?
+    - Does that mean files added on the manuscript are directly added to master?
+    - Do we want to merge our branch each time or just leave it hanging?
+      - ... Do we need to merge to take advantage of storage efficiencies?
+  - Can we do something ahead of time to check md5s or whatever and limit the data being re-uploaded?
+  - We'll also probably have different folders for the "types" of files.
+  - There seems to be no way to add files without creating a commit.
+- I'll need to do functions before files are uploaded. Some things in the dropzone, some on object create actions, etc
+
+{% endcomment %}
+
+<div id="dropdiv" name="thing" class="dropzone dz-clickable" ></div>

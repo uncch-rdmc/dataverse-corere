@@ -24,7 +24,7 @@ INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
 GIT_LAB_URL = os.environ["GIT_LAB_URL"]
 GIT_API_VERSION = os.environ["GIT_API_VERSION"]
-GIT_PRIVATE_TOKEN = os.environ["GIT_PRIVATE_TOKEN"]
+GIT_PRIVATE_ADMIN_TOKEN = os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
 RECIPIENTS = os.environ["RECIPIENTS"]
 
 # Application definition

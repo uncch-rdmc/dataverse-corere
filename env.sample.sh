@@ -17,7 +17,7 @@ export GIT_LAB_URL=
 # only "api/v4?" is supported at this stage
 export GIT_API_VERSION="api/v4/"
 # private token used by CORE-RE server that has global access.
-export GIT_PRIVATE_TOKEN=
+export GIT_PRIVATE_ADMIN_TOKEN=
 # a list of emails (seperated by comma) to use to email changes in git repository.
 export RECIPIENTS="email@email.com"
 

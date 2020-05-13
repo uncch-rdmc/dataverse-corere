@@ -5,6 +5,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
 from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm
 from corere.main import constants as c
+from corere.main.utils import gitlab_create_manuscript_repo
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -43,6 +44,7 @@ class User(AbstractUser):
 
     invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    gitlab_id = models.IntegerField(blank=True, null=True)
 
 ####################################################
 
@@ -340,6 +342,7 @@ class Manuscript(AbstractCreateUpdateModel):
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
     environment_info = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
+    gitlab_id = models.IntegerField(blank=True, null=True)
     _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):
@@ -391,6 +394,9 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('verify_manuscript', group_manuscript_verifier, self) 
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
+
+            gitlab_create_manuscript_repo(self)
+
             
     ##### django-fsm (workflow) related functions #####
 
