@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from guardian.decorators import permission_required_or_403
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
@@ -12,6 +13,7 @@ from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
 from corere.main.utils import gitlab_create_user, gitlab_add_user_to_manuscript_repo, gitlab_update_user
+logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
 # Corere creates a user with no auth connected, and an email address, and the requested role(s).
@@ -53,11 +55,11 @@ def add_author(request, id=None):
             for u in users:
                 manu_author_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
-                print('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
+                logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'users': manu_author_group.user_set.all()})
 
 @permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -74,10 +76,10 @@ def add_curator(request, id=None):
             for u in users_to_add:
                 manu_curator_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
-                print('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
+                logger.info('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'users': manu_curator_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
@@ -108,10 +110,10 @@ def add_verifier(request, id=None):
             for u in users:
                 manu_verifier_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
-                print('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
+                logger.info('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'users': manu_verifier_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
@@ -146,7 +148,7 @@ def account_user_details(request):
             gitlab_update_user(user)
             return redirect('/')
         else:
-            print(form.errors) #TODO: DO MORE?
+            logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_user_details.html', {'form': form})
 
 def logout_view(request):

@@ -1,3 +1,5 @@
+import logging
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
@@ -11,10 +13,8 @@ from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from corere.main.middleware import local
-import logging
-import uuid
 
-logger = logging.getLogger('corere')  
+logger = logging.getLogger(__name__)  
 ####################################################
 
 class AbstractCreateUpdateModel(models.Model):
@@ -227,7 +227,7 @@ class Submission(AbstractCreateUpdateModel):
             self.manuscript.process()
             self.manuscript.save()
         else:
-            print("ERROR") #TODO: Handle better
+            logger.debug("ERROR") #TODO: Handle better
         pass
 
     #-----------------------

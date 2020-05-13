@@ -1,3 +1,4 @@
+import logging
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from corere.main import constants as c
 from corere.main import models as m
@@ -6,6 +7,8 @@ from django.utils.html import escape
 from django.db.models import Q
 from guardian.shortcuts import get_perms
 from django_fsm import has_transition_perm
+
+logger = logging.getLogger(__name__)
 
 #Shared across our various datatables
 class CorereBaseDatatableView(BaseDatatableView):

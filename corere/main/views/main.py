@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -11,12 +12,11 @@ from django_fsm import can_proceed, has_transition_perm, TransitionNotAllowed
 from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from corere.main.utils import fsm_check_transition_perm
 from django.core.exceptions import PermissionDenied
-
 from django.http import HttpResponse
 from django.views import View
-
 from corere.main.utils import gitlab_repo_get_file_folder_list
 
+logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
@@ -68,7 +68,7 @@ class GenericCorereObjectView(View):
             messages.add_message(request, messages.INFO, self.message)
             return redirect(self.redirect)
         else:
-            print(form.errors) #Handle exception better
+            logger.debug(form.errors) #Handle exception better
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list})
 
@@ -95,7 +95,7 @@ class NotesMixin(object):
             if request.user.has_perm('view_note', note):
                 self.notes.append(note)
             else:
-                print("user did not have permission for note: " + note.text)
+                logger.debug("user did not have permission for note: " + note.text)
         # except FieldDoesNotExist: #To catch models without notes (Manuscript)
         #     pass
         return super(NotesMixin, self).dispatch(request, *args, **kwargs)
@@ -124,7 +124,7 @@ class GetOrGenerateObjectMixin(object):
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
             self.message = 'Your new '+self.object_friendly_name +' has been created!'
         else:
-            print("ERROR")
+            logger.error("Error with GetOrGenerateObjectMixin dispatch")
         return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
     
 
@@ -143,7 +143,7 @@ class TransitionPermissionMixin(object):
             transition_method = getattr(self.object, self.transition_method_name)
         if(not has_transition_perm(transition_method, request.user)):
             #TODO: Even if we don't collapse this with transition_if_allowed, we should still refer to it for erroring out in the correct ways
-            print("PermissionDenied")
+            logger.debug("PermissionDenied")
             raise PermissionDenied
         return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
     pass
@@ -176,13 +176,13 @@ class GenericManuscriptView(GenericCorereObjectView):
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.begin, request.user): 
-            print("PermissionDenied")
+            logger.debug("PermissionDenied")
             raise PermissionDenied
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.begin()
             self.object.save()
         except TransitionNotAllowed as e:
-            print("TransitionNotAllowed: " + str(e)) #Handle exception better
+            logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
 class ManuscriptCreateView(GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
@@ -201,7 +201,7 @@ class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView): #MAD: Delete readonly?
+class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ManuscriptFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
@@ -230,13 +230,13 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submit, request.user): 
-            print("PermissionDenied")
+            logger.debug("PermissionDenied")
             raise PermissionDenied
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.submit(request.user)
             self.object.save()
         except TransitionNotAllowed as e:
-            print("TransitionNotAllowed: " + str(e)) #Handle exception better
+            logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
 class SubmissionCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
@@ -267,7 +267,7 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
-            print("PermissionDenied")
+            logger.debug("PermissionDenied")
             raise PermissionDenied
         try:
             self.object.submission.review()
@@ -303,7 +303,7 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
-            print("PermissionDenied")
+            logger.debug("PermissionDenied")
             raise PermissionDenied
         try:
             self.object.submission.review()
@@ -363,7 +363,7 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
             assign_perm('delete_note', request.user, note) 
             return redirect(re_url)
         else:
-            print(form.errors) #Handle exception better
+            logger.debug(form.errors) #Handle exception better
 
     return render(request, 'main/form_create_note.html', {'form': form})
 

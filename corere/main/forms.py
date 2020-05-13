@@ -1,4 +1,4 @@
-#from django import forms
+import logging
 from django import forms
 from django.forms import ModelMultipleChoiceField
 from .models import Manuscript, Submission, Verification, Curation, User, Note
@@ -9,6 +9,8 @@ from django.conf import settings
 from . import constants as c
 from django_select2.forms import Select2MultipleWidget
 from django.contrib.auth.models import Group
+
+logger = logging.getLogger(__name__)
 
 class ReadOnlyFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):

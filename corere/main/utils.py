@@ -1,4 +1,5 @@
-import os, gitlab, re, random, string
+import os, gitlab, re, random, string, logging
+logger = logging.getLogger(__name__)  
 #from corere.main.models import Manuscript, User
 
 # For use by the python-social-auth library pipeline.
@@ -55,7 +56,7 @@ def gitlab_create_user(django_user):
 def gitlab_update_user(django_user):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     #gl.enable_debug()
-    print(django_user.__dict__)
+    logger.debug(django_user.__dict__)
 
     #TODO: is this efficient? I feel like it may be doing multiple calls under the hood...
 
@@ -92,14 +93,14 @@ def gitlab_create_manuscript_repo(manuscript):
 #TODO: What is the output of this?
 #TODO: I think this errors if there are no files in the repo? "tree not found"
 def gitlab_repo_get_file_folder_list(manuscript):
-    print(manuscript.__dict__)
+    logger.debug(manuscript.__dict__)
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    #gl.enable_debug()
+    gl.enable_debug()
     try:
         repo_tree = gl.projects.get(manuscript.gitlab_id).repository_tree()
     except gitlab.GitlabGetError:
         repo_tree = []
-    print(repo_tree)
+    logger.debug(repo_tree)
     return repo_tree
     #GET /projects/:id/repository/tree
     #items = project.repository_tree(path='docs', ref='branch1')

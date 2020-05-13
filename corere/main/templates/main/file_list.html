@@ -1,8 +1,8 @@
+{% if repo_dict_list %}
 <br> Files: <br>
-<table id="filestable">
-{% if not repo_dict_list %}
-None
 {% endif %}
+
+<table id="filestable">
 
 {%for file in repo_dict_list%}
 <tr>
