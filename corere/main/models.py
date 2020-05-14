@@ -7,7 +7,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
 from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm
 from corere.main import constants as c
-from corere.main.utils import gitlab_create_manuscript_repo
+from corere.main.gitlab import gitlab_create_manuscript_repo
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation

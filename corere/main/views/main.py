@@ -14,7 +14,7 @@ from corere.main.utils import fsm_check_transition_perm
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.views import View
-from corere.main.utils import gitlab_repo_get_file_folder_list
+from corere.main.gitlab import gitlab_repo_get_file_folder_list
 
 logger = logging.getLogger(__name__)
 

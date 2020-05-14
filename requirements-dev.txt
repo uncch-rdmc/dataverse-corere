@@ -1,3 +1,5 @@
-graphviz==0.13.2 #for visualizing state transitions
 django-extensions==2.2.6
 django-debug-toolbar==2.2
+graphviz==0.13.2 #for visualizing state transitions
+mock==4.0.2
+selenium==3.141.0

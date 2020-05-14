@@ -1,5 +1,4 @@
-import json
-import unittest
+import json, unittest, mock
 from django.test import TestCase
 from corere.main.middleware import local
 from django.db.utils import IntegrityError
@@ -16,6 +15,13 @@ from django_fsm import has_transition_perm, TransitionNotAllowed
 # - Test that other users can't do the various transitions. Include canview canedit. Maybe in test_basic_manuscript_cycle_and_fsm_permissions_direct
 # - Maybe add a test related to the nested submission.submit/manuscript.process perms
 # - Add Integration tests! Make sure each role can only do the things we want!
+# - Still running into issues calling specific tests, this notation won't work ./manage.py test corere.main.tests.TestModels.test_create_manuscript_objects
+# - With further testing we'll also need more mocks. Currently all our mocking does is "do nothing". 
+#    More advanced mocks seem to require passing the mocks as args to the functions, even if they aren't used in there? 
+#    Some useful resources when getting back into that:
+#       - https://docs.python.org/3/library/unittest.mock.html#where-to-patch
+#       - https://fgimian.github.io/blog/2014/04/10/using-the-python-mock-library-to-fake-regular-functions-during-tests/
+#       - https://stackoverflow.com/questions/15352315/django-mock-patch-doesnt-work-as-i-expect
 
 #@unittest.skip("Don't want to test")
 class TestModels(TestCase):
@@ -25,6 +31,8 @@ class TestModels(TestCase):
 
     #This tests ensures that manuscripts/submissions/curations/verifications/notes can be created.
     #Furthermore, it tests the restrictions related to creating and connecting these objects.
+
+    @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     def test_create_manuscript_objects(self):
         manuscript = m.Manuscript()
         manuscript.save()
@@ -131,6 +139,7 @@ class TestManuscriptWorkflow(TestCase):
         local.user = self.editor #has to be set to something for saving (middleware uses it to set creator/updater).
 
     #@unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     def test_basic_manuscript_cycle_and_fsm_permissions_direct(self):
 
         #-------------- Create manuscript ----------------
@@ -279,14 +288,9 @@ class TestManuscriptWorkflow(TestCase):
         self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_COMPLETED)
 
-
-    @unittest.skip("Integration tests will have to come later")
-    def test_basic_manuscript_cycle_and_permissions_via_url(self):
-        pass
-
 ### Test Helpers ###
 
-#TODO: These are non-functional until we get integration tests set up
+#TODO: This is non-functional until we get integration tests set up
 def get_url_success_users(url, r_type, users):
     success_users = []
     for u in users:
@@ -295,6 +299,3 @@ def get_url_success_users(url, r_type, users):
         if(result.status_code == 200):
             success_users.append(u)
     return success_users
-
-def get_transition_perm_success_users(transition, users):
-    pass

@@ -12,7 +12,7 @@ from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
-from corere.main.utils import gitlab_create_user, gitlab_add_user_to_manuscript_repo, gitlab_update_user
+from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_manuscript_repo, gitlab_update_user
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -34,26 +34,27 @@ def add_author(request, id=None):
             if(email):
                 Invitation = get_invitation_model()
                 invite = Invitation.create(email)#, inviter=request.user)
-                #In here, we create a "starter" user that will later be modified and connected to auth after the invite
-                user = User()
-                user.email = email
-                user.username = get_random_string(64).lower() #required field, we enter jibberish for now
-                user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
-                user.invite_key = invite.key #to later reconnect the user we've created to the invite
-                user.invited_by=request.user
-                user.set_unusable_password()
-                user.save()
+                #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
+                new_user = User()
+                new_user.email = email
+                new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+                new_user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
+                new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
+                new_user.invited_by=request.user
+                new_user.set_unusable_password()
+                new_user.save()
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                author_role.user_set.add(user)
-                users.append(user) #add new user to the other uses provided
+                author_role.user_set.add(new_user)
+                users.append(new_user) #add new new_user to the other uses provided
+                gitlab_create_user(new_user)
+                gitlab_add_user_to_manuscript_repo(new_user, manuscript)
                 #TODO: Think about doing this after everything else, incase something bombs
                 invite.send_invitation(request)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
-                gitlab_create_user(user)
-                gitlab_add_user_to_manuscript_repo(user, manuscript)
             
             for u in users:
                 manu_author_group.user_set.add(u)
+                gitlab_add_user_to_manuscript_repo(user, manuscript)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 
