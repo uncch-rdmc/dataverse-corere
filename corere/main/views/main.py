@@ -9,9 +9,11 @@ from django.contrib.auth.models import Permission, Group
 from guardian.shortcuts import assign_perm, remove_perm
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import can_proceed, has_transition_perm, TransitionNotAllowed
-from django.core.exceptions import PermissionDenied, FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist #,PermissionDenied
+from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm
-from django.core.exceptions import PermissionDenied
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views import View
 from corere.main.gitlab import gitlab_repo_get_file_folder_list
@@ -76,7 +78,7 @@ class GenericCorereObjectView(View):
 
     # To do a tranisition on save. Different transitions are used for each object
     def transition_if_allowed(self, request, *args, **kwargs):
-        pass
+        pass    
 
 class ReadOnlyCorereMixin(object):
     read_only = True
@@ -144,7 +146,7 @@ class TransitionPermissionMixin(object):
         if(not has_transition_perm(transition_method, request.user)):
             #TODO: Even if we don't collapse this with transition_if_allowed, we should still refer to it for erroring out in the correct ways
             logger.debug("PermissionDenied")
-            raise PermissionDenied
+            raise Http404()
         return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
     pass
 
@@ -157,13 +159,13 @@ class GroupRequiredMixin(object):
     def dispatch(self, request, *args, **kwargs):
         if(len(self.groups_required)>0):
             if not request.user.is_authenticated:
-                raise PermissionDenied
+                raise Http404()
             else:
                 user_groups = []
                 for group in request.user.groups.values_list('name', flat=True):
                     user_groups.append(group)
                 if len(set(user_groups).intersection(self.groups_required)) <= 0:
-                    raise PermissionDenied
+                    raise Http404()
         return super(GroupRequiredMixin, self).dispatch(request, *args, **kwargs)
 
 ################################################################################################
@@ -177,7 +179,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.begin, request.user): 
             logger.debug("PermissionDenied")
-            raise PermissionDenied
+            raise Http404()
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.begin()
             self.object.save()
@@ -185,7 +187,8 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
-class ManuscriptCreateView(GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
+#NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
+class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
     form = ManuscriptForm
     #groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
     #For PermissionRequiredMixin
@@ -193,7 +196,7 @@ class ManuscriptCreateView(GetOrGenerateObjectMixin, PermissionRequiredMixin, Ge
     accept_global_perms = True
     return_403 = True
 
-class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = ManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
@@ -201,7 +204,7 @@ class ManuscriptEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, Ge
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
+class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ManuscriptFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
@@ -211,14 +214,14 @@ class ManuscriptEditFilesView(GetOrGenerateObjectMixin, TransitionPermissionMixi
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list})
 
-class ManuscriptReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
+class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
 
     
-
+# Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit for Review'
     form = SubmissionForm
@@ -231,7 +234,7 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submit, request.user): 
             logger.debug("PermissionDenied")
-            raise PermissionDenied
+            raise Http404()
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.submit(request.user)
             self.object.save()
@@ -239,22 +242,23 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
             logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
             raise
 
-class SubmissionCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
+class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
 
-class SubmissionEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
+class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class SubmissionReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericSubmissionView):
+class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
+# Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
     form = CurationForm
@@ -268,29 +272,30 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
             logger.debug("PermissionDenied")
-            raise PermissionDenied
+            raise Http404()
         try:
             self.object.submission.review()
             self.object.submission.save()
         except TransitionNotAllowed:
             pass #We do not do review if the statuses don't align
 
-class CurationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
+class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_curation_noop'
     transition_on_parent = True
 
-class CurationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
+class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class CurationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericCurationView):
+class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericCurationView):
     form = ReadOnlyCurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
+# Do not call directly
 class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
     form = VerificationForm
@@ -304,25 +309,25 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
             logger.debug("PermissionDenied")
-            raise PermissionDenied
+            raise Http404()
         try:
             self.object.submission.review()
             self.object.submission.save()
         except TransitionNotAllowed:
             pass #We do not do review if the statuses don't align
 
-class VerificationCreateView(GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
+class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = VerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_verification_noop'
     transition_on_parent = True
 
-class VerificationEditView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
+class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
     form = VerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class VerificationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericVerificationView):
+class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericVerificationView):
     form = ReadOnlyVerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
@@ -330,6 +335,14 @@ class VerificationReadView(GetOrGenerateObjectMixin, TransitionPermissionMixin, 
 
 ################################################################################################
 
+
+###TODO: There are no perms for notes. I can use the same checks for create as I use to edit sub/cur/ver. For edit/delete implement fsm can_edit.
+# What should these permissions even be:
+# - Create if you have permission
+# - Edit/Delete only if you made it (for now at least)
+# I'm not sure if this will work best with multiple "endpoints" or one (see commented code below)
+
+@login_required
 def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
         note = get_object_or_404(m.Note, id=id)
@@ -367,6 +380,25 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 
     return render(request, 'main/form_create_note.html', {'form': form})
 
+#@permission_required_or_404('add_submission_to_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+# def edit_sub_note(request, id=None, submission_id=None):
+#     if not fsm_check_transition_perm(self.object.submission.review, request.user):
+#         logger.debug("PermissionDenied")
+#         raise Http404()
+
+#     return _edit_note(request, id, submission_id, None, None)
+
+# #@permission_required_or_404('curate_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+# def edit_cur_note(request, id=None, curation_id=None):
+#     return _edit_note(request, id, None, curation_id, None)
+
+# #@permission_required_or_404('verify_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+# def edit_ver_note(request, id=None, verification_id=None):
+#     return _edit_note(request, id, submission_id, None, None)
+
+
+#TODO: NEED TO DO DELETE SAME AS EDIT
+@login_required
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     note = get_object_or_404(Note, id=id)
     note.delete()

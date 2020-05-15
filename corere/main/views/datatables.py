@@ -7,11 +7,14 @@ from django.utils.html import escape
 from django.db.models import Q
 from guardian.shortcuts import get_perms
 from django_fsm import has_transition_perm
-
+from django.utils.decorators import classonlymethod
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
+from django.core.exceptions import ObjectDoesNotExist
 logger = logging.getLogger(__name__)
 
 #Shared across our various datatables
-class CorereBaseDatatableView(BaseDatatableView):
+class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
     # pull from source mostly, except when noted. 
     # Needed to disallow users from requesting columns from the model we do not wish to provide
     def extract_datatables_column_data(self):
@@ -146,6 +149,10 @@ class ManuscriptJson(CorereBaseDatatableView):
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
         return qs
 
+    # @classonlymethod
+    # def as_view(cls, **initkwargs):
+    #     pass
+
 def helper_submission_columns(user):
     # This defines the columns a user can view for a table.
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
@@ -230,9 +237,14 @@ class SubmissionJson(CorereBaseDatatableView):
 
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['manuscript_id']
-        manuscript = m.Manuscript.objects.get(id=manuscript_id)
+        try:
+            manuscript = m.Manuscript.objects.get(id=manuscript_id)
+        except ObjectDoesNotExist:
+            raise Http404()
         if(self.request.user.has_perm('view_manuscript', manuscript) or self.request.user.has_perm('main.view_manuscript')):
             return(m.Submission.objects.filter(manuscript=manuscript_id))
+        else:
+            raise Http404()
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset

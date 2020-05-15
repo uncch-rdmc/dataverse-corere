@@ -1,6 +1,6 @@
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
-from guardian.decorators import permission_required_or_403
+from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 # Corere emails the user telling them to sign-up. This has a one-time 
 
 # TODO: We should probably make permissions part of our constants as well
-@permission_required_or_403('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@login_required
+@permission_required_or_404('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_author(request, id=None):
     form = AuthorInvitationForm(request.POST or None)
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
@@ -54,7 +55,7 @@ def add_author(request, id=None):
             
             for u in users:
                 manu_author_group.user_set.add(u)
-                gitlab_add_user_to_manuscript_repo(user, manuscript)
+                gitlab_add_user_to_manuscript_repo(u, manuscript)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 
@@ -63,7 +64,8 @@ def add_author(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'users': manu_author_group.user_set.all()})
 
-@permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@login_required
+@permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_curator(request, id=None):
     form = CuratorInvitationForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
@@ -85,7 +87,8 @@ def add_curator(request, id=None):
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
-@permission_required_or_403('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@login_required
+@permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def delete_curator(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
@@ -97,7 +100,8 @@ def delete_curator(request, id=None, user_id=None):
     #from django.http import HttpResponse
     #return HttpResponse("DELETE " + str(user_id))
 
-@permission_required_or_403('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@login_required
+@permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def add_verifier(request, id=None):
     form = VerifierInvitationForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
@@ -119,7 +123,8 @@ def add_verifier(request, id=None):
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
-@permission_required_or_403('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@login_required
+@permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def delete_verifier(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
