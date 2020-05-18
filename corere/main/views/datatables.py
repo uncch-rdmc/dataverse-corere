@@ -149,10 +149,6 @@ class ManuscriptJson(CorereBaseDatatableView):
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
         return qs
 
-    # @classonlymethod
-    # def as_view(cls, **initkwargs):
-    #     pass
-
 def helper_submission_columns(user):
     # This defines the columns a user can view for a table.
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
