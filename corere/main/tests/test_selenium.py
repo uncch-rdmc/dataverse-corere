@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
-import time
+import time, unittest
 from selenium.webdriver.support.ui import WebDriverWait
 from corere.main import models as m
 #from selenium.webdriver.support import expected_conditions as EC
@@ -20,6 +20,7 @@ class LoggingInTestCase(LiveServerTestCase):
         self.selenium.quit()
         super(LoggingInTestCase, self).tearDown()
 
+    #@unittest.skip("Don't want to test")
     def test_admin_login(self):
         selenium = self.selenium
 

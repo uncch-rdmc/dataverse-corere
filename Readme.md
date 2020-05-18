@@ -206,6 +206,13 @@ Detection
 ## Contributing
 Thank you for your interest in contributing to CORE-RE Project!  We welcome any contribution from anybody. If you have any questions, please feel free to reach out to us. If you want to add a feature, please create a fork, add the feature, and create a pull request. If you have an issue, please search if there are existing similar issues using the search bar in the issues tab. If an existing open issue exists, contribute to it. Otherwise, please create a new issue.
 
+### Code Coverage
+To see code coverage:
+```bash
+coverage run --source='.' manage.py test corere
+coverage report --omit="*prototype*"
+```
+
 ## Credits
 Odum Institute 
 
