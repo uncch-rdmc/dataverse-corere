@@ -6,7 +6,7 @@ from corere.main import constants as c
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #bad practice but I use them all...
 from django.contrib.auth.models import Permission, Group
-from guardian.shortcuts import assign_perm, remove_perm
+from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import can_proceed, has_transition_perm, TransitionNotAllowed
 from django.core.exceptions import FieldDoesNotExist #,PermissionDenied
@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views import View
 from corere.main.gitlab import gitlab_repo_get_file_folder_list
+#from guardian.decorators import permission_required_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,10 @@ class GenericCorereObjectView(View):
     parent_reference_name = None
     parent_id_name = None
     parent_model = None
-    notes = []
+    #TODO: Move definitions into mixins? Will that blow up?
+    #NOTE: that these do not clear on their own and have to be cleared manually. There has to be a better way...
+    #      If you don't clear them you get duplicate notes etc
+    notes = [] 
     repo_dict_list = []
 
     def dispatch(self, request, *args, **kwargs): 
@@ -93,6 +97,7 @@ class NotesMixin(object):
     def dispatch(self, request, *args, **kwargs): 
         # try:
         self.model._meta.get_field('notes')
+        self.notes = []
         for note in self.object.notes.all():
             if request.user.has_perm('view_note', note):
                 self.notes.append(note)
@@ -143,6 +148,7 @@ class TransitionPermissionMixin(object):
             transition_method = getattr(parent_object, self.transition_method_name)
         else:
             transition_method = getattr(self.object, self.transition_method_name)
+        logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
         if(not has_transition_perm(transition_method, request.user)):
             #TODO: Even if we don't collapse this with transition_if_allowed, we should still refer to it for erroring out in the correct ways
             logger.debug("PermissionDenied")
@@ -345,61 +351,53 @@ class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 @login_required
 def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
-        note = get_object_or_404(m.Note, id=id)
+        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        if(not request.user.has_perm('view_note', note)):
+            logger.warning("User id:{0} attempted to access Note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+            raise Http404()
         message = 'Your note has been updated!'
         re_url = '../edit'
     else:
         note = m.Note()
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
+            if(not request.user.has_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
+                logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
+                raise Http404()
         elif(curation_id):
             note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
+            if(not request.user.has_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
+                logger.warning("User id:{0} attempted to create a note on curation id:{1} which they had no permission to".format(request.user.id, curation_id))
+                raise Http404()
         elif(verification_id):
             note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
+            if(not request.user.has_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
+                logger.warning("User id:{0} attempted to create a note on verification id:{1} which they had no permission to".format(request.user.id, verification_id))
+                raise Http404()
         message = 'Your new note has been created!'
         re_url = './edit'
     form = NoteForm(request.POST or None, request.FILES or None, instance=note)
-    if request.method == 'POST':
+    if request.method == 'POST': #MAD: Do I need better perms on this?
         if form.is_valid():
             form.save()
             #We go through all available role-groups and add/remove their permissions depending on whether they were selected
-            #TODO move to actual model save?
             for role in c.get_roles():
                 group = Group.objects.get(name=role)
                 if role in form.cleaned_data['scope']:
                     assign_perm('view_note', group, note) 
                 else:
                     remove_perm('view_note', group, note)           
-            #user always has full permissions to their own note
-            assign_perm('view_note', request.user, note) 
-            assign_perm('change_note', request.user, note) 
-            assign_perm('delete_note', request.user, note) 
             return redirect(re_url)
         else:
             logger.debug(form.errors) #Handle exception better
 
     return render(request, 'main/form_create_note.html', {'form': form})
 
-#@permission_required_or_404('add_submission_to_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-# def edit_sub_note(request, id=None, submission_id=None):
-#     if not fsm_check_transition_perm(self.object.submission.review, request.user):
-#         logger.debug("PermissionDenied")
-#         raise Http404()
-
-#     return _edit_note(request, id, submission_id, None, None)
-
-# #@permission_required_or_404('curate_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-# def edit_cur_note(request, id=None, curation_id=None):
-#     return _edit_note(request, id, None, curation_id, None)
-
-# #@permission_required_or_404('verify_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-# def edit_ver_note(request, id=None, verification_id=None):
-#     return _edit_note(request, id, submission_id, None, None)
-
-
-#TODO: NEED TO DO DELETE SAME AS EDIT
 @login_required
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
-    note = get_object_or_404(Note, id=id)
+    note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+    if(not request.user.has_perm('delete_note', note)):
+        logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+        raise Http404()
     note.delete()
     return redirect('../edit')

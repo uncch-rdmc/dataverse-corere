@@ -564,10 +564,21 @@ class Note(AbstractCreateUpdateModel):
         if not self.pk:
             first_save = True
         super(Note, self).save(*args, **kwargs)
-        if first_save:
-            group_prefixes = kwargs.pop('group_prefixes', [])
-            for prefix in group_prefixes:
-                group = Group.objects.get(name=prefix + " " + str(self.manuscript.id))
-                assign_perm('view_note', prefix, self) 
+        #print("auth: "+ str(local.user.is_authenticated))
+        if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
+            ## MAD: Disabled this code as I think it was the same as the scope code in the form
+            # group_prefixes = kwargs.pop('group_prefixes', [])
+            # print("group_prefixes")
+            # print(group_prefixes)
+            # for prefix in group_prefixes:
+            #     group = Group.objects.get(name=prefix + " " + str(self.manuscript.id))
+            #     assign_perm('view_note', prefix, self) 
+
+            #user always has full permissions to their own note
+            #print("ASSIGN PERM MODEL")
+            #print(local.user.__dict__)
+            assign_perm('view_note', local.user, self) 
+            assign_perm('change_note', local.user, self) 
+            assign_perm('delete_note', local.user, self) 
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
