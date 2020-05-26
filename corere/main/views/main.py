@@ -16,7 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views import View
-from corere.main.gitlab import gitlab_repo_get_file_folder_list
+from corere.main.gitlab import gitlab_repo_get_file_folder_list, gitlab_delete_file
 #from guardian.decorators import permission_required_or_404
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,7 @@ class GenericCorereObjectView(View):
     #      If you don't clear them you get duplicate notes etc
     notes = [] 
     repo_dict_list = []
+    file_delete_url = None
 
     def dispatch(self, request, *args, **kwargs): 
         self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
@@ -64,7 +65,7 @@ class GenericCorereObjectView(View):
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'repo_dict_list': self.repo_dict_list})
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     def post(self, request, *args, **kwargs):
         if self.form.is_valid():
@@ -76,7 +77,7 @@ class GenericCorereObjectView(View):
         else:
             logger.debug(form.errors) #Handle exception better
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'repo_dict_list': self.repo_dict_list})
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     ######## Custom class functions. You may want to override some of these. #########
 
@@ -91,6 +92,8 @@ class ReadOnlyCorereMixin(object):
 class GitlabFilesMixin(object):
     def dispatch(self, request, *args, **kwargs): 
         self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
+        #TODO: Make this dynamic based upon model etc
+        self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
         return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
 
 class NotesMixin(object):
@@ -218,7 +221,7 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list})
+            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
@@ -395,9 +398,24 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 
 @login_required
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+    # if request.method == 'POST': TODO do this? Or hell, make it delete?
     note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
     if(not request.user.has_perm('delete_note', note)):
         logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
         raise Http404()
     note.delete()
     return redirect('../edit')
+
+@login_required
+def delete_file(request, manuscript_id):
+    # if request.method == 'POST': TODO do this? Or hell, make it delete?
+    file_path = request.GET.get('file_path')
+    if(not file_path):
+        raise Http404()
+    manuscript = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
+    if(not has_transition_perm(manuscript.edit_noop, request.user)):
+        logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+        raise Http404()
+    gitlab_delete_file(manuscript, file_path)
+
+    return redirect('./editfiles') #go to the edit files page again

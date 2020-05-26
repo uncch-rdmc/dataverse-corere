@@ -12,6 +12,7 @@ from http import HTTPStatus
 class TestUrls(TestCase):
     
     #TODO: Test associate/logout/etc urls
+    #TODO: How to test deletefiles good?
 
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     def setUp(self):

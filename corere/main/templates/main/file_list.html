@@ -1,13 +1,18 @@
-{% if repo_dict_list %}
-<br> Files: <br>
-{% endif %}
+
+<div id="filesHeaderDiv" 
+    {% if not repo_dict_list %}
+        style="visibility:hidden;"
+    {% endif %} > 
+    Files: 
+</div>
+
 
 <table id="filestable">
 
 {%for file in repo_dict_list%}
 <tr>
     {% if not read_only %}
-    <td> X </td>
+    <td> <a href="{{ file_delete_url }}{{ file.path }}">X</a> </td>
     {% endif %}
     <td>{{ file.path }} </td>
 </tr>

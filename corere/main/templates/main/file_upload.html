@@ -25,12 +25,13 @@
         });
         this.on('success', function() {
           var args = Array.prototype.slice.call(arguments);
-          //var json = JSON.parse(arguments);
+          var title = document.getElementById("filesHeaderDiv");
+          title.style.visibility = 'visible';
           var table = document.getElementById("filestable");
           var row = table.insertRow(0);
           var cell1 = row.insertCell(0);
           var cell2 = row.insertCell(1);
-          cell1.innerHTML = "X"
+          cell1.innerHTML = "<a href='{{ file_delete_url }}" + args[1].file_path +"' >X</a>"
           cell2.innerHTML = args[1].file_path
           // Look at the output in you browser console, if there is something interesting
           console.log(args);
