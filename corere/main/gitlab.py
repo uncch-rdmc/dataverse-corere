@@ -35,37 +35,43 @@ def gitlab_update_user(django_user):
     gl_user.save()
 
 
-#https://docs.gitlab.com/ee/api/members.html#add-a-member-to-a-group-or-project
-#https://docs.gitlab.com/ee/api/members.html top has info on access levels
-#http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
-def gitlab_add_user_to_manuscript_repo(django_user, manuscript):
+# https://docs.gitlab.com/ee/api/members.html#add-a-member-to-a-group-or-project
+# https://docs.gitlab.com/ee/api/members.html top has info on access levels
+# http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
+def gitlab_add_user_to_repo(django_user, repo_id):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     #gl.enable_debug()
-    gl_project = gl.projects.get(manuscript.gitlab_id)
+    gl_project = gl.projects.get(repo_id)
     #TODO: what happens if a member already exists?
     gl_project.members.create({'user_id': django_user.gitlab_id, 'access_level':
                                 gitlab.DEVELOPER_ACCESS})
 
 
-def gitlab_remove_user_from_manuscript_repo(django_user, manuscript):
+def gitlab_remove_user_from_repo(django_user, repo_id):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gl_project = gl.projects.get(manuscript.gitlab_id)
+    gl_project = gl.projects.get(repo_id)
     gl_project.members.delete(django_user.gitlab_id)
 
 def gitlab_create_manuscript_repo(manuscript):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
-    gitlab_project = gl.projects.create({'name': str(manuscript.id) + " - " + re.sub('[^a-zA-Z0-9_. -]' ,'' ,manuscript.title)}) #gitlab only allows certain characters for titles
-    manuscript.gitlab_id = gitlab_project.id
+    gitlab_project = gl.projects.create({'name': str(manuscript.id) + " - " + re.sub('[^a-zA-Z0-9_. -]' ,'' ,manuscript.title) + " - Manuscript"}) #gitlab only allows certain characters for titles
+    manuscript.gitlab_manuscript_id = gitlab_project.id
+    manuscript.save()
+
+def gitlab_create_submissions_repo(manuscript):
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    gitlab_project = gl.projects.create({'name': str(manuscript.id) + " - " + re.sub('[^a-zA-Z0-9_. -]' ,'' ,manuscript.title)+ " - Submissions"}) #gitlab only allows certain characters for titles
+    manuscript.gitlab_submissions_id = gitlab_project.id
     manuscript.save()
 
 #TODO: What is the output of this?
 #TODO: I think this errors if there are no files in the repo? "tree not found"
-def gitlab_repo_get_file_folder_list(manuscript):
-    logger.debug(manuscript.__dict__)
+def gitlab_repo_get_file_folder_list(repo_id):
+    # logger.debug(manuscript.__dict__)
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     #gl.enable_debug()
     try:
-        repo_tree = gl.projects.get(manuscript.gitlab_id).repository_tree()
+        repo_tree = gl.projects.get(repo_id).repository_tree()
     except gitlab.GitlabGetError:
         repo_tree = []
     logger.debug(repo_tree)
@@ -74,10 +80,10 @@ def gitlab_repo_get_file_folder_list(manuscript):
     #items = project.repository_tree(path='docs', ref='branch1')
     
 # Maybe need to allow branch specification?
-def gitlab_delete_file(manuscript, file_path):
+def gitlab_delete_file(repo_id, file_path):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     gl.enable_debug()
-    gl_project = gl.projects.get(manuscript.gitlab_id)
+    gl_project = gl.projects.get(repo_id)
 
     #gotta get the file first
     f = gl_project.files.get(file_path=file_path, ref='master')

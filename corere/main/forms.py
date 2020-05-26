@@ -44,6 +44,7 @@ class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
+
 class SubmissionForm(forms.ModelForm):
     class Meta:
         model = Submission
@@ -53,6 +54,14 @@ class SubmissionForm(forms.ModelForm):
         super(SubmissionForm, self).__init__(*args, **kwargs)
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
+    pass
+
+#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+class SubmissionFilesForm(ReadOnlyFormMixin, SubmissionForm):
+    class Meta:
+        model = Submission
+        fields = []#['title','doi','open_data']#,'authors']
     pass
 
 class CurationForm(forms.ModelForm):

@@ -7,7 +7,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
 from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm
 from corere.main import constants as c
-from corere.main.gitlab import gitlab_create_manuscript_repo
+from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -190,6 +190,7 @@ class Submission(AbstractCreateUpdateModel):
                     raise FieldError('A submission is already in progress for this manuscript')
                 if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
                     raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
+                gitlab_create_submissions_repo(self.manuscript)
         except Submission.manuscript.RelatedObjectDoesNotExist:
             pass #this is caught in super
         super(Submission, self).save(*args, **kwargs)
@@ -342,7 +343,8 @@ class Manuscript(AbstractCreateUpdateModel):
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
     environment_info = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
-    gitlab_id = models.IntegerField(blank=True, null=True)
+    gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
+    gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
     _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):

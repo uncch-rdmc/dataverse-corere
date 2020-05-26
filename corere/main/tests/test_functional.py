@@ -163,6 +163,7 @@ class TestUrls(TestCase):
 
     #multiple roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
     # @unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
     def test_manuscript_urls_logged_in_multiple_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
@@ -237,6 +238,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     # @unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     def test_submission_curation_verification_urls_not_logged_in(self):
         #Add user2 to roles on manuscript, to test removal
         #Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.user2)
@@ -268,6 +270,10 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        self.assertEqual(resp.status_code, 302)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id}))
+        self.assertEqual(resp.status_code, 302)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         local.user = None #accessing pages sets local.user=AnonymousUser which blows up our save tracking (anon users will never be creating in real runs)
         submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
@@ -383,6 +389,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 302)
  
     # @unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     def test_submission_curation_verification_urls_logged_in_no_role(self):
         #Add user2 to roles on manuscript, to test removal
         #Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.user2)
@@ -419,6 +426,10 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        self.assertEqual(resp.status_code, 404)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id}))
+        self.assertEqual(resp.status_code, 404)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
         submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
@@ -536,7 +547,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     #all roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
-    def test_submission_curation_verification_urls_logged_in_all_roles(self):
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
+    @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
+    def test_submission_curation_verification_urls_logged_in_all_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
         #Certain access is needed to actually test pages
         Group.objects.get(name=c.GROUP_ROLE_EDITOR).user_set.add(self.user) #test user is editor
@@ -583,6 +596,10 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        self.assertEqual(resp.status_code, 404)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id}))
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         #For this test we make the local user actually the note "author" so we can test edit/delete
         #local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None

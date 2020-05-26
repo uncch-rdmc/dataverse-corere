@@ -280,6 +280,15 @@
                             },
                             enabled: false
                         },
+                        {
+                            text: 'Edit Submission Files',
+                            name: 'editSubmissionFiles',
+                            action: function ( e, dt, node, config ) {
+                                //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                window.location.href = "submission/"+submission_id+"/editfiles";
+                            },
+                            enabled: false
+                        },
                     {% endif %}
                     {
                         text: 'View Submission',

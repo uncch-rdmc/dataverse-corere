@@ -33,6 +33,7 @@ class TestModels(TestCase):
     #Furthermore, it tests the restrictions related to creating and connecting these objects.
 
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     def test_create_manuscript_objects(self):
         manuscript = m.Manuscript()
         manuscript.save()
@@ -140,6 +141,7 @@ class TestManuscriptWorkflow(TestCase):
 
     #@unittest.skip("Don't want to test")
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
+    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     def test_basic_manuscript_cycle_and_fsm_permissions_direct(self):
 
         #-------------- Create manuscript ----------------

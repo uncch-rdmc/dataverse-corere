@@ -206,6 +206,7 @@ class SubmissionJson(CorereBaseDatatableView):
             avail_buttons = []
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
+                avail_buttons.append('editSubmissionFiles')
             if(has_transition_perm(submission.view_noop, user)):
                 avail_buttons.append('viewSubmission')
             if(has_transition_perm(submission.add_curation_noop, user)):

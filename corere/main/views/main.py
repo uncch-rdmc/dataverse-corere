@@ -89,11 +89,21 @@ class ReadOnlyCorereMixin(object):
     read_only = True
     http_method_names = ['get']
     
+#TODO: this needs to be dynamically getting its repo based upon manuscript/submissions
 class GitlabFilesMixin(object):
     def dispatch(self, request, *args, **kwargs): 
-        self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object)
-        #TODO: Make this dynamic based upon model etc
-        self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
+        if(isinstance(self.object, m.Manuscript)):
+            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.gitlab_manuscript_id)
+            self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
+        elif(isinstance(self.object, m.Submission)):
+            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id)
+            self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
+        else:
+            #print(self.object.__dict__)
+            logger.error("Attempted to load Gitlab file for an object which does not have gitlab files")
+            #TODO: this should better error that the object provided doesn't have gitlab files
+            raise Http404()
+        
         return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
 
 class NotesMixin(object):
@@ -221,7 +231,7 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'manuscript_git_id': self.object.gitlab_id, 'manuscript_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
@@ -262,7 +272,20 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
-class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericSubmissionView):
+#No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+#TODO: See if this can be done cleaner
+class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+    form = SubmissionFilesForm
+    template = 'main/not_form_upload_files.html'
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+
+class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
@@ -406,16 +429,22 @@ def delete_note(request, id=None, submission_id=None, curation_id=None, verifica
     note.delete()
     return redirect('../edit')
 
+#TODO: Either make this take both submission and manuscript, or make two methods
 @login_required
-def delete_file(request, manuscript_id):
+def delete_file(request, manuscript_id=None, submission_id=None):
     # if request.method == 'POST': TODO do this? Or hell, make it delete?
     file_path = request.GET.get('file_path')
     if(not file_path):
         raise Http404()
-    manuscript = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
-    if(not has_transition_perm(manuscript.edit_noop, request.user)):
+    if(manuscript_id):
+        obj = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
+        git_id = obj.gitlab_manuscript_id
+    elif(submission_id):
+        obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
+        git_id = obj.manuscript.gitlab_submissions_id
+    if(not has_transition_perm(obj.edit_noop, request.user)):
         logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
         raise Http404()
-    gitlab_delete_file(manuscript, file_path)
+    gitlab_delete_file(git_id, file_path)
 
     return redirect('./editfiles') #go to the edit files page again

@@ -18,15 +18,17 @@ urlpatterns = [
     path('manuscript/<int:id>/addverifier', users.add_verifier, name="manuscript_addverifier"),
     path('manuscript/<int:id>/deleteverifier/<int:user_id>', users.delete_verifier, name="manuscript_deleteverifier"),
     path('manuscript/<int:manuscript_id>/createsubmission', main.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
-    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_editfiles"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
 
     path('submission/<int:id>/edit', main.SubmissionEditView.as_view(), name="submission_edit"),
+    path('submission/<int:id>/editfiles', main.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/view', main.SubmissionReadView.as_view(), name="submission_read"),
     path('submission/<int:submission_id>/createcuration', main.CurationCreateView.as_view(), name="submission_createcuration"),
     path('submission/<int:submission_id>/createverification', main.VerificationCreateView.as_view(), name="submission_createverification"),
     path('submission/<int:submission_id>/createnote', main.edit_note, name="submission_createnote"),
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note, name="submission_editnote"),
     path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note, name="submission_deletenote"),
+    path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
 
     path('curation/<int:id>/edit', main.CurationEditView.as_view(), name="curation_edit"),
     path('curation/<int:id>/view', main.CurationReadView.as_view(), name="curation_read"),

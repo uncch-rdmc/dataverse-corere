@@ -22,7 +22,7 @@
       },
       init: function () {
         this.on("processing", function(file) {
-          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{manuscript_git_id}}/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
+          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{git_id}}/repository/files/"+file.name+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
         });
         this.on('success', function() {
           var args = Array.prototype.slice.call(arguments);

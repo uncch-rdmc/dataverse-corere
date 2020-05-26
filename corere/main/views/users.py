@@ -12,7 +12,7 @@ from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
-from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_manuscript_repo, gitlab_update_user
+from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_repo, gitlab_update_user
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -48,14 +48,15 @@ def add_author(request, id=None):
                 author_role.user_set.add(new_user)
                 users.append(new_user) #add new new_user to the other uses provided
                 gitlab_create_user(new_user)
-                gitlab_add_user_to_manuscript_repo(new_user, manuscript)
+#TODO: Is this the right place to set these? Maybe better in a general save method???
+                gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
                 #TODO: Think about doing this after everything else, incase something bombs
                 invite.send_invitation(request)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
             
             for u in users:
                 manu_author_group.user_set.add(u)
-                gitlab_add_user_to_manuscript_repo(u, manuscript)
+                gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 
