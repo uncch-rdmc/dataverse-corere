@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views import View
 from corere.main.gitlab import gitlab_repo_get_file_folder_list, gitlab_delete_file
+from urllib.parse import quote
 #from guardian.decorators import permission_required_or_404
 
 logger = logging.getLogger(__name__)

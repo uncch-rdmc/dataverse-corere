@@ -71,7 +71,7 @@ def gitlab_repo_get_file_folder_list(repo_id):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     #gl.enable_debug()
     try:
-        repo_tree = gl.projects.get(repo_id).repository_tree()
+        repo_tree = gl.projects.get(repo_id).repository_tree(recursive=True)
     except gitlab.GitlabGetError:
         repo_tree = []
     logger.debug(repo_tree)
