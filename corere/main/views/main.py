@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.views import View
 from corere.main.gitlab import gitlab_repo_get_file_folder_list, gitlab_delete_file
+from corere.main.binderhub import binder_build_load 
 from urllib.parse import quote
 #from guardian.decorators import permission_required_or_404
 
@@ -449,3 +450,12 @@ def delete_file(request, manuscript_id=None, submission_id=None):
     gitlab_delete_file(git_id, file_path)
 
     return redirect('./editfiles') #go to the edit files page again
+
+
+##################### BINDER #####################
+
+@login_required
+def open_binder(request, id=None):
+    manuscript = get_object_or_404(m.Manuscript, id=id)
+    response = binder_build_load(manuscript)
+    print(response.__dict__)

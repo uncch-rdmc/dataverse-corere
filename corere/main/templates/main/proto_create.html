@@ -478,6 +478,7 @@ textarea.md-textarea {
 
         repo_e = encodeURIComponent(repo);
 
+        console.log("{{ BINDER_ADDR_ENV }}/build/git/"+repo_e+"/"+shacode);
         var evtSource = new EventSource( "{{ BINDER_ADDR_ENV }}/build/git/"+repo_e+"/"+shacode);
         
         evtSource.onerror = function(e) {
@@ -511,7 +512,7 @@ textarea.md-textarea {
           logme(msg)
 
           //OLDDO: Right now the JupyterNotebook Kube config allows this iframe, but there are issues
-          //      with the same workspace being open in another window (though I'm not sure where?)
+          //      with the same workspace being open in another window (though I'm not sure where?) 
           //
           //      For now we should at least provide a link?
           if(phase == 'ready'){

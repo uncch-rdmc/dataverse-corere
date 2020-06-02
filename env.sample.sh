@@ -10,7 +10,7 @@ export DJANGO_LOG_DIRECTORY=
 export BINDER_ADDR=
 
 ### GITLAB ###
-# URL for commiting to gitlab repository from binderhub pod.
+# URL for commiting to gitlab repository from binderhub pod. Unused outside of prototype...
 export GIT_CONFIG_URL="https://user:secret_token@gitlab_full_url/root/test.git/"
 # URL for gitlab. Used by CORE-RE to download and commit to repository.
 export GIT_LAB_URL=

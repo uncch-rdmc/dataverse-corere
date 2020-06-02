@@ -339,12 +339,14 @@ MANUSCRIPT_STATUS_CHOICES = (
 class Manuscript(AbstractCreateUpdateModel):
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     pub_id = models.CharField(max_length=200, default="", db_index=True)
-    title = models.TextField(blank=False, null=False, default="")
+    title = models.TextField(max_length=200, blank=False, null=False, default="")
     doi = models.CharField(max_length=200, default="", db_index=True)
     open_data = models.BooleanField(default=False)
     environment_info = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
-    gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
     gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
+    gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
+    gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
+    gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
     _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
 
     def __str__(self):
