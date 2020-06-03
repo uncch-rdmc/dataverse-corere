@@ -457,5 +457,6 @@ def delete_file(request, manuscript_id=None, submission_id=None):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    response = binder_build_load(manuscript)
-    print(response.__dict__)
+    binder_url = binder_build_load(manuscript)
+    return redirect(binder_url)
+    #print(response.__dict__)

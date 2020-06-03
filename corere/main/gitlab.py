@@ -52,20 +52,22 @@ def gitlab_remove_user_from_repo(django_user, repo_id):
     gl_project = gl.projects.get(repo_id)
     gl_project.members.delete(django_user.gitlab_id)
 
+#For now, all created projects are public, until we configure binderhub for private self-hosted gitlab repos
 def gitlab_create_manuscript_repo(manuscript):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     name = _helper_generate_gitlab_project_name(manuscript.id, manuscript.title, False)
     path = _helper_generate_gitlab_project_path(manuscript.id, manuscript.title, False)
-    gitlab_project = gl.projects.create({'name': name, 'path': path})
+    gitlab_project = gl.projects.create({'name': name, 'path': path, 'visibility': 'public'})
     manuscript.gitlab_manuscript_id = gitlab_project.id
     manuscript.gitlab_manuscript_path = path
     manuscript.save()
 
+#For now, all created projects are public, until we configure binderhub for private self-hosted gitlab repos
 def gitlab_create_submissions_repo(manuscript):
     gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
     name = _helper_generate_gitlab_project_name(manuscript.id, manuscript.title, True)
     path = _helper_generate_gitlab_project_path(manuscript.id, manuscript.title, True)
-    gitlab_project = gl.projects.create({'name': name, 'path': path})
+    gitlab_project = gl.projects.create({'name': name, 'path': path, 'visibility': 'public'})
     manuscript.gitlab_submissions_id = gitlab_project.id
     manuscript.gitlab_submissions_path = path
     manuscript.save()
