@@ -190,7 +190,6 @@ class Submission(AbstractCreateUpdateModel):
                     raise FieldError('A submission is already in progress for this manuscript')
                 if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
                     raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
-                gitlab_create_submissions_repo(self.manuscript)
         except Submission.manuscript.RelatedObjectDoesNotExist:
             pass #this is caught in super
         super(Submission, self).save(*args, **kwargs)
@@ -400,6 +399,7 @@ class Manuscript(AbstractCreateUpdateModel):
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
             gitlab_create_manuscript_repo(self)
+            gitlab_create_submissions_repo(self)
 
             
     ##### django-fsm (workflow) related functions #####

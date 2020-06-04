@@ -13,6 +13,8 @@
     <input type="submit" name="submit" value="Save">
     <input type="submit" name="submit" value="{{transition_text}}">
     {% endif %}
+    {% block extrabuttons %}
+    {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
 {% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}

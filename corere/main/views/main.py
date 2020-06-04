@@ -219,6 +219,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = ManuscriptForm
+    template = 'main/manuscript_super_form.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
