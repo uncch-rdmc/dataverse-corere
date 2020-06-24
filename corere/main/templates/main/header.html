@@ -6,16 +6,11 @@
         <div class="sidebar-header">
             <h3>
                 <a href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
-
             </h3>
         </div>
         {% if user.is_authenticated %}
         <ul class="list-unstyled components">
-            
-            <p>{{ user.get_username }}</p>
-            {% comment %} <li>
-                <a href="/">Dashboard</a>
-            </li> {% endcomment %}
+            <a href="account_user_details"><p>{{ user.get_username }}</p></a>
         </ul>
 
         <ul class="list-unstyled CTAs">
