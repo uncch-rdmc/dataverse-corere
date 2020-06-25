@@ -1,0 +1,229 @@
+@import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
+/* line 4, corere/main/static/main/custom.scss */
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #fafafa; }
+
+/* line 9, corere/main/static/main/custom.scss */
+p {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.1em;
+  font-weight: 300;
+  line-height: 1.7em;
+  color: #999; }
+
+/* line 17, corere/main/static/main/custom.scss */
+a, a:hover, a:focus {
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.3s; }
+
+/* line 23, corere/main/static/main/custom.scss */
+.navbar {
+  padding: 15px 10px;
+  background: #fff !important;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 40px;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1); }
+
+/* line 32, corere/main/static/main/custom.scss */
+.navbar-btn {
+  box-shadow: none;
+  outline: none !important;
+  border: none;
+  background: #fff !important; }
+
+/* line 39, corere/main/static/main/custom.scss */
+.line {
+  width: 100%;
+  height: 1px;
+  border-bottom: 1px dashed #ddd;
+  margin: 40px 0; }
+
+/* ---------------------------------------------------
+    SIDEBAR STYLE
+----------------------------------------------------- */
+/* line 50, corere/main/static/main/custom.scss */
+.wrapper {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  perspective: 1500px; }
+
+/* line 58, corere/main/static/main/custom.scss */
+#sidebar {
+  min-width: 250px;
+  max-width: 250px;
+  background: #7386D5;
+  color: #fff;
+  transition: all 0.6s cubic-bezier(0.945, 0.02, 0.27, 0.665);
+  transform-origin: bottom left; }
+
+/* line 67, corere/main/static/main/custom.scss */
+#sidebar.active {
+  margin-left: -250px;
+  transform: rotateY(100deg); }
+
+/* line 72, corere/main/static/main/custom.scss */
+#sidebar .sidebar-header {
+  padding: 20px;
+  background: #6d7fcc; }
+
+/* line 77, corere/main/static/main/custom.scss */
+#sidebar ul.components {
+  padding: 20px 0;
+  border-bottom: 1px solid #47748b; }
+
+/* line 82, corere/main/static/main/custom.scss */
+#sidebar ul p {
+  color: #fff;
+  padding: 10px; }
+
+/* line 87, corere/main/static/main/custom.scss */
+#sidebar ul li a {
+  padding: 10px;
+  font-size: 1.1em;
+  display: block; }
+
+/* line 92, corere/main/static/main/custom.scss */
+#sidebar ul li a:hover {
+  color: #7386D5;
+  background: #fff; }
+
+/* line 97, corere/main/static/main/custom.scss */
+#sidebar ul li.active > a, a[aria-expanded="true"] {
+  color: #fff;
+  background: #6d7fcc; }
+
+/* line 103, corere/main/static/main/custom.scss */
+a[data-toggle="collapse"] {
+  position: relative; }
+
+/* line 107, corere/main/static/main/custom.scss */
+.dropdown-toggle::after {
+  display: block;
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%); }
+
+/* line 115, corere/main/static/main/custom.scss */
+ul ul a {
+  font-size: 0.9em !important;
+  padding-left: 30px !important;
+  background: #6d7fcc; }
+
+/* line 121, corere/main/static/main/custom.scss */
+ul.CTAs {
+  padding: 20px; }
+
+/* line 125, corere/main/static/main/custom.scss */
+ul.CTAs a {
+  text-align: center;
+  font-size: 0.9em !important;
+  display: block;
+  border-radius: 5px;
+  margin-bottom: 5px; }
+
+/* line 133, corere/main/static/main/custom.scss */
+a.download {
+  background: #fff;
+  color: #7386D5; }
+
+/* line 138, corere/main/static/main/custom.scss */
+a.article, a.article:hover {
+  background: #6d7fcc !important;
+  color: #fff !important; }
+
+/* line 143, corere/main/static/main/custom.scss */
+a.logs, a.logs:hover {
+  background: #FFEB3B !important;
+  color: #3F51B5 !important; }
+
+/* ---------------------------------------------------
+    CONTENT STYLE
+----------------------------------------------------- */
+/* line 153, corere/main/static/main/custom.scss */
+#content {
+  width: 100%;
+  padding: 20px;
+  min-height: 100vh;
+  transition: all 0.3s; }
+
+/* line 160, corere/main/static/main/custom.scss */
+#sidebarCollapse {
+  width: 40px;
+  height: 40px;
+  cursor: pointer; }
+
+/* line 167, corere/main/static/main/custom.scss */
+#sidebarCollapse span {
+  width: 80%;
+  height: 2px;
+  margin: 0 auto;
+  display: block;
+  background: #555;
+  transition: all 0.8s cubic-bezier(0.81, -0.33, 0.345, 1.375);
+  transition-delay: 0.2s; }
+
+/* line 177, corere/main/static/main/custom.scss */
+#sidebarCollapse span:first-of-type {
+  transform: rotate(45deg) translate(2px, 2px); }
+
+/* line 180, corere/main/static/main/custom.scss */
+#sidebarCollapse span:nth-of-type(2) {
+  opacity: 0; }
+
+/* line 183, corere/main/static/main/custom.scss */
+#sidebarCollapse span:last-of-type {
+  transform: rotate(-45deg) translate(1px, -1px); }
+
+/* line 188, corere/main/static/main/custom.scss */
+#sidebarCollapse.active span {
+  transform: none;
+  opacity: 1;
+  margin: 5px auto; }
+
+/* ---------------------------------------------------
+    MEDIAQUERIES
+----------------------------------------------------- */
+@media (max-width: 768px) {
+  /* line 199, corere/main/static/main/custom.scss */
+  #sidebar {
+    margin-left: -250px;
+    transform: rotateY(90deg); }
+  /* line 203, corere/main/static/main/custom.scss */
+  #sidebar.active {
+    margin-left: 0;
+    transform: none; }
+  /* line 207, corere/main/static/main/custom.scss */
+  #sidebarCollapse span:first-of-type,
+  #sidebarCollapse span:nth-of-type(2),
+  #sidebarCollapse span:last-of-type {
+    transform: none;
+    opacity: 1;
+    margin: 5px auto; }
+  /* line 214, corere/main/static/main/custom.scss */
+  #sidebarCollapse.active span {
+    margin: 0 auto; }
+  /* line 217, corere/main/static/main/custom.scss */
+  #sidebarCollapse.active span:first-of-type {
+    transform: rotate(45deg) translate(2px, 2px); }
+  /* line 220, corere/main/static/main/custom.scss */
+  #sidebarCollapse.active span:nth-of-type(2) {
+    opacity: 0; }
+  /* line 223, corere/main/static/main/custom.scss */
+  #sidebarCollapse.active span:last-of-type {
+    transform: rotate(-45deg) translate(1px, -1px); } }
+
+/* line 230, corere/main/static/main/custom.scss */
+.card.records {
+  width: 30%;
+  height: 120px;
+  display: inline-block;
+  margin-left: 20px; }
+
+/* line 237, corere/main/static/main/custom.scss */
+.breadcrumb-item + .breadcrumb-item::before {
+  content: none; }
