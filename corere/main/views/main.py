@@ -74,7 +74,7 @@ class GenericCorereObjectView(View):
             self.form.save() #Note: this is what saves a newly created model instance
             if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
                 self.transition_if_allowed(request, *args, **kwargs)
-            messages.add_message(request, messages.INFO, self.message)
+            messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
             logger.debug(form.errors) #Handle exception better

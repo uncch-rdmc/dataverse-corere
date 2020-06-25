@@ -1,4 +1,5 @@
 {% load static %}
+{% load bootstrap_msg_class_lvls %}
 
 <div> {# div ends in footer.html #}
 
@@ -35,6 +36,18 @@
     </form> {% endcomment %}
   </div>
 </nav>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {{ message.tags|bootstrap_alert_lvl }} alert-dismissible fade show " role="alert">
+                                <button type="button" class="fas fa-fw mr-3 align-self-center close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                <div>{{ message }}</div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
 
     {% comment %} <nav class="navbar navbar-light navbar-expand-md">
         <a class="navbar-brand" href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
