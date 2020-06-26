@@ -3,7 +3,7 @@
 
 <div> {# div ends in footer.html #}
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light ">
+<nav class="navbar navbar-expand-lg navbar-light ">
   <a class="navbar-brand" href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
@@ -12,13 +12,6 @@
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <span class=" mr-auto"></span>
     <ul class="navbar-nav">
-      {% comment %} <li class="nav-item active">
-        <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-      </li> {% endcomment %}
-      {% comment %} <li class="nav-item">
-        <a class="nav-link" href="account_user_details">{{ user.get_username }}</a> 
-      </li> {% endcomment %}
-
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           {{ user.get_username }}
@@ -30,87 +23,18 @@
         </div>
       </li>
     </ul>
-    {% comment %} <form class="form-inline my-2 my-lg-0">
-      <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-    </form> {% endcomment %}
   </div>
 </nav>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert {{ message.tags|bootstrap_alert_lvl }} alert-dismissible fade show " role="alert">
-                                <button type="button" class="fas fa-fw mr-3 align-self-center close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                                <div>{{ message }}</div>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-
-
-    {% comment %} <nav class="navbar navbar-light navbar-expand-md">
-        <a class="navbar-brand" href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsingNavbar3">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="navbar-collapse collapse" id="collapsingNavbar3">
-            <ul class="navbar-nav ml-auto">
-                <li> <a class="nav-link" href="account_user_details"><p>{{ user.get_username }}</p></a> </li>
-                <li> <a class="nav-link" href="logout" class="download">Logout</a> </li>
-            </ul>
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {{ message.tags|bootstrap_alert_lvl }} alert-dismissible fade show " role="alert">
+            <button type="button" class="fas fa-fw mr-3 align-self-center close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <div>{{ message }}</div>
         </div>
-    </nav>  {% endcomment %}
+    {% endfor %}
+{% endif %}
 
-
-
-    <!-- Sidebar Holder -->
-    {% comment %} <nav id="sidebar">
-        <div class="sidebar-header">
-            <h3>
-                <a href="/"><img src="{% static 'main/CORE2.png' %}" width="128" height="64"/></a>
-            </h3>
-        </div>
-        {% if user.is_authenticated %}
-        <ul class="list-unstyled components">
-            <a href="account_user_details"><p>{{ user.get_username }}</p></a>
-        </ul>
-
-        <ul class="list-unstyled CTAs">
-            <li>
-                <a href="logout" class="download">Logout</a>
-            </li>
-        </ul>
-        {% else %}
-        <div></div>
-
-        {% endif %}
-    </nav> {% endcomment %}
-
-    <!-- Page Content Holder -->
-    <div id="content">
-        {% comment %} <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container-fluid">
-
-                <button type="button" id="sidebarCollapse" class="navbar-btn">
-                    {# why? #}
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <button class="btn btn-dark d-inline-block d-lg-none ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <i class="fas fa-align-justify"></i>
-                </button>
-
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-
-                    {% if messages %}
-                        <ul class="messages">
-                            {% for message in messages %}
-                            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-                </div>
-            </div>
-        </nav> {% endcomment %}
+<div id="content">

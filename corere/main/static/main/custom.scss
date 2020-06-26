@@ -1,5 +1,13 @@
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
+.navbar {
+    background: #7386D5;
+}
+
+/* Datatables */
+
+//To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
+.dt-button-background { background:transparent ! important; }
 
 // body {
 //     // font-family: 'Poppins', sans-serif;
@@ -54,26 +62,6 @@
 // .breadcrumb-item + .breadcrumb-item::before {
 //     // content: none; 
 // }
-
-
-/* Datatables */
-
-//To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
-.dt-button-background { background:transparent ! important; }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ---------------------------------------------------
     SIDEBAR STYLE
