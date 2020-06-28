@@ -4,10 +4,63 @@
     background: #7386D5;
 }
 
-/* Datatables */
+/* 
+ * Datatables 
+ */
+
+table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
+    background-color: #7386D5;
+    opacity: .75;
+}
+.table_holder h5 {
+    color: #7386D5;
+    display:block;
+}
+
+.btn-secondary {
+    color: #000;
+    background-color: #e7e7e7;
+    border-color: #989898
+}
+
+.btn-secondary.disabled, .btn-secondary:disabled {
+    color: #000;
+    background-color: #e7e7e7;
+    border-color: #222
+}
+
+.dropdown-item.disabled, .dropdown-item:disabled {
+    color: #9fa8b1;
+}
+
+.btn.disabled, .btn:disabled {
+    opacity: .3;
+}
+
+.dataTables_filter {
+    margin-left: 10px;
+    float: right;
+}
+
+// .dataTables_length {
+//     margin-left: 10px;
+//     float: left;
+// }
+
+ul.pagination {
+    float: right;
+}
 
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
+
+
+
+
+
+
+
+/* Datatables OLD */
 
 // body {
 //     // font-family: 'Poppins', sans-serif;
