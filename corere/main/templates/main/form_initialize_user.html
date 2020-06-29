@@ -1,15 +1,15 @@
 {% extends "main/layout.html" %}
 {% block content %}
 {% load groups_contain_count %}
+{% load crispy_forms_tags %}
 {{ form.media.css }}
-
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 <form action="" method="post">
     {% csrf_token %}
     {{role_name}} Management for Manuscript {{id}}
     <table>
-        {{form}}
+        {{form|crispy}}
     </table>
     <input type="submit" name="submit" value="Submit">
     <input type=button value="Back" onClick="javascript:history.go(-1);">

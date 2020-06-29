@@ -4,19 +4,6 @@
     background: #7386D5;
 }
 
-/* 
- * Datatables (we don't have direct control of the html, so a lot of overrides)
- */
-
-table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
-    background-color: #7386D5;
-    opacity: .75;
-}
-.table_holder h5 {
-    color: #7386D5;
-    display:block;
-}
-
 .btn-secondary {
     color: #000;
     background-color: #e7e7e7;
@@ -29,12 +16,26 @@ table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
     border-color: #222
 }
 
-.dropdown-item.disabled, .dropdown-item:disabled {
-    color: #9fa8b1;
-}
-
 .btn.disabled, .btn:disabled {
     opacity: .3;
+}
+
+/* 
+ * Datatables (we don't have direct control of the html, so a lot of overrides)
+ */
+
+.table_holder h5 {
+    color: #7386D5;
+    display:block;
+}
+
+table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
+    background-color: #7386D5;
+    opacity: .75;
+}
+
+.dropdown-item.disabled, .dropdown-item:disabled {
+    color: #9fa8b1;
 }
 
 .dataTables_filter {
