@@ -5,7 +5,7 @@
 }
 
 /* 
- * Datatables 
+ * Datatables (we don't have direct control of the html, so a lot of overrides)
  */
 
 table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
@@ -42,22 +42,40 @@ table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
     float: right;
 }
 
-// .dataTables_length {
-//     margin-left: 10px;
-//     float: left;
-// }
+table.dataTable thead .sorting:after, table.dataTable thead .sorting_asc:after, table.dataTable thead .sorting_desc:after, table.dataTable thead .sorting_asc_disabled:after, table.dataTable thead .sorting_desc_disabled:after {
+    right: 0.35em;
+}
+
+table.dataTable thead .sorting:before, table.dataTable thead .sorting_asc:before, table.dataTable thead .sorting_desc:before, table.dataTable thead .sorting_asc_disabled:before, table.dataTable thead .sorting_desc_disabled:before {
+    right: .95em;
+}
 
 ul.pagination {
     float: right;
+    a {
+        color: #7386D5;
+    }
+
+    .page-item.active .page-link {
+        color: #fff;
+        background-color: #7386D5;
+        border-color: #7386D5;
+    }
+}
+
+table.dataTable tbody th.focus, table.dataTable tbody td.focus {
+    box-shadow: unset; //inset 0 0 1px 2px #0275d8;
+}
+
+.dropdown-menu a:hover
+{
+  color: #fff;
+  background-color: #7386D5;
+  border-color: #fff;
 }
 
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
-
-
-
-
-
 
 
 /* Datatables OLD */
