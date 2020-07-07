@@ -74,7 +74,11 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
   background-color: #7386D5;
   border-color: #fff;
 }
-
+.notification_count{
+    &.badge {
+        margin-top: -0.4em;
+    }
+}
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
 

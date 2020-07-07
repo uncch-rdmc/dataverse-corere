@@ -13,6 +13,7 @@ from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
 from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_repo, gitlab_update_user
+from notifications.signals import notify
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -59,7 +60,7 @@ def add_author(request, id=None):
                 gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
-                
+                notify.send(request.user, recipient=u, verb='WOW ACCESS', target=manuscript, public=False) #TODO: Create better message
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -163,3 +164,7 @@ def logout_view(request):
     logout(request)
     messages.add_message(request, messages.INFO, 'You have succesfully logged out!')
     return redirect('/')
+
+@login_required()
+def notifications(request):
+    return render(request, 'main/notifications.html')

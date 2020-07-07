@@ -1,0 +1,7 @@
+{% extends "main/layout.html" %}
+{% block content %}
+    {% load notifications_tags %}
+    {% register_notify_callbacks callbacks='fill_notification_list,fill_notification_badge' %}
+    {% live_notify_list %}
+
+{% endblock content %}

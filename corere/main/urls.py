@@ -46,4 +46,5 @@ urlpatterns = [
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
     path('account_user_details', users.account_user_details),
+    path('notifications', users.notifications)
 ]

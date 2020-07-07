@@ -17,6 +17,8 @@ from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url, include
 from django.conf import settings
+from django.views.generic.base import RedirectView
+import notifications.urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,6 +26,11 @@ urlpatterns = [
     path('prototype/', include('corere.main.prototype_urls')),
     url(r'^auth/', include('rest_framework_social_oauth2.urls')), #Social OAuth2
     url(r'^invitations/', include('invitations.urls', namespace='invitations')),
+    #url('^inbox/notifications/', RedirectView.as_view(url='/notifications')), #redirect notifications library url from their generic to our custom
+    #url('^inbox/notifications/unread/', RedirectView.as_view(url='/notifications')), #redirect notifications library url from their generic to our custom
+    #url('^notification_functions/', include(notifications.urls, namespace='notifications')),
+    #TODO: Renaming this path broke badge updating, something in the library must me hardcoded. Maybe fork and fix?
+    url('^inbox/notifications/', include(notifications.urls, namespace='notifications')), 
     #url(r'^select2/', include('django_select2.urls')), #if you use any "Auto" fields.
 ]
 
