@@ -27,6 +27,10 @@ GIT_API_VERSION = os.environ["GIT_API_VERSION"]
 GIT_PRIVATE_ADMIN_TOKEN = os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
 RECIPIENTS = os.environ["RECIPIENTS"]
 
+#Enabling this fakes all the gitlab calls so that development can be done without connection to a server
+#Enabling this in production is not recommended as new accounts/manuscripts will be created without the needed gitlab infrastructure
+DISABLE_GIT = False
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
