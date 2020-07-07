@@ -4,7 +4,7 @@ DEBUG = True
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/'
@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites', #added for invitations
+    'crispy_forms',
     'invitations',
     'oauth2_provider',
     'social_django',
@@ -237,3 +238,5 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 # Social Auth: Github configuration
 SOCIAL_AUTH_GITHUB_KEY = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_KEY"]
 SOCIAL_AUTH_GITHUB_SECRET = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"]
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'

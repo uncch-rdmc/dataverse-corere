@@ -1,13 +1,14 @@
 {% extends "main/layout.html" %}
 {% block content %}
 {% load concat %}
+{% load crispy_forms_tags %}
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <table>
-        {{form}}
+        {{form|crispy}}
     </table>
     {% if not read_only %}
     <input type="submit" name="submit" value="Save">

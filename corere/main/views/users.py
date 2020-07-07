@@ -153,6 +153,7 @@ def account_user_details(request):
                 request.user.invite_key = "" #we clear out the invite_key now that we can associate the user
             user = form.save()
             gitlab_update_user(user)
+            messages.add_message(request, messages.SUCCESS, "User info has been updated!")
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?

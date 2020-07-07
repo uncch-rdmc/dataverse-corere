@@ -1,3 +1,5 @@
+from django.contrib.messages import constants as messages
+
 GROUP_ROLE_EDITOR = "Role Editor"
 GROUP_ROLE_AUTHOR = "Role Author"
 GROUP_ROLE_VERIFIER = "Role Verifier"
