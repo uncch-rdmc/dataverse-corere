@@ -21,12 +21,22 @@ function fill_notification_badge(data) {
     }
     //Custom query to update CoReRe badges
     //this code also exists in the header to update when the page loads
-      $( "span.notification_count").filter(function() {
-          return parseInt($(this).text()) > 0;
-      }).show();
-      $( "span.notification_count").filter(function() {
-          return parseInt($(this).text()) == 0;
-      }).hide();
+    //TODO: Use notify_badge_class?
+    $( "span.notification_count").filter(function() {
+        return parseInt($(this).text()) > 0;
+    }).show();
+    $( "span.notification_count").filter(function() {
+        return parseInt($(this).text()) == 0;
+    }).hide();
+
+    //Custom update page title
+    //if(data.unread_count > 0)
+    //var pageTitle = $("title").text();
+    if(data.unread_count > 0){
+        $("title").text("(" + data.unread_count + ") Dataverse CORE2");
+    } else {
+        $("title").text("Dataverse CORE2");
+    }
 }
 
 function fill_notification_list(data) {
@@ -52,9 +62,10 @@ function fill_notification_list(data) {
             +    '<button type="button" class="fas fa-fw mr-3 align-self-center close" data-dismiss="alert" aria-label="Close" onclick="'
             + `
               $.ajax({
-                  url:'http://localhost:8000/inbox/notifications/mark-as-read/`+item.slug+`/',
+                  url:'/inbox/notifications/mark-as-read/`+item.slug+`/',
                   type:'get' 
               });
+              fetch_api_data();
               `
             +'">'
             +        '<span aria-hidden="true">&times;</span>'

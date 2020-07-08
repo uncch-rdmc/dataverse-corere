@@ -29,7 +29,7 @@ RECIPIENTS = os.environ["RECIPIENTS"]
 
 #Enabling this fakes all the gitlab calls so that development can be done without connection to a server
 #Enabling this in production is not recommended as new accounts/manuscripts will be created without the needed gitlab infrastructure
-DISABLE_GIT = False
+DISABLE_GIT = True
 
 # Application definition
 INSTALLED_APPS = [
