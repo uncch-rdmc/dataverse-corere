@@ -20,7 +20,7 @@
         </a>
         
         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-          {% register_notify_callbacks callbacks='fill_notification_list,fill_notification_badge' %}
+          {% register_notify_callbacks callbacks='fill_notification_badge' %}
           <a class="dropdown-item" href="notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
           <a class="dropdown-item" href="account_user_details">Edit User Info</a>
           <div class="dropdown-divider"></div>

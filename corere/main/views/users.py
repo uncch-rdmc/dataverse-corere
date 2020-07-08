@@ -60,7 +60,9 @@ def add_author(request, id=None):
                 gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
-                notify.send(request.user, recipient=u, verb='WOW ACCESS', target=manuscript, public=False) #TODO: Create better message
+                #Admin gave Author access to Matthew for manuscript bug5
+                notification_msg = '{0} has given you author access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -82,6 +84,8 @@ def add_curator(request, id=None):
                 manu_curator_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
+                notification_msg = '{0} has given you curator access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -118,6 +122,8 @@ def add_verifier(request, id=None):
                 manu_verifier_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
+                notification_msg = '{0} has given you verifier access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
