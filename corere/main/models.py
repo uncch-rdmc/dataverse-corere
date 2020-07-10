@@ -12,7 +12,12 @@ from guardian.shortcuts import get_users_with_perms, assign_perm
 from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from simple_history.models import HistoricalRecords
 from corere.main.middleware import local
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from simple_history.utils import update_change_reason
+
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -33,7 +38,14 @@ class AbstractCreateUpdateModel(models.Model):
 
     class Meta:
         abstract = True
-        
+
+# Adding an additional field to our histories for changes. We populate this after save with a post_save signal        
+class AbstractHistoryWithChanges(models.Model):
+    history_change_list = models.TextField(blank=False, null=False, default="")
+
+    class Meta:
+        abstract = True
+
 ####################################################
 
 class User(AbstractUser):
@@ -45,8 +57,9 @@ class User(AbstractUser):
     invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     gitlab_id = models.IntegerField(blank=True, null=True)
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-####################################################
+##################################################Rude & Deadly##
 
 VERIFICATION_NEW = "new"
 VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
@@ -68,6 +81,7 @@ class Verification(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
     software = models.TextField()
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     class Meta:
         default_permissions = ()
@@ -121,6 +135,7 @@ CURATION_RESULT_CHOICES = (
 class Curation(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     class Meta:
         default_permissions = ()
@@ -179,6 +194,7 @@ class Submission(AbstractCreateUpdateModel):
     #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
     _status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     class Meta:
         default_permissions = ()
@@ -347,6 +363,7 @@ class Manuscript(AbstractCreateUpdateModel):
     gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
     gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
     _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     def __str__(self):
         return '{0}: {1}'.format(self.id, self.title)
@@ -472,7 +489,6 @@ class Manuscript(AbstractCreateUpdateModel):
     def view_noop(self):
         return self._status
 
-
 ####################################################
 
 # See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
@@ -495,6 +511,7 @@ def manuscript_directory_path(instance, filename):
 class File(AbstractCreateUpdateModel):
     file = models.FileField(upload_to=manuscript_directory_path, blank=True) #TODO: Redo path, currently blows up because it uses manuscript uuid
     type = models.CharField(max_length=12, choices=FILE_TYPE_CHOICES, default=FILE_TYPE_OTHER) 
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
     owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
@@ -535,6 +552,7 @@ class File(AbstractCreateUpdateModel):
 
 class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
@@ -586,3 +604,19 @@ class Note(AbstractCreateUpdateModel):
             assign_perm('delete_note', local.user, self) 
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
+
+############### POST-SAVE ################
+
+# post-save signal to update history with list of fields changed
+@receiver(post_save, sender=Manuscript, dispatch_uid="add_history_info_manuscript")
+@receiver(post_save, sender=User, dispatch_uid="add_history_info_user")
+@receiver(post_save, sender=Submission, dispatch_uid="add_history_info_submission")
+@receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
+@receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
+@receiver(post_save, sender=File, dispatch_uid="add_history_info_file")
+@receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
+def add_history_info(sender, instance, **kwargs):
+    new_record, old_record = instance.history.order_by('-history_date')[:2]
+    delta = new_record.diff_against(old_record)
+    new_record.history_change_list = str(delta.changed_fields)
+    new_record.save()

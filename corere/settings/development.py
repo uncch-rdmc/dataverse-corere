@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework_social_oauth2',
     'compressor',
     'guardian',
+    'simple_history',
     'django_select2',
     'corere.main',
 ]
@@ -68,6 +69,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -245,3 +247,5 @@ SOCIAL_AUTH_GITHUB_KEY = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_KEY"]
 SOCIAL_AUTH_GITHUB_SECRET = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+SIMPLE_HISTORY_REVERT_DISABLED=True
