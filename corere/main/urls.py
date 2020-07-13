@@ -2,7 +2,6 @@ from django.urls import path
 
 from corere.main.views import datatables, main, users
 
-
 urlpatterns = [ 
     path('', main.index),
     path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"),

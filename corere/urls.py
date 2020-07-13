@@ -20,6 +20,11 @@ from django.conf import settings
 from django.views.generic.base import RedirectView
 import notifications.urls
 
+handler400 = 'corere.main.views.errors.handler400'
+handler403 = 'corere.main.views.errors.handler403'
+handler404 = 'corere.main.views.errors.handler404'
+handler500 = 'corere.main.views.errors.handler500'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('corere.main.urls')),
