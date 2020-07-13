@@ -4,7 +4,9 @@ logger = logging.getLogger(__name__)
 
 #https://docs.gitlab.com/ee/api/users.html#user-creation
 def gitlab_create_user(django_user):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         #gl.enable_debug()
         gitlab_user = gl.users.create({
@@ -22,7 +24,9 @@ def gitlab_create_user(django_user):
 
 #TODO: Add update user command to update on users.account_user_details() changes
 def gitlab_update_user(django_user):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         #gl.enable_debug()
         logger.debug(django_user.__dict__)
@@ -42,7 +46,9 @@ def gitlab_update_user(django_user):
 # https://docs.gitlab.com/ee/api/members.html top has info on access levels
 # http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
 def gitlab_add_user_to_repo(django_user, repo_id):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         #gl.enable_debug()
         gl_project = gl.projects.get(repo_id)
@@ -52,14 +58,18 @@ def gitlab_add_user_to_repo(django_user, repo_id):
 
 
 def gitlab_remove_user_from_repo(django_user, repo_id):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         gl_project = gl.projects.get(repo_id)
         gl_project.members.delete(django_user.gitlab_id)
 
 #For now, all created projects are public, until we configure binderhub for private self-hosted gitlab repos
 def gitlab_create_manuscript_repo(manuscript):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         name = _helper_generate_gitlab_project_name(manuscript.id, manuscript.title, False)
         path = _helper_generate_gitlab_project_path(manuscript.id, manuscript.title, False)
@@ -70,7 +80,9 @@ def gitlab_create_manuscript_repo(manuscript):
 
 #For now, all created projects are public, until we configure binderhub for private self-hosted gitlab repos
 def gitlab_create_submissions_repo(manuscript):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         name = _helper_generate_gitlab_project_name(manuscript.id, manuscript.title, True)
         path = _helper_generate_gitlab_project_path(manuscript.id, manuscript.title, True)
@@ -82,7 +94,9 @@ def gitlab_create_submissions_repo(manuscript):
 #TODO: What is the output of this?
 #TODO: I think this errors if there are no files in the repo? "tree not found"
 def gitlab_repo_get_file_folder_list(repo_id):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return [{"path":"fakefile1.png"},{"path":"fakefile2.png"}]
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         try:
             repo_tree = gl.projects.get(repo_id).repository_tree(recursive=True)
@@ -91,12 +105,12 @@ def gitlab_repo_get_file_folder_list(repo_id):
             repo_tree = []
         logger.debug(repo_tree)
         return repo_tree
-    else:
-        return [{"path":"fakefile1.png"},{"path":"fakefile2.png"}]
-    
+        
 # Maybe need to allow branch specification?
 def gitlab_delete_file(repo_id, file_path):
-    if(not settings.DISABLE_GIT):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         gl.enable_debug()
         gl_project = gl.projects.get(repo_id)
