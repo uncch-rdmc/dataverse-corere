@@ -87,6 +87,7 @@ def gitlab_repo_get_file_folder_list(repo_id):
         try:
             repo_tree = gl.projects.get(repo_id).repository_tree(recursive=True)
         except gitlab.GitlabGetError:
+            logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
             repo_tree = []
         logger.debug(repo_tree)
         return repo_tree

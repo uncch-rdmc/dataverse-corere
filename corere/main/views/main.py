@@ -77,7 +77,8 @@ class GenericCorereObjectView(View):
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
-            logger.debug(form.errors) #Handle exception better
+            logger.debug(form.errors)
+            #TODO: Pass back form errors
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
@@ -199,13 +200,13 @@ class GenericManuscriptView(GenericCorereObjectView):
 
     def transition_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.begin, request.user): 
-            logger.debug("PermissionDenied")
+            logger.error("PermissionDenied")
             raise Http404()
         try: #TODO: only do this if the reviewer selects a certain form button
             self.object.begin()
             self.object.save()
         except TransitionNotAllowed as e:
-            logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
+            logger.error("TransitionNotAllowed: " + str(e))
             raise
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
@@ -261,7 +262,7 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
             self.object.submit(request.user)
             self.object.save()
         except TransitionNotAllowed as e:
-            logger.debug("TransitionNotAllowed: " + str(e)) #Handle exception better
+            logger.error("TransitionNotAllowed: " + str(e))
             raise
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
@@ -312,7 +313,8 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
             self.object.submission.review()
             self.object.submission.save()
         except TransitionNotAllowed:
-            pass #We do not do review if the statuses don't align
+            logger.error("TransitionNotAllowed: " + str(e))
+            raise
 
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
@@ -349,7 +351,8 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
             self.object.submission.review()
             self.object.submission.save()
         except TransitionNotAllowed:
-            pass #We do not do review if the statuses don't align
+            logger.error("TransitionNotAllowed: " + str(e))
+            raise
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = VerificationForm
@@ -418,7 +421,8 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
                     remove_perm('view_note', group, note)           
             return redirect(re_url)
         else:
-            logger.debug(form.errors) #Handle exception better
+            #TODO: Return form errors correctly
+            logger.debug(form.errors)
 
     return render(request, 'main/form_create_note.html', {'form': form})
 
