@@ -616,7 +616,10 @@ class Note(AbstractCreateUpdateModel):
 @receiver(post_save, sender=File, dispatch_uid="add_history_info_file")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
 def add_history_info(sender, instance, **kwargs):
-    new_record, old_record = instance.history.order_by('-history_date')[:2]
-    delta = new_record.diff_against(old_record)
-    new_record.history_change_list = str(delta.changed_fields)
-    new_record.save()
+    try:
+        new_record, old_record = instance.history.order_by('-history_date')[:2]
+        delta = new_record.diff_against(old_record)
+        new_record.history_change_list = str(delta.changed_fields)
+        new_record.save()
+    except ValueError:
+        pass #On new object creation there are not 2 records to do a history diff on.
