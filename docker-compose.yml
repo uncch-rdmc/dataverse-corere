@@ -4,12 +4,17 @@ services:
   db:
     image: postgres
     environment:
+      #- POSTGRES_DB=corere
       - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      #- POSTGRES_USER=postgres
+      #- POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432" #NEEDED?
   web:
+    env_file:
+      - settings.env
     build: .
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: bash -c "python manage.py makemigrations --settings=corere.settings.production && python manage.py migrate --settings=corere.settings.production && python manage.py runserver 0.0.0.0:8000 --insecure --settings=corere.settings.production"
     volumes:
       - .:/code
     ports:
