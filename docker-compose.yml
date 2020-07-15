@@ -3,9 +3,11 @@ version: '3'
 services:
   db:
     image: postgres
-    environment:
+    env_file:
+      - settings.env
+    #environment:
       #- POSTGRES_DB=corere
-      - POSTGRES_DB=postgres
+      #- POSTGRES_DB=postgres
       #- POSTGRES_USER=postgres
       #- POSTGRES_PASSWORD=postgres
     ports:
