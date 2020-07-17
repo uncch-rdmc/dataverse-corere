@@ -147,44 +147,42 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LOGGING = {
-#MAD: FIX THIS
-
-    # 'version': 1,
-    # 'disable_existing_loggers': False,
-    # 'handlers': {
-    #     'django_file': {
-    #         'level': 'DEBUG',
-    #         'class': 'logging.handlers.TimedRotatingFileHandler',
-    #         'formatter': 'normal',
-    #         'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/django.log",
-    #         'interval': 1,
-    #     },      
-    #     'file': {
-    #         'level': 'DEBUG',
-    #         'class': 'logging.handlers.TimedRotatingFileHandler',
-    #         'formatter': 'normal',
-    #         'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/corere.log",
-    #         'interval': 1,
-    #     },         
-    # },
-    # 'loggers': {
-    #     'django': {
-    #         'handlers': ['django_file'],
-    #         'level': 'DEBUG',
-    #         'propagate': True,
-    #     },
-    #     'corere': {
-    #         'handlers': ['file'],
-    #         'level': 'DEBUG',
-    #         'propagate': True,
-    #     },
-    # },
-    # 'formatters': {
-    #     'normal': {
-    #         'format': '%(asctime)s %(levelname)-8s [%(module)s:%(lineno).3d] %(message)s',
-    #         'datefmt': '%Y-%m-%d %H:%M:%S'
-    #     },
-    # }
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'django_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'normal',
+            'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/django.log",
+            'interval': 1,
+        },      
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'normal',
+            'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/corere.log",
+            'interval': 1,
+        },         
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['django_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'corere': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+    'formatters': {
+        'normal': {
+            'format': '%(asctime)s %(levelname)-8s [%(module)s:%(lineno).3d] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
+    }
 }
 
 # Internationalization

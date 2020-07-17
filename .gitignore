@@ -1,0 +1,17 @@
+build
+dist
+*.pyc
+.DS_Store
+MANIFEST
+.coverage
+htmlcov
+/.idea/
+*.egg-info
+.tox/
+.python-version
+.eggs/
+.venv/
+test.sqlite3
+settings.json
+corere/static*
+settings.env
