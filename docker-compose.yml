@@ -13,11 +13,9 @@ services:
     env_file:
       - settings.env
     build: .
-    command: bash -c "python manage.py makemigrations --settings=corere.settings.production && python manage.py migrate --settings=corere.settings.production && python manage.py runserver 0.0.0.0:8000 --insecure --settings=corere.settings.production"
+    command: bash -c "python manage.py makemigrations --settings=corere.settings.production && python manage.py migrate --settings=corere.settings.production && gunicorn --env DJANGO_SETTINGS_MODULE=corere.settings.production --bind=0.0.0.0 corere.wsgi"
     volumes:
       - .:/code
-    ports:
-      - "8000:8000"
     depends_on:
       - db
 
