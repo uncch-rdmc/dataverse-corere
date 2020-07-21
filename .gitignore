@@ -11,6 +11,8 @@ htmlcov
 .python-version
 .eggs/
 .venv/
+/logs/*
+!/logs/.blank
 test.sqlite3
 settings.json
 corere/static*
