@@ -46,3 +46,14 @@ def populate_models(sender, **kwargs):
     # curator.permissions.add(perm_submission_view)   
     # curator.permissions.add(perm_curation_view)   
     # curator.permissions.add(perm_verification_view)   
+
+    #Add all roles to superusers 
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    superusers = User.objects.filter(is_superuser=True)
+
+    for user in superusers:
+        for role in c.get_roles():
+            my_group = Group.objects.get(name=role) 
+            my_group.user_set.add(user)

@@ -9,3 +9,5 @@ DEBUG = False
 #     MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+
+DISABLE_GIT = True

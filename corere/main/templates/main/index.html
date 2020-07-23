@@ -105,6 +105,7 @@
                                 },
                             ]
                         },
+                        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
                         {
                             extend: 'collection',
                             text: 'Manuscript Members <i class="fas fa-angle-down"></i>',
@@ -143,6 +144,7 @@
                                 {% endif %}
                             ]
                         }
+                        {% endif %}
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -378,6 +380,7 @@
                                         },
                                         enabled: false
                                     },
+                                {% endif %}
                                     {
                                         text: 'View',
                                         name: 'viewVerification',
@@ -387,8 +390,6 @@
                                         },
                                         enabled: false
                                     },
-                                {% endif %}
-
                             ]
                         },
                     ]

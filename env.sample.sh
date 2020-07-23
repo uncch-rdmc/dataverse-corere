@@ -5,6 +5,8 @@ export UPLOAD_OUTPUT_PATH=
 #This can reference the BASE_DIR in the settings file: DJANGO_LOG_PATH="BASE_DIR+/../../../../django-logs"
 export DJANGO_LOG_DIRECTORY=
 
+export DJANGO_SETTINGS_MODULE=corere.settings.production
+
 ### BINDERHUB ###
 # Address of your Binderhub server
 export BINDER_ADDR=
