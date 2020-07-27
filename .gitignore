@@ -17,3 +17,4 @@ test.sqlite3
 settings.json
 corere/static*
 settings.env
+corere-cloudrun-service.yaml
