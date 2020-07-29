@@ -1,4 +1,4 @@
-version: '3'
+version: '3.3'
     
 services:
   db:
@@ -8,8 +8,14 @@ services:
     image: corere_postgres:latest
     env_file:
       - docker/settings.env
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/secret.db.user
+      POSTGRES_PASSWORD_FILE: /run/secrets/secret.db.password
     ports:
       - "5432:5432"
+    secrets:
+      - secret.db.user
+      - secret.db.password
 
   web:
     env_file:
@@ -18,12 +24,13 @@ services:
       context: .
       dockerfile: ./docker/web.Dockerfile
     image: corere_web:latest
-    command: bash -c "pwd && ls && ls corere && python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --no-input && gunicorn --bind=0.0.0.0 corere.wsgi"
+    command: bash -c ". /run/secrets/secret.web.sh && python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --no-input && gunicorn --bind=0.0.0.0 corere.wsgi"
     depends_on:
       - db
-    #TODO: Delete ports
-    # ports:
-    #   - 8000:8000
+#    ports:
+#      - 8000:8000
+    secrets:
+      - secret.web.sh
 
   nginx:
     build:
@@ -35,3 +42,11 @@ services:
       - 8080:8080
     depends_on:
       - web
+
+secrets:
+  secret.web.sh:
+    file: ./docker/secret.web.sh
+  secret.db.user:
+    file: ./docker/secret.db.user
+  secret.db.password:
+    file: ./docker/secret.db.password

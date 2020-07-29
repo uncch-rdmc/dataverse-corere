@@ -18,3 +18,7 @@ settings.json
 corere/static*
 settings.env
 corere-cloudrun-service.yaml
+/docker/secret*
+!/docker/secret.web.sample.sh
+!/docker/secret.db.password.sample
+!/docker/secret.db.user.sample
