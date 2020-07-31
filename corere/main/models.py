@@ -5,19 +5,19 @@ from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
-from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm
-from corere.main import constants as c
-from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo
-from guardian.shortcuts import get_users_with_perms, assign_perm
+from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm, TransitionNotAllowed
 from django.db.models import Q
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from simple_history.models import HistoricalRecords
-from corere.main.middleware import local
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from guardian.shortcuts import get_users_with_perms, assign_perm
+from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
-
+from corere.main import constants as c
+from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo
+from corere.main.middleware import local
+from corere.main.utils import fsm_check_transition_perm
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -286,8 +286,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    #MAD: This whole section may need to be split up to curation/verification to be like "can_submit"
-    #... not sure though
+    #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
+    
 
     def can_review(self):
         #Note, the logic in here is decided whether you can even do a review, not whether its accepted

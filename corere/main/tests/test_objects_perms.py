@@ -10,6 +10,7 @@ from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 
 #TODO: Encapsulating all the previous TODOs:
+# - Test progress endpoints
 # - Test manuscript/file notes in test_create_manuscript_objects when available
 # - Add extra notes test that covers more edge-cases
 # - Test that other users can't do the various transitions. Include canview canedit. Maybe in test_basic_manuscript_cycle_and_fsm_permissions_direct

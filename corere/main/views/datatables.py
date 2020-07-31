@@ -2,6 +2,7 @@ import logging
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from corere.main import constants as c
 from corere.main import models as m
+from corere.main.utils import fsm_check_transition_perm
 from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
 from django.db.models import Q
@@ -105,7 +106,7 @@ def helper_manuscript_columns(user):
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
     model = m.Manuscript
-    max_display_length = 500 #MADTEST: This does impact if less than 10 but something else is getting in the way?
+    max_display_length = 500
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
@@ -125,6 +126,10 @@ class ManuscriptJson(CorereBaseDatatableView):
                 avail_buttons.append('editManuscriptFiles')
             if(has_transition_perm(manuscript.view_noop, user)):
                 avail_buttons.append('viewManuscript')
+            if(has_transition_perm(manuscript.begin, user)):
+                avail_buttons.append('progressManuscript')
+            #TODO: add launchNotebook once integration is better
+
             # MAD: Should we change these to be transitions?
             if(user.has_perm('manage_authors_on_manuscript', manuscript)):
                 avail_buttons.append('addAuthor')
@@ -132,6 +137,7 @@ class ManuscriptJson(CorereBaseDatatableView):
                 avail_buttons.append('addCurator')
             if(user.has_perm('manage_verifiers_on_manuscript', manuscript)):
                 avail_buttons.append('addVerifier')
+
             if(has_transition_perm(manuscript.add_submission_noop, user)):
                 avail_buttons.append('createSubmission')
             return avail_buttons
@@ -139,7 +145,6 @@ class ManuscriptJson(CorereBaseDatatableView):
             return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
-#MADTEST: All results here
         return get_objects_for_user(self.request.user, "view_manuscript", klass=self.model)
 
     def filter_queryset(self, qs):
@@ -209,6 +214,8 @@ class SubmissionJson(CorereBaseDatatableView):
                 avail_buttons.append('editSubmissionFiles')
             if(has_transition_perm(submission.view_noop, user)):
                 avail_buttons.append('viewSubmission')
+            if(has_transition_perm(submission.submit, user)):
+                avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
@@ -216,6 +223,8 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editCuration')
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
+                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                    avail_buttons.append('progressCuration')
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
             if(has_transition_perm(submission.add_verification_noop, user)):
@@ -225,6 +234,8 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editVerification')
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
+                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                    avail_buttons.append('progressVerification')
             except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
 

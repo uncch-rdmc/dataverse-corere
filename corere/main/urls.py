@@ -19,6 +19,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/createsubmission', main.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
     path('manuscript/<int:id>/binder', main.open_binder, name="manuscript_binder"),
+    path('manuscript/<int:id>/progress', main.ManuscriptProgressView.as_view(), name="manuscript_progress"),
 
     path('submission/<int:id>/edit', main.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles', main.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
@@ -29,18 +30,21 @@ urlpatterns = [
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note, name="submission_editnote"),
     path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note, name="submission_deletenote"),
     path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('submission/<int:id>/progress', main.SubmissionProgressView.as_view(), name="submission_progress"),
 
     path('curation/<int:id>/edit', main.CurationEditView.as_view(), name="curation_edit"),
     path('curation/<int:id>/view', main.CurationReadView.as_view(), name="curation_read"),
     path('curation/<int:curation_id>/createnote', main.edit_note, name="curation_createnote"),
     path('curation/<int:curation_id>/editnote/<int:id>', main.edit_note, name="curation_editnote"),
     path('curation/<int:curation_id>/deletenote/<int:id>', main.delete_note, name="curation_deletenote"),
+    path('curation/<int:id>/progress', main.CurationProgressView.as_view(), name="curation_progress"),
 
     path('verification/<int:id>/edit', main.VerificationEditView.as_view(), name="verification_edit"),
     path('verification/<int:id>/view', main.VerificationReadView.as_view(), name="verification_read"),
     path('verification/<int:verification_id>/createnote', main.edit_note, name="verification_createnote"),
     path('verification/<int:verification_id>/editnote/<int:id>', main.edit_note, name="verification_editnote"),
     path('verification/<int:verification_id>/deletenote/<int:id>', main.delete_note, name="verification_deletenote"),
+    path('verification/<int:id>/progress', main.VerificationProgressView.as_view(), name="verification_progress"),
 
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
