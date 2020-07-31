@@ -40,6 +40,19 @@ def index(request):
     else:
         return render(request, "main/login.html")
 
+@login_required
+def open_binder(request, id=None):
+    manuscript = get_object_or_404(m.Manuscript, id=id)
+    binder_url = binder_build_load(manuscript)
+    return redirect(binder_url)
+    #print(response.__dict__)
+
+
+##################### Class based object views #####################
+#TODO: move these to own file?
+#TODO: "transition_method_name" is a bit misleading. We are (over)using transitions to do perm checks, but the no-ops aren't actually transitioning
+#TODO: Test whether I'm leaving open get/post calls on the generic when subclassing.
+
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
     transition_button_title = None
@@ -62,7 +75,10 @@ class GenericCorereObjectView(View):
     file_delete_url = None
 
     def dispatch(self, request, *args, **kwargs): 
-        self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
+        try:
+            self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
+        except TypeError as e: #Added so that progress and other calls that don't use forms can work. TODO: implement better
+            pass
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -73,7 +89,7 @@ class GenericCorereObjectView(View):
         if self.form.is_valid():
             self.form.save() #Note: this is what saves a newly created model instance
             if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
-                self.transition_if_allowed(request, *args, **kwargs)
+                self.progress_if_allowed(request, *args, **kwargs)
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
@@ -85,7 +101,7 @@ class GenericCorereObjectView(View):
     ######## Custom class functions. You may want to override some of these. #########
 
     # To do a tranisition on save. Different transitions are used for each object
-    def transition_if_allowed(self, request, *args, **kwargs):
+    def progress_if_allowed(self, request, *args, **kwargs):
         pass    
 
 class ReadOnlyCorereMixin(object):
@@ -137,10 +153,11 @@ class GetOrGenerateObjectMixin(object):
     # parent_id_name = None
     # parent_model = None
 
+    #TODO: This gets called on every get, do we need to generate the messages this early?
     def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
-            self.message = 'Your '+self.object_friendly_name +' has been updated!'
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been updated!'
         elif not self.read_only: #kwargs.get(self.parent_id_name) and 
             self.object = self.model()
             if(self.parent_model is not None):
@@ -166,7 +183,7 @@ class TransitionPermissionMixin(object):
             transition_method = getattr(self.object, self.transition_method_name)
         logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
         if(not has_transition_perm(transition_method, request.user)):
-            #TODO: Even if we don't collapse this with transition_if_allowed, we should still refer to it for erroring out in the correct ways
+            #TODO: Even if we don't collapse this with progress_if_allowed, we should still refer to it for erroring out in the correct ways
             logger.debug("PermissionDenied")
             raise Http404()
         return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
@@ -198,11 +215,11 @@ class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
 
-    def transition_if_allowed(self, request, *args, **kwargs):
+    def progress_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.begin, request.user): 
             logger.error("PermissionDenied")
             raise Http404()
-        try: #TODO: only do this if the reviewer selects a certain form button
+        try:
             self.object.begin()
             self.object.save()
         except TransitionNotAllowed as e:
@@ -242,8 +259,19 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+class ManuscriptTransitionView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+    #TODO: Should be post
+    def get(self, request, *args, **kwargs):
+        try:
+            self.progress_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (Http404, TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
 
-    
 # Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit for Review'
@@ -254,7 +282,7 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     object_friendly_name = 'submission'
     model = m.Submission
 
-    def transition_if_allowed(self, request, *args, **kwargs):
+    def progress_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submit, request.user): 
             logger.debug("PermissionDenied")
             raise Http404()
@@ -305,7 +333,7 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
     model = m.Curation
     redirect = '/'
 
-    def transition_if_allowed(self, request, *args, **kwargs):
+    def progress_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
             logger.debug("PermissionDenied")
             raise Http404()
@@ -343,7 +371,7 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     model = m.Verification
     redirect = '/'
 
-    def transition_if_allowed(self, request, *args, **kwargs):
+    def progress_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submission.review, request.user):
             logger.debug("PermissionDenied")
             raise Http404()
@@ -455,13 +483,3 @@ def delete_file(request, manuscript_id=None, submission_id=None):
     gitlab_delete_file(git_id, file_path)
 
     return redirect('./editfiles') #go to the edit files page again
-
-
-##################### BINDER #####################
-
-@login_required
-def open_binder(request, id=None):
-    manuscript = get_object_or_404(m.Manuscript, id=id)
-    binder_url = binder_build_load(manuscript)
-    return redirect(binder_url)
-    #print(response.__dict__)

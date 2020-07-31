@@ -19,6 +19,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/createsubmission', main.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
     path('manuscript/<int:id>/binder', main.open_binder, name="manuscript_binder"),
+    path('manuscript/<int:id>/progress', main.ManuscriptTransitionView.as_view(), name="manuscript_transition"),
 
     path('submission/<int:id>/edit', main.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles', main.SubmissionEditFilesView.as_view(), name="submission_editfiles"),

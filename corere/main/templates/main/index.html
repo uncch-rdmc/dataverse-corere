@@ -71,7 +71,7 @@
                     {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Manuscript Details <i class="fas fa-angle-down"></i>',
+                            text: 'Manuscript Actions <i class="fas fa-angle-down"></i>',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_global_perm:'main.add_manuscript' %} 
@@ -102,6 +102,29 @@
                                         window.location.href = "manuscript/"+manuscript_id+"/view";
                                     },
                                     enabled: false
+                                },
+                                {
+                                    text: 'Hand-off to Authors',
+                                    name: 'progressManuscript',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = 'manuscript/'+manuscript_id+'/progress';
+                                        //Not using ajax because we just reload the page instead.
+                                        //Because we do the datatable ajax ourselves we can't call dt.ajax.reload();
+                                        //Something like the table.clear... function below could work, but I was running into issues
+                                        //$.ajax({type: 'GET', url: 'manuscript/'+manuscript_id+'/progress'});
+                                        //table.clear().rows.add(originalJsonData).draw();
+                                    },
+                                    enabled: false
+                                },
+                                {
+                                    text: 'Launch Notebook',
+                                    name: 'launchNotebook',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "manuscript/"+manuscript_id+"/binder";
+                                    },
+                                    enabled: true
                                 },
                             ]
                         },
@@ -161,7 +184,9 @@
                         dt.button('viewManuscript:name').enable(false);
                         dt.button('addAuthor:name').enable(false);
                         dt.button('addCurator:name').enable(false);
-                        dt.button('addVerifier:name').enable(false);
+                        dt.button('addVerifier:name').enable(false);                        
+                        dt.button('progressManuscript:name').enable(false);
+                        dt.button('launchNotebook:name').enable(false);
                     }
                     document.getElementById("submission_table_holder").style.display = "none"; //hide element
                     //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
@@ -283,7 +308,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Submission Details <i class="fas fa-angle-down"></i>',
+                            text: 'Submission Actions <i class="fas fa-angle-down"></i>',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
@@ -329,7 +354,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Curation Details <i class="fas fa-angle-down"></i>',
+                            text: 'Curation Actions <i class="fas fa-angle-down"></i>',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
@@ -367,7 +392,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Verification Details <i class="fas fa-angle-down"></i>',
+                            text: 'Verification Actions <i class="fas fa-angle-down"></i>',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
