@@ -25,7 +25,7 @@ class UserAdmin(SimpleHistoryAdmin):
 class HistoryAdmin(admin.ModelAdmin):
     #NOTE: Couldn't add title/last_editor_id as not all models have it. Will fix later
     list_display = ['id', 'history_change_list', 'history_change_reason', 'history_date'] #'title', 'last_editor_id'
-    admin.site.disable_action('delete_selected')
+    actions = None
 
     #NOTE: There might be a simpler solution https://stackoverflow.com/questions/49560378/
     def change_view(self, request, object_id=None, form_url='', extra_context=None):
