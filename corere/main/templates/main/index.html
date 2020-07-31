@@ -340,6 +340,15 @@
                                     },
                                     enabled: false
                                 },
+                                {
+                                    text: 'Hand-off to Curators',
+                                    name: 'progressSubmission',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = 'submission/'+submission_id+'/progress';
+                                    },
+                                    enabled: false
+                                },
                             ]
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
@@ -374,6 +383,15 @@
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "curation/"+curation_id+"/view";
+                                    },
+                                    enabled: false
+                                },
+                                {
+                                    text: 'Submit Review',
+                                    name: 'progressCuration',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = 'curation/'+curation_id+'/progress';
                                     },
                                     enabled: false
                                 },
@@ -415,6 +433,15 @@
                                         },
                                         enabled: false
                                     },
+                                    {
+                                    text: 'Submit Review',
+                                    name: 'progressVerification',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = 'verification/'+verification_id+'/progress';
+                                    },
+                                    enabled: false
+                                },
                             ]
                         },
                     ]
@@ -435,13 +462,18 @@
                     var count = dt.rows( { selected: true } ).count();
                     if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editSubmission:name').enable(false);
+                        dt.button('editSubmissionFiles:name').enable(false);
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);
                         dt.button('createVerification:name').enable(false);
                         dt.button('editVerification:name').enable(false);                                     
                         dt.button('viewSubmission:name').enable(false);
                         dt.button('viewCuration:name').enable(false);
-                        dt.button('viewVerification:name').enable(false);                                      
+                        dt.button('viewVerification:name').enable(false);
+                        dt.button('progressSubmission:name').enable(false);
+                        dt.button('progressCuration:name').enable(false);
+                        dt.button('progressVerification:name').enable(false);
+                                                              
                     }
                     console.log('Table row deselected');
                 } ).row(':last').select();

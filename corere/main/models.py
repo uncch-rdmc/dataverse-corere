@@ -286,8 +286,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    #MAD: This whole section may need to be split up to curation/verification to be like "can_submit"
-    #... not sure though
+    #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
+    
 
     def can_review(self):
         #Note, the logic in here is decided whether you can even do a review, not whether its accepted

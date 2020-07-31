@@ -207,6 +207,8 @@ class GroupRequiredMixin(object):
                     raise Http404()
         return super(GroupRequiredMixin, self).dispatch(request, *args, **kwargs)
 
+
+
 ################################################################################################
 
 # Do not call directly
@@ -260,12 +262,13 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     transition_method_name = 'view_noop'
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class ManuscriptTransitionView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
+class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
     #TODO: Should be post
     def get(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors!'
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (Http404, TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
@@ -322,6 +325,19 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+    #TODO: Should be post
+    def get(self, request, *args, **kwargs):
+        try:
+            self.progress_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to curators!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (Http404, TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
+
 # Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
     transition_button_title = 'Submit and Progress'
@@ -359,6 +375,19 @@ class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionP
     form = ReadOnlyCurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
+
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCurationView):
+    #TODO: Should be post
+    def get(self, request, *args, **kwargs):
+        try:
+            self.progress_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (Http404, TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
 
 # Do not call directly
 class GenericVerificationView(NotesMixin, GenericCorereObjectView):
@@ -398,6 +427,18 @@ class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericVerificationView):
+    #TODO: Should be post
+    def get(self, request, *args, **kwargs):
+        try:
+            self.progress_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (Http404, TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
 
 ################################################################################################
 
