@@ -11,7 +11,7 @@ import django.db.models.deletion
 import django.utils.timezone
 import django_fsm
 import simple_history.models
-import uuid, os
+import uuid, os, sys
 
 
 # Functions from the following migrations need manual copying.
@@ -28,22 +28,23 @@ class Migration(migrations.Migration):
     #When we upgrade to Django 3.0, we can remove this and use noinput admin command
     #https://docs.djangoproject.com/en/3.0/ref/django-admin/#createsuperuser
     def generate_superuser(apps, schema_editor):
-        from django.contrib.auth import get_user_model
+        if('test' not in sys.argv): #TODO: this is maybe not the cleanest way to detect a test, reprocussions are low though
+            from django.contrib.auth import get_user_model
 
-        User = get_user_model()
+            User = get_user_model()
 
-        DJANGO_SU_NAME = os.environ.get('DJANGO_SUPERUSER_USERNAME')
-        DJANGO_SU_EMAIL = os.environ.get('DJANGO_SUPERUSER_EMAIL')
-        DJANGO_SU_PASSWORD = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+            DJANGO_SU_NAME = os.environ.get('DJANGO_SUPERUSER_USERNAME')
+            DJANGO_SU_EMAIL = os.environ.get('DJANGO_SUPERUSER_EMAIL')
+            DJANGO_SU_PASSWORD = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
 
-        superuser = User.objects.create_superuser(
-            username=DJANGO_SU_NAME,
-            email=DJANGO_SU_EMAIL,
-            password=DJANGO_SU_PASSWORD)
+            superuser = User.objects.create_superuser(
+                username=DJANGO_SU_NAME,
+                email=DJANGO_SU_EMAIL,
+                password=DJANGO_SU_PASSWORD)
 
-        #TODO: Pass in gitlab id here?
+            #TODO: Pass in gitlab id here?
 
-        superuser.save()
+            superuser.save()
 
     dependencies = [
         ('auth', '0011_update_proxy_permissions'),
