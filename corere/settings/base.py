@@ -99,23 +99,6 @@ WSGI_APPLICATION = 'corere.wsgi.application'
 
 AUTH_USER_MODEL = 'main.User'
 
-# Database
-DATABASES = {
-    ## Can be enabled for quickest dev purposes
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    # }
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ["POSTGRES_DB"],
-        'USER': os.environ["POSTGRES_USER"],
-        'PASSWORD': os.environ["POSTGRES_PASSWORD"],
-        # 'HOST': os.environ["POSTGRES_HOST"], #TODO: is this needed?
-        'PORT': '5432',
-    }
-}
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
