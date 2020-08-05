@@ -98,7 +98,11 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_table", kwargs={'manuscript_id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("submission_table", kwargs={'manuscript_id':self.manuscript.id+1})) #id we know hasn't been created
-        self.assertEqual(resp.status_code, 302)        
+        self.assertEqual(resp.status_code, 302)      
+        resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id}))
+        self.assertEqual(resp.status_code, 302)
+        resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        self.assertEqual(resp.status_code, 302)  
 
     # @unittest.skip("Don't want to test")
     def test_manuscript_urls_logged_in_no_role(self):
@@ -161,6 +165,10 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("submission_table", kwargs={'manuscript_id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)    
+        resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id}))
+        self.assertEqual(resp.status_code, 404)
+        resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        self.assertEqual(resp.status_code, 404)
 
     #multiple roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
     # @unittest.skip("Don't want to test")
@@ -237,6 +245,11 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse("submission_table", kwargs={'manuscript_id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
+        #Manuscript is not in a state to be progressed so it returns 404
+        # resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = self.client.get(reverse("manuscript_progress", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        # self.assertEqual(resp.status_code, 404)
 
     # @unittest.skip("Don't want to test")
     def test_submission_curation_verification_urls_not_logged_in(self):

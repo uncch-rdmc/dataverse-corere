@@ -270,7 +270,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
-        except (Http404, TransitionNotAllowed):
+        except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
@@ -333,7 +333,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to curators!'
             messages.add_message(request, messages.SUCCESS, self.message)
-        except (Http404, TransitionNotAllowed):
+        except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
@@ -384,7 +384,7 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
             messages.add_message(request, messages.SUCCESS, self.message)
-        except (Http404, TransitionNotAllowed):
+        except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
@@ -435,7 +435,7 @@ class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
             messages.add_message(request, messages.SUCCESS, self.message)
-        except (Http404, TransitionNotAllowed):
+        except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
