@@ -1,7 +1,9 @@
 {% extends "main/layout.html" %}
 {% block content %}
     <h5 class="my-3"> Site Actions </h5>
+    <a href="site_actions/create_editor">Create Editor</a>
     <a href="site_actions/create_curator">Create Curator</a>
+    <a href="site_actions/create_verifier">Create Verifier</a>
     {% comment %} {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}
     {% live_notify_list %}

@@ -35,7 +35,7 @@ def add_author(request, id=None):
 
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                new_user = create_user_and_invite(request, email, author_role)
+                new_user = helper_create_user_and_invite(request, email, author_role)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
                 gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
                 users.append(new_user) #add new new_user to the other users provided
@@ -160,9 +160,19 @@ def notifications(request):
     return render(request, 'main/notifications.html')
 
 @login_required()
+def create_editor(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_EDITOR) 
+    return create_user_not_author(request, role, "editor")
+
+@login_required()
 def create_curator(request):
     role = Group.objects.get(name=c.GROUP_ROLE_CURATOR) 
     return create_user_not_author(request, role, "curator")
+
+@login_required()
+def create_verifier(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_VERIFIER) 
+    return create_user_not_author(request, role, "verifier")
 
 @login_required()
 def create_user_not_author(request, role, role_text):
@@ -172,7 +182,7 @@ def create_user_not_author(request, role, role_text):
             if form.is_valid():
                 email = form.cleaned_data['email']
                 if(email):
-                    new_user = create_user_and_invite(request, email, role)
+                    new_user = helper_create_user_and_invite(request, email, role)
                     messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
             else:
                 logger.debug(form.errors) #TODO: DO MORE?
@@ -182,7 +192,7 @@ def create_user_not_author(request, role, role_text):
         raise Http404()
 
 
-def create_user_and_invite(request, email, role):
+def helper_create_user_and_invite(request, email, role):
     Invitation = get_invitation_model()
     invite = Invitation.create(email)#, inviter=request.user)
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
