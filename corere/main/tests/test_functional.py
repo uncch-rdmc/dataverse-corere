@@ -173,7 +173,7 @@ class TestUrls(TestCase):
     #multiple roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
     # @unittest.skip("Don't want to test")
     @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
-    @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_manuscript_urls_logged_in_multiple_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
         #Certain access is needed to actually test pages
@@ -559,7 +559,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     #all roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
-    @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_submission_curation_verification_urls_logged_in_all_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
         #Certain access is needed to actually test pages

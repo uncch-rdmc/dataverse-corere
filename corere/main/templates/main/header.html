@@ -23,13 +23,13 @@
         {% if user.is_authenticated %}
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
             {% register_notify_callbacks callbacks='fill_notification_badge' %}
-            <a class="dropdown-item" href="notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
-            <a class="dropdown-item" href="account_user_details">Edit User Info</a>
+            <a class="dropdown-item" href="/notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
+            <a class="dropdown-item" href="/account_user_details">Edit User Info</a>
             {% if user.is_superuser %}
-              <a class="dropdown-item" href="site_actions">Site Actions</a>
+              <a class="dropdown-item" href="/site_actions">Site Actions</a>
             {% endif%}
             <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="logout">Logout</a>
+            <a class="dropdown-item" href="/logout">Logout</a>
           </div>
           {% comment %} this code also exists in notify_custom.js to be run when the notification count is refreshed {% endcomment %}
           <script> 
