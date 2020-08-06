@@ -524,3 +524,10 @@ def delete_file(request, manuscript_id=None, submission_id=None):
     gitlab_delete_file(git_id, file_path)
 
     return redirect('./editfiles') #go to the edit files page again
+
+@login_required()
+def site_actions(request):
+    if(request.user.is_superuser):
+        return render(request, 'main/site_actions.html')
+    else:
+        raise Http404()

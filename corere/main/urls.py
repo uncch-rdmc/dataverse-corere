@@ -49,5 +49,10 @@ urlpatterns = [
     path('logout', users.logout_view),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth),
     path('account_user_details', users.account_user_details),
-    path('notifications', users.notifications)
+    path('notifications', users.notifications),
+    path('site_actions', main.site_actions),
+    #path('site_actions/create_editor', main.site_actions),
+    path('site_actions/create_curator', users.create_curator),
+    #path('site_actions/create_verifier', main.site_actions)
+
 ]

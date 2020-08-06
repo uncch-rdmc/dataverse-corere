@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm
+from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm, UserCreationForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -34,27 +34,11 @@ def add_author(request, id=None):
             users = list(form.cleaned_data['users_to_add'])
 
             if(email):
-                Invitation = get_invitation_model()
-                invite = Invitation.create(email)#, inviter=request.user)
-                #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
-                new_user = User()
-                new_user.email = email
-                new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
-                new_user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
-                new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
-                new_user.invited_by=request.user
-                new_user.set_unusable_password()
-                new_user.save()
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                author_role.user_set.add(new_user)
-                users.append(new_user) #add new new_user to the other uses provided
-                gitlab_create_user(new_user)
-#TODO: Is this the right place to set these? Maybe better in a general save method???
+                new_user = create_user_and_invite(request, email, author_role)
+                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
                 gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
-                #TODO: Think about doing this after everything else, incase something bombs
-                invite.send_invitation(request)
-                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
-            
+                users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 manu_author_group.user_set.add(u)
                 gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
@@ -174,3 +158,46 @@ def logout_view(request):
 @login_required()
 def notifications(request):
     return render(request, 'main/notifications.html')
+
+@login_required()
+def create_curator(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_CURATOR) 
+    return create_user_not_author(request, role, "curator")
+
+@login_required()
+def create_user_not_author(request, role, role_text):
+    if(request.user.is_superuser):
+        form = UserCreationForm(request.POST or None)
+        if request.method == 'POST':
+            if form.is_valid():
+                email = form.cleaned_data['email']
+                if(email):
+                    new_user = create_user_and_invite(request, email, role)
+                    messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+            else:
+                logger.debug(form.errors) #TODO: DO MORE?
+        return render(request, 'main/form_user_details.html', {'form': form})
+
+    else:
+        raise Http404()
+
+
+def create_user_and_invite(request, email, role):
+    Invitation = get_invitation_model()
+    invite = Invitation.create(email)#, inviter=request.user)
+    #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
+    new_user = User()
+    new_user.email = email
+    new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+    new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
+    new_user.invited_by=request.user
+    new_user.set_unusable_password()
+    new_user.save()
+
+    role.user_set.add(new_user)
+    gitlab_create_user(new_user)
+
+    #TODO: Think about doing this after everything else, incase something bombs
+    invite.send_invitation(request)
+
+    return new_user

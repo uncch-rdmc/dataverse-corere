@@ -130,3 +130,7 @@ class NewUserForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name']
+
+#Note: not used on Authors, as we always want them assigned when created
+class UserCreationForm(forms.Form):
+    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
