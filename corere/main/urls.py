@@ -10,12 +10,12 @@ urlpatterns = [
     path('manuscript/<int:id>/edit', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
     path('manuscript/<int:id>/editfiles', classes.ManuscriptEditFilesView.as_view(), name="manuscript_editfiles"),
     path('manuscript/<int:id>/view', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
-    path('manuscript/<int:id>/addauthor', users.add_author, name="manuscript_addauthor"),
+    path('manuscript/<int:id>/inviteaddauthor', users.create_add_author, name="manuscript_inviteaddauthor"),
     #TODO: Add deleteauthor and test
-    path('manuscript/<int:id>/addcurator', users.add_curator, name="manuscript_addcurator"),
-    path('manuscript/<int:id>/deletecurator/<int:user_id>', users.delete_curator, name="manuscript_deletecurator"),
-    path('manuscript/<int:id>/addverifier', users.add_verifier, name="manuscript_addverifier"),
-    path('manuscript/<int:id>/deleteverifier/<int:user_id>', users.delete_verifier, name="manuscript_deleteverifier"),
+    path('manuscript/<int:id>/assigncurator', users.assign_curator, name="manuscript_assigncurator"),
+    path('manuscript/<int:id>/unassigncurator/<int:user_id>', users.unassign_curator, name="manuscript_unassigncurator"),
+    path('manuscript/<int:id>/assignverifier', users.assign_verifier, name="manuscript_assignverifier"),
+    path('manuscript/<int:id>/unassignverifier/<int:user_id>', users.unassign_verifier, name="manuscript_unassignverifier"),
     path('manuscript/<int:manuscript_id>/createsubmission', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
     path('manuscript/<int:id>/binder', main.open_binder, name="manuscript_binder"),
@@ -51,8 +51,8 @@ urlpatterns = [
     path('account_user_details', users.account_user_details),
     path('notifications', users.notifications),
     path('site_actions', main.site_actions),
-    path('site_actions/create_editor', users.create_editor),
-    path('site_actions/create_curator', users.create_curator),
-    path('site_actions/create_verifier', users.create_verifier),
+    path('site_actions/inviteeditor', users.invite_editor),
+    path('site_actions/invitecurator', users.invite_curator),
+    path('site_actions/inviteverifier', users.invite_verifier),
 
 ]

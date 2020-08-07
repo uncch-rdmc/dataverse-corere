@@ -140,11 +140,11 @@
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
                                     {
-                                        text: 'Add Author',
-                                        name: 'addAuthor',
+                                        text: 'Invite/Add Author',
+                                        name: 'inviteaddauthor',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addauthor";
+                                            window.location.href = "manuscript/"+manuscript_id+"/inviteaddauthor";
                                         },
                                         enabled: false
                                     },
@@ -152,19 +152,19 @@
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                                     {
                                         text: 'Add Curator',
-                                        name: 'addCurator',
+                                        name: 'assigncurator',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addcurator";
+                                            window.location.href = "manuscript/"+manuscript_id+"/assigncurator";
                                         },
                                         enabled: false
                                     },
                                     {
                                         text: 'Add Verifier',
-                                        name: 'addVerifier',
+                                        name: 'assignverifier',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addverifier";
+                                            window.location.href = "manuscript/"+manuscript_id+"/assignverifier";
                                         },
                                         enabled: false
                                     },
@@ -186,9 +186,9 @@
                         dt.button('editManuscript:name').enable(false);
                         dt.button('editManuscriptFiles:name').enable(false);
                         dt.button('viewManuscript:name').enable(false);
-                        dt.button('addAuthor:name').enable(false);
-                        dt.button('addCurator:name').enable(false);
-                        dt.button('addVerifier:name').enable(false);                        
+                        dt.button('inviteaddauthor:name').enable(false);
+                        dt.button('assigncurator:name').enable(false);
+                        dt.button('assignverifier:name').enable(false);                        
                         dt.button('progressManuscript:name').enable(false);
                         dt.button('launchNotebook:name').enable(false);
                     }

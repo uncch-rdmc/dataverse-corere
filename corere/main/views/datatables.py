@@ -132,11 +132,11 @@ class ManuscriptJson(CorereBaseDatatableView):
 
             # MAD: Should we change these to be transitions?
             if(user.has_perm('manage_authors_on_manuscript', manuscript)):
-                avail_buttons.append('addAuthor')
+                avail_buttons.append('inviteaddauthor')
             if(user.has_perm('manage_curators_on_manuscript', manuscript)):
-                avail_buttons.append('addCurator')
+                avail_buttons.append('assigncurator')
             if(user.has_perm('manage_verifiers_on_manuscript', manuscript)):
-                avail_buttons.append('addVerifier')
+                avail_buttons.append('assignverifier')
 
             if(has_transition_perm(manuscript.add_submission_noop, user)):
                 avail_buttons.append('createSubmission')

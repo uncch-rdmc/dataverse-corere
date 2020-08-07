@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm, UserCreationForm
+from corere.main.forms import AuthorInviteAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 # TODO: We should probably make permissions part of our constants as well
 @login_required
 @permission_required_or_404('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_author(request, id=None):
-    form = AuthorInvitationForm(request.POST or None)
+def create_add_author(request, id=None):
+    form = AuthorInviteAddForm(request.POST or None)
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
@@ -54,8 +54,8 @@ def add_author(request, id=None):
 
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_curator(request, id=None):
-    form = CuratorInvitationForm(request.POST or None)
+def assign_curator(request, id=None):
+    form = CuratorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
@@ -79,21 +79,21 @@ def add_curator(request, id=None):
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def delete_curator(request, id=None, user_id=None):
+def unassign_curator(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     user = User.objects.get(id=user_id)
     manu_curator_group.user_set.remove(user)
     # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/addcurator')
+    return redirect('/manuscript/'+str(id)+'/assigncurator')
     #from django.http import HttpResponse
     #return HttpResponse("DELETE " + str(user_id))
 
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_verifier(request, id=None):
-    form = VerifierInvitationForm(request.POST or None)
+def assign_verifier(request, id=None):
+    form = VerifierAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
@@ -117,14 +117,14 @@ def add_verifier(request, id=None):
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def delete_verifier(request, id=None, user_id=None):
+def unassign_verifier(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
     manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     user = User.objects.get(id=user_id)
     manu_verifier_group.user_set.remove(user)
     # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/addverifier')
+    return redirect('/manuscript/'+str(id)+'/assignverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)
@@ -137,7 +137,7 @@ def account_associate_oauth(request, key=None):
 
 @login_required()
 def account_user_details(request):
-    form = NewUserForm(request.POST or None, instance=request.user)
+    form = EditUserForm(request.POST or None, instance=request.user)
     if request.method == 'POST':
         if form.is_valid():
             if(request.user.invite_key):
@@ -160,24 +160,24 @@ def notifications(request):
     return render(request, 'main/notifications.html')
 
 @login_required()
-def create_editor(request):
+def invite_editor(request):
     role = Group.objects.get(name=c.GROUP_ROLE_EDITOR) 
-    return create_user_not_author(request, role, "editor")
+    return invite_user_not_author(request, role, "editor")
 
 @login_required()
-def create_curator(request):
+def invite_curator(request):
     role = Group.objects.get(name=c.GROUP_ROLE_CURATOR) 
-    return create_user_not_author(request, role, "curator")
+    return invite_user_not_author(request, role, "curator")
 
 @login_required()
-def create_verifier(request):
+def invite_verifier(request):
     role = Group.objects.get(name=c.GROUP_ROLE_VERIFIER) 
-    return create_user_not_author(request, role, "verifier")
+    return invite_user_not_author(request, role, "verifier")
 
 @login_required()
-def create_user_not_author(request, role, role_text):
+def invite_user_not_author(request, role, role_text):
     if(request.user.is_superuser):
-        form = UserCreationForm(request.POST or None)
+        form = UserInviteForm(request.POST or None)
         if request.method == 'POST':
             if form.is_valid():
                 email = form.cleaned_data['email']
