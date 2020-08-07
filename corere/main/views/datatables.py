@@ -131,8 +131,10 @@ class ManuscriptJson(CorereBaseDatatableView):
             #TODO: add launchNotebook once integration is better
 
             # MAD: Should we change these to be transitions?
-            if(user.has_perm('manage_authors_on_manuscript', manuscript)):
-                avail_buttons.append('inviteaddauthor')
+            if(user.has_perm('add_authors_on_manuscript', manuscript)):
+                avail_buttons.append('inviteassignauthor')
+            if(user.has_perm('manage_editors_on_manuscript', manuscript)):
+                avail_buttons.append('assigneditor')
             if(user.has_perm('manage_curators_on_manuscript', manuscript)):
                 avail_buttons.append('assigncurator')
             if(user.has_perm('manage_verifiers_on_manuscript', manuscript)):

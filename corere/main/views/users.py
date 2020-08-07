@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorInviteAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 
 # TODO: We should probably make permissions part of our constants as well
 @login_required
-@permission_required_or_404('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def create_add_author(request, id=None):
+@permission_required_or_404('main.add_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+def invite_assign_author(request, id=None):
     form = AuthorInviteAddForm(request.POST or None)
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
+    can_remove_author = request.user.has_perm('remove_authors_on_manuscript')
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -50,7 +51,56 @@ def create_add_author(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'users': manu_author_group.user_set.all()})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@login_required
+@permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def unassign_author(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+    manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_author_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
+
+@login_required
+@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def assign_editor(request, id=None):
+    form = EditorAddForm(request.POST or None)
+    #MAD: I moved these outside... is that bad?
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
+    manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    if request.method == 'POST':
+        if form.is_valid():
+            users_to_add = list(form.cleaned_data['users_to_add'])
+            
+            for u in users_to_add:
+                manu_editor_group.user_set.add(u)
+                messages.add_message(request, messages.INFO, 'You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
+                logger.info('You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
+                notification_msg = '{0} has given you editor access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+            return redirect('/')
+        else:
+            logger.debug(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@login_required
+@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def unassign_editor(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
+    manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_editor_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -73,7 +123,7 @@ def assign_curator(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'users': manu_curator_group.user_set.all()})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
@@ -111,7 +161,7 @@ def assign_verifier(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'users': manu_verifier_group.user_set.all()})
+    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)

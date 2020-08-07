@@ -141,15 +141,24 @@
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
                                     {
                                         text: 'Invite/Add Author',
-                                        name: 'inviteaddauthor',
+                                        name: 'inviteassignauthor',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/inviteaddauthor";
+                                            window.location.href = "manuscript/"+manuscript_id+"/inviteassignauthor";
                                         },
                                         enabled: false
                                     },
                                 {% endif %}
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                    {
+                                        text: 'Add Editor',
+                                        name: 'assigneditor',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "manuscript/"+manuscript_id+"/assigneditor";
+                                        },
+                                        enabled: false
+                                    },
                                     {
                                         text: 'Add Curator',
                                         name: 'assigncurator',
@@ -186,7 +195,7 @@
                         dt.button('editManuscript:name').enable(false);
                         dt.button('editManuscriptFiles:name').enable(false);
                         dt.button('viewManuscript:name').enable(false);
-                        dt.button('inviteaddauthor:name').enable(false);
+                        dt.button('inviteassignauthor:name').enable(false);
                         dt.button('assigncurator:name').enable(false);
                         dt.button('assignverifier:name').enable(false);                        
                         dt.button('progressManuscript:name').enable(false);

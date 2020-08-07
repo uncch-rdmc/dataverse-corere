@@ -64,9 +64,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
@@ -130,9 +130,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
@@ -208,9 +208,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_inviteaddauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)

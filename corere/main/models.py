@@ -371,7 +371,8 @@ class Manuscript(AbstractCreateUpdateModel):
     class Meta:
         permissions = [
             #TODO: This includes default CRUD permissions, but we should switch it to be explicit (other objects too)
-            ('manage_authors_on_manuscript', 'Can manage authors on manuscript'),
+            ('add_authors_on_manuscript', 'Can manage authors on manuscript'),
+            ('remove_authors_on_manuscript', 'Can manage authors on manuscript'), # we needed more granularity for authors
             ('manage_editors_on_manuscript', 'Can manage editors on manuscript'),
             ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
             ('manage_verifiers_on_manuscript', 'Can manage verifiers on manuscript'),
@@ -395,12 +396,12 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('change_manuscript', group_manuscript_editor, self) 
             assign_perm('delete_manuscript', group_manuscript_editor, self) 
             assign_perm('view_manuscript', group_manuscript_editor, self) 
-            assign_perm('manage_authors_on_manuscript', group_manuscript_editor, self) 
+            assign_perm('add_authors_on_manuscript', group_manuscript_editor, self) 
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
             assign_perm('change_manuscript', group_manuscript_author, self)
             assign_perm('view_manuscript', group_manuscript_author, self) 
-            assign_perm('manage_authors_on_manuscript', group_manuscript_author, self) 
+            assign_perm('add_authors_on_manuscript', group_manuscript_author, self) 
             assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
 
             group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))

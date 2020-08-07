@@ -10,8 +10,11 @@ urlpatterns = [
     path('manuscript/<int:id>/edit', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
     path('manuscript/<int:id>/editfiles', classes.ManuscriptEditFilesView.as_view(), name="manuscript_editfiles"),
     path('manuscript/<int:id>/view', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
-    path('manuscript/<int:id>/inviteaddauthor', users.create_add_author, name="manuscript_inviteaddauthor"),
-    #TODO: Add deleteauthor and test
+
+    path('manuscript/<int:id>/inviteassignauthor', users.invite_assign_author, name="manuscript_inviteassignauthor"),
+    path('manuscript/<int:id>/unassignauthor/<int:user_id>', users.unassign_author, name="manuscript_unassignauthor"),
+    path('manuscript/<int:id>/assigneditor', users.assign_editor, name="manuscript_assigneditor"),
+    path('manuscript/<int:id>/unassigneditor/<int:user_id>', users.unassign_editor, name="manuscript_unassigneditor"),
     path('manuscript/<int:id>/assigncurator', users.assign_curator, name="manuscript_assigncurator"),
     path('manuscript/<int:id>/unassigncurator/<int:user_id>', users.unassign_curator, name="manuscript_unassigncurator"),
     path('manuscript/<int:id>/assignverifier', users.assign_verifier, name="manuscript_assignverifier"),
