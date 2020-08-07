@@ -248,7 +248,9 @@ def helper_create_user_and_invite(request, email, role):
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
-    new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+    #TODO: This can blow up if the email is already used as a username, but seems unlikely.
+    # Should increment if it errors or something.
+    new_user.username = email
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
     new_user.invited_by=request.user
     new_user.set_unusable_password()
