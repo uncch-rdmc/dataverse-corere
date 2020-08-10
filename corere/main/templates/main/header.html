@@ -19,8 +19,6 @@
           {{ user.get_username }} <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span>
         </a>
 
-
-        {% if user.is_authenticated %}
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
             {% register_notify_callbacks callbacks='fill_notification_badge' %}
             <a class="dropdown-item" href="/notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
@@ -40,7 +38,6 @@
                   return parseInt($(this).text()) == 0;
               }).hide();
           </script>
-        {% endif %}
       </li>
     </ul>
   </div>

@@ -17,18 +17,15 @@ logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
-        if(request.user.invite_key): #user hasn't finished signing up if we are still holding their key
-            return redirect("/account_user_details")
-        else:
-            args = {'user':     request.user, 
-                    'manuscript_columns':  helper_manuscript_columns(request.user),
-                    'submission_columns':  helper_submission_columns(request.user),
-                    'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
-                    'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
-                    'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
-                    'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
-                    }
-            return render(request, "main/index.html", args)
+        args = {'user':     request.user, 
+                'manuscript_columns':  helper_manuscript_columns(request.user),
+                'submission_columns':  helper_submission_columns(request.user),
+                'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
+                'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
+                'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
+                'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
+                }
+        return render(request, "main/index.html", args)
     else:
         return render(request, "main/login.html")
 

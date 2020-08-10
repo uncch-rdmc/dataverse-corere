@@ -1,9 +1,11 @@
 {% extends "main/layout.html" %}
 {% block content %}
     <h5 class="my-3"> Site Actions </h5>
-    <a href="site_actions/inviteeditor">Create Editor</a>
-    <a href="site_actions/invitecurator">Create Curator</a>
-    <a href="site_actions/inviteverifier">Create Verifier</a>
+    <ul class="list-group">
+    <li class="list-group-item"><a href="site_actions/inviteeditor">Invite Editor</a></li>
+    <li class="list-group-item"><a href="site_actions/invitecurator">Invite Curator</a></li>
+    <li class="list-group-item"><a href="site_actions/inviteverifier">Invite Verifier</a></li>
+    </ul>
     {% comment %} {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}
     {% live_notify_list %}

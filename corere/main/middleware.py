@@ -1,5 +1,4 @@
 import threading
-
 local = threading.local()
 
 # For passing the request directly to save for tracking

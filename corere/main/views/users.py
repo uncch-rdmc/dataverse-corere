@@ -51,7 +51,7 @@ def invite_assign_author(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
@@ -87,7 +87,7 @@ def assign_editor(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
@@ -123,7 +123,7 @@ def assign_curator(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
@@ -161,7 +161,7 @@ def assign_verifier(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
@@ -180,18 +180,22 @@ def account_associate_oauth(request, key=None):
     logout(request)
     user = get_object_or_404(User, invite_key=key)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
-    user.username = ""
-    user.invite_key = ""
+    #user.username = ""
+    #user.invite_key = ""
 
     return render(request, 'main/new_user_oauth.html')
 
 @login_required()
 def account_user_details(request):
+    if(request.user.invite_key):
+        #we clear out the invite_key now that we can associate the user
+        #we do it regardless incase a new user clicks out of the page.
+        #This is somewhat a hack to get around having to serve this page with and without header content
+        request.user.invite_key = "" 
+        request.user.save()
     form = EditUserForm(request.POST or None, instance=request.user)
     if request.method == 'POST':
         if form.is_valid():
-            if(request.user.invite_key):
-                request.user.invite_key = "" #we clear out the invite_key now that we can associate the user
             user = form.save()
             gitlab_update_user(user)
             messages.add_message(request, messages.SUCCESS, "User info has been updated!")
