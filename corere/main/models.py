@@ -11,6 +11,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db.models.signals import post_delete
 from guardian.shortcuts import get_users_with_perms, assign_perm
 from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
@@ -489,6 +490,14 @@ class Manuscript(AbstractCreateUpdateModel):
                                             (instance._status != MANUSCRIPT_NEW and user.has_perm('view_manuscript',instance))) )
     def view_noop(self):
         return self._status
+
+@receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
+def delete_manuscript_groups(sender, instance, using, **kwargs):
+    Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+
 
 ####################################################
 
