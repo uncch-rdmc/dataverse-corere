@@ -108,7 +108,7 @@ class NoteForm(forms.ModelForm):
         self.fields['scope'].initial = existing_scope
         #print(self.fields['scope'].__dict__)
 
-class AuthorInvitationForm(forms.Form):
+class AuthorInviteAddForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
@@ -120,13 +120,20 @@ class AuthorInvitationForm(forms.Form):
     # I think so if we initialize it ourselves? https://github.com/applegrew/django-select2/blob/master/docs/django_select2.rst#javascript
     users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
 
-class CuratorInvitationForm(forms.Form):
+class EditorAddForm(forms.Form):
+    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=Select2MultipleWidget, required=False)
+
+class CuratorAddForm(forms.Form):
     users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=Select2MultipleWidget, required=False)
 
-class VerifierInvitationForm(forms.Form):
+class VerifierAddForm(forms.Form):
     users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=Select2MultipleWidget, required=False)
 
-class NewUserForm(forms.ModelForm):
+class EditUserForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name']
+
+#Note: not used on Authors, as we always want them assigned when created
+class UserInviteForm(forms.Form):
+    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)

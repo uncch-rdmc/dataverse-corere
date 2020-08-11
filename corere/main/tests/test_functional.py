@@ -64,30 +64,30 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         ## Not implemented yet
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         # self.assertEqual(resp.status_code, 302)
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         # self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
@@ -130,30 +130,30 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         ## Not implemented yet
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         # self.assertEqual(resp.status_code, 404)
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         # self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
@@ -173,7 +173,7 @@ class TestUrls(TestCase):
     #multiple roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
     # @unittest.skip("Don't want to test")
     @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
-    @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_manuscript_urls_logged_in_multiple_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
         #Certain access is needed to actually test pages
@@ -208,17 +208,17 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_addauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_addcurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assigncurator", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_addverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_assignverifier", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         ## Not implemented yet
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
@@ -226,14 +226,14 @@ class TestUrls(TestCase):
         # resp = self.client.get(reverse("manuscript_deleteauthor", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         # self.assertEqual(resp.status_code, 404)
         ## Untested because effort to set up
-        # resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        # resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         # self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_deletecurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassigncurator", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         ## Untested because effort to set up
-        # resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
+        # resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id, 'user_id': self.user2.id}))
         # self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_deleteverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_unassignverifier", kwargs={'id':self.manuscript.id+1, 'user_id': self.user2.id})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
@@ -559,7 +559,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     #all roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
-    @mock.patch('corere.main.views.main.gitlab_repo_get_file_folder_list', return_value=[])
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_submission_curation_verification_urls_logged_in_all_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 
         #Certain access is needed to actually test pages

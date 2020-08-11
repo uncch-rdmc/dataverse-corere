@@ -17,3 +17,6 @@ export DJANGO_SUPERUSER_PASSWORD=
 #NOTE: must be changed in db files as well
 export POSTGRES_USER=
 export POSTGRES_PASSWORD=
+
+export EMAIL_HOST_USER=
+export EMAIL_HOST_PASSWORD=

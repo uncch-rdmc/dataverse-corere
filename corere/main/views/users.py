@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorInvitationForm, CuratorInvitationForm, VerifierInvitationForm, NewUserForm
+from corere.main.forms import AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -22,39 +22,24 @@ logger = logging.getLogger(__name__)
 
 # TODO: We should probably make permissions part of our constants as well
 @login_required
-@permission_required_or_404('main.manage_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_author(request, id=None):
-    form = AuthorInvitationForm(request.POST or None)
+@permission_required_or_404('main.add_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+def invite_assign_author(request, id=None):
+    form = AuthorInviteAddForm(request.POST or None)
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
+    can_remove_author = request.user.has_perm('remove_authors_on_manuscript')
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
             users = list(form.cleaned_data['users_to_add'])
 
             if(email):
-                Invitation = get_invitation_model()
-                invite = Invitation.create(email)#, inviter=request.user)
-                #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
-                new_user = User()
-                new_user.email = email
-                new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
-                new_user.is_author = True  #TODO: This need to be dynamic depending on roles selected.
-                new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
-                new_user.invited_by=request.user
-                new_user.set_unusable_password()
-                new_user.save()
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                author_role.user_set.add(new_user)
-                users.append(new_user) #add new new_user to the other uses provided
-                gitlab_create_user(new_user)
-#TODO: Is this the right place to set these? Maybe better in a general save method???
+                new_user = helper_create_user_and_invite(request, email, author_role)
+                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
                 gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
-                #TODO: Think about doing this after everything else, incase something bombs
-                invite.send_invitation(request)
-                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe!'.format(email))
-            
+                users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 manu_author_group.user_set.add(u)
                 gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
@@ -66,12 +51,61 @@ def add_author(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'users': manu_author_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@login_required
+@permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def unassign_author(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+    manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_author_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
+
+@login_required
+@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def assign_editor(request, id=None):
+    form = EditorAddForm(request.POST or None)
+    #MAD: I moved these outside... is that bad?
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
+    manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    if request.method == 'POST':
+        if form.is_valid():
+            users_to_add = list(form.cleaned_data['users_to_add'])
+            
+            for u in users_to_add:
+                manu_editor_group.user_set.add(u)
+                messages.add_message(request, messages.INFO, 'You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
+                logger.info('You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
+                notification_msg = '{0} has given you editor access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+            return redirect('/')
+        else:
+            logger.debug(form.errors) #TODO: DO MORE?
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
+
+#MAD: Should this only work on post? Should it display confirmation?
+#MAD: Maybe error if id not in list (right now does nothing silently)
+@login_required
+@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+def unassign_editor(request, id=None, user_id=None):
+    manuscript = Manuscript.objects.get(pk=id)
+    group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
+    manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    user = User.objects.get(id=user_id)
+    manu_editor_group.user_set.remove(user)
+    # print("DELETE " + str(user_id))
+    return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_curator(request, id=None):
-    form = CuratorInvitationForm(request.POST or None)
+def assign_curator(request, id=None):
+    form = CuratorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
@@ -89,27 +123,27 @@ def add_curator(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'users': manu_curator_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def delete_curator(request, id=None, user_id=None):
+def unassign_curator(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     user = User.objects.get(id=user_id)
     manu_curator_group.user_set.remove(user)
     # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/addcurator')
+    return redirect('/manuscript/'+str(id)+'/assigncurator')
     #from django.http import HttpResponse
     #return HttpResponse("DELETE " + str(user_id))
 
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def add_verifier(request, id=None):
-    form = VerifierInvitationForm(request.POST or None)
+def assign_verifier(request, id=None):
+    form = VerifierAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
@@ -127,37 +161,41 @@ def add_verifier(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_initialize_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'users': manu_verifier_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
 
 #MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
-def delete_verifier(request, id=None, user_id=None):
+def unassign_verifier(request, id=None, user_id=None):
     manuscript = Manuscript.objects.get(pk=id)
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
     manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     user = User.objects.get(id=user_id)
     manu_verifier_group.user_set.remove(user)
     # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/addverifier')
+    return redirect('/manuscript/'+str(id)+'/assignverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)
     user = get_object_or_404(User, invite_key=key)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
-    user.username = ""
-    user.invite_key = ""
+    #user.username = ""
+    #user.invite_key = ""
 
     return render(request, 'main/new_user_oauth.html')
 
 @login_required()
 def account_user_details(request):
-    form = NewUserForm(request.POST or None, instance=request.user)
+    if(request.user.invite_key):
+        #we clear out the invite_key now that we can associate the user
+        #we do it regardless incase a new user clicks out of the page.
+        #This is somewhat a hack to get around having to serve this page with and without header content
+        request.user.invite_key = "" 
+        request.user.save()
+    form = EditUserForm(request.POST or None, instance=request.user)
     if request.method == 'POST':
         if form.is_valid():
-            if(request.user.invite_key):
-                request.user.invite_key = "" #we clear out the invite_key now that we can associate the user
             user = form.save()
             gitlab_update_user(user)
             messages.add_message(request, messages.SUCCESS, "User info has been updated!")
@@ -174,3 +212,58 @@ def logout_view(request):
 @login_required()
 def notifications(request):
     return render(request, 'main/notifications.html')
+
+@login_required()
+def invite_editor(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_EDITOR) 
+    return invite_user_not_author(request, role, "editor")
+
+@login_required()
+def invite_curator(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_CURATOR) 
+    return invite_user_not_author(request, role, "curator")
+
+@login_required()
+def invite_verifier(request):
+    role = Group.objects.get(name=c.GROUP_ROLE_VERIFIER) 
+    return invite_user_not_author(request, role, "verifier")
+
+@login_required()
+def invite_user_not_author(request, role, role_text):
+    if(request.user.is_superuser):
+        form = UserInviteForm(request.POST or None)
+        if request.method == 'POST':
+            if form.is_valid():
+                email = form.cleaned_data['email']
+                if(email):
+                    new_user = helper_create_user_and_invite(request, email, role)
+                    messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+            else:
+                logger.debug(form.errors) #TODO: DO MORE?
+        return render(request, 'main/form_user_details.html', {'form': form})
+
+    else:
+        raise Http404()
+
+
+def helper_create_user_and_invite(request, email, role):
+    Invitation = get_invitation_model()
+    invite = Invitation.create(email)#, inviter=request.user)
+    #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
+    new_user = User()
+    new_user.email = email
+    #TODO: This can blow up if the email is already used as a username, but seems unlikely.
+    # Should increment if it errors or something.
+    new_user.username = email
+    new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
+    new_user.invited_by=request.user
+    new_user.set_unusable_password()
+    new_user.save()
+
+    role.user_set.add(new_user)
+    gitlab_create_user(new_user)
+
+    #TODO: Think about doing this after everything else, incase something bombs
+    invite.send_invitation(request)
+
+    return new_user

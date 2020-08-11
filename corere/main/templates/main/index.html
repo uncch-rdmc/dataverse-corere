@@ -74,6 +74,8 @@
                             text: 'Manuscript Actions <i class="fas fa-angle-down"></i>',
                             fade: 0,
                             buttons: [
+                                //TODO: This perm is different than the one for progress. 
+                                // I think its because we want non-editors to create as well, but should doublecheck.
                                 {% if request.user|has_global_perm:'main.add_manuscript' %} 
                                     {
                                         text: 'Edit',
@@ -103,20 +105,22 @@
                                     },
                                     enabled: false
                                 },
-                                {
-                                    text: 'Hand-off to Authors',
-                                    name: 'progressManuscript',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = 'manuscript/'+manuscript_id+'/progress';
-                                        //Not using ajax because we just reload the page instead.
-                                        //Because we do the datatable ajax ourselves we can't call dt.ajax.reload();
-                                        //Something like the table.clear... function below could work, but I was running into issues
-                                        //$.ajax({type: 'GET', url: 'manuscript/'+manuscript_id+'/progress'});
-                                        //table.clear().rows.add(originalJsonData).draw();
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Hand-off to Authors',
+                                        name: 'progressManuscript',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = 'manuscript/'+manuscript_id+'/progress';
+                                            //Not using ajax because we just reload the page instead.
+                                            //Because we do the datatable ajax ourselves we can't call dt.ajax.reload();
+                                            //Something like the table.clear... function below could work, but I was running into issues
+                                            //$.ajax({type: 'GET', url: 'manuscript/'+manuscript_id+'/progress'});
+                                            //table.clear().rows.add(originalJsonData).draw();
+                                        },
+                                        enabled: false
                                     },
-                                    enabled: false
-                                },
+                                {% endif %}
                                 {
                                     text: 'Launch Notebook',
                                     name: 'launchNotebook',
@@ -136,31 +140,40 @@
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
                                     {
-                                        text: 'Add Author',
-                                        name: 'addAuthor',
+                                        text: 'Invite/Add Author',
+                                        name: 'inviteassignauthor',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addauthor";
+                                            window.location.href = "manuscript/"+manuscript_id+"/inviteassignauthor";
                                         },
                                         enabled: false
                                     },
                                 {% endif %}
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                                     {
-                                        text: 'Add Curator',
-                                        name: 'addCurator',
+                                        text: 'Add Editor',
+                                        name: 'assigneditor',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addcurator";
+                                            window.location.href = "manuscript/"+manuscript_id+"/assigneditor";
+                                        },
+                                        enabled: false
+                                    },
+                                    {
+                                        text: 'Add Curator',
+                                        name: 'assigncurator',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "manuscript/"+manuscript_id+"/assigncurator";
                                         },
                                         enabled: false
                                     },
                                     {
                                         text: 'Add Verifier',
-                                        name: 'addVerifier',
+                                        name: 'assignverifier',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/addverifier";
+                                            window.location.href = "manuscript/"+manuscript_id+"/assignverifier";
                                         },
                                         enabled: false
                                     },
@@ -182,9 +195,9 @@
                         dt.button('editManuscript:name').enable(false);
                         dt.button('editManuscriptFiles:name').enable(false);
                         dt.button('viewManuscript:name').enable(false);
-                        dt.button('addAuthor:name').enable(false);
-                        dt.button('addCurator:name').enable(false);
-                        dt.button('addVerifier:name').enable(false);                        
+                        dt.button('inviteassignauthor:name').enable(false);
+                        dt.button('assigncurator:name').enable(false);
+                        dt.button('assignverifier:name').enable(false);                        
                         dt.button('progressManuscript:name').enable(false);
                         dt.button('launchNotebook:name').enable(false);
                     }
@@ -340,15 +353,17 @@
                                     },
                                     enabled: false
                                 },
-                                {
-                                    text: 'Hand-off to Curators',
-                                    name: 'progressSubmission',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = 'submission/'+submission_id+'/progress';
+                                {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
+                                    {
+                                        text: 'Hand-off to Curators',
+                                        name: 'progressSubmission',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = 'submission/'+submission_id+'/progress';
+                                        },
+                                        enabled: false
                                     },
-                                    enabled: false
-                                },
+                                {% endif %}
                             ]
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
@@ -386,15 +401,17 @@
                                     },
                                     enabled: false
                                 },
-                                {
-                                    text: 'Submit Review',
-                                    name: 'progressCuration',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = 'curation/'+curation_id+'/progress';
+                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                    {
+                                        text: 'Submit Review',
+                                        name: 'progressCuration',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = 'curation/'+curation_id+'/progress';
+                                        },
+                                        enabled: false
                                     },
-                                    enabled: false
-                                },
+                                {% endif %}
                             ]
                         },
 
@@ -433,15 +450,17 @@
                                         },
                                         enabled: false
                                     },
+                                {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
                                     {
-                                    text: 'Submit Review',
-                                    name: 'progressVerification',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = 'verification/'+verification_id+'/progress';
+                                        text: 'Submit Review',
+                                        name: 'progressVerification',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = 'verification/'+verification_id+'/progress';
+                                        },
+                                        enabled: false
                                     },
-                                    enabled: false
-                                },
+                                {% endif %}
                             ]
                         },
                     ]

@@ -10,8 +10,6 @@ LOGOUT_REDIRECT_URL = '/'
 MEDIA_ROOT = os.environ["MEDIA_ROOT"]
 #MEDIA_URL
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' #TODO: make configurable
-
 #Invitation related
 SITE_ID = 1
 INVITATIONS_EMAIL_MAX_LENGTH = 200

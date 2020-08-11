@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {% include 'main/head.html' %}
+    </head>
+    <body>
+        {% include 'main/header_registration.html' %}
+        <div class="mx-3 my-3">
+            {% block content %}{% endblock %}
+        </div>
+        {% include 'main/footer.html' %}
+    </body>
+</html>
