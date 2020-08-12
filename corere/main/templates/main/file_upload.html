@@ -2,19 +2,24 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
 <script type="text/javascript">
-    //TODO: Fix multiple file upload issue
-    //      Fix large file upload issue
-    //      ... both are probably gitlab
+    //TODO: 
+    //      Dragging more than 2 files fails
+    //      Some files just fail, completely unsure why
+    //      Fix temporary data holding issue
+    //      Folders show up as files and cannot be deleted
+    //      ... file upload back button is broken
     Dropzone.options.dropdiv = {
       url: "FAKE", //is replaced during file upload
       //method: "post",
       maxFilesize: 0, // MB
       autoProcessQueue: false, //We first need to convert the files to base 64
       timeout: 30000000,
+      parallelUploads: 1,
       headers: {
           'X-CSRFToken': "{{csrf_token}}"
       },
       accept: function(file, done) {
+        console.log("accept")
         if (file.name.indexOf(".zip") != -1) {
           done("Cannot upload zip files!");
         }
@@ -22,6 +27,7 @@
       },
       init: function () {
         this.on("processing", function(file) {
+          console.log("processing")
           path = file.fullPath
           if(path === undefined) { //fullPath is undefined if no folder
             path = file.name
@@ -30,6 +36,7 @@
           this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{git_id}}/repository/files/"+escape(path).replace('/','%2F')+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
         });
         this.on('success', function() {
+          console.log("success")
           var args = Array.prototype.slice.call(arguments);
           var title = document.getElementById("filesHeaderDiv");
           title.style.visibility = 'visible';
@@ -41,19 +48,22 @@
           cell2.innerHTML = args[1].file_path
           // Look at the output in you browser console, if there is something interesting
           console.log(args);
+          this.processQueue(); //call the next file
         });
         this.on("addedfile", function(file){
+          console.log("addedfile")
           var _this=this,
               reader = new FileReader();
           reader.onload = function(event) {
               base64 = event.target.result.split(',')[1]; //Strip headers
-              _this.processQueue();
+              _this.processQueue(); //For some reason I have to call this here AND in sucess to get multiple files to process.
+              console.log("addedfile reader.onload")
           };
           reader.readAsDataURL(file);
         });
         //testing file paths
         this.on("sending", function(file, xhr, data) {
-
+            console.log("sending")
             // if file is actually a folder
             if(file.fullPath){
                 console.log(file.fullPath)
@@ -63,6 +73,7 @@
       },
       // Defining here overrides default functionality
       sending: function (file, xhr, data) {
+        console.log("sending outside")
         data.append("ref", "master");
         data.append("content", base64);
       },
