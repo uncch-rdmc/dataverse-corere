@@ -113,12 +113,9 @@ def gitlab_delete_file(repo_id, file_path):
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         gl.enable_debug()
-        gl_project = gl.projects.get(repo_id)
 
-        #gotta get the file first
-        f = gl_project.files.get(file_path=file_path, ref='master')
-        #then delete
-        f.delete(commit_message='Delete file', branch='master')
+        gl_project = gl.projects.get(repo_id)
+        gl_project.files.delete(file_path=file_path, commit_message='Delete file', branch='master')
 
 #This is unused as we just specify master. It may have never gotten the latest/correct sha
 # def gitlab_get_latest_commit_sha(repo_id):

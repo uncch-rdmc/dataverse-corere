@@ -1,6 +1,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
+<script> //TODO: there's a better way than this
+  obj_name = "{{obj_name}}"
+  obj_id = {{ obj_id }}
+</script>
 <script type="text/javascript">
     //NOTE: This implementation causes 2 files base64 to be cached in browser at a time.
     //      It can cause a fair bit of ballooning but its acceptable for now.
@@ -34,18 +38,9 @@
           this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{git_id}}/repository/files/"+escape(path).replace('/','%2F')+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
         });
         this.on('success', function() {
-          var args = Array.prototype.slice.call(arguments);
-          var title = document.getElementById("filesHeaderDiv");
-          title.style.visibility = 'visible';
-          var table = document.getElementById("filestable");
-          var row = table.insertRow(0);
-          var cell1 = row.insertCell(0);
-          var cell2 = row.insertCell(1);
-          cell1.innerHTML = "<a href='{{ file_delete_url }}" + args[1].file_path +"' >X</a>"
-          cell2.innerHTML = args[1].file_path
-          // Look at the output in you browser console, if there is something interesting
+          var args = Array.prototype.slice.call(arguments);          
+          $("#filesWithHeader").load("/"+obj_name+"/"+obj_id+"/fileslist")
           this.processQueue(); //call the next file
-
         });
         this.on("addedfile", function(file){
           var _this=this,
