@@ -212,14 +212,22 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
 class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
-    form = ManuscriptFilesForm
+    form = ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+
+class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
+    template = 'main/file_list.html'
+    transition_method_name = 'edit_noop'
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template, {'read_only': self.read_only, 
+            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
@@ -283,7 +291,15 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+
+class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+    template = 'main/file_list.html'
+    transition_method_name = 'edit_noop'
+
+    def get(self, request, *args, **kwargs):
+            return render(request, self.template, {'read_only': self.read_only, 
+                'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm

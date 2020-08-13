@@ -38,7 +38,7 @@ def invite_assign_author(request, id=None):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 new_user = helper_create_user_and_invite(request, email, author_role)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
-                gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
+                # gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id) #done below
                 users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 manu_author_group.user_set.add(u)

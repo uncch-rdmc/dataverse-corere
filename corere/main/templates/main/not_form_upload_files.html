@@ -5,4 +5,16 @@ File Upload: {{object_title}}
 {% include "main/file_upload.html" %}
 <input type=button value="Back" onClick="javascript:history.go(-1);">
 {% include "main/file_list.html" %}
+<script>
+    function delete_and_refresh(delete_url, id, obj_name){
+        console.log(delete_url)
+        $.get(delete_url, function() {
+            console.log("SUCCESS")
+            console.log(id)
+            $("#filesWithHeader").load("/"+obj_name+"/"+id+"/fileslist") //manuscript/<int:id>/fileslist
+            console.log("AFTER")
+        })
+        //$( "#result" ).load( "ajax/test.html" );
+    }
+</script>
 {% endblock content %}
