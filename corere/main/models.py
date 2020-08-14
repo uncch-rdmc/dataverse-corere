@@ -16,7 +16,7 @@ from guardian.shortcuts import get_users_with_perms, assign_perm
 from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 from corere.main import constants as c
-from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo
+from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo, gitlab_create_submission_branch, helper_get_submission_branch_name
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 
@@ -201,15 +201,26 @@ class Submission(AbstractCreateUpdateModel):
         default_permissions = ()
 
     def save(self, *args, **kwargs):
-        try:
-            if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
+        first_save = False
+        if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
+            first_save = True
+            try:
                 if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=SUBMISSION_REVIEWED).count() > 0):
                     raise FieldError('A submission is already in progress for this manuscript')
                 if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
                     raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
-        except Submission.manuscript.RelatedObjectDoesNotExist:
-            pass #this is caught in super
+            except Submission.manuscript.RelatedObjectDoesNotExist:
+                pass #this is caught in super
+
+            try:
+                gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
+            except ValueError:
+                gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
+
         super(Submission, self).save(*args, **kwargs)
+        branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
+        if first_save:
+            gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
 
     ##### django-fsm (workflow) related functions #####
 

@@ -98,7 +98,8 @@ def delete_note(request, id=None, submission_id=None, curation_id=None, verifica
     note.delete()
     return redirect('../edit')
 
-#TODO: Either make this take both submission and manuscript, or make two methods
+#TODO: Error if both manuscript and submission id is provided
+#TODO: Make this more efficient, I think we could avoid pulling the object itself
 @login_required
 def delete_file(request, manuscript_id=None, submission_id=None):
     # if request.method == 'POST': TODO do this? Or hell, make it delete?
@@ -106,15 +107,17 @@ def delete_file(request, manuscript_id=None, submission_id=None):
     if(not file_path):
         raise Http404()
     if(manuscript_id):
+        obj_type = "manuscript"
         obj = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
         git_id = obj.gitlab_manuscript_id
     elif(submission_id):
+        obj_type = "submission"
         obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
         git_id = obj.manuscript.gitlab_submissions_id
     if(not has_transition_perm(obj.edit_noop, request.user)):
         logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
         raise Http404()
-    gitlab_delete_file(git_id, file_path)
+    gitlab_delete_file(obj_type, obj, git_id, file_path)
 
     return redirect('./editfiles') #go to the edit files page again
 

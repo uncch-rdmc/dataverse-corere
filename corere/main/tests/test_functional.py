@@ -252,6 +252,7 @@ class TestUrls(TestCase):
         # self.assertEqual(resp.status_code, 404)
 
     # @unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
     def test_submission_curation_verification_urls_not_logged_in(self):
         #Add user2 to roles on manuscript, to test removal
         #Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.user2)
@@ -402,6 +403,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 302)
  
     # @unittest.skip("Don't want to test")
+    @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
     def test_submission_curation_verification_urls_logged_in_no_role(self):
         #Add user2 to roles on manuscript, to test removal
         #Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).user_set.add(self.user2)
@@ -559,6 +561,7 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
 
     #all roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
+    @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
     @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_submission_curation_verification_urls_logged_in_all_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 

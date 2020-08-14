@@ -10,7 +10,7 @@ from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
-from corere.main.gitlab import gitlab_repo_get_file_folder_list
+from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_submission_branch_name
 #from guardian.decorators import permission_required_or_404
 
 ##################### Class based object views #####################
@@ -77,10 +77,10 @@ class ReadOnlyCorereMixin(object):
 class GitlabFilesMixin(object):
     def dispatch(self, request, *args, **kwargs): 
         if(isinstance(self.object, m.Manuscript)):
-            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.gitlab_manuscript_id)
+            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.gitlab_manuscript_id, 'master')
             self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
         elif(isinstance(self.object, m.Submission)):
-            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id)
+            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
         else:
             #print(self.object.__dict__)
@@ -219,8 +219,10 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
+            'obj_id': self.object.id, "obj_name": self.object_friendly_name, "repo_branch":"master"})
 
+#Used for ajax refreshing in EditFiles
 class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
@@ -291,8 +293,10 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
-            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
 
+#Used for ajax refreshing in EditFiles
 class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'

@@ -34,6 +34,7 @@ class TestModels(TestCase):
 
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
+    @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
     def test_create_manuscript_objects(self):
         manuscript = m.Manuscript()
         manuscript.save()
@@ -43,9 +44,9 @@ class TestModels(TestCase):
         #-------------------------------------------------
 
         submission = m.Submission()
-        with self.assertRaises(IntegrityError) as exc_sub1, transaction.atomic(): #cannot save without manuscript
+        with self.assertRaises(m.Manuscript.DoesNotExist) as exc_sub1, transaction.atomic(): #cannot save without manuscript
             submission.save()
-        self.assertTrue('null value in column "manuscript_id" violates not-null constraint' in str(exc_sub1.exception))
+        #self.assertTrue('null value in column "manuscript_id" violates not-null constraint' in str(exc_sub1.exception))
 
         submission.manuscript = manuscript
         with self.assertRaises(FieldError) as exc_sub2, transaction.atomic():
@@ -142,6 +143,7 @@ class TestManuscriptWorkflow(TestCase):
     #@unittest.skip("Don't want to test")
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
+    @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
     def test_basic_manuscript_cycle_and_fsm_permissions_direct(self):
 
         #-------------- Create manuscript ----------------
