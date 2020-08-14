@@ -99,7 +99,9 @@ def gitlab_repo_get_file_folder_list(repo_id):
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         try:
-            repo_tree = gl.projects.get(repo_id).repository_tree(recursive=True)
+            repo_tree_full = gl.projects.get(repo_id).repository_tree(recursive=True)
+            repo_tree = [item for item in repo_tree_full if item['type'] != 'tree']
+
         except gitlab.GitlabGetError:
             logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
             repo_tree = []
@@ -134,7 +136,7 @@ def gitlab_delete_file(repo_id, file_path):
 # This will be used by the end-user as well, as there is no way for admin to generate a normal access token via API (in April 2020)
 # The difference between an impersonation token and a normal access token is nothing for our user cases
 # The only difference is that the user can't see impersonation tokens via the UI, but CoReRe users should never see the UI anyways
-#
+
 # https://docs.gitlab.com/ee/api/users.html#create-an-impersonation-token
 def gitlab_generate_impersonation_token(self, token_user, timeout=1):
     pass
