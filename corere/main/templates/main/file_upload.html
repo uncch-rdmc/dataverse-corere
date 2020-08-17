@@ -4,7 +4,7 @@
 <script> 
   //TODO: there's a better way than this
   //Right now we directly swap a bunch of variables in the script still... (git_id, GIT_LAB_URL_ENV.. etc...)
-  obj_name = "{{obj_name}}"
+  obj_type = "{{obj_type}}"
   obj_id = {{ obj_id }}
   branch = "{{ repo_branch }}"
 </script>
@@ -42,7 +42,7 @@
         });
         this.on('success', function() {
           var args = Array.prototype.slice.call(arguments);          
-          $("#filesWithHeader").load("/"+obj_name+"/"+obj_id+"/fileslist")
+          $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
           this.processQueue(); //call the next file
         });
         this.on("addedfile", function(file){

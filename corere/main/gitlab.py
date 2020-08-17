@@ -137,10 +137,18 @@ def gitlab_delete_file(obj_type, obj, repo_id, file_path):
 
         
 
-def gitlab_delete_all(repo_id):
+#Delete the existing branch and make a new one off master (which has nothing?)
+#This code only works for submissions
+#How do we get branch name from repo id?
+def gitlab_submission_delete_all_files(submission):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
         return
-    pass
+
+    current_branch = helper_get_submission_branch_name(submission.manuscript)
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    gl_project = gl.projects.get(submission.manuscript.gitlab_submissions_id)
+    gl_project.branches.delete(current_branch)
+    gl_project.branches.create({'branch': current_branch, 'ref': 'master'})
 
 #This is unused as we just specify master. It may have never gotten the latest/correct sha
 # def gitlab_get_latest_commit_sha(repo_id):

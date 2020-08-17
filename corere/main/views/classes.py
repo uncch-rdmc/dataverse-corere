@@ -220,7 +220,7 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_name": self.object_friendly_name, "repo_branch":"master"})
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master"})
 
 #Used for ajax refreshing in EditFiles
 class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
@@ -229,7 +229,7 @@ class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
-            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+            'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = ReadOnlyManuscriptForm
@@ -294,7 +294,7 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
 
 #Used for ajax refreshing in EditFiles
 class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
@@ -303,7 +303,7 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
             return render(request, self.template, {'read_only': self.read_only, 
-                'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_name": self.object_friendly_name})
+                'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm

@@ -6,10 +6,15 @@ File Upload: {{object_title}}
 <input type=button value="Back" onClick="javascript:history.go(-1);">
 {% include "main/file_list.html" %}
 <script>
-    function delete_and_refresh(delete_url, id, obj_name){
-        console.log(delete_url)
+    function delete_and_refresh(delete_url, id, obj_type){
         $.get(delete_url, function() {
-            $("#filesWithHeader").load("/"+obj_name+"/"+id+"/fileslist")
+            $("#filesWithHeader").load("/"+obj_type+"/"+id+"/fileslist")
+        })
+    }
+    function delete_all_and_refresh(id){
+        delete_all_url = "/submission/"+id+"/deleteallfiles"
+        $.get(delete_all_url, function() {
+            $("#filesWithHeader").load("/submission/"+id+"/fileslist")
         })
     }
 </script>

@@ -9,7 +9,7 @@ from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
 from django.contrib.auth.decorators import login_required
-from corere.main.gitlab import gitlab_delete_file
+from corere.main.gitlab import gitlab_delete_file, gitlab_submission_delete_all_files
 from corere.main.binderhub import binder_build_load 
 
 
@@ -118,6 +118,17 @@ def delete_file(request, manuscript_id=None, submission_id=None):
         logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
         raise Http404()
     gitlab_delete_file(obj_type, obj, git_id, file_path)
+
+    return redirect('./editfiles') #go to the edit files page again
+
+@login_required
+def delete_all_submission_files(request, submission_id):
+    print("WOWOW")
+    submission = get_object_or_404(m.Submission, id=submission_id)
+    if(not has_transition_perm(submission.edit_noop, request.user)):
+        logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+        raise Http404()
+    gitlab_submission_delete_all_files(submission)
 
     return redirect('./editfiles') #go to the edit files page again
 
