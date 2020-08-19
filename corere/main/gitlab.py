@@ -1,4 +1,5 @@
 import gitlab, logging, os, re, random, string
+from .models import * #TODO: Switch to GitlabFile
 from django.conf import settings
 logger = logging.getLogger(__name__)  
 
@@ -95,14 +96,12 @@ def gitlab_create_submission_branch(manuscript, repo_id, branch, ref_branch):
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         gl_project = gl.projects.get(repo_id)
-
-        print(branch)
-        print(ref_branch)
-        print(repo_id)
+        # print(branch)
+        # print(ref_branch)
+        # print(repo_id)
 
         branch = gl_project.branches.create({'branch': branch, 'ref': ref_branch})
 
-#TODO: What is the output of this?
 #TODO: I think this errors if there are no files in the repo? "tree not found"
 def gitlab_repo_get_file_folder_list(repo_id, branch):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
@@ -112,13 +111,38 @@ def gitlab_repo_get_file_folder_list(repo_id, branch):
         try:
             repo_tree_full = gl.projects.get(repo_id).repository_tree(recursive=True, ref=branch)
             repo_tree = [item for item in repo_tree_full if item['type'] != 'tree']
-
         except gitlab.GitlabGetError:
             logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
             repo_tree = []
         logger.debug(repo_tree)
         return repo_tree
-        
+
+#Gets info about a file without having to get the file itself
+def gitlab_get_file_blame_headers(repo_id, branch, file_path):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return [{"path":"fakefile1.png"},{"path":"fakefile2.png"}]
+    else:
+        gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+        return gl.projects.get(repo_id).files.blame_head(file_path=file_path, ref=branch)
+    #b = project.files.blame(file_path='README.rst', ref='master')
+
+# For each new file: use path to get blame headers, use blame headers to get commit, use commit to get date
+#   - There's also a bunch of other data in each check we need
+
+#how am I "traveling backwards" through submissions? I probably need to number them?
+def helper_populate_gitlab_files_submission(repo, submission, current_version):
+    repo_list = gitlab_repo_get_file_folder_list(repo, manuscript)
+    print(repo_list)
+    for item in repo_list: 
+        #GitlabFile.objects.get(gitlab_sha1=item['id'], )
+
+        #If sha-1 + current_branch exists, continue (skip current loop iteration)
+        #If sha-1 + previous_branch exists, create new object with data from previous one
+        #Else, create completely new object
+
+        print("=====BLAME====")
+        print(gitlab_get_file_blame_headers(repo_id, branch, item['path']).__dict__)
+
 # Only allows deleting from the "latest" branch (for submissions, manuscript is always master)
 def gitlab_delete_file(obj_type, obj, repo_id, file_path):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
