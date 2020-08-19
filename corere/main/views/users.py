@@ -38,7 +38,7 @@ def invite_assign_author(request, id=None):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 new_user = helper_create_user_and_invite(request, email, author_role)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
-                gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id)
+                # gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id) #done below
                 users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 manu_author_group.user_set.add(u)
@@ -252,9 +252,9 @@ def helper_create_user_and_invite(request, email, role):
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
-    #TODO: This can blow up if the email is already used as a username, but seems unlikely.
-    # Should increment if it errors or something.
-    new_user.username = email
+    
+    #Username can't be set to email as gitlab does not support those characters.
+    new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
     new_user.invited_by=request.user
     new_user.set_unusable_password()

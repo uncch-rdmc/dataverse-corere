@@ -41,7 +41,6 @@ def gitlab_update_user(django_user):
         gl_user.username = django_user.username
         gl_user.save()
 
-
 # https://docs.gitlab.com/ee/api/members.html#add-a-member-to-a-group-or-project
 # https://docs.gitlab.com/ee/api/members.html top has info on access levels
 # http://vlabs.iitb.ac.in/gitlab/help/user/permissions.md useful about access levels
@@ -55,7 +54,6 @@ def gitlab_add_user_to_repo(django_user, repo_id):
         #TODO: what happens if a member already exists?
         gl_project.members.create({'user_id': django_user.gitlab_id, 'access_level':
                                     gitlab.DEVELOPER_ACCESS})
-
 
 def gitlab_remove_user_from_repo(django_user, repo_id):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
@@ -91,23 +89,38 @@ def gitlab_create_submissions_repo(manuscript):
         manuscript.gitlab_submissions_path = path
         manuscript.save()
 
+def gitlab_create_submission_branch(manuscript, repo_id, branch, ref_branch):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    else:
+        gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+        gl_project = gl.projects.get(repo_id)
+
+        print(branch)
+        print(ref_branch)
+        print(repo_id)
+
+        branch = gl_project.branches.create({'branch': branch, 'ref': ref_branch})
+
 #TODO: What is the output of this?
 #TODO: I think this errors if there are no files in the repo? "tree not found"
-def gitlab_repo_get_file_folder_list(repo_id):
+def gitlab_repo_get_file_folder_list(repo_id, branch):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
         return [{"path":"fakefile1.png"},{"path":"fakefile2.png"}]
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         try:
-            repo_tree = gl.projects.get(repo_id).repository_tree(recursive=True)
+            repo_tree_full = gl.projects.get(repo_id).repository_tree(recursive=True, ref=branch)
+            repo_tree = [item for item in repo_tree_full if item['type'] != 'tree']
+
         except gitlab.GitlabGetError:
             logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
             repo_tree = []
         logger.debug(repo_tree)
         return repo_tree
         
-# Maybe need to allow branch specification?
-def gitlab_delete_file(repo_id, file_path):
+# Only allows deleting from the "latest" branch (for submissions, manuscript is always master)
+def gitlab_delete_file(obj_type, obj, repo_id, file_path):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
         return
     else:
@@ -115,10 +128,27 @@ def gitlab_delete_file(repo_id, file_path):
         gl.enable_debug()
         gl_project = gl.projects.get(repo_id)
 
-        #gotta get the file first
-        f = gl_project.files.get(file_path=file_path, ref='master')
-        #then delete
-        f.delete(commit_message='Delete file', branch='master')
+        if(obj_type == "manuscript"):
+            gl_project.files.delete(file_path=file_path, commit_message='Delete file', branch='master')
+        elif(obj_type == "submission"):
+            gl_project.files.delete(file_path=file_path, commit_message='Delete file', branch=helper_get_submission_branch_name(obj.manuscript))
+        else:
+            raise ValueError
+
+        
+
+#Delete the existing branch and make a new one off master (which has nothing?)
+#This code only works for submissions
+#How do we get branch name from repo id?
+def gitlab_submission_delete_all_files(submission):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+
+    current_branch = helper_get_submission_branch_name(submission.manuscript)
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    gl_project = gl.projects.get(submission.manuscript.gitlab_submissions_id)
+    gl_project.branches.delete(current_branch)
+    gl_project.branches.create({'branch': current_branch, 'ref': 'master'})
 
 #This is unused as we just specify master. It may have never gotten the latest/correct sha
 # def gitlab_get_latest_commit_sha(repo_id):
@@ -137,10 +167,13 @@ def gitlab_delete_file(repo_id, file_path):
 # This will be used by the end-user as well, as there is no way for admin to generate a normal access token via API (in April 2020)
 # The difference between an impersonation token and a normal access token is nothing for our user cases
 # The only difference is that the user can't see impersonation tokens via the UI, but CoReRe users should never see the UI anyways
-#
+
 # https://docs.gitlab.com/ee/api/users.html#create-an-impersonation-token
 def gitlab_generate_impersonation_token(self, token_user, timeout=1):
     pass
+
+#TODO: Find a better way to clarify that some helpers I expect to be called outside and some not.
+#Some say its not best practice to have these helpers in here, but I want all the gitlab functions clustered...
 
 #Does not actually access gitlab. One place that defines how we name things. Important for urls etc
 #NOTE: Don't use this after creation, as changes in corere project name do not propigate to gitlab
@@ -159,3 +192,8 @@ def _helper_generate_gitlab_project_path(id, title, is_sub):
     pro_path = re.sub(' ' ,'_' ,pro_name)
 
     return pro_path
+
+def helper_get_submission_branch_name(manuscript):
+    if(manuscript.manuscript_submissions.count() == 0):
+        raise ValueError
+    return "submission_" + str(manuscript.manuscript_submissions.count())

@@ -1,16 +1,28 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
+<script> 
+  //TODO: there's a better way than this
+  //Right now we directly swap a bunch of variables in the script still... (git_id, GIT_LAB_URL_ENV.. etc...)
+  obj_type = "{{obj_type}}"
+  obj_id = {{ obj_id }}
+  branch = "{{ repo_branch }}"
+</script>
 <script type="text/javascript">
-    //TODO: Fix multiple file upload issue
-    //      Fix large file upload issue
-    //      ... both are probably gitlab
+    //NOTE: This implementation causes 2 files base64 to be cached in browser at a time.
+    //      It can cause a fair bit of ballooning but its acceptable for now.
+    //      We can't just move the base64 gen to processing as then the async task isn't ready..
+    //
+    //      This looks very similar, although they are using a second library as well: https://github.com/FineUploader/fine-uploader/issues/1711
+    reader = null;
+    base64 = null;
     Dropzone.options.dropdiv = {
       url: "FAKE", //is replaced during file upload
       //method: "post",
       maxFilesize: 0, // MB
       autoProcessQueue: false, //We first need to convert the files to base 64
       timeout: 30000000,
+      parallelUploads: 1,
       headers: {
           'X-CSRFToken': "{{csrf_token}}"
       },
@@ -26,37 +38,29 @@
           if(path === undefined) { //fullPath is undefined if no folder
             path = file.name
           }
-          console.log(path)
-          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{git_id}}/repository/files/"+escape(path).replace('/','%2F')+"?branch=master&commit_message=hiz&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
+          this.options.url = "{{ GIT_LAB_URL_ENV }}/{{ GIT_API_VERSION_ENV }}/projects/{{git_id}}/repository/files/"+escape(path).replace('/','%2F')+"?branch="+branch+"&commit_message=file added&encoding=base64&private_token={{ GIT_PRIVATE_ADMIN_TOKEN_ENV_MAD_DELETE }}";
         });
         this.on('success', function() {
-          var args = Array.prototype.slice.call(arguments);
-          var title = document.getElementById("filesHeaderDiv");
-          title.style.visibility = 'visible';
-          var table = document.getElementById("filestable");
-          var row = table.insertRow(0);
-          var cell1 = row.insertCell(0);
-          var cell2 = row.insertCell(1);
-          cell1.innerHTML = "<a href='{{ file_delete_url }}" + args[1].file_path +"' >X</a>"
-          cell2.innerHTML = args[1].file_path
-          // Look at the output in you browser console, if there is something interesting
-          console.log(args);
+          var args = Array.prototype.slice.call(arguments);          
+          $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
+          this.processQueue(); //call the next file
         });
         this.on("addedfile", function(file){
           var _this=this,
               reader = new FileReader();
           reader.onload = function(event) {
               base64 = event.target.result.split(',')[1]; //Strip headers
-              _this.processQueue();
+              _this.processQueue(); //For some reason I have to call this here AND in sucess to get multiple files to process.
           };
           reader.readAsDataURL(file);
+          reader = null; //probably does nothing
         });
         //testing file paths
+        //TODO: Delete this?
         this.on("sending", function(file, xhr, data) {
-
             // if file is actually a folder
             if(file.fullPath){
-                console.log(file.fullPath)
+                //console.log(file.fullPath)
                 //data.append("fullPath", file.fullPath);
             }
         });
@@ -70,39 +74,5 @@
     };
 
 </script>
-{% comment %}
-
-=== OLD BEFORE "BREAK" ===
-
-DO NOW:
-- Understand how jupyter is talking to gitlab. It looks to be using actual git not the api. Is it using a token somewhere?
-- Get repo structure stuff working
-
-TODO:
-- How am I handling tokens and auth???
-  - Admin accounts can generate an impersonation token
-    - We can do that with a short time-limit
-    - Is there a way we can generate these tokens on request from dropzone?
-  - CI may have one-time tokens.... but will that work?
-    - no, read-only currently
-  - create all users as external with access only to specific repo
-  - Concerns:
-    - Users can use token to get more permissions.
-  - can we whitelist api endpoints on the gitlab server?
-    - can go further and whitelist endpoints from IPs other than the ones we trust
-  - can we limit the branches a user can commit to:
-    - yes, we can protect every branch besides the currently active one.
-
-- Decide on my method for adding files. 
-  - Probably want to create a branch per submission?
-    - Does that mean files added on the manuscript are directly added to master?
-    - Do we want to merge our branch each time or just leave it hanging?
-      - ... Do we need to merge to take advantage of storage efficiencies?
-  - Can we do something ahead of time to check md5s or whatever and limit the data being re-uploaded?
-  - We'll also probably have different folders for the "types" of files.
-  - There seems to be no way to add files without creating a commit.
-- I'll need to do functions before files are uploaded. Some things in the dropzone, some on object create actions, etc
-
-{% endcomment %}
 
 <div id="dropdiv" name="thing" class="dropzone dz-clickable" ></div>

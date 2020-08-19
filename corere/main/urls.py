@@ -9,8 +9,8 @@ urlpatterns = [
     path('manuscript/create', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
     path('manuscript/<int:id>/editfiles', classes.ManuscriptEditFilesView.as_view(), name="manuscript_editfiles"),
+    path('manuscript/<int:id>/fileslist', classes.ManuscriptFilesListView.as_view(),name="manuscript_fileslist"),
     path('manuscript/<int:id>/view', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
-
     path('manuscript/<int:id>/inviteassignauthor', users.invite_assign_author, name="manuscript_inviteassignauthor"),
     path('manuscript/<int:id>/unassignauthor/<int:user_id>', users.unassign_author, name="manuscript_unassignauthor"),
     path('manuscript/<int:id>/assigneditor', users.assign_editor, name="manuscript_assigneditor"),
@@ -26,6 +26,7 @@ urlpatterns = [
 
     path('submission/<int:id>/edit', classes.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
+    path('submission/<int:id>/fileslist', classes.SubmissionFilesListView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view', classes.SubmissionReadView.as_view(), name="submission_read"),
     path('submission/<int:submission_id>/createcuration', classes.CurationCreateView.as_view(), name="submission_createcuration"),
     path('submission/<int:submission_id>/createverification', classes.VerificationCreateView.as_view(), name="submission_createverification"),
@@ -33,6 +34,7 @@ urlpatterns = [
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note, name="submission_editnote"),
     path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note, name="submission_deletenote"),
     path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('submission/<int:submission_id>/deleteallfiles', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress', classes.SubmissionProgressView.as_view(), name="submission_progress"),
 
     path('curation/<int:id>/edit', classes.CurationEditView.as_view(), name="curation_edit"),
