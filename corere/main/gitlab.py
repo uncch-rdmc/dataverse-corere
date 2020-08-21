@@ -1,5 +1,5 @@
 import gitlab, logging, os, re, random, string
-from .models import * #TODO: Switch to GitlabFile
+from corere.main import models as m #TODO: Switch to GitlabFile
 from django.conf import settings
 logger = logging.getLogger(__name__)  
 
@@ -102,6 +102,17 @@ def gitlab_create_submission_branch(manuscript, repo_id, branch, ref_branch):
 
         branch = gl_project.branches.create({'branch': branch, 'ref': ref_branch})
 
+def gitlab_repo_get_commit_list(repo_id):
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return []
+    else:
+        gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+        try:
+            return gl.projects.get(repo_id).commits.list()
+        except gitlab.GitlabGetError:
+            logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
+            raise
+
 #TODO: I think this errors if there are no files in the repo? "tree not found"
 def gitlab_repo_get_file_folder_list(repo_id, branch):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
@@ -113,13 +124,16 @@ def gitlab_repo_get_file_folder_list(repo_id, branch):
             repo_tree = [item for item in repo_tree_full if item['type'] != 'tree']
         except gitlab.GitlabGetError:
             logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
-            repo_tree = []
+            raise
         logger.debug(repo_tree)
         return repo_tree
 
 #Gets info about a file without having to get the file itself
+#blame headers is the same as file headers
+#I just implemented it with blame because there was other useful looking info not in the header (which we ended up not using)
 def gitlab_get_file_blame_headers(repo_id, branch, file_path):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        #TODO: Change this to something else? Or Remove it?
         return [{"path":"fakefile1.png"},{"path":"fakefile2.png"}]
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
@@ -129,19 +143,83 @@ def gitlab_get_file_blame_headers(repo_id, branch, file_path):
 # For each new file: use path to get blame headers, use blame headers to get commit, use commit to get date
 #   - There's also a bunch of other data in each check we need
 
-#how am I "traveling backwards" through submissions? I probably need to number them?
-def helper_populate_gitlab_files_submission(repo, submission, current_version):
-    repo_list = gitlab_repo_get_file_folder_list(repo, manuscript)
-    print(repo_list)
-    for item in repo_list: 
-        #GitlabFile.objects.get(gitlab_sha1=item['id'], )
+#TODO: My new quandry is that we're going to call this a lot so I want it to be efficent
+#      So wantonly saving every object every time doesn't really cut it
+#TODO: Investigate getting all current and previous submission GitlabFiles in one query https://stackoverflow.com/questions/35314346/performance-optimization-on-django-update-or-create
+#TODO: Name of function could be better
+#TODO: Can we pass in the current dict list as we already got it once outside the place this is "normally" called?
+def helper_populate_gitlab_files_submission(repo_id, submission):
 
-        #If sha-1 + current_branch exists, continue (skip current loop iteration)
-        #If sha-1 + previous_branch exists, create new object with data from previous one
+    #Next:
+    # - Get branch title for loop
+    # - Go into repo loop and do searches looking for GitlabFiles in current/previous version that have the same sha-1
+
+    #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
+
+
+
+    cur_branch = "submission_" + str(submission.version)
+
+
+    #self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
+    gl_repo_list = gitlab_repo_get_file_folder_list(repo_id, cur_branch)
+
+    for item in gl_repo_list: #TODO: This naming is confusing, glf makes me think it came from gitlab
+
+        ask_gitlab = False
+        try:
+            cur_glf = m.GitlabFile.objects.get(gitlab_path=item['path'], parent_submission=submission)
+        except m.GitlabFile.DoesNotExist:
+            cur_glf = m.GitlabFile()
+            cur_glf.parent_submission = submission
+            cur_glf.gitlab_path = item["path"]
+            ask_gitlab = True
+
+        #path same but file or git metadata changed
+        #would be better if we could just check on file, but that's how it goes
+        if(ask_gitlab or cur_glf.gitlab_sha1 != item["id"]):
+
+            if('gl_commit_list' not in locals()):
+                gl_commit_list = gitlab_repo_get_commit_list(repo_id)
+            
+            gl_blame_head_resp = gitlab_get_file_blame_headers( repo_id , cur_branch, cur_glf.gitlab_path) #(repo_id, branch, file_path):
+
+            cur_glf.gitlab_sha256 = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Content-Sha256')
+            commit_id = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Last-Commit-Id') #TODO: It shouldn't be commit-id?
+            
+            #Here I need to get the commit for the file
+
+            #TODO: We could use short id instead for some efficiency: https://stackoverflow.com/a/43666212/1017302
+            
+            for c in gl_commit_list:
+                if(c.id == commit_id):
+                    commit = c
+                    break
+            
+            cur_glf.gitlab_date = commit.authored_date
+            cur_glf.gitlab_sha1 = commit.id
+
+        if(submission.version-1 > 0):
+            prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version-1)
+            try:
+                prev_glf = m.GitlabFile.objects.get(gitlab_path=item['path'], parent_submission=prev_submission.id)
+                cur_glf.tag = prev_glf.tag
+                cur_glf.description = prev_glf.description
+            except m.GitlabFile.DoesNotExist:
+                #set fields from item? seems wrong?
+                pass
+
+        cur_glf.save()
+
+        print(cur_glf.__dict__)
+
+        #If path + current_branch exists, continue (skip current loop iteration)
+        #If path + previous_branch exists, create new object with data from previous one
         #Else, create completely new object
+        #... In what case do I query gitlab for more info? When sha1 doesn't match?
 
-        print("=====BLAME====")
-        print(gitlab_get_file_blame_headers(repo_id, branch, item['path']).__dict__)
+        # print("=====BLAME====")
+        # print(gitlab_get_file_blame_headers(repo_id, branch, item['path']).__dict__)
 
 # Only allows deleting from the "latest" branch (for submissions, manuscript is always master)
 def gitlab_delete_file(obj_type, obj, repo_id, file_path):
@@ -201,8 +279,8 @@ def gitlab_generate_impersonation_token(self, token_user, timeout=1):
 
 #Does not actually access gitlab. One place that defines how we name things. Important for urls etc
 #NOTE: Don't use this after creation, as changes in corere project name do not propigate to gitlab
-def _helper_generate_gitlab_project_name(id, title, is_sub):
-    pro_name = str(id) + " - " + re.sub('[^a-zA-Z0-9_. -]' ,'' ,title)
+def _helper_generate_gitlab_project_name(manuscript_id, title, is_sub):
+    pro_name = str(manuscript_id) + " - " + re.sub('[^a-zA-Z0-9_. -]' ,'' ,title)
     if(is_sub):
         pro_name += " - Submissions"
     else:
@@ -217,6 +295,7 @@ def _helper_generate_gitlab_project_path(id, title, is_sub):
 
     return pro_path
 
+#TODO: This should probably use submission.version instead of doing count
 def helper_get_submission_branch_name(manuscript):
     if(manuscript.manuscript_submissions.count() == 0):
         raise ValueError

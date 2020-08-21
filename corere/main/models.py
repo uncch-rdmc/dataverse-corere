@@ -218,6 +218,8 @@ class Submission(AbstractCreateUpdateModel):
             except ValueError:
                 gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
 
+            self.version = Submission.objects.filter(manuscript=self.manuscript).count() + 1
+
         super(Submission, self).save(*args, **kwargs)
         branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
         if first_save:
@@ -516,15 +518,15 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 # See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
 # https://lukeplant.me.uk/blog/posts/avoid-django-genericforeignkey/
 
-FILE_TYPE_MANUSCRIPT = 'manuscript'
-FILE_TYPE_APPENDIX = 'appendix'
-FILE_TYPE_OTHER = 'other'
+# FILE_TYPE_MANUSCRIPT = 'manuscript'
+# FILE_TYPE_APPENDIX = 'appendix'
+# FILE_TYPE_OTHER = 'other'
 
-FILE_TYPE_CHOICES = (
-    (FILE_TYPE_MANUSCRIPT, 'Manuscript'),
-    (FILE_TYPE_APPENDIX, 'Appendix'),
-    (FILE_TYPE_OTHER, 'Other'),
-)
+# FILE_TYPE_CHOICES = (
+#     (FILE_TYPE_MANUSCRIPT, 'Manuscript'),
+#     (FILE_TYPE_APPENDIX, 'Appendix'),
+#     (FILE_TYPE_OTHER, 'Other'),
+# )
 
 # #TODO:THIS SHOULD BE DELETED, BUT MIGRATIONS EXPECT IT. DELETE ONCE GITLABFILE IS STABILIZED
 def manuscript_directory_path(instance, filename):
@@ -596,15 +598,18 @@ class GitlabFile(AbstractCreateUpdateModel):
     gitlab_sha1 = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64) #, default="", )
     gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
+    gitlab_date = models.DateTimeField()
     tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, blank=True, null=True) 
     description = models.TextField(max_length=1024, default="")
+
     #linked = models.BooleanField(default=True)
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
     parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
 
     class Meta:
         indexes = [
-            models.Index(fields=['gitlab_sha1', 'parent_submission']), #one index for the combination of the two fields
+            models.Index(fields=['gitlab_sha1', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
+            models.Index(fields=['gitlab_path', 'parent_submission']), #one index for the combination of the two fields
         ]
 
     @property
@@ -622,7 +627,7 @@ class GitlabFile(AbstractCreateUpdateModel):
         if(parents > 1):
             raise AssertionError("Multiple parents set")
 
-        super(Note, self).save(*args, **kwargs)
+        super(GitlabFile, self).save(*args, **kwargs)
 
 class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")

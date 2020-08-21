@@ -10,7 +10,7 @@ from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
-from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_submission_branch_name
+from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_submission_branch_name, helper_populate_gitlab_files_submission, _helper_generate_gitlab_project_name
 #from guardian.decorators import permission_required_or_404
 
 ##################### Class based object views #####################
@@ -292,6 +292,7 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
+        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
         return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
@@ -302,8 +303,9 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-            return render(request, self.template, {'read_only': self.read_only, 
-                'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+        #helper_populate_gitlab_files_submission(helper_get_submission_branch_name(self.object.manuscript), self.object) #TEST
+        return render(request, self.template, {'read_only': self.read_only, 
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = ReadOnlySubmissionForm
