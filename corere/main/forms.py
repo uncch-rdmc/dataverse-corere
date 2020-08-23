@@ -1,6 +1,6 @@
-import logging
+import logging, os
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput
 from .models import Manuscript, Submission, Verification, Curation, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
@@ -11,6 +11,7 @@ from django_select2.forms import Select2MultipleWidget
 from django.contrib.auth.models import Group
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
+from corere.main.gitlab import helper_get_submission_branch_name
 logger = logging.getLogger(__name__)
 
 class ReadOnlyFormMixin(forms.ModelForm):
@@ -29,6 +30,7 @@ class ReadOnlyFormMixin(forms.ModelForm):
 class GenericFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.form_tag = False
 
 class ManuscriptForm(forms.ModelForm):
     class Meta:
@@ -68,17 +70,51 @@ class GitlabFileForm(forms.ModelForm):
 
     def __init__ (self, *args, **kwargs):
         super(GitlabFileForm, self).__init__(*args, **kwargs)
+        self.fields['gitlab_path'].widget.object_instance = self.instance
         self.fields['gitlab_path'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+        self.fields['gitlab_date'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+
+class DownloadGitlabWidget(forms.widgets.TextInput):
+    #template_name = 'django/forms/widgets/textarea.html'
+    template_name = 'main/widget_download.html'
+
+    #Here get the kwarg from the form, need to include our token or whatever we are passing
+    #def get_form_kwargs()
+
+    # def __init__(self, *args, **kwargs):
+    #     self.gitlab_user_token = kwargs['attrs'].pop('gitlab_user_token')
+    #     super(DownloadGitlabWidget, self).__init__(*args, **kwargs)
+
+    def get_context(self, name, value, attrs):
+        try:
+            #TODO: If root changes in our env variables this will break
+            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
+                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"] #Token filled in by javascript, as user is a PITA to get here
+        except AttributeError as e:
+            self.download_url = ""
+        return {
+            'widget': {
+                'name': name,
+                'is_hidden': self.is_hidden,
+                'required': self.is_required,
+                'value': self.format_value(value),
+                'attrs': self.build_attrs(self.attrs, attrs),
+                'template_name': self.template_name,
+                'download_url': self.download_url 
+            },
+        }
 
 GitlabFileFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
     form=GitlabFileForm,
-    fields=('gitlab_path','tag','description'),
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_date'),
     extra=0,
-    can_delete=False
-    # max_num=1,
-    # min_num=1
+    can_delete=False,
+    widgets={
+        'gitlab_path': DownloadGitlabWidget(),
+        'description': TextInput() }
 )
 
 class GitlabFileFormSetHelper(FormHelper):
@@ -182,3 +218,25 @@ class EditUserForm(forms.ModelForm):
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+
+######Some example I'm not using
+#
+# class ToggleWidget(forms.widgets.CheckboxInput):
+#     class Media:
+#         css = {'all': (
+#             "https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css", )}
+#         js = ("https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js",)
+
+#     def __init__(self, attrs=None, *args, **kwargs):
+#         attrs = attrs or {}
+
+#         default_options = {
+#             'toggle': 'toggle',
+#             'offstyle': 'danger'
+#         }
+#         options = kwargs.get('options', {})
+#         default_options.update(options)
+#         for key, val in default_options.items():
+#             attrs['data-' + key] = val
+
+#         super().__init__(attrs)

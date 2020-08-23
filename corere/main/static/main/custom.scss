@@ -79,6 +79,13 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
         margin-top: -0.4em;
     }
 }
+//TODO: This doesn't do all we want
+.downloadgitlabwidget{
+    display: inline;
+    width: unset;
+}
+
+
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
 
