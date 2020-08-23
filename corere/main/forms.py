@@ -1,7 +1,7 @@
 import logging
 from django import forms
-from django.forms import ModelMultipleChoiceField
-from .models import Manuscript, Submission, Verification, Curation, User, Note
+from django.forms import ModelMultipleChoiceField, inlineformset_factory
+from .models import Manuscript, Submission, Verification, Curation, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
@@ -9,7 +9,8 @@ from django.conf import settings
 from . import constants as c
 from django_select2.forms import Select2MultipleWidget
 from django.contrib.auth.models import Group
-
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
 logger = logging.getLogger(__name__)
 
 class ReadOnlyFormMixin(forms.ModelForm):
@@ -24,6 +25,10 @@ class ReadOnlyFormMixin(forms.ModelForm):
     def save(self, *args, **kwargs):
         # do not do anything
         pass
+
+class GenericFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 class ManuscriptForm(forms.ModelForm):
     class Meta:
@@ -44,7 +49,6 @@ class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
-
 class SubmissionForm(forms.ModelForm):
     class Meta:
         model = Submission
@@ -56,9 +60,50 @@ class SubmissionForm(forms.ModelForm):
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
     pass
 
+#TODO: Move this
+class GitlabFileForm(forms.ModelForm):
+    class Meta:
+        model = GitlabFile
+        fields = ['gitlab_path']
+
+    def __init__ (self, *args, **kwargs):
+        super(GitlabFileForm, self).__init__(*args, **kwargs)
+        self.fields['gitlab_path'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+
+GitlabFileFormSet = inlineformset_factory(
+    Submission,
+    GitlabFile,
+    form=GitlabFileForm,
+    fields=('gitlab_path','tag','description'),
+    extra=0,
+    can_delete=False
+    # max_num=1,
+    # min_num=1
+)
+
+class GitlabFileFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'
+        self.form_tag = False
+        #self.field_template = 'bootstrap4/layout/inline_field.html'
+        self.layout = Layout(
+            Fieldset(
+            'gitlab_path',
+            'tag',
+            'description',
+            ),
+            ButtonHolder(
+                Submit('submit', 'Submit', css_class='button white')
+            )
+        )
+        self.render_required_fields = True
+
 #No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
-class SubmissionFilesForm(ReadOnlyFormMixin, SubmissionForm):
+class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
     class Meta:
         model = Submission
         fields = []#['title','doi','open_data']#,'authors']

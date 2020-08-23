@@ -156,10 +156,7 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
 
     #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
 
-
-
     cur_branch = "submission_" + str(submission.version)
-
 
     #self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
     gl_repo_list = gitlab_repo_get_file_folder_list(repo_id, cur_branch)
@@ -178,17 +175,13 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
         #path same but file or git metadata changed
         #would be better if we could just check on file, but that's how it goes
         if(ask_gitlab or cur_glf.gitlab_sha1 != item["id"]):
-
             if('gl_commit_list' not in locals()):
                 gl_commit_list = gitlab_repo_get_commit_list(repo_id)
             
             gl_blame_head_resp = gitlab_get_file_blame_headers( repo_id , cur_branch, cur_glf.gitlab_path) #(repo_id, branch, file_path):
-
             cur_glf.gitlab_sha256 = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Content-Sha256')
             commit_id = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Last-Commit-Id') #TODO: It shouldn't be commit-id?
             
-            #Here I need to get the commit for the file
-
             #TODO: We could use short id instead for some efficiency: https://stackoverflow.com/a/43666212/1017302
             
             for c in gl_commit_list:
@@ -217,9 +210,6 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
         #If path + previous_branch exists, create new object with data from previous one
         #Else, create completely new object
         #... In what case do I query gitlab for more info? When sha1 doesn't match?
-
-        # print("=====BLAME====")
-        # print(gitlab_get_file_blame_headers(repo_id, branch, item['path']).__dict__)
 
 # Only allows deleting from the "latest" branch (for submissions, manuscript is always master)
 def gitlab_delete_file(obj_type, obj, repo_id, file_path):

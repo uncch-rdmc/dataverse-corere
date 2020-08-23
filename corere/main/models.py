@@ -604,7 +604,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
     #linked = models.BooleanField(default=True)
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
-    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
+    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_manuscript')
 
     class Meta:
         indexes = [

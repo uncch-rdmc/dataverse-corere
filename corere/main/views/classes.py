@@ -38,6 +38,7 @@ class GenericCorereObjectView(View):
     notes = [] 
     repo_dict_list = []
     file_delete_url = None
+    helper = GenericFormSetHelper()
 
     def dispatch(self, request, *args, **kwargs): 
         try:
@@ -47,7 +48,7 @@ class GenericCorereObjectView(View):
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     def post(self, request, *args, **kwargs):
@@ -60,7 +61,7 @@ class GenericCorereObjectView(View):
         else:
             logger.debug(form.errors)
             #TODO: Pass back form errors
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     ######## Custom class functions. You may want to override some of these. #########
@@ -218,7 +219,7 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master"})
 
@@ -282,18 +283,33 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
+#TODO: Do we need the gitlab mixin? probably?
+#TODO: Do we need all the parameters being passed?
+class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+    form = GitlabFileFormSet
+    #template = 'main/not_form_upload_files.html'
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
+    helper=GitlabFileFormSetHelper()
+
+    def get(self, request, *args, **kwargs):
+        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
+
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = SubmissionFilesForm
+class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+    form = SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
-        return render(request, self.template, {'form': self.form, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
 

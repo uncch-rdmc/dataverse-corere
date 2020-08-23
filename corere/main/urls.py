@@ -26,6 +26,7 @@ urlpatterns = [
 
     path('submission/<int:id>/edit', classes.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
+    path('submission/<int:id>/uploadfiles', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path('submission/<int:id>/fileslist', classes.SubmissionFilesListView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view', classes.SubmissionReadView.as_view(), name="submission_read"),
     path('submission/<int:submission_id>/createcuration', classes.CurationCreateView.as_view(), name="submission_createcuration"),
