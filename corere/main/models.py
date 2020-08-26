@@ -595,10 +595,11 @@ FILE_TAG_CHOICES = (
 # - Blob id as well as sha? Sha should be 64
 class GitlabFile(AbstractCreateUpdateModel):
     #we get both shas because the sha1 is returned with one query 
-    gitlab_sha1 = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
+    gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64) #, default="", )
     gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
     gitlab_date = models.DateTimeField()
+    gitlab_size = models.IntegerField()
     tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, blank=True, null=True) 
     description = models.TextField(max_length=1024, default="")
 
@@ -608,7 +609,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
     class Meta:
         indexes = [
-            models.Index(fields=['gitlab_sha1', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
+            models.Index(fields=['gitlab_blob_id', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
             models.Index(fields=['gitlab_path', 'parent_submission']), #one index for the combination of the two fields
         ]
 

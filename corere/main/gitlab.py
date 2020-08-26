@@ -102,13 +102,15 @@ def gitlab_create_submission_branch(manuscript, repo_id, branch, ref_branch):
 
         branch = gl_project.branches.create({'branch': branch, 'ref': ref_branch})
 
-def gitlab_repo_get_commit_list(repo_id):
+def gitlab_repo_get_commit_list(repo_id, branch):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
         return []
     else:
         gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
         try:
-            return gl.projects.get(repo_id).commits.list()
+            commits = gl.projects.get(repo_id).commits
+            print(commits)
+            return gl.projects.get(repo_id).commits.list(all=True, query_parameters={'ref_name': branch})
         except gitlab.GitlabGetError:
             logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
             raise
@@ -144,7 +146,7 @@ def gitlab_get_file_blame_headers(repo_id, branch, file_path):
 #   - There's also a bunch of other data in each check we need
 
 #TODO: My new quandry is that we're going to call this a lot so I want it to be efficent
-#      So wantonly saving every object every time doesn't really cut it
+#      So saving every object every time doesn't really cut it
 #TODO: Investigate getting all current and previous submission GitlabFiles in one query https://stackoverflow.com/questions/35314346/performance-optimization-on-django-update-or-create
 #TODO: Name of function could be better
 #TODO: Can we pass in the current dict list as we already got it once outside the place this is "normally" called?
@@ -157,29 +159,37 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
     #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
 
     cur_branch = "submission_" + str(submission.version)
-
-    #self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
     gl_repo_list = gitlab_repo_get_file_folder_list(repo_id, cur_branch)
+    cur_sub_files = m.GitlabFile.objects.filter(parent_submission=submission)
+    #These have been moved outside for efficiency, though I'm not sure its actually caching
+    if(submission.version-1 > 0):
+        prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version-1)
+        prev_sub_files = m.GitlabFile.objects.filter(parent_submission=prev_submission.id)
 
     for item in gl_repo_list: #TODO: This naming is confusing, glf makes me think it came from gitlab
 
         ask_gitlab = False
         try:
-            cur_glf = m.GitlabFile.objects.get(gitlab_path=item['path'], parent_submission=submission)
+            cur_file = cur_sub_files.get(gitlab_path=item['path'])
         except m.GitlabFile.DoesNotExist:
-            cur_glf = m.GitlabFile()
-            cur_glf.parent_submission = submission
-            cur_glf.gitlab_path = item["path"]
+            cur_file = m.GitlabFile()
+            cur_file.parent_submission = submission
+            cur_file.gitlab_path = item["path"]
             ask_gitlab = True
 
         #path same but file or git metadata changed
         #would be better if we could just check on file, but that's how it goes
-        if(ask_gitlab or cur_glf.gitlab_sha1 != item["id"]):
+        if(ask_gitlab or cur_file.gitlab_blob_id != item["id"]): #TODO: sha1 will never be item id, as sha1 is currently commit id!!!!!
+            commit = None
             if('gl_commit_list' not in locals()):
-                gl_commit_list = gitlab_repo_get_commit_list(repo_id)
+                gl_commit_list = gitlab_repo_get_commit_list(repo_id, cur_branch)
+                print("GL COMMIT LIST")
+                print(gl_commit_list)
             
-            gl_blame_head_resp = gitlab_get_file_blame_headers( repo_id , cur_branch, cur_glf.gitlab_path) #(repo_id, branch, file_path):
-            cur_glf.gitlab_sha256 = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Content-Sha256')
+            gl_blame_head_resp = gitlab_get_file_blame_headers( repo_id , cur_branch, cur_file.gitlab_path) #(repo_id, branch, file_path):
+            print(gl_blame_head_resp.__dict__)
+            cur_file.gitlab_sha256 = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Content-Sha256')
+            cur_file.gitlab_size = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Size')
             commit_id = gl_blame_head_resp.__dict__.get('headers').get('X-Gitlab-Last-Commit-Id') #TODO: It shouldn't be commit-id?
             
             #TODO: We could use short id instead for some efficiency: https://stackoverflow.com/a/43666212/1017302
@@ -187,24 +197,51 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
             for c in gl_commit_list:
                 if(c.id == commit_id):
                     commit = c
+                    print("COMMIT")
+                    print(commit.id)
                     break
             
-            cur_glf.gitlab_date = commit.authored_date
-            cur_glf.gitlab_sha1 = commit.id
+            cur_file.gitlab_date = commit.authored_date
+            cur_file.gitlab_blob_id = item['id']
 
         if(submission.version-1 > 0):
-            prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version-1)
             try:
-                prev_glf = m.GitlabFile.objects.get(gitlab_path=item['path'], parent_submission=prev_submission.id)
-                cur_glf.tag = prev_glf.tag
-                cur_glf.description = prev_glf.description
+                prev_file = prev_sub_files.get(gitlab_path=item['path'])
+                cur_file.tag = prev_file.tag
+                cur_file.description = prev_file.description
             except m.GitlabFile.DoesNotExist:
                 #set fields from item? seems wrong?
                 pass
 
-        cur_glf.save()
+        cur_file.save()
 
-        print(cur_glf.__dict__)
+        #print(cur_file.__dict__)
+
+    #TODO: maybe combine this with the previous iteration for some additional efficiency
+    
+    print("gl_repo_list")
+    print(gl_repo_list)
+    print("==============")
+    for f in cur_sub_files:
+        print("FILE")
+        print(f.__dict__)
+        print("==============")
+        exists = False
+        for item in gl_repo_list:
+            print("FILE IN GITLAB")
+            print(item)
+            print("==============")
+            if(f.gitlab_blob_id == item["id"]):
+                exists = True
+                break   
+        if (exists == False):
+            print("DELETE")
+            print("==============")
+            print("==============")
+            #print(f.__dict__)
+            #Our file for the current submission was deleted in gitlab, so delete in CoReRe
+            f.delete()
+
 
         #If path + current_branch exists, continue (skip current loop iteration)
         #If path + previous_branch exists, create new object with data from previous one

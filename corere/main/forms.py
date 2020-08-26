@@ -73,6 +73,7 @@ class GitlabFileForm(forms.ModelForm):
         self.fields['gitlab_path'].widget.object_instance = self.instance
         self.fields['gitlab_path'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
         self.fields['gitlab_sha256'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+        self.fields['gitlab_size'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
         self.fields['gitlab_date'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
 
 class DownloadGitlabWidget(forms.widgets.TextInput):
@@ -109,7 +110,7 @@ GitlabFileFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
     form=GitlabFileForm,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_date'),
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
     extra=0,
     can_delete=False,
     widgets={
