@@ -81,8 +81,14 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
 }
 //TODO: This doesn't do all we want
 .downloadgitlabwidget{
-    display: inline;
+    display: unset;
     width: unset;
+    flex-grow: 1;
+    margin-left:10px;
+}
+
+.downloadgitlabspan{
+    display: flex;
 }
 
 
