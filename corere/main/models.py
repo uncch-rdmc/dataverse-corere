@@ -414,7 +414,7 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('add_authors_on_manuscript', group_manuscript_editor, self) 
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_author, self)
+            #assign_perm('change_manuscript', group_manuscript_author, self)
             assign_perm('view_manuscript', group_manuscript_author, self) 
             assign_perm('add_authors_on_manuscript', group_manuscript_author, self) 
             assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
