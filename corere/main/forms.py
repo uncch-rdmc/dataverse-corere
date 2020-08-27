@@ -62,7 +62,6 @@ class SubmissionForm(forms.ModelForm):
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
     pass
 
-#TODO: Move this
 class GitlabFileForm(forms.ModelForm):
     class Meta:
         model = GitlabFile
@@ -71,10 +70,26 @@ class GitlabFileForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(GitlabFileForm, self).__init__(*args, **kwargs)
         self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
-        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
-        self.fields['gitlab_size'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
-        self.fields['gitlab_date'].widget.attrs['readonly'] = True #May be able to use helper "InlineField" instead
+        self.fields['gitlab_path'].widget.attrs['readonly'] = True
+        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True
+        self.fields['gitlab_size'].widget.attrs['readonly'] = True
+        self.fields['gitlab_date'].widget.attrs['readonly'] = True
+
+class GitlabReadOnlyFileForm(forms.ModelForm):
+    class Meta:
+        model = GitlabFile
+        fields = ['gitlab_path']
+
+    def __init__ (self, *args, **kwargs):
+        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
+        self.fields['gitlab_path'].widget.object_instance = self.instance
+        self.fields['gitlab_path'].widget.attrs['readonly'] = True
+        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True
+        self.fields['gitlab_size'].widget.attrs['readonly'] = True
+        self.fields['gitlab_date'].widget.attrs['readonly'] = True
+        # All fields read only
+        self.fields['tag'].widget.attrs['readonly'] = True
+        self.fields['description'].widget.attrs['readonly'] = True
 
 class DownloadGitlabWidget(forms.widgets.TextInput):
     #template_name = 'django/forms/widgets/textarea.html'
@@ -82,10 +97,6 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
 
     #Here get the kwarg from the form, need to include our token or whatever we are passing
     #def get_form_kwargs()
-
-    # def __init__(self, *args, **kwargs):
-    #     self.gitlab_user_token = kwargs['attrs'].pop('gitlab_user_token')
-    #     super(DownloadGitlabWidget, self).__init__(*args, **kwargs)
 
     def get_context(self, name, value, attrs):
         try:
@@ -111,6 +122,18 @@ GitlabFileFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
     form=GitlabFileForm,
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+    extra=0,
+    can_delete=False,
+    widgets={
+        'gitlab_path': DownloadGitlabWidget(),
+        'description': TextInput() }
+)
+
+GitlabReadOnlyFileFormSet = inlineformset_factory(
+    Submission,
+    GitlabFile,
+    form=GitlabReadOnlyFileForm,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
     extra=0,
     can_delete=False,

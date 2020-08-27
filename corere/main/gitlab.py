@@ -148,16 +148,10 @@ def gitlab_get_file_blame_headers(repo_id, branch, file_path):
 # For each new file: use path to get blame headers, use blame headers to get commit, use commit to get date
 #   - There's also a bunch of other data in each check we need
 
-#TODO: My new quandry is that we're going to call this a lot so I want it to be efficent
-#      So saving every object every time doesn't really cut it
 #TODO: Investigate getting all current and previous submission GitlabFiles in one query https://stackoverflow.com/questions/35314346/performance-optimization-on-django-update-or-create
 #TODO: Name of function could be better
 #TODO: Can we pass in the current dict list as we already got it once outside the place this is "normally" called?
 def helper_populate_gitlab_files_submission(repo_id, submission):
-
-    #Next:
-    # - Get branch title for loop
-    # - Go into repo loop and do searches looking for GitlabFiles in current/previous version that have the same sha-1
 
     #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
 
@@ -169,7 +163,7 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
         prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version-1)
         prev_sub_files = m.GitlabFile.objects.filter(parent_submission=prev_submission.id)
 
-    for item in gl_repo_list: #TODO: This naming is confusing, glf makes me think it came from gitlab
+    for item in gl_repo_list:
 
         ask_gitlab = False
         try:

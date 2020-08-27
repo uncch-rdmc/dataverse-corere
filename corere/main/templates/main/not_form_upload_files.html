@@ -1,8 +1,10 @@
 {% extends "main/layout.html" %}
 {% block content %}
-File Upload: {{object_title}}
+File Access: {{object_title}}
 <br>
+{% if not read_only %}
 {% include "main/file_upload.html" %}
+{% endif %}
 <input type=button value="Back" onClick="javascript:history.go(-1);">
 {% include "main/file_list.html" %}
 <script>
