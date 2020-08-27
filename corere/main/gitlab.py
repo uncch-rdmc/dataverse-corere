@@ -124,9 +124,12 @@ def gitlab_repo_get_file_folder_list(repo_id, branch):
         try:
             repo_tree_full = gl.projects.get(repo_id).repository_tree(recursive=True, ref=branch)
             repo_tree = [item for item in repo_tree_full if item['type'] != 'tree']
-        except gitlab.GitlabGetError:
-            logger.warning("Unable to access gitlab for gitlab_repo_get_file_folder_list")
-            raise
+        except gitlab.GitlabGetError as e:
+            if(str(e) == "404: 404 Tree Not Found"):
+                return [] #when the repo is newly created there is no branch so it errors
+            else:
+                logger.error("Unable to access gitlab for gitlab_repo_get_file_folder_list")
+                raise
         logger.debug(repo_tree)
         return repo_tree
 

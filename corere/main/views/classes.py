@@ -221,7 +221,11 @@ class ManuscriptEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master"})
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master",
+            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
+            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+
+#MAD: TOMORROW FIX DOWNLOAD URLS ERRORING ABOVE
 
 #Used for ajax refreshing in EditFiles
 class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
@@ -312,7 +316,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)})
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
+            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
 
 #Used for ajax refreshing in EditFiles
 class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):

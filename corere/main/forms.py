@@ -90,8 +90,9 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
     def get_context(self, name, value, attrs):
         try:
             #TODO: If root changes in our env variables this will break
+            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
             self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
-                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"] #Token filled in by javascript, as user is a PITA to get here
+                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
         except AttributeError as e:
             self.download_url = ""
         return {
