@@ -515,67 +515,6 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 ####################################################
 
-# See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
-# https://lukeplant.me.uk/blog/posts/avoid-django-genericforeignkey/
-
-# FILE_TYPE_MANUSCRIPT = 'manuscript'
-# FILE_TYPE_APPENDIX = 'appendix'
-# FILE_TYPE_OTHER = 'other'
-
-# FILE_TYPE_CHOICES = (
-#     (FILE_TYPE_MANUSCRIPT, 'Manuscript'),
-#     (FILE_TYPE_APPENDIX, 'Appendix'),
-#     (FILE_TYPE_OTHER, 'Other'),
-# )
-
-# #TODO:THIS SHOULD BE DELETED, BUT MIGRATIONS EXPECT IT. DELETE ONCE GITLABFILE IS STABILIZED
-def manuscript_directory_path(instance, filename):
-    return 'manuscript_{0}/{1}_{2}/{3}'.format(instance.owner.manuscript.uuid, instance.owner._meta.model_name, instance.owner.id, filename)
-
-# class File(AbstractCreateUpdateModel):
-#     file = models.FileField(upload_to=manuscript_directory_path, blank=True) #TODO: Redo path, currently blows up because it uses manuscript uuid
-#     type = models.CharField(max_length=12, choices=FILE_TYPE_CHOICES, default=FILE_TYPE_OTHER) 
-#     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-
-#     owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
-#     owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
-#     owner_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE)
-
-#     @property
-#     def owner(self):
-#         if self.owner_submission_id is not None:
-#             return self.owner_submission
-#         if self.owner_curation_id is not None:
-#             return self.owner_curation
-#         if self.owner_verification_id is not None:
-#             return self.owner_verification
-#         raise AssertionError("Neither 'owner_submission', 'owner_curation' or 'owner_verification' is set")
-
-#     def save(self, *args, **kwargs):
-#         owners = 0
-#         owners += (self.owner_submission_id is not None)
-#         owners += (self.owner_curation_id is not None)
-#         owners += (self.owner_verification_id is not None)
-#         if(owners > 1):
-#             raise AssertionError("Multiple owners set")
-#         super(File, self).save(*args, **kwargs)
-
-# #TODO:
-# # - Multiple files?
-# #   - Instead can I just allow note duplication?
-# # - Scoping based upon permissions? groups?]
-# #   - I want to say on creation which types of users can view the note
-# #   - Could add object based view permissions to the groups? (e.g. these groups: c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-# #       - ... so on create, assign 1-4 perms per note
-# #       - Let's think about how we'll be using this:
-# #           - Creating notes: assing 'view note' object based perm to each group that has access
-# #           - Displaying notes: Just call get_objects_for_user
-# #               - ... not true when displaing notes connected to specific object. Gotta get all notes and check perms on each
-# #           - Displaying scope of notes: use perm and get each group associated (reverse m2m lookup)
-# # I should also be thinking about this in the context of tags?
-
-#code, data, documentation
-
 FILE_TAG_CODE = 'code'
 FILE_TAG_DATA = 'data'
 FILE_TAG_DOCUMENTATION = 'documentation'
@@ -586,15 +525,7 @@ FILE_TAG_CHOICES = (
     (FILE_TAG_DOCUMENTATION, 'documentation'),
 )
 
-
-#TODO:
-# - Should SHA be an index? Multiple files can exist with the same SHA
-# - How do I handle created date if we recreate these objects for each submission?
-#    - The real question is what date do the archivists care about? Do we get the date from gitlab?
-# - Download url?
-# - Blob id as well as sha? Sha should be 64
 class GitlabFile(AbstractCreateUpdateModel):
-    #we get both shas because the sha1 is returned with one query 
     gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64) #, default="", )
     gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
