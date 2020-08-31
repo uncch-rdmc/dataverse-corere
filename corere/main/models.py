@@ -195,6 +195,7 @@ class Submission(AbstractCreateUpdateModel):
     #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
     _status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
+    version = models.IntegerField()
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     class Meta:
@@ -216,6 +217,8 @@ class Submission(AbstractCreateUpdateModel):
                 gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
             except ValueError:
                 gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
+
+            self.version = Submission.objects.filter(manuscript=self.manuscript).count() + 1
 
         super(Submission, self).save(*args, **kwargs)
         branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
@@ -411,7 +414,7 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('add_authors_on_manuscript', group_manuscript_editor, self) 
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_author, self)
+            #assign_perm('change_manuscript', group_manuscript_author, self)
             assign_perm('view_manuscript', group_manuscript_author, self) 
             assign_perm('add_authors_on_manuscript', group_manuscript_author, self) 
             assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
@@ -512,64 +515,51 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 ####################################################
 
-# See this blog post for info on why these models don't use GenericForeign Key (implementation #1 chosen)
-# https://lukeplant.me.uk/blog/posts/avoid-django-genericforeignkey/
+FILE_TAG_CODE = 'code'
+FILE_TAG_DATA = 'data'
+FILE_TAG_DOCUMENTATION = 'documentation'
 
-FILE_TYPE_MANUSCRIPT = 'manuscript'
-FILE_TYPE_APPENDIX = 'appendix'
-FILE_TYPE_OTHER = 'other'
-
-FILE_TYPE_CHOICES = (
-    (FILE_TYPE_MANUSCRIPT, 'Manuscript'),
-    (FILE_TYPE_APPENDIX, 'Appendix'),
-    (FILE_TYPE_OTHER, 'Other'),
+FILE_TAG_CHOICES = (
+    (FILE_TAG_CODE, 'code'),
+    (FILE_TAG_DATA, 'data'),
+    (FILE_TAG_DOCUMENTATION, 'documentation'),
 )
 
-#TODO: This needs rework. Do we still need manuscript UUID? Does instance.owner.id work? Should we be using slugs?
-def manuscript_directory_path(instance, filename):
-    return 'manuscript_{0}/{1}_{2}/{3}'.format(instance.owner.manuscript.uuid, instance.owner._meta.model_name, instance.owner.id, filename)
+class GitlabFile(AbstractCreateUpdateModel):
+    gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
+    gitlab_sha256 = models.CharField(max_length=64) #, default="", )
+    gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
+    gitlab_date = models.DateTimeField()
+    gitlab_size = models.IntegerField()
+    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, blank=True, null=True) 
+    description = models.TextField(max_length=1024, default="")
 
-class File(AbstractCreateUpdateModel):
-    file = models.FileField(upload_to=manuscript_directory_path, blank=True) #TODO: Redo path, currently blows up because it uses manuscript uuid
-    type = models.CharField(max_length=12, choices=FILE_TYPE_CHOICES, default=FILE_TYPE_OTHER) 
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    #linked = models.BooleanField(default=True)
+    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
+    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_manuscript')
 
-    owner_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE)
-    owner_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE)
-    owner_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE)
+    class Meta:
+        indexes = [
+            models.Index(fields=['gitlab_blob_id', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
+            models.Index(fields=['gitlab_path', 'parent_submission']), #one index for the combination of the two fields
+        ]
 
     @property
-    def owner(self):
-        if self.owner_submission_id is not None:
-            return self.owner_submission
-        if self.owner_curation_id is not None:
-            return self.owner_curation
-        if self.owner_verification_id is not None:
-            return self.owner_verification
-        raise AssertionError("Neither 'owner_submission', 'owner_curation' or 'owner_verification' is set")
+    def parent(self):
+        if self.parent_submission_id is not None:
+            return self.parent_submission
+        if self.parent_manuscript_id is not None:
+            return self.parent_submission
+        raise AssertionError("Neither 'parent_submission', 'parent_curation', 'parent_verification' or 'parent_file' is set")
 
     def save(self, *args, **kwargs):
-        owners = 0
-        owners += (self.owner_submission_id is not None)
-        owners += (self.owner_curation_id is not None)
-        owners += (self.owner_verification_id is not None)
-        if(owners > 1):
-            raise AssertionError("Multiple owners set")
-        super(File, self).save(*args, **kwargs)
+        parents = 0
+        parents += (self.parent_submission_id is not None)
+        parents += (self.parent_manuscript_id is not None)
+        if(parents > 1):
+            raise AssertionError("Multiple parents set")
 
-#TODO:
-# - Multiple files?
-#   - Instead can I just allow note duplication?
-# - Scoping based upon permissions? groups?]
-#   - I want to say on creation which types of users can view the note
-#   - Could add object based view permissions to the groups? (e.g. these groups: c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-#       - ... so on create, assign 1-4 perms per note
-#       - Let's think about how we'll be using this:
-#           - Creating notes: assing 'view note' object based perm to each group that has access
-#           - Displaying notes: Just call get_objects_for_user
-#               - ... not true when displaing notes connected to specific object. Gotta get all notes and check perms on each
-#           - Displaying scope of notes: use perm and get each group associated (reverse m2m lookup)
-# I should also be thinking about this in the context of tags?
+        super(GitlabFile, self).save(*args, **kwargs)
 
 class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")
@@ -578,7 +568,7 @@ class Note(AbstractCreateUpdateModel):
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_file = models.ForeignKey(File, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_file = models.ForeignKey(GitlabFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE)
@@ -634,7 +624,6 @@ class Note(AbstractCreateUpdateModel):
 @receiver(post_save, sender=Submission, dispatch_uid="add_history_info_submission")
 @receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
 @receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
-@receiver(post_save, sender=File, dispatch_uid="add_history_info_file")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
 def add_history_info(sender, instance, **kwargs):
     try:

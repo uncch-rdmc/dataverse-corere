@@ -124,8 +124,9 @@ class ManuscriptJson(CorereBaseDatatableView):
             if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
                 avail_buttons.append('editManuscriptFiles')
-            if(has_transition_perm(manuscript.view_noop, user)):
+            elif(has_transition_perm(manuscript.view_noop, user)):
                 avail_buttons.append('viewManuscript')
+                avail_buttons.append('viewManuscriptFiles')
             if(has_transition_perm(manuscript.begin, user)):
                 avail_buttons.append('progressManuscript')
             #TODO: add launchNotebook once integration is better
@@ -214,8 +215,9 @@ class SubmissionJson(CorereBaseDatatableView):
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
                 avail_buttons.append('editSubmissionFiles')
-            if(has_transition_perm(submission.view_noop, user)):
+            elif(has_transition_perm(submission.view_noop, user)):
                 avail_buttons.append('viewSubmission')
+                avail_buttons.append('viewSubmissionFiles')
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.add_curation_noop, user)):
@@ -223,7 +225,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                     avail_buttons.append('editCuration')
-                if(has_transition_perm(submission.submission_curation.view_noop, user)):
+                elif(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
                 if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressCuration')
@@ -234,7 +236,7 @@ class SubmissionJson(CorereBaseDatatableView):
             try:
                 if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                     avail_buttons.append('editVerification')
-                if(has_transition_perm(submission.submission_verification.view_noop, user)):
+                elif(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
                 if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressVerification')

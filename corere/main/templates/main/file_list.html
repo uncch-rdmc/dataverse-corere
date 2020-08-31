@@ -15,6 +15,7 @@
     <table id="filestable">
         {% for file in repo_dict_list %}
         <tr>
+            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{download_url_p1}}{{ file.path|always_escape }}{{download_url_p2}}')"><span class="fas fa-file-download"></span></button></td>
             {% if not read_only %}
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ file.path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td>
             {% comment %} <td> <a href="{{ file_delete_url }}{{ file.path|always_escape }}">X</a> </td> {% endcomment %}

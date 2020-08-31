@@ -3,14 +3,15 @@ from django.urls import path
 from corere.main.views import datatables, main, users, classes
 
 urlpatterns = [ 
-    path('', main.index),
+    path('', main.index, name="index"),
     path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"),
     path('manuscript/<int:manuscript_id>/submission_table', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
-    path('manuscript/<int:id>/editfiles', classes.ManuscriptEditFilesView.as_view(), name="manuscript_editfiles"),
+    path('manuscript/<int:id>/uploadfiles', classes.ManuscriptUploadFilesView.as_view(), name="manuscript_uploadfiles"),
     path('manuscript/<int:id>/fileslist', classes.ManuscriptFilesListView.as_view(),name="manuscript_fileslist"),
     path('manuscript/<int:id>/view', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
+    path('manuscript/<int:id>/viewfiles', classes.ManuscriptReadFilesView.as_view(), name="manuscript_readfiles"),
     path('manuscript/<int:id>/inviteassignauthor', users.invite_assign_author, name="manuscript_inviteassignauthor"),
     path('manuscript/<int:id>/unassignauthor/<int:user_id>', users.unassign_author, name="manuscript_unassignauthor"),
     path('manuscript/<int:id>/assigneditor', users.assign_editor, name="manuscript_assigneditor"),
@@ -26,8 +27,10 @@ urlpatterns = [
 
     path('submission/<int:id>/edit', classes.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
+    path('submission/<int:id>/uploadfiles', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path('submission/<int:id>/fileslist', classes.SubmissionFilesListView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view', classes.SubmissionReadView.as_view(), name="submission_read"),
+    path('submission/<int:id>/viewfiles', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
     path('submission/<int:submission_id>/createcuration', classes.CurationCreateView.as_view(), name="submission_createcuration"),
     path('submission/<int:submission_id>/createverification', classes.VerificationCreateView.as_view(), name="submission_createverification"),
     path('submission/<int:submission_id>/createnote', main.edit_note, name="submission_createnote"),

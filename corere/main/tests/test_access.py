@@ -28,6 +28,7 @@ class TestUrls(TestCase):
         #Create needed objects. Maybe should be a fixture.
         self.manuscript = m.Manuscript()
         self.manuscript._status = m.MANUSCRIPT_AWAITING_INITIAL
+        self.manuscript.gitlab_manuscript_path = ""
         self.manuscript.save()
 
         local.user = None
@@ -56,9 +57,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_edit", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 302)
@@ -122,9 +123,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_edit", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 404)
@@ -200,9 +201,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get(reverse("manuscript_edit", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id}))
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("manuscript_editfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("manuscript_uploadfiles", kwargs={'id':self.manuscript.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("manuscript_read", kwargs={'id':self.manuscript.id}))
         self.assertEqual(resp.status_code, 200)
@@ -562,6 +563,7 @@ class TestUrls(TestCase):
 
     #all roles at once makes it a bit easier to test access, tho its possible it'd overlook a role based access bug.
     @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
+    @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
     def test_submission_curation_verification_urls_logged_in_all_roles(self, mock_gitlab_file_list):
         local.user = self.user #Not sure if nessecary 

@@ -84,6 +84,9 @@
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "manuscript/"+manuscript_id+"/edit";
                                         },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
                                         enabled: false
                                     },
                                     {
@@ -91,7 +94,10 @@
                                         name: 'editManuscriptFiles',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/editfiles";
+                                            window.location.href = "manuscript/"+manuscript_id+"/uploadfiles";
+                                        },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
                                         },
                                         enabled: false
                                     },
@@ -102,6 +108,21 @@
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "manuscript/"+manuscript_id+"/view";
+                                    },
+                                    init: function ( dt, node, config ) {
+                                        node.css("display", "none");
+                                    },
+                                    enabled: false
+                                },
+                                {
+                                    text: 'View Files',
+                                    name: 'viewManuscriptFiles',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "manuscript/"+manuscript_id+"/viewfiles";
+                                    },
+                                    init: function ( dt, node, config ) {
+                                        node.css("display", "none");
                                     },
                                     enabled: false
                                 },
@@ -193,13 +214,19 @@
                     var count = dt.rows( { selected: true } ).count();
                     if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editManuscript:name').enable(false);
+                        dt.button('editManuscript:name').nodes().css("display", "none");
                         dt.button('editManuscriptFiles:name').enable(false);
+                        dt.button('editManuscriptFiles:name').nodes().css("display", "none");
                         dt.button('viewManuscript:name').enable(false);
+                        dt.button('viewManuscript:name').nodes().css("display", "none");
+                        dt.button('viewManuscriptFiles:name').enable(false);
+                        dt.button('viewManuscriptFiles:name').nodes().css("display", "none");
                         dt.button('inviteassignauthor:name').enable(false);
                         dt.button('assigncurator:name').enable(false);
                         dt.button('assignverifier:name').enable(false);                        
                         dt.button('progressManuscript:name').enable(false);
                         dt.button('launchNotebook:name').enable(false);
+                        //.nodes().addClass('hidden');
                     }
                     document.getElementById("submission_table_holder").style.display = "none"; //hide element
                     //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
@@ -231,6 +258,7 @@
                             createSubButton = true;
                         } else {
                             table.button(avail_buttons[i]+':name').enable(true);
+                            table.button(avail_buttons[i]+':name').nodes().css("display", "block");
                         }
                     }
                     document.getElementById("submission_table_holder").style.display = "block"; //show element
@@ -332,6 +360,9 @@
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "submission/"+submission_id+"/edit";
                                         },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
                                         enabled: false
                                     },
                                     {
@@ -340,6 +371,9 @@
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "submission/"+submission_id+"/editfiles";
+                                        },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
                                         },
                                         enabled: false
                                     },
@@ -351,6 +385,21 @@
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "submission/"+submission_id+"/view";
                                     },
+                                    init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
+                                    enabled: false
+                                },
+                                {
+                                    text: 'View Files',
+                                    name: 'viewSubmissionFiles',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "submission/"+submission_id+"/viewfiles";
+                                    },
+                                    init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
                                     enabled: false
                                 },
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
@@ -473,6 +522,7 @@
                     avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
+                        dt.button(avail_buttons[i]+':name').nodes().css("display", "block");
                     }
 
                     console.log('Table row selected');
@@ -481,16 +531,25 @@
                     var count = dt.rows( { selected: true } ).count();
                     if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
                         dt.button('editSubmission:name').enable(false);
+                        dt.button('editSubmission:name').nodes().css("display", "none");
                         dt.button('editSubmissionFiles:name').enable(false);
+                        dt.button('editSubmissionFiles:name').nodes().css("display", "none");
+                        dt.button('viewSubmission:name').enable(false);
+                        dt.button('viewSubmission:name').nodes().css("display", "none");
+                        dt.button('progressSubmission:name').enable(false);
+
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);
-                        dt.button('createVerification:name').enable(false);
-                        dt.button('editVerification:name').enable(false);                                     
-                        dt.button('viewSubmission:name').enable(false);
+                        dt.button('editCuration:name').nodes().css("display", "none");
                         dt.button('viewCuration:name').enable(false);
-                        dt.button('viewVerification:name').enable(false);
-                        dt.button('progressSubmission:name').enable(false);
+                        dt.button('viewCuration:name').nodes().css("display", "none");
                         dt.button('progressCuration:name').enable(false);
+
+                        dt.button('createVerification:name').enable(false);
+                        dt.button('editVerification:name').enable(false);            
+                        dt.button('editVerification:name').nodes().css("display", "none");                               
+                        dt.button('viewVerification:name').enable(false);
+                        dt.button('viewVerification:name').nodes().css("display", "none");
                         dt.button('progressVerification:name').enable(false);
                                                               
                     }

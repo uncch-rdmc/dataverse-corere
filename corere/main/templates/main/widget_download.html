@@ -1,0 +1,4 @@
+<div class="downloadgitlabspan">
+    <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{widget.download_url}}')"><span class="fas fa-file-download"></span></button>
+    <input type="{{ widget.type }}" name="{{ widget.name }}" {% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}> 
+</div>
