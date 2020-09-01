@@ -57,7 +57,7 @@ def invite_assign_author(request, id=None):
 @login_required
 @permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_author(request, id=None, user_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
         group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
         manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -93,7 +93,7 @@ def assign_editor(request, id=None):
 @login_required
 @permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_editor(request, id=None, user_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
         group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
         manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -129,7 +129,7 @@ def assign_curator(request, id=None):
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_curator(request, id=None, user_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -167,7 +167,7 @@ def assign_verifier(request, id=None):
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_verifier(request, id=None, user_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
         group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
         manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))

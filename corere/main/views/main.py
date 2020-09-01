@@ -90,7 +90,7 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 
 @login_required
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
         if(not request.user.has_perm('delete_note', note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
@@ -102,7 +102,7 @@ def delete_note(request, id=None, submission_id=None, curation_id=None, verifica
 #TODO: Make this more efficient, I think we could avoid pulling the object itself
 @login_required
 def delete_file(request, manuscript_id=None, submission_id=None):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -123,7 +123,7 @@ def delete_file(request, manuscript_id=None, submission_id=None):
 
 @login_required
 def delete_all_submission_files(request, submission_id):
-    if request.method == 'DELETE':
+    if request.method == 'POST':
         submission = get_object_or_404(m.Submission, id=submission_id)
         if(not has_transition_perm(submission.edit_noop, request.user)):
             logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))

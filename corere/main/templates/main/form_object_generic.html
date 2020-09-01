@@ -10,7 +10,7 @@
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
         fetch('deletenote/'+noteid, {
-            method: 'DELETE',
+            method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {

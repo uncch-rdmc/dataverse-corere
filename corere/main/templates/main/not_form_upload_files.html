@@ -12,7 +12,7 @@ File Access: {{object_title}}
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
         fetch(delete_url, {
-            method: 'DELETE',
+            method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {
@@ -23,7 +23,7 @@ File Access: {{object_title}}
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
         fetch("/submission/"+id+"/deleteallfiles", {
-            method: 'DELETE',
+            method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {
