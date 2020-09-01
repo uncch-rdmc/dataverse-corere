@@ -5,6 +5,21 @@
 {{ form.media.css }}
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
+<script type="text/javascript">
+    function unassign(manuscriptid, rolename, userid) {
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch('/manuscript/'+manuscriptid+'/unassign'+rolename+'/'+userid, {
+            method: 'DELETE',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        })
+    }
+</script>
 <form action="" method="post">
     {% csrf_token %}
     <h5 class="my-3"> {{role_name}} Management for Manuscript {{id}} </h5>
@@ -20,7 +35,7 @@
         <th>Username</th>
         {% if role_name != "Author" or can_remove_author %}
             <th>Total {{role_name}} Assignments</th>
-            <th>Delete</th>
+            <th>Unassign</th>
         {% endif %}
     </tr>
     {% for u in assigned_users %}
@@ -28,7 +43,7 @@
         <td>{{ u.username }}</td>
         {% if role_name != "Author" or can_remove_author %}
             <td>{{ u|groups_contain_count:group_substring }}</td>
-            <td><a href="/manuscript/{{id}}/unassign{{role_name|lower}}/{{u.id}}">DELETE</a></td>
+            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="unassign('{{id}}','{{role_name|lower}}','{{u.id}}')"><span class="fas fa-user-minus"></span></button></td>
         {% endif %}
     </tr>
     {% endfor %}
