@@ -5,6 +5,22 @@
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 
+<script type="text/javascript">
+    function deletenote(noteid) {
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch('deletenote/'+noteid, {
+            method: 'DELETE',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        })
+    }
+</script>
+
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
         {% crispy form helper %}
@@ -25,7 +41,8 @@
     <p>{{note.text}} by {{note.creator}} 
     {% if not read_only  %}
         {% if user.username == note.creator.username %}
-            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href={{ 'deletenote/'|concat:note.id}}>Delete</a>)
+            {% comment %} Delete probably shouldn't be a link? {% endcomment %}
+            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href="javascript:void(0)" onClick="deletenote({{note.id}});">Delete</a>)
         {% endif %}
     {% endif %}
     </p> 

@@ -152,7 +152,8 @@ def gitlab_get_file_blame_headers(repo_id, branch, file_path):
 #TODO: Name of function could be better
 #TODO: Can we pass in the current dict list as we already got it once outside the place this is "normally" called?
 def helper_populate_gitlab_files_submission(repo_id, submission):
-
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
     #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
 
     cur_branch = "submission_" + str(submission.version)
