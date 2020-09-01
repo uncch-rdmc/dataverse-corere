@@ -11,7 +11,7 @@ from django.http import Http404
 from django.contrib.auth.decorators import login_required
 from corere.main.gitlab import gitlab_delete_file, gitlab_submission_delete_all_files
 from corere.main.binderhub import binder_build_load 
-
+from guardian.shortcuts import assign_perm, remove_perm
 
 logger = logging.getLogger(__name__)
 
@@ -90,46 +90,47 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 
 @login_required
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
-    # if request.method == 'POST': TODO do this? Or hell, make it delete?
-    note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-    if(not request.user.has_perm('delete_note', note)):
-        logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
-        raise Http404()
-    note.delete()
-    return redirect('../edit')
+    if request.method == 'POST':
+        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        if(not request.user.has_perm('delete_note', note)):
+            logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+            raise Http404()
+        note.delete()
+        return redirect('../edit')
 
 #TODO: Error if both manuscript and submission id is provided
 #TODO: Make this more efficient, I think we could avoid pulling the object itself
 @login_required
 def delete_file(request, manuscript_id=None, submission_id=None):
-    # if request.method == 'POST': TODO do this? Or hell, make it delete?
-    file_path = request.GET.get('file_path')
-    if(not file_path):
-        raise Http404()
-    if(manuscript_id):
-        obj_type = "manuscript"
-        obj = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
-        git_id = obj.gitlab_manuscript_id
-    elif(submission_id):
-        obj_type = "submission"
-        obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
-        git_id = obj.manuscript.gitlab_submissions_id
-    if(not has_transition_perm(obj.edit_noop, request.user)):
-        logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
-        raise Http404()
-    gitlab_delete_file(obj_type, obj, git_id, file_path)
+    if request.method == 'POST':
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+        if(manuscript_id):
+            obj_type = "manuscript"
+            obj = get_object_or_404(m.Manuscript, id=manuscript_id) # do we need this or could we have just passed the id?
+            git_id = obj.gitlab_manuscript_id
+        elif(submission_id):
+            obj_type = "submission"
+            obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
+            git_id = obj.manuscript.gitlab_submissions_id
+        if(not has_transition_perm(obj.edit_noop, request.user)):
+            logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+            raise Http404()
+        gitlab_delete_file(obj_type, obj, git_id, file_path)
 
-    return redirect('./editfiles') #go to the edit files page again
+        return redirect('./editfiles') #go to the edit files page again
 
 @login_required
 def delete_all_submission_files(request, submission_id):
-    submission = get_object_or_404(m.Submission, id=submission_id)
-    if(not has_transition_perm(submission.edit_noop, request.user)):
-        logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
-        raise Http404()
-    gitlab_submission_delete_all_files(submission)
+    if request.method == 'POST':
+        submission = get_object_or_404(m.Submission, id=submission_id)
+        if(not has_transition_perm(submission.edit_noop, request.user)):
+            logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+            raise Http404()
+        gitlab_submission_delete_all_files(submission)
 
-    return redirect('./editfiles') #go to the edit files page again
+        return redirect('./editfiles') #go to the edit files page again
 
 @login_required()
 def site_actions(request):

@@ -53,18 +53,18 @@ def invite_assign_author(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
 
-#MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_author(request, id=None, user_id=None):
-    manuscript = Manuscript.objects.get(pk=id)
-    group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
-    manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    user = User.objects.get(id=user_id)
-    manu_author_group.user_set.remove(user)
-    # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
+    if request.method == 'POST':
+        manuscript = Manuscript.objects.get(pk=id)
+        group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+        manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+        user = User.objects.get(id=user_id)
+        manu_author_group.user_set.remove(user)
+        # print("DELETE " + str(user_id))
+        return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
 
 @login_required
 @permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -89,18 +89,18 @@ def assign_editor(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
 
-#MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_editor(request, id=None, user_id=None):
-    manuscript = Manuscript.objects.get(pk=id)
-    group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
-    manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    user = User.objects.get(id=user_id)
-    manu_editor_group.user_set.remove(user)
-    # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/assigneditor')
+    if request.method == 'POST':
+        manuscript = Manuscript.objects.get(pk=id)
+        group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
+        manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+        user = User.objects.get(id=user_id)
+        manu_editor_group.user_set.remove(user)
+        # print("DELETE " + str(user_id))
+        return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -125,20 +125,20 @@ def assign_curator(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
-#MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_curator(request, id=None, user_id=None):
-    manuscript = Manuscript.objects.get(pk=id)
-    group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
-    manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    user = User.objects.get(id=user_id)
-    manu_curator_group.user_set.remove(user)
-    # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/assigncurator')
-    #from django.http import HttpResponse
-    #return HttpResponse("DELETE " + str(user_id))
+    if request.method == 'POST':
+        manuscript = Manuscript.objects.get(pk=id)
+        group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
+        manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+        user = User.objects.get(id=user_id)
+        manu_curator_group.user_set.remove(user)
+        # print("DELETE " + str(user_id))
+        return redirect('/manuscript/'+str(id)+'/assigncurator')
+        #from django.http import HttpResponse
+        #return HttpResponse("DELETE " + str(user_id))
 
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -163,18 +163,18 @@ def assign_verifier(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
 
-#MAD: Should this only work on post? Should it display confirmation?
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_verifier(request, id=None, user_id=None):
-    manuscript = Manuscript.objects.get(pk=id)
-    group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
-    manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    user = User.objects.get(id=user_id)
-    manu_verifier_group.user_set.remove(user)
-    # print("DELETE " + str(user_id))
-    return redirect('/manuscript/'+str(id)+'/assignverifier')
+    if request.method == 'POST':
+        manuscript = Manuscript.objects.get(pk=id)
+        group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
+        manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+        user = User.objects.get(id=user_id)
+        manu_verifier_group.user_set.remove(user)
+        # print("DELETE " + str(user_id))
+        return redirect('/manuscript/'+str(id)+'/assignverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)

@@ -131,13 +131,17 @@
                                         text: 'Hand-off to Authors',
                                         name: 'progressManuscript',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = 'manuscript/'+manuscript_id+'/progress';
-                                            //Not using ajax because we just reload the page instead.
-                                            //Because we do the datatable ajax ourselves we can't call dt.ajax.reload();
-                                            //Something like the table.clear... function below could work, but I was running into issues
-                                            //$.ajax({type: 'GET', url: 'manuscript/'+manuscript_id+'/progress'});
-                                            //table.clear().rows.add(originalJsonData).draw();
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('manuscript/'+manuscript_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
                                         },
                                         enabled: false
                                     },
@@ -407,8 +411,17 @@
                                         text: 'Hand-off to Curators',
                                         name: 'progressSubmission',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = 'submission/'+submission_id+'/progress';
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('submission/'+submission_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
                                         },
                                         enabled: false
                                     },
@@ -455,8 +468,17 @@
                                         text: 'Submit Review',
                                         name: 'progressCuration',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = 'curation/'+curation_id+'/progress';
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('curation/'+curation_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
                                         },
                                         enabled: false
                                     },
@@ -504,8 +526,17 @@
                                         text: 'Submit Review',
                                         name: 'progressVerification',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = 'verification/'+verification_id+'/progress';
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('verification/'+verification_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
                                         },
                                         enabled: false
                                     },

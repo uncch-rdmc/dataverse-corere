@@ -260,8 +260,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
 class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    #TODO: Should be post
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
@@ -370,8 +369,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
-    #TODO: Should be post
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to curators!'
@@ -421,8 +419,7 @@ class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionP
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCurationView):
-    #TODO: Should be post
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
@@ -472,8 +469,7 @@ class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericVerificationView):
-    #TODO: Should be post
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
