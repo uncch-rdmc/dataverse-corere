@@ -62,5 +62,4 @@ urlpatterns = [
     path('site_actions/inviteeditor', users.invite_editor),
     path('site_actions/invitecurator', users.invite_curator),
     path('site_actions/inviteverifier', users.invite_verifier),
-
 ]
