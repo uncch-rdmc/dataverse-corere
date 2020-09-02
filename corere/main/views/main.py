@@ -32,6 +32,10 @@ def index(request):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
+    if(not request.user.has_perm('view_manuscript', manuscript)):
+        logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+        raise Http404()
+
     binder_url = binder_build_load(manuscript)
     return redirect(binder_url)
     #print(response.__dict__)
@@ -103,6 +107,7 @@ def delete_note(request, id=None, submission_id=None, curation_id=None, verifica
 @login_required
 def delete_file(request, manuscript_id=None, submission_id=None):
     if request.method == 'POST':
+        #TODO: Should send the post body
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()

@@ -21,7 +21,7 @@ urlpatterns = [
     path('manuscript/<int:id>/assignverifier', users.assign_verifier, name="manuscript_assignverifier"),
     path('manuscript/<int:id>/unassignverifier/<int:user_id>', users.unassign_verifier, name="manuscript_unassignverifier"),
     path('manuscript/<int:manuscript_id>/createsubmission', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
-    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"),
     path('manuscript/<int:id>/binder', main.open_binder, name="manuscript_binder"),
     path('manuscript/<int:id>/progress', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
 
@@ -36,7 +36,7 @@ urlpatterns = [
     path('submission/<int:submission_id>/createnote', main.edit_note, name="submission_createnote"),
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note, name="submission_editnote"),
     path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note, name="submission_deletenote"),
-    path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress', classes.SubmissionProgressView.as_view(), name="submission_progress"),
 

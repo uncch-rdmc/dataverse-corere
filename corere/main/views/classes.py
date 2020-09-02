@@ -52,7 +52,7 @@ class GenericCorereObjectView(View):
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     def post(self, request, *args, **kwargs):
-        print(self.__dict__)
+        #print(self.__dict__)
         if self.form.is_valid():
             self.form.save() #Note: this is what saves a newly created model instance
             if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
