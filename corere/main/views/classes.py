@@ -234,7 +234,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     form = ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
@@ -304,6 +304,7 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
+#TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     form = GitlabFileFormSet
     template = 'main/form_edit_files.html'
@@ -327,7 +328,7 @@ class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Read
     template = 'main/form_edit_files.html'
     #template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
     helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
