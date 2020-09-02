@@ -257,14 +257,6 @@
 },
 {
     "model": "sessions.session",
-    "pk": "849jmc34vdamgzdl7wfvfsyhd01ikkho",
-    "fields": {
-        "session_data": "NjRiZjNkMWIwODU0ZDI2MGQ3NDk2ZjhiNDFhZWE5MDc0NjZkYjU4ZDp7Il9hdXRoX3VzZXJfaWQiOiIxIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJlMzUyNDc2ZThiOTQ3OTU0NWJkYTUyMjQxYjliNzM3OGNjOWRiMTRhIn0=",
-        "expire_date": "2020-09-11T15:38:28.318Z"
-    }
-},
-{
-    "model": "sessions.session",
     "pk": "8ikumb8adhilcmbaxon74b1psa9nb0vu",
     "fields": {
         "session_data": "NzM1YTRjMmY3YjAzNTAxZmYwM2M4OWNjOTM5NTFiMmU4NTc2YWMwYjp7Il9hdXRoX3VzZXJfaWQiOiI3IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoic29jaWFsX2NvcmUuYmFja2VuZHMuZ29vZ2xlLkdvb2dsZU9BdXRoMiIsIl9hdXRoX3VzZXJfaGFzaCI6IjJkYzE2ZjVmYmFlNDRiNGEzNWY4OTk2YzgyMWU2ZjI5OTdmMmYyZGYifQ==",
@@ -281,6 +273,14 @@
 },
 {
     "model": "sessions.session",
+    "pk": "cotf2gsf03475oie2jmfs1xvat2dtcff",
+    "fields": {
+        "session_data": "NjRiZjNkMWIwODU0ZDI2MGQ3NDk2ZjhiNDFhZWE5MDc0NjZkYjU4ZDp7Il9hdXRoX3VzZXJfaWQiOiIxIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJlMzUyNDc2ZThiOTQ3OTU0NWJkYTUyMjQxYjliNzM3OGNjOWRiMTRhIn0=",
+        "expire_date": "2020-09-15T21:33:31.275Z"
+    }
+},
+{
+    "model": "sessions.session",
     "pk": "fw4f19syg0b2xoun5bs1kt4vzcat7pig",
     "fields": {
         "session_data": "NTgwNjIwNjVmMDk0ZGZhYTU0ODc2NjAyZDRhYTEzZWViMDNhZGU2Yjp7Il9hdXRoX3VzZXJfaWQiOiI2IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoic29jaWFsX2NvcmUuYmFja2VuZHMuZ29vZ2xlLkdvb2dsZU9BdXRoMiIsIl9hdXRoX3VzZXJfaGFzaCI6ImQ3ZTJiMWUwNjE0OWI2NmMzYjVjY2ZlYWI2NjA1YjI2MjE3NDY0MjIifQ==",
@@ -289,10 +289,10 @@
 },
 {
     "model": "sessions.session",
-    "pk": "kaj36j921evnio0vpnd56vj7ahfem6ty",
+    "pk": "mn4td75f7rmo7oczr7wi5seg63fwqluh",
     "fields": {
-        "session_data": "MDY1YmQ0ZmU0ZTRiYjI2MWU1MzBmYjAzYmIyMTJhN2ZiMmY3ODM2YTp7Il9hdXRoX3VzZXJfaWQiOiI4IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoic29jaWFsX2NvcmUuYmFja2VuZHMuZ29vZ2xlLkdvb2dsZU9BdXRoMiIsIl9hdXRoX3VzZXJfaGFzaCI6IjY4ZWY0MTczMjVjNWRjNmQ1YzgwZTc4NmVjNTNkMTUyMmE3M2YzNjkifQ==",
-        "expire_date": "2020-09-11T17:03:05.423Z"
+        "session_data": "YWZmNGVlMDU0YmE3NmQ1YzJjMmU1OTdhODhhYzdmNzBkNTkwNGY5ZTp7Imdvb2dsZS1vYXV0aDJfc3RhdGUiOiI4RGc3SURtNk5DQndFYzhOdjVzRVpJQ2drOG96NXRyMCIsIl9hdXRoX3VzZXJfaWQiOiI1IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiJlMzUyNDc2ZThiOTQ3OTU0NWJkYTUyMjQxYjliNzM3OGNjOWRiMTRhIn0=",
+        "expire_date": "2020-09-16T16:17:41.418Z"
     }
 },
 {
@@ -3449,7 +3449,7 @@
     "pk": 1,
     "fields": {
         "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
-        "last_login": "2020-08-28T15:38:28.219Z",
+        "last_login": "2020-09-01T21:33:31.132Z",
         "is_superuser": true,
         "username": "admin",
         "first_name": "",
@@ -3509,15 +3509,15 @@
     "pk": 5,
     "fields": {
         "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
-        "last_login": "2020-08-28T16:57:00.057Z",
+        "last_login": "2020-09-02T16:17:41.322Z",
         "is_superuser": false,
         "username": "fakeauthor",
         "first_name": "Fake",
         "last_name": "Author",
         "email": "fakeauthor@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
-        "date_joined": "2020-08-28T16:56:38.384Z",
+        "date_joined": "2020-08-28T16:56:38Z",
         "invite_key": "",
         "invited_by": 1,
         "gitlab_id": 10,
@@ -3542,15 +3542,15 @@
     "pk": 6,
     "fields": {
         "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
-        "last_login": "2020-08-28T17:01:24.870Z",
+        "last_login": "2020-08-28T17:01:24Z",
         "is_superuser": false,
         "username": "fakeeditor",
         "first_name": "Fake",
         "last_name": "Editor",
         "email": "fakeeditor@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
-        "date_joined": "2020-08-28T16:57:44.500Z",
+        "date_joined": "2020-08-28T16:57:44Z",
         "invite_key": "",
         "invited_by": 1,
         "gitlab_id": 11,
@@ -3574,15 +3574,15 @@
     "pk": 7,
     "fields": {
         "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
-        "last_login": "2020-08-28T17:02:19.567Z",
+        "last_login": "2020-08-28T17:02:19Z",
         "is_superuser": false,
         "username": "fakecurator",
         "first_name": "Fake",
         "last_name": "Curator",
         "email": "fakecurator@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
-        "date_joined": "2020-08-28T17:02:07.769Z",
+        "date_joined": "2020-08-28T17:02:07Z",
         "invite_key": "",
         "invited_by": 1,
         "gitlab_id": 12,
@@ -3606,15 +3606,15 @@
     "pk": 8,
     "fields": {
         "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
-        "last_login": "2020-08-28T17:03:05.315Z",
+        "last_login": "2020-08-28T17:03:05Z",
         "is_superuser": false,
         "username": "fakeverifier",
         "first_name": "Fake",
         "last_name": "Verifier",
         "email": "fakeverifier@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
-        "date_joined": "2020-08-28T17:02:55.461Z",
+        "date_joined": "2020-08-28T17:02:55Z",
         "invite_key": "",
         "invited_by": 1,
         "gitlab_id": 13,
@@ -3672,6 +3672,44 @@
     }
 },
 {
+    "model": "main.historicalverification",
+    "pk": 3,
+    "fields": {
+        "id": 3,
+        "created_at": "2020-09-02T15:37:30.232Z",
+        "updated_at": "2020-09-02T15:37:30.232Z",
+        "history_change_list": "",
+        "_status": "success",
+        "software": "",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 9,
+        "history_date": "2020-09-02T15:37:30.246Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalverification",
+    "pk": 4,
+    "fields": {
+        "id": 4,
+        "created_at": "2020-09-02T15:40:21.151Z",
+        "updated_at": "2020-09-02T15:40:21.151Z",
+        "history_change_list": "",
+        "_status": "success",
+        "software": "",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 10,
+        "history_date": "2020-09-02T15:40:21.162Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.verification",
     "pk": 1,
     "fields": {
@@ -3695,6 +3733,32 @@
         "_status": "not_attempted",
         "software": "",
         "submission": 6
+    }
+},
+{
+    "model": "main.verification",
+    "pk": 3,
+    "fields": {
+        "created_at": "2020-09-02T15:37:30.232Z",
+        "updated_at": "2020-09-02T15:37:30.232Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "success",
+        "software": "",
+        "submission": 9
+    }
+},
+{
+    "model": "main.verification",
+    "pk": 4,
+    "fields": {
+        "created_at": "2020-09-02T15:40:21.151Z",
+        "updated_at": "2020-09-02T15:40:21.151Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "success",
+        "software": "",
+        "submission": 10
     }
 },
 {
@@ -3770,6 +3834,42 @@
     }
 },
 {
+    "model": "main.historicalcuration",
+    "pk": 5,
+    "fields": {
+        "id": 5,
+        "created_at": "2020-09-02T15:37:23.387Z",
+        "updated_at": "2020-09-02T15:37:23.387Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 9,
+        "history_date": "2020-09-02T15:37:23.398Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalcuration",
+    "pk": 6,
+    "fields": {
+        "id": 6,
+        "created_at": "2020-09-02T15:40:15.328Z",
+        "updated_at": "2020-09-02T15:40:15.328Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 10,
+        "history_date": "2020-09-02T15:40:15.338Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.curation",
     "pk": 1,
     "fields": {
@@ -3815,6 +3915,30 @@
         "last_editor": null,
         "_status": "no_issues",
         "submission": 6
+    }
+},
+{
+    "model": "main.curation",
+    "pk": 5,
+    "fields": {
+        "created_at": "2020-09-02T15:37:23.387Z",
+        "updated_at": "2020-09-02T15:37:23.387Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 9
+    }
+},
+{
+    "model": "main.curation",
+    "pk": 6,
+    "fields": {
+        "created_at": "2020-09-02T15:40:15.328Z",
+        "updated_at": "2020-09-02T15:40:15.328Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 10
     }
 },
 {
@@ -4179,6 +4303,158 @@
     }
 },
 {
+    "model": "main.historicalsubmission",
+    "pk": 20,
+    "fields": {
+        "id": 9,
+        "created_at": "2020-09-02T15:37:03.620Z",
+        "updated_at": "2020-09-02T15:37:03.620Z",
+        "history_change_list": "",
+        "_status": "new",
+        "version": 1,
+        "creator": 1,
+        "last_editor": null,
+        "manuscript": 13,
+        "history_date": "2020-09-02T15:37:03.631Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 21,
+    "fields": {
+        "id": 9,
+        "created_at": "2020-09-02T15:37:03.620Z",
+        "updated_at": "2020-09-02T15:37:08.777Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_curation",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 13,
+        "history_date": "2020-09-02T15:37:08.787Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 22,
+    "fields": {
+        "id": 9,
+        "created_at": "2020-09-02T15:37:03.620Z",
+        "updated_at": "2020-09-02T15:37:23.464Z",
+        "history_change_list": "['_status']",
+        "_status": "in_progress_verification",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 13,
+        "history_date": "2020-09-02T15:37:23.483Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 23,
+    "fields": {
+        "id": 9,
+        "created_at": "2020-09-02T15:37:03.620Z",
+        "updated_at": "2020-09-02T15:37:30.528Z",
+        "history_change_list": "['_status']",
+        "_status": "reviewed",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 13,
+        "history_date": "2020-09-02T15:37:30.537Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 24,
+    "fields": {
+        "id": 10,
+        "created_at": "2020-09-02T15:40:03.079Z",
+        "updated_at": "2020-09-02T15:40:03.079Z",
+        "history_change_list": "",
+        "_status": "new",
+        "version": 1,
+        "creator": 1,
+        "last_editor": null,
+        "manuscript": 14,
+        "history_date": "2020-09-02T15:40:03.089Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 25,
+    "fields": {
+        "id": 10,
+        "created_at": "2020-09-02T15:40:03.079Z",
+        "updated_at": "2020-09-02T15:40:07.409Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_curation",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 14,
+        "history_date": "2020-09-02T15:40:07.422Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 26,
+    "fields": {
+        "id": 10,
+        "created_at": "2020-09-02T15:40:03.079Z",
+        "updated_at": "2020-09-02T15:40:15.370Z",
+        "history_change_list": "['_status']",
+        "_status": "in_progress_verification",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 14,
+        "history_date": "2020-09-02T15:40:15.380Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 27,
+    "fields": {
+        "id": 10,
+        "created_at": "2020-09-02T15:40:03.079Z",
+        "updated_at": "2020-09-02T15:40:21.435Z",
+        "history_change_list": "['_status']",
+        "_status": "reviewed",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 14,
+        "history_date": "2020-09-02T15:40:21.445Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
     "model": "main.submission",
     "pk": 1,
     "fields": {
@@ -4279,6 +4555,32 @@
         "last_editor": 1,
         "_status": "new",
         "manuscript": 12,
+        "version": 1
+    }
+},
+{
+    "model": "main.submission",
+    "pk": 9,
+    "fields": {
+        "created_at": "2020-09-02T15:37:03.620Z",
+        "updated_at": "2020-09-02T15:37:30.528Z",
+        "creator": 1,
+        "last_editor": 1,
+        "_status": "reviewed",
+        "manuscript": 13,
+        "version": 1
+    }
+},
+{
+    "model": "main.submission",
+    "pk": 10,
+    "fields": {
+        "created_at": "2020-09-02T15:40:03.079Z",
+        "updated_at": "2020-09-02T15:40:21.435Z",
+        "creator": 1,
+        "last_editor": 1,
+        "_status": "reviewed",
+        "manuscript": 14,
         "version": 1
     }
 },
@@ -5957,6 +6259,330 @@
     }
 },
 {
+    "model": "main.historicalmanuscript",
+    "pk": 63,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:35:58.369Z",
+        "history_change_list": "",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-02T15:35:58.381Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 64,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:36:02.536Z",
+        "history_change_list": "['last_editor', 'gitlab_manuscript_id', 'gitlab_manuscript_path']",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:36:02.546Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 65,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:36:05.665Z",
+        "history_change_list": "['gitlab_submissions_id', 'gitlab_submissions_path']",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 66,
+        "gitlab_submissions_path": "13_-_Manuscript_complete_all_roles_-_Submissions",
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:36:05.675Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 66,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:36:53.207Z",
+        "history_change_list": "['_status']",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 66,
+        "gitlab_submissions_path": "13_-_Manuscript_complete_all_roles_-_Submissions",
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "awaiting_init",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:36:53.216Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 67,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:37:08.730Z",
+        "history_change_list": "['_status']",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 66,
+        "gitlab_submissions_path": "13_-_Manuscript_complete_all_roles_-_Submissions",
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "processing",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:37:08.742Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 68,
+    "fields": {
+        "id": 13,
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:37:30.486Z",
+        "history_change_list": "['_status']",
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 66,
+        "gitlab_submissions_path": "13_-_Manuscript_complete_all_roles_-_Submissions",
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "completed",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:37:30.496Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 69,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:37:43.673Z",
+        "history_change_list": "",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-02T15:37:43.685Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 70,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:37:47.519Z",
+        "history_change_list": "['last_editor', 'gitlab_manuscript_id', 'gitlab_manuscript_path']",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:37:47.530Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 71,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:37:49.591Z",
+        "history_change_list": "['gitlab_submissions_id', 'gitlab_submissions_path']",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 68,
+        "gitlab_submissions_path": "14_-_Manuscript_complete_no_roles_-_Submissions",
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:37:49.601Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 72,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:39:56.182Z",
+        "history_change_list": "['_status']",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 68,
+        "gitlab_submissions_path": "14_-_Manuscript_complete_no_roles_-_Submissions",
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "awaiting_init",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:39:56.191Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 73,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:40:07.331Z",
+        "history_change_list": "['_status']",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 68,
+        "gitlab_submissions_path": "14_-_Manuscript_complete_no_roles_-_Submissions",
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "processing",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:40:07.350Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 74,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:40:21.389Z",
+        "history_change_list": "['_status']",
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 68,
+        "gitlab_submissions_path": "14_-_Manuscript_complete_no_roles_-_Submissions",
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "completed",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-02T15:40:21.400Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
     "model": "main.manuscript",
     "pk": 1,
     "fields": {
@@ -6050,7 +6676,7 @@
         "last_editor": 1,
         "uuid": "610c4e55-a43f-41de-b5f5-8b64bebc1e11",
         "pub_id": "21",
-        "title": "In progress submission awaiting curation all roles",
+        "title": "In progress submission awaiting initial all roles",
         "doi": "test",
         "open_data": false,
         "environment_info": [],
@@ -6071,7 +6697,7 @@
         "last_editor": 1,
         "uuid": "5a700701-87bf-46ef-835a-a2ba04ae927a",
         "pub_id": "",
-        "title": "in progress submission awaiting verification all roles",
+        "title": "in progress submission waiting verification all roles",
         "doi": "test",
         "open_data": false,
         "environment_info": [],
@@ -6206,6 +6832,48 @@
         "gitlab_manuscript_id": 63,
         "gitlab_manuscript_path": "12_-_In_Progress_initial_submission_not_submitted_all_roles_-_Manuscript",
         "_status": "awaiting_init"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 13,
+    "fields": {
+        "created_at": "2020-09-02T15:35:58.369Z",
+        "updated_at": "2020-09-02T15:37:30.486Z",
+        "creator": 1,
+        "last_editor": 1,
+        "uuid": "cdf857b1-c719-435c-a93b-ad06a4a04374",
+        "pub_id": "",
+        "title": "Manuscript complete all roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 66,
+        "gitlab_submissions_path": "13_-_Manuscript_complete_all_roles_-_Submissions",
+        "gitlab_manuscript_id": 65,
+        "gitlab_manuscript_path": "13_-_Manuscript_complete_all_roles_-_Manuscript",
+        "_status": "completed"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 14,
+    "fields": {
+        "created_at": "2020-09-02T15:37:43.673Z",
+        "updated_at": "2020-09-02T15:40:21.389Z",
+        "creator": 1,
+        "last_editor": 1,
+        "uuid": "cb4c9003-9e23-4007-a392-74d15bf59616",
+        "pub_id": "",
+        "title": "Manuscript complete no roles",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 68,
+        "gitlab_submissions_path": "14_-_Manuscript_complete_no_roles_-_Submissions",
+        "gitlab_manuscript_id": 67,
+        "gitlab_manuscript_path": "14_-_Manuscript_complete_no_roles_-_Manuscript",
+        "_status": "completed"
     }
 },
 {
@@ -7314,6 +7982,156 @@
     }
 },
 {
+    "model": "main.historicaluser",
+    "pk": 28,
+    "fields": {
+        "id": 1,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-09-01T21:33:31.132Z",
+        "is_superuser": true,
+        "username": "admin",
+        "first_name": "",
+        "last_name": "",
+        "email": "madunlap@ad.unc.edu",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T15:32:47.166Z",
+        "history_change_list": "['last_login']",
+        "invite_key": "",
+        "gitlab_id": null,
+        "invited_by": null,
+        "history_date": "2020-09-01T21:33:31.143Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 29,
+    "fields": {
+        "id": 5,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-08-28T16:57:00Z",
+        "is_superuser": false,
+        "username": "fakeauthor",
+        "first_name": "Fake",
+        "last_name": "Author",
+        "email": "fakeauthor@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T16:56:38Z",
+        "history_change_list": "['password', 'last_login', 'email', 'is_staff', 'date_joined']",
+        "invite_key": "",
+        "gitlab_id": 10,
+        "invited_by": 1,
+        "history_date": "2020-09-02T16:17:07.489Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 30,
+    "fields": {
+        "id": 6,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-08-28T17:01:24Z",
+        "is_superuser": false,
+        "username": "fakeeditor",
+        "first_name": "Fake",
+        "last_name": "Editor",
+        "email": "fakeeditor@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T16:57:44Z",
+        "history_change_list": "['password', 'last_login', 'is_staff', 'date_joined']",
+        "invite_key": "",
+        "gitlab_id": 11,
+        "invited_by": 1,
+        "history_date": "2020-09-02T16:17:17.385Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 31,
+    "fields": {
+        "id": 7,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-08-28T17:02:19Z",
+        "is_superuser": false,
+        "username": "fakecurator",
+        "first_name": "Fake",
+        "last_name": "Curator",
+        "email": "fakecurator@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T17:02:07Z",
+        "history_change_list": "['password', 'last_login', 'is_staff', 'date_joined']",
+        "invite_key": "",
+        "gitlab_id": 12,
+        "invited_by": 1,
+        "history_date": "2020-09-02T16:17:26.794Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 32,
+    "fields": {
+        "id": 8,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-08-28T17:03:05Z",
+        "is_superuser": false,
+        "username": "fakeverifier",
+        "first_name": "Fake",
+        "last_name": "Verifier",
+        "email": "fakeverifier@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T17:02:55Z",
+        "history_change_list": "['password', 'last_login', 'is_staff', 'date_joined']",
+        "invite_key": "",
+        "gitlab_id": 13,
+        "invited_by": 1,
+        "history_date": "2020-09-02T16:17:35.771Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 33,
+    "fields": {
+        "id": 5,
+        "password": "pbkdf2_sha256$150000$XGunAaAYQ8Bs$EZbw3DnvLsKYUZkyFnhMI5uYE2xtfUPmSCXZB5nqvbI=",
+        "last_login": "2020-09-02T16:17:41.322Z",
+        "is_superuser": false,
+        "username": "fakeauthor",
+        "first_name": "Fake",
+        "last_name": "Author",
+        "email": "fakeauthor@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-08-28T16:56:38Z",
+        "history_change_list": "['last_login']",
+        "invite_key": "",
+        "gitlab_id": 10,
+        "invited_by": 1,
+        "history_date": "2020-09-02T16:17:41.333Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 5
+    }
+},
+{
     "model": "guardian.userobjectpermission",
     "pk": 1,
     "fields": {
@@ -8368,6 +9186,94 @@
     }
 },
 {
+    "model": "notifications.notification",
+    "pk": 38,
+    "fields": {
+        "level": "info",
+        "recipient": 5,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you author access to manuscript Manuscript complete all roles!",
+        "target_content_type": 23,
+        "target_object_id": "13",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-02T15:36:16.384Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 39,
+    "fields": {
+        "level": "info",
+        "recipient": 6,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you editor access to manuscript Manuscript complete all roles!",
+        "target_content_type": 23,
+        "target_object_id": "13",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-02T15:36:24.930Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 40,
+    "fields": {
+        "level": "info",
+        "recipient": 7,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you curator access to manuscript Manuscript complete all roles!",
+        "target_content_type": 23,
+        "target_object_id": "13",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-02T15:36:30.462Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 41,
+    "fields": {
+        "level": "info",
+        "recipient": 8,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you verifier access to manuscript Manuscript complete all roles!",
+        "target_content_type": 23,
+        "target_object_id": "13",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-02T15:36:43.725Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
     "model": "invitations.invitation",
     "pk": 1,
     "fields": {
@@ -8528,6 +9434,58 @@
         "object_repr": "Note object (8)",
         "action_flag": 2,
         "change_message": "[{\"changed\": {\"fields\": [\"creator\"]}}]"
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 8,
+    "fields": {
+        "action_time": "2020-09-02T16:17:07.602Z",
+        "user": 1,
+        "content_type": 20,
+        "object_id": "5",
+        "object_repr": "fakeauthor",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"is_staff\"]}}]"
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 9,
+    "fields": {
+        "action_time": "2020-09-02T16:17:17.505Z",
+        "user": 1,
+        "content_type": 20,
+        "object_id": "6",
+        "object_repr": "fakeeditor",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"is_staff\"]}}]"
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 10,
+    "fields": {
+        "action_time": "2020-09-02T16:17:26.894Z",
+        "user": 1,
+        "content_type": 20,
+        "object_id": "7",
+        "object_repr": "fakecurator",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"is_staff\"]}}]"
+    }
+},
+{
+    "model": "admin.logentry",
+    "pk": 11,
+    "fields": {
+        "action_time": "2020-09-02T16:17:35.884Z",
+        "user": 1,
+        "content_type": 20,
+        "object_id": "8",
+        "object_repr": "fakeverifier",
+        "action_flag": 2,
+        "change_message": "[{\"changed\": {\"fields\": [\"is_staff\"]}}]"
     }
 }
 ]
