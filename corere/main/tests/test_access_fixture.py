@@ -9,30 +9,7 @@ from corere.main import models as m
 from django.contrib.auth.models import Permission, Group
 from rest_framework import status
 from http import HTTPStatus
-#from inspect import getframeinfo, stack
-
-#TODO: Delete these unused helper methods
-
-# #will error on methods without id
-# def helper_check_statuses(testself, client, verb, endpoint, id_name, id_result_dict):
-#     lineno = getframeinfo(stack()[1][0]).lineno #gets the line number our helper was called from
-
-#     for mid in id_result_dict:
-#         resp = client.get(reverse(endpoint, kwargs={id_name:mid}))
-#         error_msg =  "(Line#:{0} | Endpoint:{1} | Object_id:{2})".format(lineno, endpoint, mid) #If this errors this is the message
-#         testself.assertEqual(resp.status_code, id_result_dict[mid], error_msg)
-
-#will error on methods without id
-# def helper_check_statuses(testself, client, endpoint, verb, id_name, manuscript_list, result_list):
-#     lineno = getframeinfo(stack()[1][0]).lineno #gets the line number our helper was called from
-#     if(len(manuscript_list) != len(result_list)):
-#         raise Exception('List lengths must be the same!')
-#     for i in range(len(manuscript_list)):
-#         resp = client.get(reverse(endpoint, kwargs={id_name:manuscript_list[i]}))
-#         error_msg =  "(Line#:{0} | Endpoint:{1} | Manuscript_id:{2})".format(lineno, endpoint, manuscript_list[i]) #If this errors this is the message
-#         testself.assertEqual(resp.status_code, result_list[i], error_msg)
-
-
+from django.core.management import call_command
 
 # Fixture generation:
 # - python3 manage.py dumpdata --indent=4 > corere/main/fixtures/manuscript_submission_states.json
@@ -44,9 +21,13 @@ from http import HTTPStatus
 
 ### NOTE: With all these tests, I tested all the important cases and some of the "this really shouldn't happen" cases. It is a bit vague though
 #@unittest.skip("Incomplete")
-class TestUrlAccessFixture(TestCase):
-    fixtures = ['manuscript_submission_states']
+class BaseTestWithFixture(TestCase):
+    #fixtures = ['manuscript_submission_states']
 
+    #Our many contants to make referncing our various cases easier
+    #(Technically most "nouser" manuscripts actually have admin as an author)
+    #Also note that even though we have files, delete does not actually delete a GitlabFile, it calls GitLab. So its kinda pointless to have these cases
+    #Loading the submission page checks gitlab every time and deletes files if needed.
     M_NEW_NOUSER         = 1   # New manuscript no assigned users for any roles
     M_NEW_ALLUSER        = 2   # New manuscript users assigned for all 4 roles
     M_B4_SUB1_ALLUSER    = 3   # Manuscript awaiting initial submission, all 4 roles
@@ -59,20 +40,86 @@ class TestUrlAccessFixture(TestCase):
     M_B4_SUB2_ALLUSER    = 7   # Manuscript awaiting second submission, all 4 roles
     M_DONE_ALLUSER       = 13  # Manuscript completed, all roles (well actually not, they get removed currently)
     M_DONE_NOUSER        = 14  # Manuscript completed, no roles
-    M_DUR_SUB1_NOUSER_F  = 11  # Manuscript initial submission created but not submit, no roles. Has notes/files
-    M_DUR_SUB1_ALLUSER_F = 12  # Manuscript initial submission created but not submit, all roles. Has notes/files
+    M_DUR_SUB1_NOUSER_F  = 11  # Manuscript initial submission created but not submit, no roles. Has files (and not great notes)
+    M_DUR_SUB1_ALLUSER_F = 12  # Manuscript initial submission created but not submit, all roles. Has files (and not great notes)
+    M_B4_SUB1_NOUSER     = 15  # Manuscript awaiting initial submission, no roles
+    M_DUR_SUB1_NOUSER    = 16  # Manuscript initial submission created but not submit, no roles
+    M_B4_CUR1_NOUSER     = 17  # Manuscript awaiting initial curation, no roles
+    M_DUR_CUR1_NOUSER    = 18  # Manuscript initial curation created but not submit, no roles
+    M_B4_VER1_NOUSER     = 19  # Manuscript awaiting initial verification, no roles
+    M_DUR_VER1_NOUSER    = 20  # Manuscript initial verification created but not submit, no roles
+    M_B4_CUR1_AUTHOR_F   = 21  # Manuscript initial submission created and submitted, author roles. Has files on sub
 
-    def testFixtureLoad(self):
-        manuscript = m.Manuscript.objects.get(pk=1)
-        self.assertEquals(manuscript.doi, 'test')
+    S_DUR_SUB1_ALLUSER   = 4
+    S_B4_CUR1_ALLUSER    = 1
+    S_DUR_CUR1_ALLUSER   = 5
+    S_B4_VER1_ALLUSER    = 2
+    S_DUR_VER1_ALLUSER   = 6
+    S_B4_SUB2_ALLUSER    = 3 
+    S_DONE_ALLUSER       = 9 
+    S_DONE_NOUSER        = 10
+    S_DUR_SUB1_NOUSER_F  = 7
+    S_DUR_SUB1_ALLUSER_F = 8
+    S_DUR_SUB1_NOUSER    = 11  
+    S_B4_CUR1_NOUSER     = 12 
+    S_DUR_CUR1_NOUSER    = 13 
+    S_B4_VER1_NOUSER     = 14 
+    S_DUR_VER1_NOUSER    = 15  
+    S_B4_CUR1_AUTHOR_F   = 16
 
-    @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
-    @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
-    def testAssignedAuthorAccessManuscript(self):
+    C_DUR_CUR1_ALLUSER   = 3 
+    C_B4_VER1_ALLUSER    = 1
+    C_DUR_VER1_ALLUSER   = 4  
+    C_B4_SUB2_ALLUSER    = 2  
+    C_DONE_ALLUSER       = 5  
+    C_DONE_NOUSER        = 6  
+    C_DUR_CUR1_NOUSER    = 7 
+    C_B4_VER1_NOUSER     = 8 
+    C_DUR_VER1_NOUSER    = 9  
+
+    V_DUR_VER1_ALLUSER   = 2  
+    V_B4_SUB2_ALLUSER    = 1   
+    V_DONE_ALLUSER       = 3 
+    V_DONE_NOUSER        = 4  
+    V_DUR_VER1_NOUSER    = 5 
+
+    #These notes are attached to various objects. 
+    # The ones with _AD were created by the admin, otherwise they were created by the author/curator/verifier used in the tests
+    N_DUR_SUB1_ALLUSER = 9  # Submission 4 / S_DUR_SUB1_ALLUSER
+    N_DUR_SUB1_AUTHOR = 10  # Submission 4 / S_DUR_SUB1_ALLUSER
+    N_DUR_SUB1_AUTHOR_AD = 21  # Submission 4 / S_DUR_SUB1_ALLUSER
+    N_B4_CUR1_ALLUSER = 11  # Submission 1 / S_B4_CUR1_ALLUSER
+    N_B4_CUR1_AUTHOR = 12   # Submission 1 / S_B4_CUR1_ALLUSER
+    N_B4_CUR1_AUTHOR_AD = 22   # Submission 1 / S_B4_CUR1_ALLUSER
+    N_DUR_CUR1_ALLUSER = 13 # Curation 3 / C_DUR_CUR1_ALLUSER
+    N_DUR_CUR1_CURATOR = 14 # Curation 3 / C_DUR_CUR1_ALLUSER
+    N_DUR_CUR1_CURATOR_AD = 23 # Curation 3 / C_DUR_CUR1_ALLUSER
+    N_B4_VER1_ALLUSER = 15  # Curation 1 / C_B4_VER1_ALLUSER
+    N_B4_VER1_CURATOR = 16  # Curation 1 / C_B4_VER1_ALLUSER
+    N_B4_VER1_CURATOR_AD = 24  # Curation 1 / C_B4_VER1_ALLUSER
+    N_DUR_VER1_ALLUSER = 17 # Verification 2 / V_DUR_VER1_ALLUSER 
+    N_DUR_VER1_VERIF = 18   # Verification 2 / V_DUR_VER1_ALLUSER 
+    N_DUR_VER1_VERIF_AD = 25   # Verification 2 / V_DUR_VER1_ALLUSER 
+    N_B4_SUB2_ALLUSER = 19  # Verification 1 / V_B4_SUB2_ALLUSER
+    N_B4_SUB2_VERIF = 20    # Verification 1 / V_B4_SUB2_ALLUSER
+    N_B4_SUB2_VERIF_AD = 26    # Verification 1 / V_B4_SUB2_ALLUSER
+    #21-26 admin created auth/cur/ver scope
+
+    #Fixture is initialized here so we can call it once per class instead of method.
+    #Downside is we could munge our test data. Seems worthwhile for now
+    def setUpTestData():
+        call_command(
+            'loaddata', 
+            'manuscript_submission_states_temp.json',
+            verbosity=0
+        )
+
+class TestAuthorUrlAccess(BaseTestWithFixture):
+    def test_AuthorAccess_IndexOther(self):
         author = m.User.objects.get(email="fakeauthor@gmail.com")
         cl = Client()
         cl.force_login(author)
-        
+
         self.assertEqual(cl.get(reverse("index")).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_table")).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_NOUSER    })).status_code, 404)
@@ -80,7 +127,31 @@ class TestUrlAccessFixture(TestCase):
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR})).status_code, 200)
         #codebroken #self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_NOUSER   })).status_code, 404)
-        
+
+        # pain to test # self.assertEqual(cl.get(reverse("account_associate_oauth")).status_code, 200)
+        self.assertEqual(cl.get(reverse("account_user_details")).status_code, 200)
+        self.assertEqual(cl.get(reverse("notifications")).status_code, 200)
+        self.assertEqual(cl.get(reverse("site_actions")).status_code, 404)
+        self.assertEqual(cl.get(reverse("inviteeditor")).status_code, 404)
+        self.assertEqual(cl.get(reverse("invitecurator")).status_code, 404)
+        self.assertEqual(cl.get(reverse("inviteverifier")).status_code, 404)
+        self.assertEqual(cl.get(reverse("logout")).status_code, 302)
+
+    @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
+    def test_AuthorAccessManuscript_CreateEdit(self):
+        author = m.User.objects.get(email="fakeauthor@gmail.com")
+        cl = Client()
+        cl.force_login(author)   
+
+        ###We only test binders we can't access, because it redirects to an external service (and the functionality is not flushed out)
+        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_DONE_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_NEW_NOUSER   })).status_code, 404)
+
+        #Only editor can progress manuscript
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_B4_SUB2_ALLUSER })).status_code, 404)
+
         ### Author can never create/edit manuscript. 
         self.assertEqual(cl.get(reverse("manuscript_create")).status_code, 403)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 404)
@@ -118,6 +189,17 @@ class TestUrlAccessFixture(TestCase):
         #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
+        ### Author cannot delete from manuscript
+        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+
+
+    def test_AuthorAccessManuscript_Assign(self):
+        author = m.User.objects.get(email="fakeauthor@gmail.com")
+        cl = Client()
+        cl.force_login(author)   
+
         ### Author should always be able to invite other authors, but no other roles
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 200)
@@ -186,6 +268,15 @@ class TestUrlAccessFixture(TestCase):
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
 
+    @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
+    @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
+    @mock.patch('corere.main.views.main.gitlab_submission_delete_all_files', mock.Mock())
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
+    def test_AuthorAccessSubCurVer_Index(self, mock_gitlab_file_list):
+        author = m.User.objects.get(email="fakeauthor@gmail.com")
+        cl = Client()
+        cl.force_login(author)
+
         ### Need to be able to get and post on create. Post will probably break once we have any fields on the submission.
         self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
@@ -200,52 +291,108 @@ class TestUrlAccessFixture(TestCase):
         self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_DONE_ALLUSER     })).status_code, 404)
 
-        ### Author cannot delete from manuscript
-        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        ##Disabled for precision testing    
+        # ### All submission edit actions should only be doable when a submission is in progress
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
 
-        ###We only test binders we can't access, because it redirects to an external service (and the functionality is not flushed out)
-        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_DONE_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_NEW_NOUSER   })).status_code, 404)
+        ### Read should be doable at any point there is a submission
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        
+        ### Author cannot create these
+        self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createverification", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createverification", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+ 
+        #We currently allow creating, editing, deleting notes they own at any point, even though the ui doesn't provide a path to the page when its not editing
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
 
-        #Only editor can progress manuscript
-        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_NOUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_B4_SUB2_ALLUSER })).status_code, 404)
+        ### Author can only delete from their own submission
+        self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
 
-    def testAssignedAuthorAccessSubCurVer(self):
-        author = m.User.objects.get(email="fakeauthor@gmail.com")
-        cl = Client()
-        cl.force_login(author)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
-        # resp = cl.get(reverse("submission_edit", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_editfiles", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_uploadfiles", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_fileslist", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_read", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_readfiles", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_createcuration", kwargs={'submission_id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_createverification", kwargs={'submission_id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_createnote", kwargs={'submission_id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_editnote", kwargs={'submission_id':5, 'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_deletenote", kwargs={'submission_id':5, 'id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_deletefile", kwargs={'submission_id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_deleteallfiles", kwargs={'submission_id':5}))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("submission_progress", kwargs={'id':5}))
-        # self.assertEqual(resp.status_code, 200)
+        #TODO: Fill in Curation / Verification after writing tests first from a curator / verifier perspective
 
         # resp = cl.get(reverse("curation_edit", kwargs={'id':5}))
         # self.assertEqual(resp.status_code, 200)
@@ -272,29 +419,9 @@ class TestUrlAccessFixture(TestCase):
         # self.assertEqual(resp.status_code, 200)
         # resp = cl.get(reverse("verification_progress", kwargs={'id':5}))
         # self.assertEqual(resp.status_code, 200)
-        
-    def testAssignedAuthorAccessOther(self):
-        pass
-        # untested currently
-        # resp = cl.get(reverse("account_associate_oauth", kwargs={'key':5}))
-        # self.assertEqual(resp.status_code, 200)
 
-        # resp = cl.get(reverse("account_user_details"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("notifications"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("site_actions"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("site_actions/inviteeditor"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("site_actions/invitecurator"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("site_actions/inviteverifier"))
-        # self.assertEqual(resp.status_code, 200)
-        # resp = cl.get(reverse("logout"))
-        # self.assertEqual(resp.status_code, 200)
-
-    def testAssignedCuratorAccessManuscript(self):
+class TestCuratorUrlAccess(BaseTestWithFixture):
+    def test_CuratorAccessManuscript_Index(self):
         curator = m.User.objects.get(email="fakecurator@gmail.com")
         cl = Client()
         cl.force_login(curator)

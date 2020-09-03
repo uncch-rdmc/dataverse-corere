@@ -323,7 +323,7 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
 #TODO: Pass less parameters, especially token stuff
-class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
+class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = GitlabReadOnlyFileFormSet
     template = 'main/form_edit_files.html'
     #template = 'main/not_form_upload_files.html'
@@ -332,7 +332,7 @@ class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Read
     helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
-        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
+        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
