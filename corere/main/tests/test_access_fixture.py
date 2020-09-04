@@ -103,7 +103,6 @@ class BaseTestWithFixture(TestCase):
     N_B4_SUB2_ALLUSER = 19  # Verification 1 / V_B4_SUB2_ALLUSER
     N_B4_SUB2_VERIF = 20    # Verification 1 / V_B4_SUB2_ALLUSER
     N_B4_SUB2_VERIF_AD = 26    # Verification 1 / V_B4_SUB2_ALLUSER
-    #21-26 admin created auth/cur/ver scope
 
     #Fixture is initialized here so we can call it once per class instead of method.
     #Downside is we could munge our test data. Seems worthwhile for now
@@ -114,6 +113,9 @@ class BaseTestWithFixture(TestCase):
             verbosity=0
         )
 
+#####################################################################################################################################################
+########## AUTHOR
+#####################################################################################################################################################
 class TestAuthorUrlAccess(BaseTestWithFixture):
     def test_AuthorAccess_IndexOther(self):
         author = m.User.objects.get(email="fakeauthor@gmail.com")
@@ -420,7 +422,327 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         # resp = cl.get(reverse("verification_progress", kwargs={'id':5}))
         # self.assertEqual(resp.status_code, 200)
 
+
+#Ok so... curator needs fixing for sure
+#Right now it can view all manuscripts, but the perm check in a lot of places only looks for "object based", not global (I think)
+#Also right not curator can't do any assignments which... it absolutely needs to do.
+#...
+#Maybe someday we'll need curators who can only see their assignments, but for now I should just design to not block that out
+
+
+#####################################################################################################################################################
+########## Curator
+#####################################################################################################################################################
 class TestCuratorUrlAccess(BaseTestWithFixture):
+    def test_CuratorAccess_IndexOther(self):
+        curator = m.User.objects.get(email="fakecurator@gmail.com")
+        cl = Client()
+        cl.force_login(curator)
+
+        self.assertEqual(cl.get(reverse("index")).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_table")).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_NOUSER    })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR})).status_code, 404)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_NOUSER   })).status_code, 404)
+
+        # pain to test # self.assertEqual(cl.get(reverse("account_associate_oauth")).status_code, 200)
+        self.assertEqual(cl.get(reverse("account_user_details")).status_code, 200)
+        self.assertEqual(cl.get(reverse("notifications")).status_code, 200)
+        self.assertEqual(cl.get(reverse("site_actions")).status_code, 200)
+        self.assertEqual(cl.get(reverse("inviteeditor")).status_code, 200)
+        self.assertEqual(cl.get(reverse("invitecurator")).status_code, 200)
+        self.assertEqual(cl.get(reverse("inviteverifier")).status_code, 200)
+        self.assertEqual(cl.get(reverse("logout")).status_code, 302)
+
+    @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
+    def test_CuratorAccessManuscript_CreateEdit(self):
+        curator = m.User.objects.get(email="fakecurator@gmail.com")
+        cl = Client()
+        cl.force_login(curator)   
+
+        ###We only test binders we can't access, because it redirects to an external service (and the functionality is not flushed out)
+        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_DONE_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_NEW_NOUSER   })).status_code, 404)
+
+        #Only editor can progress manuscript
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_NEW_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_progress", kwargs={'id':self.M_B4_SUB2_ALLUSER })).status_code, 404)
+
+        ### Curator can never create/edit manuscript. 
+        self.assertEqual(cl.get(reverse("manuscript_create")).status_code, 403)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_CUR1_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_CUR1_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        
+        ### Curator should always be able to read manuscript contents when assigned
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_CUR1_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_CUR1_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
+        
+        ### Curator cannot delete from manuscript
+        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+
+
+    def test_CuratorAccessManuscript_Assign(self):
+        curator = m.User.objects.get(email="fakecurator@gmail.com")
+        cl = Client()
+        cl.force_login(curator)   
+
+        ### Curator should always be able to invite other curators, but no other roles
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        
+        ### Only curators can unassign
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+
+    @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
+    @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
+    @mock.patch('corere.main.views.main.gitlab_submission_delete_all_files', mock.Mock())
+    @mock.patch('corere.main.views.classes.gitlab_repo_get_file_folder_list', return_value=[])
+    def test_CuratorAccessSubCurVer_Index(self, mock_gitlab_file_list):
+        curator = m.User.objects.get(email="fakecurator@gmail.com")
+        cl = Client()
+        cl.force_login(curator)
+
+        ### Need to be able to get and post on create. Post will probably break once we have any fields on the submission.
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_NEW_ALLUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR   })).status_code, 200)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_DONE_ALLUSER     })).status_code, 404)
+
+        ##Disabled for precision testing    
+        # ### All submission edit actions should only be doable when a submission is in progress
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_uploadfiles", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_fileslist", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+
+        ### Read should be doable at any point there is a submission
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        
+        ### Curator cannot create these
+        self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createverification", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createverification", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+ 
+        #We currently allow creating, editing, deleting notes they own at any point, even though the ui doesn't provide a path to the page when its not editing
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_CUR1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
+        #codebroken #self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_NOUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_CUR1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_VER1_NOUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_VER1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+
+        ### Curator can only delete from their own submission
+        self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
+
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_B4_CUR1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+
+        #TODO: Fill in Curation / Verification after writing tests first from a curator / verifier perspective
+
+        # resp = cl.get(reverse("curation_edit", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("curation_read", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("curation_createnote", kwargs={'curation_id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("curation_editnote", kwargs={'curation_id':5, 'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("curation_deletenote", kwargs={'curation_id':5, 'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("curation_progress", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        
+        # resp = cl.get(reverse("verification_edit", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("verification_read", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("verification_createnote", kwargs={'verification_id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("verification_editnote", kwargs={'verification_id':5, 'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("verification_deletenote", kwargs={'verification_id':5, 'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+        # resp = cl.get(reverse("verification_progress", kwargs={'id':5}))
+        # self.assertEqual(resp.status_code, 200)
+
+
+
+
+class TestCuratorUrlAccess2(BaseTestWithFixture):
     def test_CuratorAccessManuscript_Index(self):
         curator = m.User.objects.get(email="fakecurator@gmail.com")
         cl = Client()
