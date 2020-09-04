@@ -132,13 +132,13 @@ class ManuscriptJson(CorereBaseDatatableView):
             #TODO: add launchNotebook once integration is better
 
             # MAD: Should we change these to be transitions?
-            if(user.has_perm('add_authors_on_manuscript', manuscript)):
+            if(user.has_any_perm('add_authors_on_manuscript', manuscript)):
                 avail_buttons.append('inviteassignauthor')
-            if(user.has_perm('manage_editors_on_manuscript', manuscript)):
+            if(user.has_any_perm('manage_editors_on_manuscript', manuscript)):
                 avail_buttons.append('assigneditor')
-            if(user.has_perm('manage_curators_on_manuscript', manuscript)):
+            if(user.has_any_perm('manage_curators_on_manuscript', manuscript)):
                 avail_buttons.append('assigncurator')
-            if(user.has_perm('manage_verifiers_on_manuscript', manuscript)):
+            if(user.has_any_perm('manage_verifiers_on_manuscript', manuscript)):
                 avail_buttons.append('assignverifier')
 
             if(has_transition_perm(manuscript.add_submission_noop, user)):
@@ -253,7 +253,7 @@ class SubmissionJson(CorereBaseDatatableView):
             manuscript = m.Manuscript.objects.get(id=manuscript_id)
         except ObjectDoesNotExist:
             raise Http404()
-        if(self.request.user.has_perm('view_manuscript', manuscript) or self.request.user.has_perm('main.view_manuscript')):
+        if(self.request.user.has_any_perm('view_manuscript', manuscript)):
             return(m.Submission.objects.filter(manuscript=manuscript_id))
         else:
             raise Http404()

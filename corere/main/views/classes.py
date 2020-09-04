@@ -98,7 +98,7 @@ class NotesMixin(object):
         self.model._meta.get_field('notes')
         self.notes = []
         for note in self.object.notes.all():
-            if request.user.has_perm('view_note', note):
+            if request.user.has_any_perm('view_note', note):
                 self.notes.append(note)
             else:
                 logger.debug("user did not have permission for note: " + note.text)

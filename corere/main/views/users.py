@@ -15,6 +15,7 @@ from django.conf import settings
 from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_repo, gitlab_update_user
 from notifications.signals import notify
 from django.http import Http404
+from corere.main.templatetags.auth_extras import has_group
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -29,7 +30,7 @@ def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
-    can_remove_author = request.user.has_perm('remove_authors_on_manuscript')
+    can_remove_author = request.user.has_any_perm('remove_authors_on_manuscript', manuscript)
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -240,7 +241,7 @@ def invite_verifier(request):
 
 @login_required()
 def invite_user_not_author(request, role, role_text):
-    if(request.user.is_superuser):
+    if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         form = UserInviteForm(request.POST or None)
         if request.method == 'POST':
             if form.is_valid():

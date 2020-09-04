@@ -2085,6 +2085,70 @@
     }
 },
 {
+    "model": "auth.group",
+    "pk": 81,
+    "fields": {
+        "name": "Editor Manuscript 22",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 82,
+    "fields": {
+        "name": "Author Manuscript 22",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 83,
+    "fields": {
+        "name": "Curator Manuscript 22",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 84,
+    "fields": {
+        "name": "Verifier Manuscript 22",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 85,
+    "fields": {
+        "name": "Editor Manuscript 23",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 86,
+    "fields": {
+        "name": "Author Manuscript 23",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 87,
+    "fields": {
+        "name": "Curator Manuscript 23",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 88,
+    "fields": {
+        "name": "Verifier Manuscript 23",
+        "permissions": []
+    }
+},
+{
     "model": "guardian.groupobjectpermission",
     "pk": 1,
     "fields": {
@@ -4975,6 +5039,266 @@
     }
 },
 {
+    "model": "guardian.groupobjectpermission",
+    "pk": 290,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 81
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 291,
+    "fields": {
+        "permission": 87,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 81
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 292,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 81
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 293,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 81
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 294,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 82
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 295,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 82
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 296,
+    "fields": {
+        "permission": 94,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 82
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 297,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 83
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 298,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 83
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 299,
+    "fields": {
+        "permission": 95,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 83
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 300,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 84
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 301,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 84
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 302,
+    "fields": {
+        "permission": 96,
+        "content_type": 23,
+        "object_pk": "22",
+        "group": 84
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 303,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 85
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 304,
+    "fields": {
+        "permission": 87,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 85
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 305,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 85
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 306,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 85
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 307,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 86
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 308,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 86
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 309,
+    "fields": {
+        "permission": 94,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 86
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 310,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 87
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 311,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 87
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 312,
+    "fields": {
+        "permission": 95,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 87
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 313,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 88
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 314,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 88
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 315,
+    "fields": {
+        "permission": 96,
+        "content_type": 23,
+        "object_pk": "23",
+        "group": 88
+    }
+},
+{
     "model": "main.user",
     "pk": 1,
     "fields": {
@@ -5021,7 +5345,9 @@
             70,
             73,
             74,
-            77
+            77,
+            81,
+            85
         ],
         "user_permissions": []
     }
@@ -5066,17 +5392,19 @@
         "gitlab_id": 10,
         "groups": [
             2,
+            34,
+            38,
             10,
+            42,
             14,
+            78,
             18,
+            50,
             22,
             26,
             30,
-            34,
-            38,
-            42,
-            50,
-            78
+            82,
+            86
         ],
         "user_permissions": []
     }
@@ -5108,7 +5436,8 @@
             33,
             37,
             41,
-            49
+            49,
+            81
         ],
         "user_permissions": []
     }
@@ -9492,6 +9821,60 @@
     }
 },
 {
+    "model": "main.historicalmanuscript",
+    "pk": 109,
+    "fields": {
+        "id": 22,
+        "created_at": "2020-09-04T19:11:27.747Z",
+        "updated_at": "2020-09-04T19:11:27.747Z",
+        "history_change_list": "",
+        "uuid": "d46f4224-6b36-427e-9b2d-a8b8b5bcf581",
+        "pub_id": "",
+        "title": "Manuscript created with assigned author and editor",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-04T19:11:27.768Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 110,
+    "fields": {
+        "id": 23,
+        "created_at": "2020-09-04T19:12:13.749Z",
+        "updated_at": "2020-09-04T19:12:13.749Z",
+        "history_change_list": "",
+        "uuid": "2c8e5849-f288-44e8-b604-77727197c55e",
+        "pub_id": "",
+        "title": "Manuscript created with assigned author",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-04T19:12:13.760Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.manuscript",
     "pk": 1,
     "fields": {
@@ -9930,6 +10313,48 @@
         "gitlab_manuscript_id": 99,
         "gitlab_manuscript_path": "21_-_Manuscript_submission_waiting_curation_with_files_-_Manuscript",
         "_status": "processing"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 22,
+    "fields": {
+        "created_at": "2020-09-04T19:11:27.747Z",
+        "updated_at": "2020-09-04T19:11:27.747Z",
+        "creator": 1,
+        "last_editor": null,
+        "uuid": "d46f4224-6b36-427e-9b2d-a8b8b5bcf581",
+        "pub_id": "",
+        "title": "Manuscript created with assigned author and editor",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 23,
+    "fields": {
+        "created_at": "2020-09-04T19:12:13.749Z",
+        "updated_at": "2020-09-04T19:12:13.749Z",
+        "creator": 1,
+        "last_editor": null,
+        "uuid": "2c8e5849-f288-44e8-b604-77727197c55e",
+        "pub_id": "",
+        "title": "Manuscript created with assigned author",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new"
     }
 },
 {
@@ -13819,6 +14244,28 @@
         "action_object_content_type": null,
         "action_object_object_id": null,
         "timestamp": "2020-09-03T21:20:08.336Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 43,
+    "fields": {
+        "level": "info",
+        "recipient": 6,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you editor access to manuscript Manuscript created with assigned author and editor!",
+        "target_content_type": 23,
+        "target_object_id": "22",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-04T19:11:59.576Z",
         "public": false,
         "deleted": false,
         "emailed": false,

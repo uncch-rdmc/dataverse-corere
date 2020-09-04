@@ -1,7 +1,7 @@
 {% load static %}
 {% load bootstrap_msg_class_lvls %}
 {% load notifications_tags %}
-
+{% load auth_extras %}
 
 <div> {# div ends in footer.html #}
 
@@ -23,7 +23,7 @@
             {% register_notify_callbacks callbacks='fill_notification_badge' %}
             <a class="dropdown-item" href="/notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
             <a class="dropdown-item" href="/account_user_details">Edit User Info</a>
-            {% if user.is_superuser %}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
               <a class="dropdown-item" href="/site_actions">Site Actions</a>
             {% endif%}
             <div class="dropdown-divider"></div>

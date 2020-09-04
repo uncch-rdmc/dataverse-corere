@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from corere.main.gitlab import gitlab_delete_file, gitlab_submission_delete_all_files
 from corere.main.binderhub import binder_build_load 
 from guardian.shortcuts import assign_perm, remove_perm
+from corere.main.templatetags.auth_extras import has_group
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def index(request):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not request.user.has_perm('view_manuscript', manuscript)):
+    if(not request.user.has_any_perm('view_manuscript', manuscript)):
         logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
         raise Http404()
 
@@ -50,7 +51,7 @@ def open_binder(request, id=None):
 def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
         note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_perm('change_note', note)):
+        if(not request.user.has_any_perm('change_note', note)):
             logger.warning("User id:{0} attempted to access Note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         message = 'Your note has been updated!'
@@ -60,19 +61,19 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
             
-            if(not request.user.has_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
+            if(not request.user.has_any_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
             #if(not has_transition_perm(note.parent_submission.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
                 raise Http404()
         elif(curation_id):
             note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
-            if(not request.user.has_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
+            if(not request.user.has_any_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
             #if(not has_transition_perm(note.parent_curation.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on curation id:{1} which they had no permission to".format(request.user.id, curation_id))
                 raise Http404()
         elif(verification_id):
             note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
-            if(not request.user.has_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
+            if(not request.user.has_any_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
             #if(not has_transition_perm(note.parent_verification.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on verification id:{1} which they had no permission to".format(request.user.id, verification_id))
                 raise Http404()
@@ -100,7 +101,7 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
         note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_perm('delete_note', note)):
+        if(not request.user.has_any_perm('delete_note', note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         note.delete()
@@ -146,7 +147,7 @@ def delete_all_submission_files(request, submission_id):
 
 @login_required()
 def site_actions(request):
-    if(request.user.is_superuser):
+    if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         return render(request, 'main/site_actions.html')
     else:
         raise Http404()
