@@ -432,7 +432,7 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('curate_manuscript', group_manuscript_curator, self) 
 
             group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_verifier, self) 
+            #assign_perm('change_manuscript', group_manuscript_verifier, self) 
             assign_perm('view_manuscript', group_manuscript_verifier, self) 
             assign_perm('verify_manuscript', group_manuscript_verifier, self) 
 

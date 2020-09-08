@@ -2250,16 +2250,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 11,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "1",
-        "group": 8
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 12,
     "fields": {
         "permission": 88,
@@ -2376,16 +2366,6 @@
         "content_type": 23,
         "object_pk": "2",
         "group": 11
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 24,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "2",
-        "group": 12
     }
 },
 {
@@ -2510,16 +2490,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 37,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "3",
-        "group": 16
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 38,
     "fields": {
         "permission": 88,
@@ -2636,16 +2606,6 @@
         "content_type": 23,
         "object_pk": "4",
         "group": 19
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 50,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "4",
-        "group": 20
     }
 },
 {
@@ -2770,16 +2730,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 63,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "5",
-        "group": 24
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 64,
     "fields": {
         "permission": 88,
@@ -2896,16 +2846,6 @@
         "content_type": 23,
         "object_pk": "6",
         "group": 27
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 76,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "6",
-        "group": 28
     }
 },
 {
@@ -3030,16 +2970,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 89,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "7",
-        "group": 32
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 90,
     "fields": {
         "permission": 88,
@@ -3156,16 +3086,6 @@
         "content_type": 23,
         "object_pk": "8",
         "group": 35
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 102,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "8",
-        "group": 36
     }
 },
 {
@@ -3290,16 +3210,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 115,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "9",
-        "group": 40
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 116,
     "fields": {
         "permission": 88,
@@ -3420,16 +3330,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 128,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "10",
-        "group": 44
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 129,
     "fields": {
         "permission": 88,
@@ -3546,16 +3446,6 @@
         "content_type": 23,
         "object_pk": "11",
         "group": 47
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 141,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "11",
-        "group": 48
     }
 },
 {
@@ -3720,16 +3610,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 158,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "12",
-        "group": 52
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 159,
     "fields": {
         "permission": 88,
@@ -3846,16 +3726,6 @@
         "content_type": 23,
         "object_pk": "15",
         "group": 55
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 171,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "15",
-        "group": 56
     }
 },
 {
@@ -3980,16 +3850,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 184,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "16",
-        "group": 60
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 185,
     "fields": {
         "permission": 88,
@@ -4106,16 +3966,6 @@
         "content_type": 23,
         "object_pk": "17",
         "group": 63
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 197,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "17",
-        "group": 64
     }
 },
 {
@@ -4240,16 +4090,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 210,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "18",
-        "group": 68
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 211,
     "fields": {
         "permission": 88,
@@ -4370,16 +4210,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 223,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "19",
-        "group": 72
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 224,
     "fields": {
         "permission": 88,
@@ -4496,16 +4326,6 @@
         "content_type": 23,
         "object_pk": "20",
         "group": 75
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 236,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "20",
-        "group": 76
     }
 },
 {
@@ -5010,16 +4830,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 287,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "21",
-        "group": 80
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 288,
     "fields": {
         "permission": 88,
@@ -5136,16 +4946,6 @@
         "content_type": 23,
         "object_pk": "22",
         "group": 83
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
-    "pk": 300,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "22",
-        "group": 84
     }
 },
 {
@@ -5270,16 +5070,6 @@
 },
 {
     "model": "guardian.groupobjectpermission",
-    "pk": 313,
-    "fields": {
-        "permission": 86,
-        "content_type": 23,
-        "object_pk": "23",
-        "group": 88
-    }
-},
-{
-    "model": "guardian.groupobjectpermission",
     "pk": 314,
     "fields": {
         "permission": 88,
@@ -5400,11 +5190,11 @@
             78,
             18,
             50,
-            22,
-            26,
-            30,
             82,
-            86
+            22,
+            86,
+            26,
+            30
         ],
         "user_permissions": []
     }
@@ -5428,16 +5218,16 @@
         "gitlab_id": 11,
         "groups": [
             1,
-            9,
-            13,
-            21,
-            25,
-            29,
             33,
             37,
+            9,
             41,
+            13,
             49,
-            81
+            81,
+            21,
+            25,
+            29
         ],
         "user_permissions": []
     }
@@ -5460,16 +5250,16 @@
         "invited_by": 1,
         "gitlab_id": 12,
         "groups": [
+            35,
             4,
+            39,
             11,
+            43,
             15,
+            51,
             23,
             27,
-            31,
-            35,
-            39,
-            43,
-            51
+            31
         ],
         "user_permissions": []
     }
@@ -5492,16 +5282,16 @@
         "invited_by": 1,
         "gitlab_id": 13,
         "groups": [
-            3,
-            12,
-            16,
-            24,
-            28,
             32,
+            3,
             36,
             40,
+            12,
             44,
-            52
+            16,
+            52,
+            24,
+            28
         ],
         "user_permissions": []
     }
