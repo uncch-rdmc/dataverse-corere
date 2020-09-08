@@ -71,7 +71,7 @@
                     {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Manuscript Actions <i class="fas fa-angle-down"></i>',
+                            text: 'Manuscript Actions',
                             fade: 0,
                             buttons: [
                                 //TODO: This perm is different than the one for progress. 
@@ -160,7 +160,7 @@
                         {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
                         {
                             extend: 'collection',
-                            text: 'Manuscript Members <i class="fas fa-angle-down"></i>',
+                            text: 'Manuscript Members',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
@@ -353,7 +353,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Submission Actions <i class="fas fa-angle-down"></i>',
+                            text: 'Submission Actions',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
@@ -440,7 +440,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Curation Actions <i class="fas fa-angle-down"></i>',
+                            text: 'Curation Actions',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
@@ -498,7 +498,7 @@
                         {% endif %}
                         {
                             extend: 'collection',
-                            text: 'Verification Actions <i class="fas fa-angle-down"></i>',
+                            text: 'Verification Actions',
                             fade: 0,
                             buttons: [
                                 {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
