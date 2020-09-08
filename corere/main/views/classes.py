@@ -52,7 +52,7 @@ class GenericCorereObjectView(View):
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     def post(self, request, *args, **kwargs):
-        print(self.__dict__)
+        #print(self.__dict__)
         if self.form.is_valid():
             self.form.save() #Note: this is what saves a newly created model instance
             if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
@@ -98,7 +98,7 @@ class NotesMixin(object):
         self.model._meta.get_field('notes')
         self.notes = []
         for note in self.object.notes.all():
-            if request.user.has_perm('view_note', note):
+            if request.user.has_any_perm('view_note', note):
                 self.notes.append(note)
             else:
                 logger.debug("user did not have permission for note: " + note.text)
@@ -234,7 +234,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     form = ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
@@ -304,6 +304,7 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
+#TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     form = GitlabFileFormSet
     template = 'main/form_edit_files.html'
@@ -322,16 +323,16 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
 #TODO: Pass less parameters, especially token stuff
-class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
+class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = GitlabReadOnlyFileFormSet
     template = 'main/form_edit_files.html'
     #template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
     helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
-        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
+        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),

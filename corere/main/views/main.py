@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from corere.main.gitlab import gitlab_delete_file, gitlab_submission_delete_all_files
 from corere.main.binderhub import binder_build_load 
 from guardian.shortcuts import assign_perm, remove_perm
+from corere.main.templatetags.auth_extras import has_group
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ def index(request):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
+    if(not request.user.has_any_perm('view_manuscript', manuscript)):
+        logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+        raise Http404()
+
     binder_url = binder_build_load(manuscript)
     return redirect(binder_url)
     #print(response.__dict__)
@@ -46,7 +51,7 @@ def open_binder(request, id=None):
 def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
         note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_perm('view_note', note)):
+        if(not request.user.has_any_perm('change_note', note)):
             logger.warning("User id:{0} attempted to access Note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         message = 'Your note has been updated!'
@@ -55,17 +60,21 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
         note = m.Note()
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
-            if(not request.user.has_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
+            
+            if(not request.user.has_any_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
+            #if(not has_transition_perm(note.parent_submission.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
                 raise Http404()
         elif(curation_id):
             note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
-            if(not request.user.has_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
+            if(not request.user.has_any_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
+            #if(not has_transition_perm(note.parent_curation.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on curation id:{1} which they had no permission to".format(request.user.id, curation_id))
                 raise Http404()
         elif(verification_id):
             note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
-            if(not request.user.has_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
+            if(not request.user.has_any_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
+            #if(not has_transition_perm(note.parent_verification.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on verification id:{1} which they had no permission to".format(request.user.id, verification_id))
                 raise Http404()
         message = 'Your new note has been created!'
@@ -92,7 +101,7 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
 def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
         note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_perm('delete_note', note)):
+        if(not request.user.has_any_perm('delete_note', note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         note.delete()
@@ -103,6 +112,7 @@ def delete_note(request, id=None, submission_id=None, curation_id=None, verifica
 @login_required
 def delete_file(request, manuscript_id=None, submission_id=None):
     if request.method == 'POST':
+        #TODO: Should send the post body
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -115,7 +125,10 @@ def delete_file(request, manuscript_id=None, submission_id=None):
             obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
             git_id = obj.manuscript.gitlab_submissions_id
         if(not has_transition_perm(obj.edit_noop, request.user)):
-            logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+            if(manuscript_id):
+                logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+            else:
+                logger.warning("User id:{0} attempted to delete gitlab file path:{1} on submission id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, submission_id))
             raise Http404()
         gitlab_delete_file(obj_type, obj, git_id, file_path)
 
@@ -126,7 +139,7 @@ def delete_all_submission_files(request, submission_id):
     if request.method == 'POST':
         submission = get_object_or_404(m.Submission, id=submission_id)
         if(not has_transition_perm(submission.edit_noop, request.user)):
-            logger.warning("User id:{0} attempted to delete gitlab file path:{1} on manuscript id:{2} which is either not editable at this point, or they have no permission to".format(request.user.id, file_path, manuscript_id))
+            logger.warning("User id:{0} attempted to delete all gitlab files on manuscript id:{1} which is either not editable at this point, or they have no permission to".format(request.user.id, submission_id))
             raise Http404()
         gitlab_submission_delete_all_files(submission)
 
@@ -134,7 +147,7 @@ def delete_all_submission_files(request, submission_id):
 
 @login_required()
 def site_actions(request):
-    if(request.user.is_superuser):
+    if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         return render(request, 'main/site_actions.html')
     else:
         raise Http404()

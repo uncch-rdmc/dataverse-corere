@@ -60,6 +60,13 @@ class User(AbstractUser):
     gitlab_id = models.IntegerField(blank=True, null=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
+    # Django Guardian has_perm does not check whether the user has a global perm.
+    # We always want that in our project, so this function checks both
+    # See for more info: https://github.com/django/django/pull/9581
+    #TODO: The 'main.' perm string should probably be more dynamic
+    def has_any_perm(self, perm_string, obj):
+        return self.has_perm('main.'+perm_string) or self.has_perm(perm_string, obj)
+
 ##################################################Rude & Deadly##
 
 VERIFICATION_NEW = "new"
@@ -104,7 +111,7 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_perm('verify_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm('verify_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -112,8 +119,8 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_perm('verify_manuscript',instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_perm('view_manuscript',instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm('verify_manuscript',instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -158,7 +165,7 @@ class Curation(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_perm('curate_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm('curate_manuscript',instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -166,8 +173,8 @@ class Curation(AbstractCreateUpdateModel):
     
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_CURATION and user.has_perm('curate_manuscript',instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_CURATION and user.has_perm('view_manuscript',instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm('curate_manuscript',instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -229,7 +236,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -237,8 +244,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance._status == SUBMISSION_NEW and user.has_perm('add_submission_to_manuscript',instance.manuscript))
-                                            or (instance._status != SUBMISSION_NEW and user.has_perm('view_manuscript',instance.manuscript))) )
+        permission=lambda instance, user: ((instance._status == SUBMISSION_NEW and user.has_any_perm('add_submission_to_manuscript',instance.manuscript))
+                                            or (instance._status != SUBMISSION_NEW and user.has_any_perm('view_manuscript',instance.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -248,7 +255,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, on_error=SUBMISSION_NEW, conditions=[can_submit],
-                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
+                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         # self.manuscript._status = MANUSCRIPT_PROCESSING
         # self.manuscript.save()
@@ -273,7 +280,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
-        permission=lambda instance, user: user.has_perm('curate_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm('curate_manuscript',instance.manuscript))
     #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_curation_noop(self):
         return self._status
@@ -295,7 +302,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_add_verification],
-        permission=lambda instance, user: user.has_perm('verify_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm('verify_manuscript',instance.manuscript))
     def add_verification_noop(self):
         return self._status
 
@@ -321,8 +328,8 @@ class Submission(AbstractCreateUpdateModel):
     #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
     #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
-                permission=lambda instance, user: ( user.has_perm('curate_manuscript',instance.manuscript)
-                    or user.has_perm('verify_manuscript',instance.manuscript) ))
+                permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)
+                    or user.has_any_perm('verify_manuscript',instance.manuscript) ))
     def review(self):
         try:
             if(self.submission_curation._status == CURATION_NO_ISSUES):
@@ -425,7 +432,7 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('curate_manuscript', group_manuscript_curator, self) 
 
             group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_verifier, self) 
+            #assign_perm('change_manuscript', group_manuscript_verifier, self) 
             assign_perm('view_manuscript', group_manuscript_verifier, self) 
             assign_perm('verify_manuscript', group_manuscript_verifier, self) 
 
@@ -447,7 +454,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
-                permission=lambda instance, user: user.has_perm('change_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm('change_manuscript',instance))
     def begin(self):
         pass #Here add any additional actions related to the state change
 
@@ -464,7 +471,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_add_submission],
-                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance))
     def add_submission_noop(self):
         return self._status
 
@@ -480,7 +487,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     # Perm: ability to create/edit a submission
     @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
-                permission=lambda instance, user: user.has_perm('add_submission_to_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance))
     def process(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
@@ -489,7 +496,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[MANUSCRIPT_NEW, MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_perm('change_manuscript',instance))
+        permission=lambda instance, user: user.has_any_perm('change_manuscript',instance))
     def edit_noop(self):
         return self._status
 
@@ -500,8 +507,8 @@ class Manuscript(AbstractCreateUpdateModel):
     #
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: (#(instance._status == MANUSCRIPT_NEW and user.has_perm('add_manuscript',instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
-                                            (instance._status != MANUSCRIPT_NEW and user.has_perm('view_manuscript',instance))) )
+        permission=lambda instance, user: (#(instance._status == MANUSCRIPT_NEW and user.has_any_perm('add_manuscript',instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+                                            (instance._status != MANUSCRIPT_NEW and user.has_any_perm('view_manuscript',instance))) )
     def view_noop(self):
         return self._status
 

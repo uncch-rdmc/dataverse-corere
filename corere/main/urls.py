@@ -21,7 +21,7 @@ urlpatterns = [
     path('manuscript/<int:id>/assignverifier', users.assign_verifier, name="manuscript_assignverifier"),
     path('manuscript/<int:id>/unassignverifier/<int:user_id>', users.unassign_verifier, name="manuscript_unassignverifier"),
     path('manuscript/<int:manuscript_id>/createsubmission', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
-    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('manuscript/<int:manuscript_id>/deletefile', main.delete_file, name="manuscript_deletefile"),
     path('manuscript/<int:id>/binder', main.open_binder, name="manuscript_binder"),
     path('manuscript/<int:id>/progress', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
 
@@ -36,7 +36,7 @@ urlpatterns = [
     path('submission/<int:submission_id>/createnote', main.edit_note, name="submission_createnote"),
     path('submission/<int:submission_id>/editnote/<int:id>', main.edit_note, name="submission_editnote"),
     path('submission/<int:submission_id>/deletenote/<int:id>', main.delete_note, name="submission_deletenote"),
-    path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"), #TODO: This currently works on GET with a query param for the file path. Should be changed to delete/post
+    path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress', classes.SubmissionProgressView.as_view(), name="submission_progress"),
 
@@ -54,12 +54,12 @@ urlpatterns = [
     path('verification/<int:verification_id>/deletenote/<int:id>', main.delete_note, name="verification_deletenote"),
     path('verification/<int:id>/progress', classes.VerificationProgressView.as_view(), name="verification_progress"),
 
-    path('logout', users.logout_view),
-    path('account_associate_oauth/<str:key>', users.account_associate_oauth),
-    path('account_user_details', users.account_user_details),
-    path('notifications', users.notifications),
-    path('site_actions', main.site_actions),
-    path('site_actions/inviteeditor', users.invite_editor),
-    path('site_actions/invitecurator', users.invite_curator),
-    path('site_actions/inviteverifier', users.invite_verifier),
+    path('logout', users.logout_view, name="logout"),
+    path('account_associate_oauth/<str:key>', users.account_associate_oauth, name="account_associate_oauth"),
+    path('account_user_details', users.account_user_details, name="account_user_details"),
+    path('notifications', users.notifications, name="notifications"),
+    path('site_actions', main.site_actions, name="site_actions"),
+    path('site_actions/inviteeditor', users.invite_editor, name="inviteeditor"),
+    path('site_actions/invitecurator', users.invite_curator, name="invitecurator"),
+    path('site_actions/inviteverifier', users.invite_verifier, name="inviteverifier"),
 ]
