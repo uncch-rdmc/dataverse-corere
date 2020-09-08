@@ -20,7 +20,6 @@ from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_subm
 
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
-    transition_button_title = None
     form = None
     model = None
     template = 'main/form_object_generic.html'
@@ -48,21 +47,21 @@ class GenericCorereObjectView(View):
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     def post(self, request, *args, **kwargs):
         #print(self.__dict__)
         if self.form.is_valid():
             self.form.save() #Note: this is what saves a newly created model instance
-            if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
-                self.progress_if_allowed(request, *args, **kwargs)
+            # if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
+            #     self.progress_if_allowed(request, *args, **kwargs)
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)
             #TODO: Pass back form errors
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
     ######## Custom class functions. You may want to override some of these. #########
@@ -180,7 +179,6 @@ class GroupRequiredMixin(object):
 
 # Do not call directly
 class GenericManuscriptView(GenericCorereObjectView):
-    transition_button_title = 'Save and Assign to Authors'
     object_friendly_name = 'manuscript'
     model = m.Manuscript
 
@@ -220,7 +218,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master",
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
@@ -237,7 +235,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master",
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
@@ -272,7 +270,6 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
 # Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
-    transition_button_title = 'Submit for Review'
     form = SubmissionForm
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -315,7 +312,7 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
@@ -333,7 +330,7 @@ class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
@@ -348,7 +345,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'transition_text': self.transition_button_title, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
@@ -382,7 +379,6 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
 # Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
-    transition_button_title = 'Submit and Progress'
     form = CurationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
@@ -432,7 +428,6 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
 # Do not call directly
 class GenericVerificationView(NotesMixin, GenericCorereObjectView):
-    transition_button_title = 'Submit and Progress'
     form = VerificationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"

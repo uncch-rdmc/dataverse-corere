@@ -26,7 +26,6 @@
         {% crispy form helper %}
     {% if not read_only %}
     <input type="submit" name="submit" value="Save">
-    <input type="submit" name="submit" value="{{transition_text}}">
     {% endif %}
     {% block extrabuttons %}
     {% endblock %}
