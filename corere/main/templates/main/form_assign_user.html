@@ -2,10 +2,13 @@
 {% block content %}
 {% load groups_contain_count %}
 {% load crispy_forms_tags %}
-{{ form.media.css }}
+{% comment %} {{ form.media.css }} {% endcomment %}
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 <script type="text/javascript">
+    {% autoescape off %}
+    user_table_map=new Map({{ select_table_info }});
+    {% endautoescape %}
     function unassign(manuscriptid, rolename, userid) {
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
@@ -49,4 +52,5 @@
     {% endfor %}
 </table>
 {{ form.media.js }}
+
 {% endblock content %}

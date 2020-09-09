@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 @login_required
 @permission_required_or_404('main.add_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def invite_assign_author(request, id=None):
-    form = AuthorInviteAddForm(request.POST or None)
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+    form = AuthorInviteAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     can_remove_author = request.user.has_any_perm('remove_authors_on_manuscript', manuscript)
@@ -43,6 +43,9 @@ def invite_assign_author(request, id=None):
                 # gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id) #done below
                 users.append(new_user) #add new new_user to the other users provided
             for u in users:
+                if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
+                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
+                    raise Http404()
                 manu_author_group.user_set.add(u)
                 gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
@@ -53,7 +56,8 @@ def invite_assign_author(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
 
 @login_required
 @permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -83,6 +87,9 @@ def assign_editor(request, id=None):
             users_to_add = list(form.cleaned_data['users_to_add'])
             
             for u in users_to_add:
+                if(not u.groups.filter(name=c.GROUP_ROLE_EDITOR).exists()):
+                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
+                    raise Http404()
                 manu_editor_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
@@ -91,7 +98,8 @@ def assign_editor(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
 
 @login_required
 @permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -122,6 +130,9 @@ def assign_curator(request, id=None):
             users_to_add = list(form.cleaned_data['users_to_add'])
             
             for u in users_to_add:
+                if(not u.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
+                    raise Http404()
                 manu_curator_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
@@ -130,7 +141,8 @@ def assign_curator(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
 @login_required
 @permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -160,6 +172,9 @@ def assign_verifier(request, id=None):
             users = list(form.cleaned_data['users_to_add'])
             
             for u in users:
+                if(not u.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
+                    raise Http404()
                 manu_verifier_group.user_set.add(u)
                 messages.add_message(request, messages.INFO, 'You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
@@ -168,7 +183,8 @@ def assign_verifier(request, id=None):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
@@ -278,3 +294,17 @@ def helper_create_user_and_invite(request, email, role):
     invite.send_invitation(request)
 
     return new_user
+
+#To make a select2 dropdown a table, we need to pass info to the template and then into JS
+#Here we generate the info
+#Its a string that is used to initialize a js map, fairly hacky stuff
+#Output looks like: "[['key1', 'foo'], ['key2', 'test']]"
+def helper_generate_select_table_info(role_name, group_substring):
+    users = User.objects.filter(invite_key='', groups__name=role_name)
+    table_dict = "["
+    for u in users:
+        #{key1: "foo", key2: someObj}
+        count = u.groups.filter(name__contains=group_substring).count()
+        table_dict += "['" + u.username +"','"+str(count)+"'],"
+    table_dict += "]"
+    return table_dict

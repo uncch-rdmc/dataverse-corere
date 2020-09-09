@@ -21,7 +21,6 @@ django-libsass==0.7
 django-notifications-hq==1.6.0
 django-oauth-toolkit==1.2.0
 django-rest-framework-social-oauth2==1.1.0
-django-select2==7.2.0
 django-simple-history==2.11.0
 djangorestframework==3.11.0
 idna==2.8

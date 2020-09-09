@@ -7,7 +7,7 @@ from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
 from django.conf import settings
 from . import constants as c
-from django_select2.forms import Select2MultipleWidget
+from corere.main import models as m
 from django.contrib.auth.models import Group
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
@@ -214,26 +214,26 @@ class NoteForm(forms.ModelForm):
         self.fields['scope'].initial = existing_scope
         #print(self.fields['scope'].__dict__)
 
+class CustomSelect2UserWidget(forms.SelectMultiple):
+    class Media:
+        js = ('main/select2_table.js',)
+
+    def render(self, name, value, attrs=None, renderer=None):
+        return super().render(name, value, attrs, renderer)
+
 class AuthorInviteAddForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-
-    # TODO: This select2 field should be replaced with a "Heavy" one that supports Ajax calls.
-    # Right now the library just pulls all usernames.
-    # https://django-select2.readthedocs.io/en/latest/django_select2.html#module-django_select2.forms
-    # 
-    # Also, confirm that this django integration actually supports providing custom results
-    # I think so if we initialize it ourselves? https://github.com/applegrew/django-select2/blob/master/docs/django_select2.rst#javascript
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=Select2MultipleWidget, required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
 class EditorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=Select2MultipleWidget, required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
 
 class CuratorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=Select2MultipleWidget, required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
 
 class VerifierAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=Select2MultipleWidget, required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
 
 class EditUserForm(forms.ModelForm):
     class Meta:
@@ -243,25 +243,3 @@ class EditUserForm(forms.ModelForm):
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-
-######Some example I'm not using
-#
-# class ToggleWidget(forms.widgets.CheckboxInput):
-#     class Media:
-#         css = {'all': (
-#             "https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css", )}
-#         js = ("https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js",)
-
-#     def __init__(self, attrs=None, *args, **kwargs):
-#         attrs = attrs or {}
-
-#         default_options = {
-#             'toggle': 'toggle',
-#             'offstyle': 'danger'
-#         }
-#         options = kwargs.get('options', {})
-#         default_options.update(options)
-#         for key, val in default_options.items():
-#             attrs['data-' + key] = val
-
-#         super().__init__(attrs)

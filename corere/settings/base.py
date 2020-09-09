@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'compressor',
     'guardian',
     'simple_history',
-    'django_select2',
     'corere.main',
 ]
 
