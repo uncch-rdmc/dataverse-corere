@@ -130,7 +130,6 @@ class ManuscriptJson(CorereBaseDatatableView):
             if(has_transition_perm(manuscript.begin, user)):
                 avail_buttons.append('progressManuscript')
             #TODO: add launchNotebook once integration is better
-
             # MAD: Should we change these to be transitions?
             if(user.has_any_perm('add_authors_on_manuscript', manuscript)):
                 avail_buttons.append('inviteassignauthor')
@@ -211,6 +210,7 @@ class SubmissionJson(CorereBaseDatatableView):
                 pass
             return ''
         elif column == 'buttons': 
+#Add edition buttons
             avail_buttons = []
             if(has_transition_perm(submission.edit_noop, user)):
                 avail_buttons.append('editSubmission')
@@ -220,6 +220,19 @@ class SubmissionJson(CorereBaseDatatableView):
                 avail_buttons.append('viewSubmissionFiles')
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
+
+            if(has_transition_perm(submission.add_edition_noop, user)):
+                avail_buttons.append('createEdition')
+            try:
+                if(has_transition_perm(submission.submission_edition.edit_noop, user)):
+                    avail_buttons.append('editEdition')
+                elif(has_transition_perm(submission.submission_edition.view_noop, user)):
+                    avail_buttons.append('viewEdition')
+                if(has_transition_perm(submission.review, user)): #TODO: same review check for edition and verification. Either make smarter or refactor the model
+                    avail_buttons.append('progressEdition')
+            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                pass
+
             if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
@@ -231,6 +244,7 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('progressCuration')
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
+
             if(has_transition_perm(submission.add_verification_noop, user)):
                 avail_buttons.append('createVerification')
             try:

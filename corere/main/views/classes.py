@@ -288,6 +288,17 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
             logger.error("TransitionNotAllowed: " + str(e))
             raise
 
+    def editor_review_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.object.submit, request.user): 
+            logger.debug("PermissionDenied")
+            raise Http404()
+        try: #TODO: only do this if the reviewer selects a certain form button
+            self.object.submit(request.user)
+            self.object.save()
+        except TransitionNotAllowed as e:
+            logger.error("TransitionNotAllowed: " + str(e))
+            raise
+
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
     #For TransitionPermissionMixin
@@ -365,18 +376,31 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
 
+#TODO:Put another endpoint above here for submitting a submission for editor review ("SubmissionSubmit?")
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
         try:
             self.progress_if_allowed(request, *args, **kwargs)
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to curators!'
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for review!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
 
+class SubmissionEditorReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+    def post(self, request, *args, **kwargs):
+        pass
+        # try:
+        #     self.progress_if_allowed(request, *args, **kwargs)
+        #     self.message = 'The '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the curators for further review!'
+        #     messages.add_message(request, messages.SUCCESS, self.message)
+        # except (TransitionNotAllowed):
+        #     self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
+        #     messages.add_message(request, messages.ERROR, self.message)
+        # return redirect('/')
+        
 # Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
     form = CurationForm

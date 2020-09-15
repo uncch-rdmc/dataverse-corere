@@ -126,6 +126,57 @@ class Verification(AbstractCreateUpdateModel):
 
 ####################################################
 
+EDITION_NEW = 'new'
+EDITION_ISSUES = 'issues'
+EDITION_NO_ISSUES = 'no_issues'
+
+EDITION_RESULT_CHOICES = (
+    (EDITION_NEW, 'New'),
+    (EDITION_ISSUES, 'Issues'),
+    (EDITION_NO_ISSUES, 'No Issues'),
+)
+
+class Edition(AbstractCreateUpdateModel):
+    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW)
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+
+    class Meta:
+        default_permissions = ()
+
+    def save(self, *args, **kwargs):
+        try:
+            if(self.submission._status != SUBMISSION_IN_PROGRESS_EDITION):
+                raise FieldError('A curation cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_EDITION)
+        except Edition.submission.RelatedObjectDoesNotExist:
+            pass #this is caught in super
+        super(Edition, self).save(*args, **kwargs)
+
+    ##### django-fsm (workflow) related functions #####
+
+    def can_edit(self):
+        if(self.submission._status == SUBMISSION_IN_PROGRESS_EDITION ):
+            return True
+        return False
+
+    #approve_manuscript_submissions
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
+        permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance.submission.manuscript))
+    def edit_noop(self):
+        return self._status
+
+    #-----------------------
+    
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm('approve_manuscript',instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
+    def view_noop(self):
+        return self._status
+
+####################################################
+
 CURATION_NEW = 'new'
 CURATION_INCOM_MATERIALS = 'incom_materials'
 CURATION_MAJOR_ISSUES = 'major_issues'
@@ -184,15 +235,21 @@ class Curation(AbstractCreateUpdateModel):
 # But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
 
 SUBMISSION_NEW = 'new'
+SUBMISSION_IN_PROGRESS_EDITION = 'in_progress_edition'
 SUBMISSION_IN_PROGRESS_CURATION = 'in_progress_curation'
 SUBMISSION_IN_PROGRESS_VERIFICATION = 'in_progress_verification'
-SUBMISSION_REVIEWED = 'reviewed'
+SUBMISSION_REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
+SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approval'
+SUBMISSION_RETURNED = 'returned'
 
 SUBMISSION_RESULT_CHOICES = (
     (SUBMISSION_NEW, 'New'),
+    (SUBMISSION_IN_PROGRESS_EDITION, 'In Progress - Edition'),
     (SUBMISSION_IN_PROGRESS_CURATION, 'In Progress - Curation'),
     (SUBMISSION_IN_PROGRESS_VERIFICATION, 'In Progress - Verification'),
-    (SUBMISSION_REVIEWED, 'Reviewed'),
+    (SUBMISSION_REVIEWED_AWAITING_REPORT, 'Reviewed - Awaiting Report'),
+    (SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, 'Reviewed - Report Awaiting Approval'),
+    (SUBMISSION_RETURNED, 'Returned'),
 )
 
 #TODO: We should probably have a "uniqueness" check on the object level for submissions incase two users click submit at the same time.
@@ -213,7 +270,7 @@ class Submission(AbstractCreateUpdateModel):
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
             try:
-                if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=SUBMISSION_REVIEWED).count() > 0):
+                if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=SUBMISSION_RETURNED).count() > 0):
                     raise FieldError('A submission is already in progress for this manuscript')
                 if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
                     raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
@@ -254,19 +311,40 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit(self):
         return True
 
-    @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_CURATION, on_error=SUBMISSION_NEW, conditions=[can_submit],
+    @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_EDITION, on_error=SUBMISSION_NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         # self.manuscript._status = MANUSCRIPT_PROCESSING
         # self.manuscript.save()
         
         # TODO: This code was switched from doing the above call to nesting transitions. Is there a better way? Does this work right?
-        if has_transition_perm(self.manuscript.process, user):
-            self.manuscript.process()
+        if has_transition_perm(self.manuscript.review, user):
+            self.manuscript.review()
             self.manuscript.save()
         else:
             logger.debug("ERROR") #TODO: Handle better
         pass
+
+    #-----------------------
+
+
+#TODO: Needs work
+
+    def can_add_edition(self):
+        if(self.manuscript._status != 'reviewing'):   
+            return False
+        if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
+            return False
+        return True
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_add_edition],
+        permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance.manuscript))
+    #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
+    def add_edition_noop(self):
+        return self._status
+
+
 
     #-----------------------
 
@@ -346,7 +424,7 @@ class Submission(AbstractCreateUpdateModel):
                         # MAD: Are we leaving behind any permissions?
 
                         self.manuscript.save()
-                        return SUBMISSION_REVIEWED
+                        return SUBMISSION_REVIEWED_AWAITING_REPORT
                 except Submission.submission_verification.RelatedObjectDoesNotExist:
                     return SUBMISSION_IN_PROGRESS_VERIFICATION
 
@@ -355,13 +433,16 @@ class Submission(AbstractCreateUpdateModel):
             
         self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
         self.manuscript.save()
-        return SUBMISSION_REVIEWED
+        return SUBMISSION_REVIEWED_AWAITING_REPORT
+
+#TODO: We may need one more (noop?) transition here for the editor approving the review
 
 ####################################################
 
 MANUSCRIPT_NEW = 'new' 
 MANUSCRIPT_AWAITING_INITIAL = 'awaiting_init'
 MANUSCRIPT_AWAITING_RESUBMISSION = 'awaiting_resub'
+MANUSCRIPT_REVIEWING = 'reviewing'
 MANUSCRIPT_PROCESSING = 'processing'
 MANUSCRIPT_COMPLETED = 'completed'
 
@@ -369,6 +450,7 @@ MANUSCRIPT_STATUS_CHOICES = (
     (MANUSCRIPT_NEW, 'New'),
     (MANUSCRIPT_AWAITING_INITIAL, 'Awaiting Initial Submission'),
     (MANUSCRIPT_AWAITING_RESUBMISSION, 'Awaiting Resubmission'),
+    (MANUSCRIPT_REVIEWING, 'Reviewing Submission'),
     (MANUSCRIPT_PROCESSING, 'Processing Submission'),
     (MANUSCRIPT_COMPLETED, 'Completed'),
 )
@@ -402,6 +484,7 @@ class Manuscript(AbstractCreateUpdateModel):
             #('review_submission_on_manuscript', 'Can review submission on manuscript'),
             # We track permissions of objects under the manuscript at the manuscript level, as we don't need to be more granular
             # Technically curation/verification are added to a submission
+            ('approve_manuscript', 'Can review submissions for processing'),
             ('curate_manuscript', 'Can curate manuscript/submission'),
             ('verify_manuscript', 'Can verify manuscript/submission'),
         ]
@@ -419,6 +502,7 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm('delete_manuscript', group_manuscript_editor, self) 
             assign_perm('view_manuscript', group_manuscript_editor, self) 
             assign_perm('add_authors_on_manuscript', group_manuscript_editor, self) 
+            assign_perm('approve_manuscript', group_manuscript_editor, self)
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
             #assign_perm('change_manuscript', group_manuscript_author, self)
@@ -463,10 +547,9 @@ class Manuscript(AbstractCreateUpdateModel):
     def can_add_submission(self):
         # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
         #try:
-        if (self.manuscript_submissions.filter(Q(_status='new')| Q(_status='in_progress')).count() != 0):
+
+        if (self.manuscript_submissions.filter(Q(_status='new')| Q(_status__contains='in_progress')).count() != 0):
             return False
-        #except Manuscript.manuscript_submissions.RelatedObjectDoesNotExist:
-        #   pass
         return True
 
     #Does not actually change status, used just for permission checking
@@ -475,22 +558,37 @@ class Manuscript(AbstractCreateUpdateModel):
     def add_submission_noop(self):
         return self._status
 
+
+
     #-----------------------
 
     #Conditions: Submission with status of new
-    def can_process(self):
-        #print("OHNO: "+ str(self.manuscript_submissions.filter(_status='new').count()))
-
+    def can_review(self):
         if(self.manuscript_submissions.filter(_status='new').count() != 1):
             return False
         return True
 
     # Perm: ability to create/edit a submission
-    @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
+    @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_REVIEWING, conditions=[can_review],
                 permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance))
+    def review(self):
+        #update submission status here?
+        pass #Here add any additional actions related to the state change
+
+    #-----------------------
+
+    #Conditions: Submission with status of new
+    def can_process(self):
+        return True
+
+    # Perm: ability to create/edit a submission
+    @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
+                permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance))
     def process(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
+
+
 
     #-----------------------
 

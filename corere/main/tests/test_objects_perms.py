@@ -207,7 +207,7 @@ class TestManuscriptWorkflow(TestCase):
         self.assertTrue(has_transition_perm(submission.review, self.verifier))
         submission.review()
         submission.save()
-        self.assertEqual(submission._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
         with self.assertRaises(TransitionNotAllowed):
             submission.review()
@@ -242,7 +242,7 @@ class TestManuscriptWorkflow(TestCase):
         self.assertTrue(has_transition_perm(submission2.review, self.curator))
         submission2.review()
         submission2.save()
-        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
 
         #################### ROUND 3 #####################
@@ -289,7 +289,7 @@ class TestManuscriptWorkflow(TestCase):
         self.assertTrue(has_transition_perm(submission3.review, self.verifier))
         submission3.review()
         submission3.save()
-        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_COMPLETED)
 
 ### Test Helpers ###

@@ -408,7 +408,7 @@
                                 },
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
                                     {
-                                        text: 'Hand-off to Curators',
+                                        text: 'Hand-off to Editors',
                                         name: 'progressSubmission',
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
@@ -428,6 +428,67 @@
                                 {% endif %}
                             ]
                         },
+
+
+                        {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                            {
+                                text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
+                                name: 'createEdition',
+                                action: function ( e, dt, node, config ) {
+                                    window.location.href = "submission/"+submission_id+"/createedition";
+                                },
+                                enabled: false
+                            },
+                        {% endif %}
+                        {
+                            extend: 'collection',
+                            text: 'Edition Actions',
+                            fade: 0,
+                            buttons: [
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Edit',
+                                        name: 'editEdition',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "edition/"+edition_id+"/edit";
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {
+                                    text: 'View',
+                                    name: 'viewEdition',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "edition/"+edition_id+"/view";
+                                    },
+                                    enabled: false
+                                },
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Submit Review',
+                                        name: 'progressEdition',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('edition/'+curation_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                            ]
+                        },
+
+
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
@@ -568,6 +629,13 @@
                         dt.button('viewSubmission:name').enable(false);
                         dt.button('viewSubmission:name').nodes().css("display", "none");
                         dt.button('progressSubmission:name').enable(false);
+
+                        dt.button('createEdition:name').enable(false);
+                        dt.button('editEdition:name').enable(false);
+                        dt.button('editEdition:name').nodes().css("display", "none");
+                        dt.button('viewEdition:name').enable(false);
+                        dt.button('viewEdition:name').nodes().css("display", "none");
+                        dt.button('progressEdition:name').enable(false);
 
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);
