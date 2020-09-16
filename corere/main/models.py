@@ -340,7 +340,7 @@ class Submission(AbstractCreateUpdateModel):
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_add_edition],
         permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance.manuscript))
-    #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
+    #TODO: We should actually add the edition to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_edition_noop(self):
         return self._status
 
@@ -386,9 +386,25 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
-    
+    #TODO: Change name?
+    def can_submit_edition(self):
+        #Note, the logic in here is decided whether you can even do a review, not whether its accepted
+        try:
+            if(self.submission_edition._status == EDITION_NEW):
+                return False
+        except Submission.submission_edition.RelatedObjectDoesNotExist:
+            return False
+        return True
 
+    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=SUBMISSION_IN_PROGRESS_CURATION, conditions=[can_submit_edition],
+                permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
+    def submit_edition(self):
+        self.manuscript._status = MANUSCRIPT_PROCESSING
+        self.manuscript.save()
+
+    #-----------------------
+
+    #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
     def can_review(self):
         #Note, the logic in here is decided whether you can even do a review, not whether its accepted
         try:
@@ -671,6 +687,7 @@ class Note(AbstractCreateUpdateModel):
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_file = models.ForeignKey(GitlabFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
@@ -682,17 +699,20 @@ class Note(AbstractCreateUpdateModel):
     def parent(self):
         if self.parent_submission_id is not None:
             return self.parent_submission
+        if self.parent_edition_id is not None:
+            return self.parent_edition
         if self.parent_curation_id is not None:
             return self.parent_curation
         if self.parent_verification_id is not None:
             return self.parent_verification
         if self.parent_file_id is not None:
             return self.parent_file
-        raise AssertionError("Neither 'parent_submission', 'parent_curation', 'parent_verification' or 'parent_file' is set")
+        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
     
     def save(self, *args, **kwargs):
         parents = 0
         parents += (self.parent_submission_id is not None)
+        parents += (self.parent_edition_id is not None)
         parents += (self.parent_curation_id is not None)
         parents += (self.parent_verification_id is not None)
         if(parents > 1):

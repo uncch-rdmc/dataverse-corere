@@ -296,8 +296,8 @@
             if(columns[c] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c] === 'curation_id' || columns[c] === 'verification_id' 
-                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            } else if(columns[c] === 'edition_id' || columns[c] === 'curation_id' || columns[c] === 'verification_id' 
+                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'editors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
@@ -472,7 +472,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('edition/'+curation_id+'/progress', {
+                                            fetch('edition/'+edition_id+'/progress', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -609,8 +609,9 @@
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    curation_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
-                    verification_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
+                    curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
                     avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);

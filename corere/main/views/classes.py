@@ -173,8 +173,6 @@ class GroupRequiredMixin(object):
                     raise Http404()
         return super(GroupRequiredMixin, self).dispatch(request, *args, **kwargs)
 
-
-
 ################################################################################################
 
 # Do not call directly
@@ -267,6 +265,8 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
+
+################################################################################################
 
 # Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
@@ -389,8 +389,9 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
 
-class SubmissionEditorReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
+        print("INCOMPLETE SubmissionEditorReviewView")
         pass
         # try:
         #     self.progress_if_allowed(request, *args, **kwargs)
@@ -400,7 +401,60 @@ class SubmissionEditorReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, G
         #     self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
         #     messages.add_message(request, messages.ERROR, self.message)
         # return redirect('/')
-        
+
+################################################################################################
+
+# Do not call directly
+class GenericEditionView(NotesMixin, GenericCorereObjectView):
+    form = EditionForm
+    parent_reference_name = 'submission'
+    parent_id_name = "submission_id"
+    parent_model = m.Submission
+    object_friendly_name = 'edition'
+    model = m.Edition
+    redirect = '/'
+
+    def progress_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.object.submission.submit_edition, request.user):
+            logger.debug("PermissionDenied")
+            raise Http404()
+        try:
+            self.object.submission.submit_edition()
+            self.object.submission.save()
+        except TransitionNotAllowed:
+            logger.error("TransitionNotAllowed: " + str(e))
+            raise
+
+class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
+    form = EditionForm
+    #For TransitionPermissionMixin
+    transition_method_name = 'add_edition_noop'
+    transition_on_parent = True
+
+class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
+    form = EditionForm
+    #For TransitionPermissionMixin
+    transition_method_name = 'edit_noop'
+
+class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericEditionView):
+    form = ReadOnlyEditionForm
+    #For TransitionPermissionMixin
+    transition_method_name = 'view_noop'
+
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericEditionView):
+    def post(self, request, *args, **kwargs):
+        try:
+            self.progress_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
+
+################################################################################################
+
 # Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
     form = CurationForm
@@ -450,6 +504,8 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
 
+################################################################################################
+
 # Do not call directly
 class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     form = VerificationForm
@@ -498,5 +554,3 @@ class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
-
-################################################################################################
