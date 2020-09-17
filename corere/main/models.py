@@ -407,6 +407,11 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_review_curation(self):
+        try:
+            if(self.submission_curation._status == CURATION_NEW):
+                return False
+        except Submission.submission_curation.RelatedObjectDoesNotExist:
+            return False
         return True
 
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
@@ -425,6 +430,11 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_review_verification(self):
+        try:
+            if(self.submission_verification._status == VERIFICATION_NEW):
+                return False
+        except Submission.submission_verification.RelatedObjectDoesNotExist:
+            return False
         return True
 
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
@@ -677,7 +687,6 @@ class Manuscript(AbstractCreateUpdateModel):
     @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
                 permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance))
     def process(self):
-        print("PROCESS")
         #update submission status here?
         pass #Here add any additional actions related to the state change
 
