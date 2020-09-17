@@ -277,6 +277,7 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     object_friendly_name = 'submission'
     model = m.Submission
 
+#TODO: I don't like these functions here, kinda stupid, should just build them into calls
     def progress_if_allowed(self, request, *args, **kwargs):
         if not fsm_check_transition_perm(self.object.submit, request.user): 
             logger.debug("PermissionDenied")
@@ -288,12 +289,23 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
             logger.error("TransitionNotAllowed: " + str(e))
             raise
 
-    def editor_review_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submit, request.user): 
+    def generate_report_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.object.generate_report, request.user): 
             logger.debug("PermissionDenied")
             raise Http404()
         try: #TODO: only do this if the reviewer selects a certain form button
-            self.object.submit(request.user)
+            self.object.generate_report()
+            self.object.save()
+        except TransitionNotAllowed as e:
+            logger.error("TransitionNotAllowed: " + str(e))
+            raise
+
+    def return_if_allowed(self, request, *args, **kwargs):
+        if not fsm_check_transition_perm(self.object.return_submission, request.user): 
+            logger.debug("PermissionDenied")
+            raise Http404()
+        try: #TODO: only do this if the reviewer selects a certain form button
+            self.object.return_submission()
             self.object.save()
         except TransitionNotAllowed as e:
             logger.error("TransitionNotAllowed: " + str(e))
@@ -389,18 +401,27 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/')
 
+class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+    def post(self, request, *args, **kwargs):
+        try:
+            self.generate_report_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for return!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
+
 class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
-        print("INCOMPLETE SubmissionEditorReviewView")
-        pass
-        # try:
-        #     self.progress_if_allowed(request, *args, **kwargs)
-        #     self.message = 'The '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the curators for further review!'
-        #     messages.add_message(request, messages.SUCCESS, self.message)
-        # except (TransitionNotAllowed):
-        #     self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to curators, please contact the administrator.'
-        #     messages.add_message(request, messages.ERROR, self.message)
-        # return redirect('/')
+        try:
+            self.return_if_allowed(request, *args, **kwargs)
+            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was returned to the authors!'
+            messages.add_message(request, messages.SUCCESS, self.message)
+        except (TransitionNotAllowed):
+            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
+            messages.add_message(request, messages.ERROR, self.message)
+        return redirect('/')
 
 ################################################################################################
 

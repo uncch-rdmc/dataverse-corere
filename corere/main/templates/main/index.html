@@ -426,6 +426,46 @@
                                         enabled: false
                                     },
                                 {% endif %}
+                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                    {
+                                        text: 'Generate Report',
+                                        name: 'generateReportForSubmission',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('submission/'+submission_id+'/generatereport', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Return Submission to Authors',
+                                        name: 'returnSubmission',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('submission/'+submission_id+'/return', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
                             ]
                         },
 

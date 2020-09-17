@@ -40,6 +40,7 @@ urlpatterns = [
     path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress', classes.SubmissionProgressView.as_view(), name="submission_progress"),
+    path('submission/<int:id>/generatereport', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return', classes.SubmissionReturnView.as_view(), name="submission_return"),
 
     path('edition/<int:id>/edit', classes.EditionEditView.as_view(), name="edition_edit"),

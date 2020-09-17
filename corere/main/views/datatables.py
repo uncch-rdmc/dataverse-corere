@@ -233,6 +233,10 @@ class SubmissionJson(CorereBaseDatatableView):
                 avail_buttons.append('viewSubmissionFiles')
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
+            if(has_transition_perm(submission.generate_report, user)):
+                avail_buttons.append('generateReportForSubmission')
+            if(has_transition_perm(submission.return_submission, user)):
+                avail_buttons.append('returnSubmission')
 
             if(has_transition_perm(submission.add_edition_noop, user)):
                 avail_buttons.append('createEdition')

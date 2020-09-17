@@ -239,7 +239,7 @@ SUBMISSION_IN_PROGRESS_EDITION = 'in_progress_edition'
 SUBMISSION_IN_PROGRESS_CURATION = 'in_progress_curation'
 SUBMISSION_IN_PROGRESS_VERIFICATION = 'in_progress_verification'
 SUBMISSION_REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
-SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approval'
+SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approve'
 SUBMISSION_RETURNED = 'returned'
 
 SUBMISSION_RESULT_CHOICES = (
@@ -327,13 +327,10 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
-
-#TODO: Needs work
-
     def can_add_edition(self):
         if(self.manuscript._status != 'reviewing'):   
             return False
-        if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
+        if(Edition.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False
         return True
 
@@ -343,8 +340,6 @@ class Submission(AbstractCreateUpdateModel):
     #TODO: We should actually add the edition to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_edition_noop(self):
         return self._status
-
-
 
     #-----------------------
 
@@ -396,11 +391,18 @@ class Submission(AbstractCreateUpdateModel):
             return False
         return True
 
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=SUBMISSION_IN_PROGRESS_CURATION, conditions=[can_submit_edition],
+    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
                 permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
     def submit_edition(self):
-        self.manuscript._status = MANUSCRIPT_PROCESSING
-        self.manuscript.save()
+        #TODO: Call manuscript.process
+        if(self.submission_edition._status == EDITION_NO_ISSUES):
+            self.manuscript.process()
+            self.manuscript.save()
+            return SUBMISSION_IN_PROGRESS_CURATION
+        else:
+            self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+            self.manuscript.save()
+            return SUBMISSION_RETURNED
 
     #-----------------------
 
@@ -451,7 +453,25 @@ class Submission(AbstractCreateUpdateModel):
         self.manuscript.save()
         return SUBMISSION_REVIEWED_AWAITING_REPORT
 
-#TODO: We may need one more (noop?) transition here for the editor approving the review
+    #-----------------------
+    
+    def can_generate_report(self):
+        return True
+
+    @transition(field=_status, source=SUBMISSION_REVIEWED_AWAITING_REPORT, target=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
+            permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)))
+    def generate_report(self):
+        pass
+
+    #-----------------------
+    
+    def can_return_submission(self):
+        return True
+
+    @transition(field=_status, source=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, target=SUBMISSION_RETURNED, conditions=[can_return_submission],
+            permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
+    def return_submission(self):
+        pass
 
 ####################################################
 
@@ -601,6 +621,7 @@ class Manuscript(AbstractCreateUpdateModel):
     @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
                 permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance))
     def process(self):
+        print("PROCESS")
         #update submission status here?
         pass #Here add any additional actions related to the state change
 
