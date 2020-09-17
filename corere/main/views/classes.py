@@ -487,11 +487,11 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
     redirect = '/'
 
     def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submission.review, request.user):
+        if not fsm_check_transition_perm(self.object.submission.review_curation, request.user):
             logger.debug("PermissionDenied")
             raise Http404()
         try:
-            self.object.submission.review()
+            self.object.submission.review_curation()
             self.object.submission.save()
         except TransitionNotAllowed:
             logger.error("TransitionNotAllowed: " + str(e))
@@ -538,11 +538,11 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     redirect = '/'
 
     def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submission.review, request.user):
+        if not fsm_check_transition_perm(self.object.submission.review_verification, request.user):
             logger.debug("PermissionDenied")
             raise Http404()
         try:
-            self.object.submission.review()
+            self.object.submission.review_verification()
             self.object.submission.save()
         except TransitionNotAllowed:
             logger.error("TransitionNotAllowed: " + str(e))

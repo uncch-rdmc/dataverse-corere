@@ -258,7 +258,7 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editCuration')
                 elif(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
-                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                if(has_transition_perm(submission.review_curation, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressCuration')
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
@@ -270,7 +270,7 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editVerification')
                 elif(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
-                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                if(has_transition_perm(submission.review_verification, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressVerification')
             except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass

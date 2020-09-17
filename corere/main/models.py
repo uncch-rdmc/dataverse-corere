@@ -406,51 +406,38 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
-    def can_review(self):
-        #Note, the logic in here is decided whether you can even do a review, not whether its accepted
-        try:
-            if(self.submission_curation._status == CURATION_NEW):
-                return False
-        except Submission.submission_curation.RelatedObjectDoesNotExist:
-            return False
-        try:
-            if(self.submission_verification._status == VERIFICATION_NEW):
-                return False
-        except Submission.submission_verification.RelatedObjectDoesNotExist:
-            pass #we pass because you can review with just a curation
+    def can_review_curation(self):
         return True
 
-    #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
-    #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review],
-                permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)
-                    or user.has_any_perm('verify_manuscript',instance.manuscript) ))
-    def review(self):
+    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
+                permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)))
+    def review_curation(self):
         try:
             if(self.submission_curation._status == CURATION_NO_ISSUES):
-                try:
-                    if(self.submission_verification._status == VERIFICATION_SUCCESS):
-                        self.manuscript._status = MANUSCRIPT_COMPLETED
-                        # Delete existing groups when done for clean-up and reporting
-                        # TODO: Update django admin manuscript delete method to delete these groups as well.
-                        # It could be even better to extend the group model and have it connected to the manuscript...
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-                        Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                        # MAD: Are we leaving behind any permissions?
-
-                        self.manuscript.save()
-                        return SUBMISSION_REVIEWED_AWAITING_REPORT
-                except Submission.submission_verification.RelatedObjectDoesNotExist:
-                    return SUBMISSION_IN_PROGRESS_VERIFICATION
-
+                return SUBMISSION_IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return SUBMISSION_IN_PROGRESS_CURATION
-            
-        self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
-        self.manuscript.save()
+        
+        # self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+        # self.manuscript.save()
+        return SUBMISSION_REVIEWED_AWAITING_REPORT
+
+    #-----------------------
+
+    def can_review_verification(self):
+        return True
+
+    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
+                permission=lambda instance, user: ( user.has_any_perm('verify_manuscript',instance.manuscript)))
+    def review_verification(self):
+        try:
+            if(self.submission_verification._status == VERIFICATION_SUCCESS): #just checking the object exists, crude
+                pass
+            #return SUBMISSION_REVIEWED_AWAITING_REPORT
+        except Submission.submission_verification.RelatedObjectDoesNotExist:
+            return SUBMISSION_IN_PROGRESS_VERIFICATION
+        # self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+        # self.manuscript.save()
         return SUBMISSION_REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -465,13 +452,82 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
     
+#TODO: In here change the manuscript 
     def can_return_submission(self):
         return True
 
     @transition(field=_status, source=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, target=SUBMISSION_RETURNED, conditions=[can_return_submission],
             permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
     def return_submission(self):
-        pass
+        if(self.submission_curation._status == CURATION_NO_ISSUES):
+            if(self.submission_verification._status == VERIFICATION_SUCCESS):
+                self.manuscript._status = MANUSCRIPT_COMPLETED
+                # Delete existing groups when done for clean-up and reporting
+                # TODO: Update django admin manuscript delete method to delete these groups as well.
+                # It could be even better to extend the group model and have it connected to the manuscript...
+                Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
+                Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                # MAD: Are we leaving behind any permissions?
+
+                self.manuscript.save()
+                return
+            
+        self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+        self.manuscript.save()
+        return
+    
+    #-----------------------
+
+    # #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
+    # def DELETE_can_review(self):
+    #     #Note, the logic in here is decided whether you can even do a review, not whether its accepted
+    #     try:
+    #         if(self.submission_curation._status == CURATION_NEW):
+    #             return False
+    #     except Submission.submission_curation.RelatedObjectDoesNotExist:
+    #         return False
+    #     try:
+    #         if(self.submission_verification._status == VERIFICATION_NEW):
+    #             return False
+    #     except Submission.submission_verification.RelatedObjectDoesNotExist:
+    #         pass #we pass because you can review with just a curation
+    #     return True
+
+    # #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
+    # #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
+    # @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[DELETE_can_review],
+    #             permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)
+    #                 or user.has_any_perm('verify_manuscript',instance.manuscript) ))
+    # def DELETE_review(self):
+    #     try:
+    #         if(self.submission_curation._status == CURATION_NO_ISSUES):
+    #             try:
+    #                 if(self.submission_verification._status == VERIFICATION_SUCCESS):
+    #                     self.manuscript._status = MANUSCRIPT_COMPLETED
+    #                     # Delete existing groups when done for clean-up and reporting
+    #                     # TODO: Update django admin manuscript delete method to delete these groups as well.
+    #                     # It could be even better to extend the group model and have it connected to the manuscript...
+    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
+    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
+    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
+    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+    #                     # MAD: Are we leaving behind any permissions?
+
+    #                     self.manuscript.save()
+    #                     return SUBMISSION_REVIEWED_AWAITING_REPORT
+    #             except Submission.submission_verification.RelatedObjectDoesNotExist:
+    #                 return SUBMISSION_IN_PROGRESS_VERIFICATION
+
+    #     except Submission.submission_curation.RelatedObjectDoesNotExist:
+    #         return SUBMISSION_IN_PROGRESS_CURATION
+            
+    #     self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+    #     self.manuscript.save()
+    #     return SUBMISSION_REVIEWED_AWAITING_REPORT
+
+
 
 ####################################################
 
