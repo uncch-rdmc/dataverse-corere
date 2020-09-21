@@ -105,7 +105,7 @@ def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id
 @login_required
 def delete_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
-        note = get_object_or_404(m.Note, id=id, parent_edition=None, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        note = get_object_or_404(m.Note, id=id, parent_edition=edition_id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
         if(not request.user.has_any_perm('delete_note', note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
