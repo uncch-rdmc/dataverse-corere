@@ -757,7 +757,7 @@ class GitlabFile(AbstractCreateUpdateModel):
             return self.parent_submission
         if self.parent_manuscript_id is not None:
             return self.parent_submission
-        raise AssertionError("Neither 'parent_submission', 'parent_curation', 'parent_verification' or 'parent_file' is set")
+        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
 
     def save(self, *args, **kwargs):
         parents = 0

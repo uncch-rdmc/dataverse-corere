@@ -30,8 +30,8 @@ class BaseTestWithFixture(TestCase):
     #Also note that even though we have files, delete does not actually delete a GitlabFile, it calls GitLab. So its kinda pointless to have these cases
     #Loading the submission page checks gitlab every time and deletes files if needed.
 
-#TODO: Hack on the notes
 #TODO: Don't forget to test new manuscripts
+#Check all spots around the edition sequence break. For example S_B4_CUR1_ALLUSER might have other issues even if the tests are good
 
     M_NEW_NOUSER         = 1  # New manuscript no assigned users for any roles
     M_NEW_ALLUSER        = 2  # New manuscript users assigned for all 4 roles
@@ -139,31 +139,40 @@ class BaseTestWithFixture(TestCase):
 
     #These notes are attached to various objects. 
     # The ones with _AD were created by the admin, otherwise they were created by the author/curator/verifier used in the tests
-    N_DUR_SUB1_ALLUSER = 9  # Submission 4 / S_DUR_SUB1_ALLUSER
-    N_DUR_SUB1_AUTHOR = 10  # Submission 4 / S_DUR_SUB1_ALLUSER
-    N_DUR_SUB1_AUTHOR_AD = 21  # Submission 4 / S_DUR_SUB1_ALLUSER
-    N_B4_CUR1_ALLUSER = 11  # Submission 1 / S_B4_CUR1_ALLUSER
-    N_B4_CUR1_AUTHOR = 12   # Submission 1 / S_B4_CUR1_ALLUSER
-    N_B4_CUR1_AUTHOR_AD = 22   # Submission 1 / S_B4_CUR1_ALLUSER
-    N_DUR_CUR1_ALLUSER = 13 # Curation 3 / C_DUR_CUR1_ALLUSER
-    N_DUR_CUR1_CURATOR = 14 # Curation 3 / C_DUR_CUR1_ALLUSER
-    N_DUR_CUR1_CURATOR_AD = 23 # Curation 3 / C_DUR_CUR1_ALLUSER
-    N_B4_VER1_ALLUSER = 15  # Curation 1 / C_B4_VER1_ALLUSER
-    N_B4_VER1_CURATOR = 16  # Curation 1 / C_B4_VER1_ALLUSER
-    N_B4_VER1_CURATOR_AD = 24  # Curation 1 / C_B4_VER1_ALLUSER
-    N_DUR_VER1_ALLUSER = 17 # Verification 2 / V_DUR_VER1_ALLUSER 
-    N_DUR_VER1_VERIF = 18   # Verification 2 / V_DUR_VER1_ALLUSER 
-    N_DUR_VER1_VERIF_AD = 25   # Verification 2 / V_DUR_VER1_ALLUSER 
-    N_B4_SUB2_ALLUSER = 19  # Verification 1 / V_B4_SUB2_ALLUSER
-    N_B4_SUB2_VERIF = 20    # Verification 1 / V_B4_SUB2_ALLUSER
-    N_B4_SUB2_VERIF_AD = 26    # Verification 1 / V_B4_SUB2_ALLUSER
+    N_DUR_SUB1_ALLUSER = 1  # S_DUR_SUB1_ALLUSER
+    N_DUR_SUB1_AUTHOR = 2  # S_DUR_SUB1_ALLUSER
+    N_DUR_SUB1_AUTHOR_AD = 3  # S_DUR_SUB1_ALLUSER
+    N_B4_ED1_ALLUSER = 7 # S_B4_ED1_ALLUSER
+    N_B4_ED1_AUTHOR = 8 # S_B4_ED1_ALLUSER
+    N_B4_ED1_AUTHOR_AD = 9 # S_B4_ED1_ALLUSER
+
+    #UNTESTED
+    N_DUR_ED1_ALLUSER = 16  # E_DUR_ED1_ALLUSER 
+    N_DUR_ED1_EDITOR = 17  # E_DUR_ED1_ALLUSER 
+    N_DUR_ED1_EDITOR_AD = 18  # E_DUR_ED1_ALLUSER 
+    N_B4_CUR1_ALLUSER = 19  # E_B4_CUR1_ALLUSER
+    N_B4_CUR1_EDITOR = 20  # E_B4_CUR1_ALLUSER
+    N_B4_CUR1_EDITOR_AD = 21  # E_B4_CUR1_ALLUSER
+
+    N_DUR_CUR1_ALLUSER = 22 # C_DUR_CUR1_ALLUSER
+    N_DUR_CUR1_CURATOR = 23 # C_DUR_CUR1_ALLUSER
+    N_DUR_CUR1_CURATOR_AD = 24 # C_DUR_CUR1_ALLUSER
+    N_B4_VER1_ALLUSER = 25  # C_B4_VER1_ALLUSER
+    N_B4_VER1_CURATOR = 26  # C_B4_VER1_ALLUSER
+    N_B4_VER1_CURATOR_AD = 27  # C_B4_VER1_ALLUSER
+    N_DUR_VER1_ALLUSER = 28 # V_DUR_VER1_ALLUSER 
+    N_DUR_VER1_VERIF = 29 # V_DUR_VER1_ALLUSER 
+    N_DUR_VER1_VERIF_AD = 30 # V_DUR_VER1_ALLUSER 
+    N_B4_SUB2_ALLUSER = 31 # V_B4_SUB2_ALLUSER
+    N_B4_SUB2_VERIF = 32 # V_B4_SUB2_ALLUSER
+    N_B4_SUB2_VERIF_AD = 33 # V_B4_SUB2_ALLUSER
     
     #Fixture is initialized here so we can call it once per class instead of method.
     #Downside is we could munge our test data. Seems worthwhile for now
     def setUpTestData():
         call_command(
             'loaddata', 
-            'manuscript_submission_states_new15.json',
+            'manuscript_submission_states_new16.json',
             verbosity=0
         )
 
@@ -445,15 +454,15 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 200)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 200)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 302)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 302)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
 
         ### Author can only delete from their own submission
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
@@ -865,15 +874,15 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
 
         ### Curator cannot delete submission files
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
@@ -1279,15 +1288,15 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER , 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
 
         ### Editor cannot delete submission files
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
@@ -1688,15 +1697,15 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_editnote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR})).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER, 'id':self.N_DUR_SUB1_AUTHOR_AD})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_ALLUSER})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR})).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_CUR1_ALLUSER, 'id':self.N_B4_CUR1_AUTHOR_AD})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_ALLUSER})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR})).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_deletenote", kwargs={'submission_id':self.S_B4_ED1_ALLUSER, 'id':self.N_B4_ED1_AUTHOR_AD})).status_code, 404)
 
         ### Verifier cannot delete submission files
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)

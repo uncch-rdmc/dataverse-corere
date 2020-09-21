@@ -48,9 +48,9 @@ def open_binder(request, id=None):
 # I'm not sure if this will work best with multiple "endpoints" or one (see commented code below)
 
 @login_required
-def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
-        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        note = get_object_or_404(m.Note, id=id, parent_edition=edition_id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
         if(not request.user.has_any_perm('change_note', note)):
             logger.warning("User id:{0} attempted to access Note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
@@ -58,9 +58,14 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
         re_url = '../edit'
     else:
         note = m.Note()
+        if(edition_id):
+            note.parent_edition = get_object_or_404(m.Edition, id=edition_id)
+            if(not request.user.has_any_perm('approve_manuscript', note.parent_edition.submission.manuscript)):
+            #if(not has_transition_perm(note.parent_edition.edit_noop, request.user)):
+                logger.warning("User id:{0} attempted to create a note on edition id:{1} which they had no permission to".format(request.user.id, edition_id))
+                raise Http404()
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
-            
             if(not request.user.has_any_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
             #if(not has_transition_perm(note.parent_submission.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
@@ -98,9 +103,9 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
     return render(request, 'main/form_create_note.html', {'form': form})
 
 @login_required
-def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+def delete_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
-        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        note = get_object_or_404(m.Note, id=id, parent_edition=None, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
         if(not request.user.has_any_perm('delete_note', note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
