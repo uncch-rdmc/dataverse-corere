@@ -248,7 +248,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
-        ### Author cannot delete from manuscript
+        ### Author cannot delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
@@ -738,7 +738,7 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 200)
         
-        ### Curator can delete from manuscript
+        ### Curator can delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
@@ -1217,7 +1217,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
-        ### Editor can delete from manuscript
+        ### Editor can delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
@@ -1692,7 +1692,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
-        ### Verifier can delete from manuscript
+        ### Verifier cannot delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)

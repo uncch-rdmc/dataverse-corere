@@ -54,8 +54,6 @@ class GenericCorereObjectView(View):
         #print(self.__dict__)
         if self.form.is_valid():
             self.form.save() #Note: this is what saves a newly created model instance
-            # if(self.transition_button_title and request.POST['submit'] == self.transition_button_title): #This checks to see which form button was used. There is probably a more precise way to check
-            #     self.progress_if_allowed(request, *args, **kwargs)
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
@@ -63,12 +61,6 @@ class GenericCorereObjectView(View):
             #TODO: Pass back form errors
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
-
-    ######## Custom class functions. You may want to override some of these. #########
-
-    # To do a tranisition on save. Different transitions are used for each object
-    def progress_if_allowed(self, request, *args, **kwargs):
-        pass    
 
 class ReadOnlyCorereMixin(object):
     read_only = True
@@ -149,7 +141,6 @@ class TransitionPermissionMixin(object):
             transition_method = getattr(self.object, self.transition_method_name)
         logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
         if(not has_transition_perm(transition_method, request.user)):
-            #TODO: Even if we don't collapse this with progress_if_allowed, we should still refer to it for erroring out in the correct ways
             logger.debug("PermissionDenied")
             raise Http404()
         return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
@@ -179,17 +170,6 @@ class GroupRequiredMixin(object):
 class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
-
-    def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.begin, request.user): 
-            logger.error("PermissionDenied")
-            raise Http404()
-        try:
-            self.object.begin()
-            self.object.save()
-        except TransitionNotAllowed as e:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
@@ -258,7 +238,16 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
     def post(self, request, *args, **kwargs):
         try:
-            self.progress_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.begin, request.user): 
+                logger.error("PermissionDenied")
+                raise Http404()
+            try:
+                self.object.begin()
+                self.object.save()
+            except TransitionNotAllowed as e:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
+
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -276,40 +265,6 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-
-#TODO: I don't like these functions here, kinda stupid, should just build them into calls
-    def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submit, request.user): 
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try: #TODO: only do this if the reviewer selects a certain form button
-            self.object.submit(request.user)
-            self.object.save()
-        except TransitionNotAllowed as e:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
-
-    def generate_report_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.generate_report, request.user): 
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try: #TODO: only do this if the reviewer selects a certain form button
-            self.object.generate_report()
-            self.object.save()
-        except TransitionNotAllowed as e:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
-
-    def return_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.return_submission, request.user): 
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try: #TODO: only do this if the reviewer selects a certain form button
-            self.object.return_submission()
-            self.object.save()
-        except TransitionNotAllowed as e:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = SubmissionForm
@@ -393,7 +348,15 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
         try:
-            self.progress_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.submit, request.user): 
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try: #TODO: only do this if the reviewer selects a certain form button
+                self.object.submit(request.user)
+                self.object.save()
+            except TransitionNotAllowed as e:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for review!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -404,7 +367,15 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
         try:
-            self.generate_report_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.generate_report, request.user): 
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try: #TODO: only do this if the reviewer selects a certain form button
+                self.object.generate_report()
+                self.object.save()
+            except TransitionNotAllowed as e:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for return!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -415,7 +386,15 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
         try:
-            self.return_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.return_submission, request.user): 
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try: #TODO: only do this if the reviewer selects a certain form button
+                self.object.return_submission()
+                self.object.save()
+            except TransitionNotAllowed as e:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was returned to the authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -434,17 +413,6 @@ class GenericEditionView(NotesMixin, GenericCorereObjectView):
     object_friendly_name = 'edition'
     model = m.Edition
     redirect = '/'
-
-    def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submission.submit_edition, request.user):
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try:
-            self.object.submission.submit_edition()
-            self.object.submission.save()
-        except TransitionNotAllowed:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = EditionForm
@@ -466,7 +434,15 @@ class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPe
 class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericEditionView):
     def post(self, request, *args, **kwargs):
         try:
-            self.progress_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.submission.submit_edition, request.user):
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try:
+                self.object.submission.submit_edition()
+                self.object.submission.save()
+            except TransitionNotAllowed:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -485,17 +461,6 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
     object_friendly_name = 'curation'
     model = m.Curation
     redirect = '/'
-
-    def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submission.review_curation, request.user):
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try:
-            self.object.submission.review_curation()
-            self.object.submission.save()
-        except TransitionNotAllowed:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
 
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = CurationForm
@@ -517,7 +482,15 @@ class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionP
 class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCurationView):
     def post(self, request, *args, **kwargs):
         try:
-            self.progress_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.submission.review_curation, request.user):
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try:
+                self.object.submission.review_curation()
+                self.object.submission.save()
+            except TransitionNotAllowed:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -536,17 +509,6 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     object_friendly_name = 'verification'
     model = m.Verification
     redirect = '/'
-
-    def progress_if_allowed(self, request, *args, **kwargs):
-        if not fsm_check_transition_perm(self.object.submission.review_verification, request.user):
-            logger.debug("PermissionDenied")
-            raise Http404()
-        try:
-            self.object.submission.review_verification()
-            self.object.submission.save()
-        except TransitionNotAllowed:
-            logger.error("TransitionNotAllowed: " + str(e))
-            raise
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = VerificationForm
@@ -568,7 +530,15 @@ class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericVerificationView):
     def post(self, request, *args, **kwargs):
         try:
-            self.progress_if_allowed(request, *args, **kwargs)
+            if not fsm_check_transition_perm(self.object.submission.review_verification, request.user):
+                logger.debug("PermissionDenied")
+                raise Http404()
+            try:
+                self.object.submission.review_verification()
+                self.object.submission.save()
+            except TransitionNotAllowed:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):

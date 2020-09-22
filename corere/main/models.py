@@ -67,7 +67,7 @@ class User(AbstractUser):
     def has_any_perm(self, perm_string, obj):
         return self.has_perm(c.perm_path(perm_string)) or self.has_perm(perm_string, obj)
 
-##################################################Rude & Deadly##
+####################################################
 
 VERIFICATION_NEW = "new"
 VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
@@ -314,15 +314,11 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_EDITION, on_error=SUBMISSION_NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
-        # self.manuscript._status = MANUSCRIPT_PROCESSING
-        # self.manuscript.save()
-        
-        # TODO: This code was switched from doing the above call to nesting transitions. Is there a better way? Does this work right?
-        if has_transition_perm(self.manuscript.review, user):
+        if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
             self.manuscript.review()
             self.manuscript.save()
         else:
-            logger.debug("ERROR") #TODO: Handle better
+            raise Exception
         pass
 
     #-----------------------
@@ -462,7 +458,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
     
-#TODO: In here change the manuscript 
+    #TODO: It would be better to have this logic as a manuscript transition. 
+    # Its somewhat annoying to get to the latest submission from the manuscript, so for now it'll remain here.
     def can_return_submission(self):
         return True
 
@@ -631,17 +628,16 @@ class Manuscript(AbstractCreateUpdateModel):
     #-----------------------
 
     #Conditions: Submission with status of new
+    #TODO: Add the above? Not sure if its still needed
     def can_process(self):
         return True
 
     # Perm: ability to create/edit a submission
     @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance))
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE, instance))
     def process(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
-
-
 
     #-----------------------
 
