@@ -220,7 +220,7 @@ class NoteForm(forms.ModelForm):
         existing_scope = []
         for role in c.get_roles():
             role_perms = get_perms(Group.objects.get(name=role), self.instance)
-            if('view_note' in role_perms):
+            if(c.PERM_NOTE_VIEW_N in role_perms):
                 existing_scope.append(role)
         self.fields['scope'].initial = existing_scope
         #print(self.fields['scope'].__dict__)

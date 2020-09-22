@@ -1,6 +1,7 @@
 from . import constants as c
 from django.contrib.contenttypes.models import ContentType
-from .models import Manuscript
+from corere.main import models as m
+#from .models import Manuscript
 
 # Currently For creation of groups with permissions in CoReRe
 
@@ -11,16 +12,16 @@ from .models import Manuscript
 def populate_models(sender, **kwargs):
     from django.contrib.auth.models import Group
     from django.contrib.auth.models import Permission
-    perm_manuscript_add = Permission.objects.get(codename="add_manuscript")
-    perm_manuscript_change = Permission.objects.get(codename="change_manuscript")
-    perm_manuscript_delete = Permission.objects.get(codename="delete_manuscript")
-    perm_manuscript_view = Permission.objects.get(codename="view_manuscript")
+    perm_manuscript_add = Permission.objects.get(codename=c.PERM_MANU_ADD_M)
+    perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
+    perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
+    perm_manuscript_view = Permission.objects.get(codename=c.PERM_MANU_VIEW_M)
 
-    perm_manuscript_add_authors = Permission.objects.get(codename="add_authors_on_manuscript")
-    perm_manuscript_remove_authors = Permission.objects.get(codename="remove_authors_on_manuscript")
-    perm_manuscript_manage_editors = Permission.objects.get(codename="manage_editors_on_manuscript")
-    perm_manuscript_manage_curators = Permission.objects.get(codename="manage_curators_on_manuscript")
-    perm_manuscript_manage_verifiers = Permission.objects.get(codename="manage_verifiers_on_manuscript")
+    perm_manuscript_add_authors = Permission.objects.get(codename=c.PERM_MANU_ADD_AUTHORS)
+    perm_manuscript_remove_authors = Permission.objects.get(codename=c.PERM_MANU_REMOVE_AUTHORS)
+    perm_manuscript_manage_editors = Permission.objects.get(codename=c.PERM_MANU_MANAGE_EDITORS)
+    perm_manuscript_manage_curators = Permission.objects.get(codename=c.PERM_MANU_MANAGE_CURATORS)
+    perm_manuscript_manage_verifiers = Permission.objects.get(codename=c.PERM_MANU_MANAGE_VERIFIERS)
 
     editor, created = Group.objects.get_or_create(name=c.GROUP_ROLE_EDITOR)
     editor.permissions.clear()

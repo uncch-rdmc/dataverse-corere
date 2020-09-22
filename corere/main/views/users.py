@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 
 # TODO: We should probably make permissions part of our constants as well
 @login_required
-@permission_required_or_404('main.add_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+@permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorInviteAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
-    can_remove_author = request.user.has_any_perm('remove_authors_on_manuscript', manuscript)
+    can_remove_author = request.user.has_any_perm(c.PERM_MANU_REMOVE_AUTHORS, manuscript)
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -60,7 +60,7 @@ def invite_assign_author(request, id=None):
         'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
 
 @login_required
-@permission_required_or_404('main.remove_authors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_author(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -75,7 +75,7 @@ def unassign_author(request, id=None, user_id=None):
         return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
 
 @login_required
-@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
@@ -102,7 +102,7 @@ def assign_editor(request, id=None):
         'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
 
 @login_required
-@permission_required_or_404('main.manage_editors_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_editor(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -118,7 +118,7 @@ def unassign_editor(request, id=None, user_id=None):
         return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
-@permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
@@ -145,7 +145,7 @@ def assign_curator(request, id=None):
         'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
 
 @login_required
-@permission_required_or_404('main.manage_curators_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_curator(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -160,7 +160,7 @@ def unassign_curator(request, id=None, user_id=None):
         return redirect('/manuscript/'+str(id)+'/assigncurator')
 
 @login_required
-@permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
@@ -188,7 +188,7 @@ def assign_verifier(request, id=None):
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
-@permission_required_or_404('main.manage_verifiers_on_manuscript', (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_verifier(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)

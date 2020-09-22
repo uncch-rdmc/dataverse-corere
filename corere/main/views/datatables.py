@@ -131,13 +131,13 @@ class ManuscriptJson(CorereBaseDatatableView):
                 avail_buttons.append('progressManuscript')
             #TODO: add launchNotebook once integration is better
             # MAD: Should we change these to be transitions?
-            if(user.has_any_perm('add_authors_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
                 avail_buttons.append('inviteassignauthor')
-            if(user.has_any_perm('manage_editors_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
                 avail_buttons.append('assigneditor')
-            if(user.has_any_perm('manage_curators_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
                 avail_buttons.append('assigncurator')
-            if(user.has_any_perm('manage_verifiers_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
                 avail_buttons.append('assignverifier')
 
             if(has_transition_perm(manuscript.add_submission_noop, user)):
@@ -147,7 +147,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
-        return get_objects_for_user(self.request.user, "view_manuscript", klass=self.model)
+        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset
@@ -285,7 +285,7 @@ class SubmissionJson(CorereBaseDatatableView):
             manuscript = m.Manuscript.objects.get(id=manuscript_id)
         except ObjectDoesNotExist:
             raise Http404()
-        if(self.request.user.has_any_perm('view_manuscript', manuscript)):
+        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
             return(m.Submission.objects.filter(manuscript=manuscript_id))
         else:
             raise Http404()

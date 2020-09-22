@@ -60,7 +60,7 @@
                                         //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
-                    {% if request.user|has_global_perm:'main.add_manuscript' %} 
+                    {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
                             name: 'createManuscript',
@@ -76,7 +76,7 @@
                             buttons: [
                                 //TODO: This perm is different than the one for progress. 
                                 // I think its because we want non-editors to create as well, but should doublecheck.
-                                {% if request.user|has_global_perm:'main.add_manuscript' %} 
+                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
                                     {
                                         text: 'Edit',
                                         name: 'editManuscript',

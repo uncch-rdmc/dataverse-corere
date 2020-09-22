@@ -97,7 +97,7 @@ class NotesMixin(object):
         self.model._meta.get_field('notes')
         self.notes = []
         for note in self.object.notes.all():
-            if request.user.has_any_perm('view_note', note):
+            if request.user.has_any_perm(c.PERM_NOTE_VIEW_N, note):
                 self.notes.append(note)
             else:
                 logger.debug("user did not have permission for note: " + note.text)
@@ -196,7 +196,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     form = ManuscriptForm
     #groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
     #For PermissionRequiredMixin
-    permission_required = "main.add_manuscript"
+    permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
 

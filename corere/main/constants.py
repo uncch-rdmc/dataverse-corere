@@ -11,3 +11,28 @@ GROUP_MANUSCRIPT_CURATOR_PREFIX = "Curator Manuscript"
 
 def get_roles():
     return [GROUP_ROLE_EDITOR, GROUP_ROLE_AUTHOR, GROUP_ROLE_VERIFIER, GROUP_ROLE_CURATOR]
+
+#Manuscript perm strings
+PERM_MANU_ADD_M = 'add_manuscript'
+PERM_MANU_CHANGE_M = 'change_manuscript'
+PERM_MANU_DELETE_M = 'delete_manuscript'
+PERM_MANU_VIEW_M = 'view_manuscript'
+PERM_MANU_ADD_AUTHORS = 'add_authors_on_manuscript'
+PERM_MANU_REMOVE_AUTHORS = 'remove_authors_on_manuscript'
+PERM_MANU_MANAGE_EDITORS = 'manage_editors_on_manuscript'
+PERM_MANU_MANAGE_CURATORS = 'manage_curators_on_manuscript'
+PERM_MANU_MANAGE_VERIFIERS = 'manage_verifiers_on_manuscript'
+PERM_MANU_ADD_SUBMISSION = 'add_submission_to_manuscript'
+PERM_MANU_APPROVE = 'approve_manuscript'
+PERM_MANU_CURATE = 'curate_manuscript'
+PERM_MANU_VERIFY = 'verify_manuscript'
+
+#Note perm strings
+PERM_NOTE_ADD_N = 'add_note'
+PERM_NOTE_CHANGE_N = 'change_note'
+PERM_NOTE_DELETE_N = 'delete_note'
+PERM_NOTE_VIEW_N = 'view_note'
+
+#You need the perm path when checking non-object perms
+def perm_path(perm):
+    return 'main.'+perm

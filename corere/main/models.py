@@ -1,5 +1,6 @@
 import logging
 import uuid
+from . import constants as c
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
@@ -63,9 +64,8 @@ class User(AbstractUser):
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
     # See for more info: https://github.com/django/django/pull/9581
-    #TODO: The 'main.' perm string should probably be more dynamic
     def has_any_perm(self, perm_string, obj):
-        return self.has_perm('main.'+perm_string) or self.has_perm(perm_string, obj)
+        return self.has_perm(c.perm_path(perm_string)) or self.has_perm(perm_string, obj)
 
 ##################################################Rude & Deadly##
 
@@ -111,7 +111,7 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm('verify_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -119,8 +119,8 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm('verify_manuscript',instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -162,7 +162,7 @@ class Edition(AbstractCreateUpdateModel):
     #approve_manuscript_submissions
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -170,8 +170,8 @@ class Edition(AbstractCreateUpdateModel):
     
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm('approve_manuscript',instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_APPROVE,instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -216,7 +216,7 @@ class Curation(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm('curate_manuscript',instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -224,8 +224,8 @@ class Curation(AbstractCreateUpdateModel):
     
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm('curate_manuscript',instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm('view_manuscript',instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_CURATE,instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -293,7 +293,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -301,8 +301,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance._status == SUBMISSION_NEW and user.has_any_perm('add_submission_to_manuscript',instance.manuscript))
-                                            or (instance._status != SUBMISSION_NEW and user.has_any_perm('view_manuscript',instance.manuscript))) )
+        permission=lambda instance, user: ((instance._status == SUBMISSION_NEW and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript))
+                                            or (instance._status != SUBMISSION_NEW and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -312,7 +312,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_EDITION, on_error=SUBMISSION_NEW, conditions=[can_submit],
-                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance.manuscript)) #MAD: Used same perm as add, do we want that?
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         # self.manuscript._status = MANUSCRIPT_PROCESSING
         # self.manuscript.save()
@@ -328,7 +328,7 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_edition(self):
-        if(self.manuscript._status != 'reviewing'):   
+        if(self.manuscript._status != MANUSCRIPT_REVIEWING):   
             return False
         if(Edition.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False
@@ -336,7 +336,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_add_edition],
-        permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript))
     #TODO: We should actually add the edition to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_edition_noop(self):
         return self._status
@@ -344,7 +344,7 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_curation(self):
-        if(self.manuscript._status != 'processing'):   
+        if(self.manuscript._status != MANUSCRIPT_PROCESSING):   
             return False
         if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False
@@ -353,7 +353,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
-        permission=lambda instance, user: user.has_any_perm('curate_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript))
     #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_curation_noop(self):
         return self._status
@@ -361,7 +361,7 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_verification(self):
-        if(self.manuscript._status != 'processing'):       
+        if(self.manuscript._status != MANUSCRIPT_PROCESSING):       
             return False
         try:
             if(self.submission_curation._status != CURATION_NO_ISSUES):
@@ -375,7 +375,7 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_add_verification],
-        permission=lambda instance, user: user.has_any_perm('verify_manuscript',instance.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.manuscript))
     def add_verification_noop(self):
         return self._status
 
@@ -392,7 +392,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
-                permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
+                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def submit_edition(self):
         #TODO: Call manuscript.process
         if(self.submission_edition._status == EDITION_NO_ISSUES):
@@ -415,7 +415,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
-                permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)))
+                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript)))
     def review_curation(self):
         try:
             if(self.submission_curation._status == CURATION_NO_ISSUES):
@@ -438,7 +438,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
-                permission=lambda instance, user: ( user.has_any_perm('verify_manuscript',instance.manuscript)))
+                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_VERIFY,instance.manuscript)))
     def review_verification(self):
         try:
             if(self.submission_verification._status == VERIFICATION_SUCCESS): #just checking the object exists, crude
@@ -456,7 +456,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=SUBMISSION_REVIEWED_AWAITING_REPORT, target=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
-            permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)))
+            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript)))
     def generate_report(self):
         pass
 
@@ -467,7 +467,7 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, target=SUBMISSION_RETURNED, conditions=[can_return_submission],
-            permission=lambda instance, user: ( user.has_any_perm('approve_manuscript',instance.manuscript)))
+            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def return_submission(self):
         if(self.submission_curation._status == CURATION_NO_ISSUES):
             if(self.submission_verification._status == VERIFICATION_SUCCESS):
@@ -487,60 +487,10 @@ class Submission(AbstractCreateUpdateModel):
         self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
         self.manuscript.save()
         return
-    
-    #-----------------------
-
-    # #TODO: This whole section needs to be split up to curation/verification to be like "can_submit"
-    # def DELETE_can_review(self):
-    #     #Note, the logic in here is decided whether you can even do a review, not whether its accepted
-    #     try:
-    #         if(self.submission_curation._status == CURATION_NEW):
-    #             return False
-    #     except Submission.submission_curation.RelatedObjectDoesNotExist:
-    #         return False
-    #     try:
-    #         if(self.submission_verification._status == VERIFICATION_NEW):
-    #             return False
-    #     except Submission.submission_verification.RelatedObjectDoesNotExist:
-    #         pass #we pass because you can review with just a curation
-    #     return True
-
-    # #TODO: look over this now that we have to version of SUBMISSION_IN_PROGRESS. Probably can be simplified
-    # #NOTE: Pretty sure the reason this allows curator and verifier is to check whether this can be reviewed in either flow. Predates dual SUBMISSION_IN_PROGRESS
-    # @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION, SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[DELETE_can_review],
-    #             permission=lambda instance, user: ( user.has_any_perm('curate_manuscript',instance.manuscript)
-    #                 or user.has_any_perm('verify_manuscript',instance.manuscript) ))
-    # def DELETE_review(self):
-    #     try:
-    #         if(self.submission_curation._status == CURATION_NO_ISSUES):
-    #             try:
-    #                 if(self.submission_verification._status == VERIFICATION_SUCCESS):
-    #                     self.manuscript._status = MANUSCRIPT_COMPLETED
-    #                     # Delete existing groups when done for clean-up and reporting
-    #                     # TODO: Update django admin manuscript delete method to delete these groups as well.
-    #                     # It could be even better to extend the group model and have it connected to the manuscript...
-    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-    #                     Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
-    #                     # MAD: Are we leaving behind any permissions?
-
-    #                     self.manuscript.save()
-    #                     return SUBMISSION_REVIEWED_AWAITING_REPORT
-    #             except Submission.submission_verification.RelatedObjectDoesNotExist:
-    #                 return SUBMISSION_IN_PROGRESS_VERIFICATION
-
-    #     except Submission.submission_curation.RelatedObjectDoesNotExist:
-    #         return SUBMISSION_IN_PROGRESS_CURATION
-            
-    #     self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
-    #     self.manuscript.save()
-    #     return SUBMISSION_REVIEWED_AWAITING_REPORT
-
-
 
 ####################################################
 
+#model states
 MANUSCRIPT_NEW = 'new' 
 MANUSCRIPT_AWAITING_INITIAL = 'awaiting_init'
 MANUSCRIPT_AWAITING_RESUBMISSION = 'awaiting_resub'
@@ -576,19 +526,19 @@ class Manuscript(AbstractCreateUpdateModel):
 
     class Meta:
         permissions = [
-            #TODO: This includes default CRUD permissions, but we should switch it to be explicit (other objects too)
-            ('add_authors_on_manuscript', 'Can manage authors on manuscript'),
-            ('remove_authors_on_manuscript', 'Can manage authors on manuscript'), # we needed more granularity for authors
-            ('manage_editors_on_manuscript', 'Can manage editors on manuscript'),
-            ('manage_curators_on_manuscript', 'Can manage curators on manuscript'),
-            ('manage_verifiers_on_manuscript', 'Can manage verifiers on manuscript'),
-            ('add_submission_to_manuscript', 'Can add submission to manuscript'),
+            #TODO: This includes default CRUD permissions. We could switch it to be explicit (other objects too)
+            (c.PERM_MANU_ADD_AUTHORS, 'Can manage authors on manuscript'),
+            (c.PERM_MANU_REMOVE_AUTHORS, 'Can manage authors on manuscript'), # we needed more granularity for authors
+            (c.PERM_MANU_MANAGE_EDITORS, 'Can manage editors on manuscript'),
+            (c.PERM_MANU_MANAGE_CURATORS, 'Can manage curators on manuscript'),
+            (c.PERM_MANU_MANAGE_VERIFIERS, 'Can manage verifiers on manuscript'),
+            (c.PERM_MANU_ADD_SUBMISSION, 'Can add submission to manuscript'),
             #('review_submission_on_manuscript', 'Can review submission on manuscript'),
             # We track permissions of objects under the manuscript at the manuscript level, as we don't need to be more granular
             # Technically curation/verification are added to a submission
-            ('approve_manuscript', 'Can review submissions for processing'),
-            ('curate_manuscript', 'Can curate manuscript/submission'),
-            ('verify_manuscript', 'Can verify manuscript/submission'),
+            (c.PERM_MANU_APPROVE, 'Can review submissions for processing'),
+            (c.PERM_MANU_CURATE, 'Can curate manuscript/submission'),
+            (c.PERM_MANU_VERIFY, 'Can verify manuscript/submission'),
         ]
 
     def save(self, *args, **kwargs):
@@ -600,27 +550,27 @@ class Manuscript(AbstractCreateUpdateModel):
             # Note these works alongside global permissions defined in signals.py
             # TODO: Make this concatenation standardized
             group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_editor, self) 
-            assign_perm('delete_manuscript', group_manuscript_editor, self) 
-            assign_perm('view_manuscript', group_manuscript_editor, self) 
-            assign_perm('add_authors_on_manuscript', group_manuscript_editor, self) 
-            assign_perm('approve_manuscript', group_manuscript_editor, self)
+            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_APPROVE, group_manuscript_editor, self)
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
-            #assign_perm('change_manuscript', group_manuscript_author, self)
-            assign_perm('view_manuscript', group_manuscript_author, self) 
-            assign_perm('add_authors_on_manuscript', group_manuscript_author, self) 
-            assign_perm('add_submission_to_manuscript', group_manuscript_author, self) 
+            #assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
+            assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_author, self) 
+            assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
+            assign_perm(c.PERM_MANU_ADD_SUBMISSION, group_manuscript_author, self) 
 
             group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
-            assign_perm('change_manuscript', group_manuscript_curator, self) 
-            assign_perm('view_manuscript', group_manuscript_curator, self) 
-            assign_perm('curate_manuscript', group_manuscript_curator, self) 
+            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self) 
+            assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_curator, self) 
+            assign_perm(c.PERM_MANU_CURATE, group_manuscript_curator, self) 
 
             group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
-            #assign_perm('change_manuscript', group_manuscript_verifier, self) 
-            assign_perm('view_manuscript', group_manuscript_verifier, self) 
-            assign_perm('verify_manuscript', group_manuscript_verifier, self) 
+            #assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_verifier, self) 
+            assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_verifier, self) 
+            assign_perm(c.PERM_MANU_VERIFY, group_manuscript_verifier, self) 
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
@@ -640,7 +590,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return True
 
     @transition(field=_status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
-                permission=lambda instance, user: user.has_any_perm('change_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
     def begin(self):
         pass #Here add any additional actions related to the state change
 
@@ -650,13 +600,14 @@ class Manuscript(AbstractCreateUpdateModel):
         # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
         #try:
 
-        if (self.manuscript_submissions.filter(Q(_status='new')| Q(_status__contains='in_progress')).count() != 0):
+        if (self.manuscript_submissions.filter(Q(_status=SUBMISSION_NEW)| Q(_status=SUBMISSION_IN_PROGRESS_EDITION)
+                                             | Q(_status=SUBMISSION_IN_PROGRESS_CURATION)| Q(_status=SUBMISSION_IN_PROGRESS_VERIFICATION)).count() != 0):
             return False
         return True
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_add_submission],
-                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance))
     def add_submission_noop(self):
         return self._status
 
@@ -666,13 +617,13 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Conditions: Submission with status of new
     def can_review(self):
-        if(self.manuscript_submissions.filter(_status='new').count() != 1):
+        if(self.manuscript_submissions.filter(_status=SUBMISSION_NEW).count() != 1):
             return False
         return True
 
     # Perm: ability to create/edit a submission
     @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_REVIEWING, conditions=[can_review],
-                permission=lambda instance, user: user.has_any_perm('add_submission_to_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance))
     def review(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
@@ -685,7 +636,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     # Perm: ability to create/edit a submission
     @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
-                permission=lambda instance, user: user.has_any_perm('approve_manuscript',instance))
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance))
     def process(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
@@ -696,7 +647,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[MANUSCRIPT_NEW, MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm('change_manuscript',instance))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
     def edit_noop(self):
         return self._status
 
@@ -707,8 +658,8 @@ class Manuscript(AbstractCreateUpdateModel):
     #
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: (#(instance._status == MANUSCRIPT_NEW and user.has_any_perm('add_manuscript',instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
-                                            (instance._status != MANUSCRIPT_NEW and user.has_any_perm('view_manuscript',instance))) )
+        permission=lambda instance, user: (#(instance._status == MANUSCRIPT_NEW and user.has_any_perm(c.PERM_MANU_ADD_M,instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+                                            (instance._status != MANUSCRIPT_NEW and user.has_any_perm(c.PERM_MANU_VIEW_M,instance))) )
     def view_noop(self):
         return self._status
 
@@ -808,22 +759,10 @@ class Note(AbstractCreateUpdateModel):
         if not self.pk:
             first_save = True
         super(Note, self).save(*args, **kwargs)
-        #print("auth: "+ str(local.user.is_authenticated))
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
-            ## MAD: Disabled this code as I think it was the same as the scope code in the form
-            # group_prefixes = kwargs.pop('group_prefixes', [])
-            # print("group_prefixes")
-            # print(group_prefixes)
-            # for prefix in group_prefixes:
-            #     group = Group.objects.get(name=prefix + " " + str(self.manuscript.id))
-            #     assign_perm('view_note', prefix, self) 
-
-            #user always has full permissions to their own note
-            #print("ASSIGN PERM MODEL")
-            #print(local.user.__dict__)
-            assign_perm('view_note', local.user, self) 
-            assign_perm('change_note', local.user, self) 
-            assign_perm('delete_note', local.user, self) 
+            assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
+            assign_perm(c.PERM_NOTE_CHANGE_N, local.user, self) 
+            assign_perm(c.PERM_NOTE_DELETE_N, local.user, self) 
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
