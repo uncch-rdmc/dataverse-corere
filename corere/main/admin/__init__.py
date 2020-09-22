@@ -1,6 +1,6 @@
 from django.contrib import admin
-from corere.main.models import Verification, Curation, Submission, Manuscript, User, Note \
-    ,  HistoricalVerification, HistoricalCuration, HistoricalSubmission, HistoricalManuscript, HistoricalUser, HistoricalNote
+from corere.main.models import Submission, Edition, Curation, Verification, Manuscript, User, Note \
+    ,  HistoricalSubmission, HistoricalEdition, HistoricalCuration, HistoricalVerification, HistoricalManuscript, HistoricalUser, HistoricalNote
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin
@@ -42,11 +42,13 @@ class HistoryAdmin(admin.ModelAdmin):
         # return the result
         return template_response
 
-admin.site.register(Verification, GuardedModelAdminCustom)
-admin.site.register(Curation, GuardedModelAdminCustom)
-admin.site.register(Note, GuardedModelAdminCustom)
-admin.site.register(Submission, GuardedModelAdminCustom)
 admin.site.register(Manuscript, GuardedModelAdminCustom)
+admin.site.register(Submission, GuardedModelAdminCustom)
+admin.site.register(Edition, GuardedModelAdminCustom)
+admin.site.register(Curation, GuardedModelAdminCustom)
+admin.site.register(Verification, GuardedModelAdminCustom)
+admin.site.register(Note, GuardedModelAdminCustom)
+
 #admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 admin.site.unregister(Group)
@@ -55,6 +57,7 @@ admin.site.register(Permission)
 
 admin.site.register(HistoricalManuscript, HistoryAdmin)
 admin.site.register(HistoricalSubmission, HistoryAdmin)
+admin.site.register(HistoricalEdition, HistoryAdmin)
 admin.site.register(HistoricalCuration, HistoryAdmin)
 admin.site.register(HistoricalVerification, HistoryAdmin)
 admin.site.register(HistoricalUser, HistoryAdmin)

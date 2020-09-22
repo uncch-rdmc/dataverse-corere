@@ -93,7 +93,7 @@ def helper_manuscript_columns(user):
     # MAD: This should be using guardian???
     columns = []
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-    columns += ['id','pub_id','title','doi','open_data','_status','created_at','updated_at','authors','curators','verifiers','buttons']
+    columns += ['id','pub_id','title','doi','open_data','_status','created_at','updated_at','authors','editors','curators','verifiers','buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','authors']
     # if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
@@ -130,15 +130,14 @@ class ManuscriptJson(CorereBaseDatatableView):
             if(has_transition_perm(manuscript.begin, user)):
                 avail_buttons.append('progressManuscript')
             #TODO: add launchNotebook once integration is better
-
             # MAD: Should we change these to be transitions?
-            if(user.has_any_perm('add_authors_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
                 avail_buttons.append('inviteassignauthor')
-            if(user.has_any_perm('manage_editors_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
                 avail_buttons.append('assigneditor')
-            if(user.has_any_perm('manage_curators_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
                 avail_buttons.append('assigncurator')
-            if(user.has_any_perm('manage_verifiers_on_manuscript', manuscript)):
+            if(user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
                 avail_buttons.append('assignverifier')
 
             if(has_transition_perm(manuscript.add_submission_noop, user)):
@@ -148,7 +147,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
-        return get_objects_for_user(self.request.user, "view_manuscript", klass=self.model)
+        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
 
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset
@@ -161,7 +160,7 @@ def helper_submission_columns(user):
     # This defines the columns a user can view for a table.
     # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
     # MAD: This should be using guardian???
-    columns = ['id','submission_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
+    columns = ['id','submission_status','edition_id','edition_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     #     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
     # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
@@ -186,6 +185,20 @@ class SubmissionJson(CorereBaseDatatableView):
                 return submission._status
             else:
                 return ''
+
+        elif column == 'edition_id':
+            try:
+                return '{0}'.format(submission.submission_edition.id)
+            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                return ''
+        elif column == 'edition_status':
+            try:
+                if(has_transition_perm(submission.submission_edition.view_noop, user)):
+                    return '{0}'.format(submission.submission_edition._status)
+            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                pass
+            return ''
+
         elif column == 'curation_id':
             try:
                 return '{0}'.format(submission.submission_curation.id)
@@ -220,6 +233,24 @@ class SubmissionJson(CorereBaseDatatableView):
                 avail_buttons.append('viewSubmissionFiles')
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
+            if(has_transition_perm(submission.generate_report, user)):
+                avail_buttons.append('generateReportForSubmission')
+            if(has_transition_perm(submission.return_submission, user)):
+                avail_buttons.append('returnSubmission')
+
+            if(has_transition_perm(submission.add_edition_noop, user)):
+                avail_buttons.append('createEdition')
+            try:
+                if(has_transition_perm(submission.submission_edition.edit_noop, user)):
+                    avail_buttons.append('editEdition')
+                elif(has_transition_perm(submission.submission_edition.view_noop, user)):
+                    avail_buttons.append('viewEdition')
+                    #DO. I don't know if submission needs a "process" option or if I need to change multiple checks here or something....
+                if(has_transition_perm(submission.submit_edition, user)): #TODO: same review check for edition and verification. Either make smarter or refactor the model
+                    avail_buttons.append('progressEdition')
+            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                pass
+
             if(has_transition_perm(submission.add_curation_noop, user)):
                 avail_buttons.append('createCuration')
             try:
@@ -227,10 +258,11 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editCuration')
                 elif(has_transition_perm(submission.submission_curation.view_noop, user)):
                     avail_buttons.append('viewCuration')
-                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                if(has_transition_perm(submission.review_curation, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressCuration')
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
+
             if(has_transition_perm(submission.add_verification_noop, user)):
                 avail_buttons.append('createVerification')
             try:
@@ -238,7 +270,7 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('editVerification')
                 elif(has_transition_perm(submission.submission_verification.view_noop, user)):
                     avail_buttons.append('viewVerification')  
-                if(has_transition_perm(submission.review, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+                if(has_transition_perm(submission.review_verification, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
                     avail_buttons.append('progressVerification')
             except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
@@ -253,7 +285,7 @@ class SubmissionJson(CorereBaseDatatableView):
             manuscript = m.Manuscript.objects.get(id=manuscript_id)
         except ObjectDoesNotExist:
             raise Http404()
-        if(self.request.user.has_any_perm('view_manuscript', manuscript)):
+        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
             return(m.Submission.objects.filter(manuscript=manuscript_id))
         else:
             raise Http404()

@@ -60,7 +60,7 @@
                                         //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
-                    {% if request.user|has_global_perm:'main.add_manuscript' %} 
+                    {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
                         {
                             text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
                             name: 'createManuscript',
@@ -76,7 +76,7 @@
                             buttons: [
                                 //TODO: This perm is different than the one for progress. 
                                 // I think its because we want non-editors to create as well, but should doublecheck.
-                                {% if request.user|has_global_perm:'main.add_manuscript' %} 
+                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
                                     {
                                         text: 'Edit',
                                         name: 'editManuscript',
@@ -296,8 +296,8 @@
             if(columns[c] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c] === 'curation_id' || columns[c] === 'verification_id' 
-                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            } else if(columns[c] === 'edition_id' || columns[c] === 'curation_id' || columns[c] === 'verification_id' 
+                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'editors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
@@ -408,7 +408,7 @@
                                 },
                                 {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
                                     {
-                                        text: 'Hand-off to Curators',
+                                        text: 'Hand-off to Editors',
                                         name: 'progressSubmission',
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
@@ -426,8 +426,109 @@
                                         enabled: false
                                     },
                                 {% endif %}
+                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                    {
+                                        text: 'Generate Report',
+                                        name: 'generateReportForSubmission',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('submission/'+submission_id+'/generatereport', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Return Submission to Authors',
+                                        name: 'returnSubmission',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('submission/'+submission_id+'/return', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
                             ]
                         },
+
+
+                        {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                            {
+                                text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
+                                name: 'createEdition',
+                                action: function ( e, dt, node, config ) {
+                                    window.location.href = "submission/"+submission_id+"/createedition";
+                                },
+                                enabled: false
+                            },
+                        {% endif %}
+                        {
+                            extend: 'collection',
+                            text: 'Edition Actions',
+                            fade: 0,
+                            buttons: [
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Edit',
+                                        name: 'editEdition',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "edition/"+edition_id+"/edit";
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {
+                                    text: 'View',
+                                    name: 'viewEdition',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "edition/"+edition_id+"/view";
+                                    },
+                                    enabled: false
+                                },
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Submit Review',
+                                        name: 'progressEdition',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('edition/'+edition_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                            ]
+                        },
+
+
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
@@ -548,8 +649,9 @@
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    curation_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
-                    verification_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
+                    curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
                     avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
@@ -568,6 +670,13 @@
                         dt.button('viewSubmission:name').enable(false);
                         dt.button('viewSubmission:name').nodes().css("display", "none");
                         dt.button('progressSubmission:name').enable(false);
+
+                        dt.button('createEdition:name').enable(false);
+                        dt.button('editEdition:name').enable(false);
+                        dt.button('editEdition:name').nodes().css("display", "none");
+                        dt.button('viewEdition:name').enable(false);
+                        dt.button('viewEdition:name').nodes().css("display", "none");
+                        dt.button('progressEdition:name').enable(false);
 
                         dt.button('createCuration:name').enable(false);
                         dt.button('editCuration:name').enable(false);

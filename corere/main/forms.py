@@ -1,7 +1,7 @@
 import logging, os
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput
-from .models import Manuscript, Submission, Verification, Curation, User, Note, GitlabFile
+from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
@@ -170,6 +170,17 @@ class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
+class EditionForm(forms.ModelForm):
+    class Meta:
+        model = Edition
+        fields = ['_status']
+
+    def __init__ (self, *args, **kwargs):
+        super(EditionForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionForm):
+    pass
+
 class CurationForm(forms.ModelForm):
     class Meta:
         model = Curation
@@ -209,7 +220,7 @@ class NoteForm(forms.ModelForm):
         existing_scope = []
         for role in c.get_roles():
             role_perms = get_perms(Group.objects.get(name=role), self.instance)
-            if('view_note' in role_perms):
+            if(c.PERM_NOTE_VIEW_N in role_perms):
                 existing_scope.append(role)
         self.fields['scope'].initial = existing_scope
         #print(self.fields['scope'].__dict__)

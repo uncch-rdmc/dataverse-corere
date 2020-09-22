@@ -9,20 +9,6 @@ from django.core.exceptions import FieldError
 from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 
-#TODO: Encapsulating all the previous TODOs:
-# - Test manuscript/file notes in test_create_manuscript_objects when available
-# - Add extra notes test that covers more edge-cases
-# - Test that other users can't do the various transitions. Include canview canedit. Maybe in test_basic_manuscript_cycle_and_fsm_permissions_direct
-# - Maybe add a test related to the nested submission.submit/manuscript.process perms
-# - Add Integration tests! Make sure each role can only do the things we want!
-# - Still running into issues calling specific tests, this notation won't work ./manage.py test corere.main.tests.TestModels.test_create_manuscript_objects
-# - With further testing we'll also need more mocks. Currently all our mocking does is "do nothing". 
-#    More advanced mocks seem to require passing the mocks as args to the functions, even if they aren't used in there? 
-#    Some useful resources when getting back into that:
-#       - https://docs.python.org/3/library/unittest.mock.html#where-to-patch
-#       - https://fgimian.github.io/blog/2014/04/10/using-the-python-mock-library-to-fake-regular-functions-during-tests/
-#       - https://stackoverflow.com/questions/15352315/django-mock-patch-doesnt-work-as-i-expect
-
 #@unittest.skip("Don't want to test")
 class TestModels(TestCase):
     def setUp(self):
@@ -31,7 +17,6 @@ class TestModels(TestCase):
 
     #This tests ensures that manuscripts/submissions/curations/verifications/notes can be created.
     #Furthermore, it tests the restrictions related to creating and connecting these objects.
-
     @mock.patch('corere.main.models.gitlab_create_manuscript_repo', mock.Mock())
     @mock.patch('corere.main.models.gitlab_create_submissions_repo', mock.Mock())
     @mock.patch('corere.main.models.gitlab_create_submission_branch', mock.Mock())
@@ -161,145 +146,250 @@ class TestManuscriptWorkflow(TestCase):
         self.assertFalse(has_transition_perm(manuscript.begin, self.editor)) #Shouldn't be able to begin after begun
 
         #################### ROUND 1 #####################
+
         #-------------- Create submission ----------------
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))
         submission = m.Submission()
         submission.manuscript = manuscript
         submission.save()
-        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(manuscript.review, self.author))  
         self.assertTrue(has_transition_perm(submission.submit, self.author))   
         submission.submit(self.author)
         submission.save()
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))  
         self.assertFalse(has_transition_perm(submission.submit, self.author))   
-        with self.assertRaises(TransitionNotAllowed):
+        with self.assertRaises(TransitionNotAllowed): #can't submit twice
             submission.submit(self.author)
 
-        #-------------- Create curation (pass) -----------
-        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_CURATION)
-        self.assertTrue(has_transition_perm(submission.add_curation_noop, self.curator))
-        curation = m.Curation()
-        curation.submission = submission
-        curation.save()
-        self.assertTrue(has_transition_perm(curation.edit_noop, self.curator))
-        self.assertFalse(has_transition_perm(submission.review, self.curator))
-        curation._status = m.CURATION_NO_ISSUES
-        curation.save()
-        self.assertTrue(has_transition_perm(submission.review, self.curator))
-        submission.review()
+        #-------------- Create editor review (fail) -----------
+        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_EDITION)
+        self.assertTrue(has_transition_perm(submission.add_edition_noop, self.editor))
+        edition = m.Edition()
+        edition.submission = submission
+        edition.save()
+        self.assertTrue(has_transition_perm(edition.edit_noop, self.editor))
+        self.assertFalse(has_transition_perm(submission.submit_edition, self.editor))
+        edition._status = m.EDITION_ISSUES
+        edition.save()
+        self.assertTrue(has_transition_perm(submission.submit_edition, self.editor))
+        submission.submit_edition()
         submission.save()
-        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
-        #TODO: This doesn't fail because you call review again for verification
-        #      If we break up review we should check again... 
-        # with self.assertRaises(TransitionNotAllowed):
-        #     submission.review()
-
-        #--------- Create verification (fail) ------------
-        self.assertEqual(submission._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
-        self.assertTrue(has_transition_perm(submission.add_verification_noop, self.verifier))
-        verification = m.Verification()
-        verification.submission = submission
-        verification.save()
-        self.assertTrue(has_transition_perm(verification.edit_noop, self.verifier))
-        self.assertFalse(has_transition_perm(submission.review, self.verifier))
-        verification._status = m.VERIFICATION_MINOR_ISSUES
-        verification.save()
-        self.assertTrue(has_transition_perm(submission.review, self.verifier))
-        submission.review()
-        submission.save()
-        self.assertEqual(submission._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission._status, m.SUBMISSION_RETURNED)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
-        with self.assertRaises(TransitionNotAllowed):
-            submission.review()
 
         #################### ROUND 2 #####################
 
         #-------------- Create submission ----------------
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))
         submission2 = m.Submission()
         submission2.manuscript = manuscript
         submission2.save()
-        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(manuscript.review, self.author))  
         self.assertTrue(has_transition_perm(submission2.submit, self.author))   
         submission2.submit(self.author)
         submission2.save()
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))  
         self.assertFalse(has_transition_perm(submission2.submit, self.author))   
-        with self.assertRaises(TransitionNotAllowed):
+        with self.assertRaises(TransitionNotAllowed): #can't submit twice
             submission2.submit(self.author)
-        self.assertEqual(manuscript._status, m.MANUSCRIPT_PROCESSING)
 
-        #-------------- Create curation (fail) -----------
+        #-------------- Create editor review (pass) -----------
+        self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_EDITION)
+        self.assertTrue(has_transition_perm(submission2.add_edition_noop, self.editor))
+        edition2 = m.Edition()
+        edition2.submission = submission2
+        edition2.save()
+        self.assertTrue(has_transition_perm(edition2.edit_noop, self.editor))
+        self.assertFalse(has_transition_perm(submission2.submit_edition, self.editor))
+        edition2._status = m.EDITION_NO_ISSUES
+        edition2.save()
+        self.assertTrue(has_transition_perm(submission2.submit_edition, self.editor))
+        submission2.submit_edition()
+        submission2.save()
+        self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+
+        #-------------- Create curation (pass) -----------
         self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_CURATION)
         self.assertTrue(has_transition_perm(submission2.add_curation_noop, self.curator))
         curation2 = m.Curation()
         curation2.submission = submission2
         curation2.save()
         self.assertTrue(has_transition_perm(curation2.edit_noop, self.curator))
-        self.assertFalse(has_transition_perm(submission2.review, self.curator))
-        curation2._status = m.CURATION_MINOR_ISSUES
+        self.assertFalse(has_transition_perm(submission2.review_curation, self.curator))
+        curation2._status = m.CURATION_NO_ISSUES
         curation2.save()
-        self.assertTrue(has_transition_perm(submission2.review, self.curator))
-        submission2.review()
+        self.assertTrue(has_transition_perm(submission2.review_curation, self.curator))
+        submission2.review_curation()
         submission2.save()
-        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        #TODO: This doesn't fail because you call review again for verification
+        #      If we break up review we should check again... 
+        # with self.assertRaises(TransitionNotAllowed):
+        #     submission2.review()
+
+        #--------- Create verification (fail) ------------
+        self.assertEqual(submission2._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        self.assertTrue(has_transition_perm(submission2.add_verification_noop, self.verifier))
+        verification2 = m.Verification()
+        verification2.submission = submission2
+        verification2.save()
+        self.assertTrue(has_transition_perm(verification2.edit_noop, self.verifier))
+        self.assertFalse(has_transition_perm(submission2.review_verification, self.verifier))
+        verification2._status = m.VERIFICATION_MINOR_ISSUES
+        verification2.save()
+        self.assertTrue(has_transition_perm(submission2.review_verification, self.verifier))
+        submission2.review_verification()
+        submission2.save()
+        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_PROCESSING)
+        with self.assertRaises(TransitionNotAllowed): #can't submit twice
+            submission2.review_verification()
+
+        #-------------- Create curator report -----------
+        self.assertTrue(has_transition_perm(submission2.generate_report, self.curator))
+        submission2.generate_report()
+        submission2.save()
+        self.assertEqual(submission2._status, m.SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL)
+
+        #-------------- Create editor return -----------
+        self.assertTrue(has_transition_perm(submission2.return_submission, self.editor))
+        submission2.return_submission()
+        submission2.save()
+        self.assertEqual(submission2._status, m.SUBMISSION_RETURNED)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
 
         #################### ROUND 3 #####################
 
         #-------------- Create submission ----------------
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))
         submission3 = m.Submission()
         submission3.manuscript = manuscript
         submission3.save()
-        self.assertTrue(has_transition_perm(manuscript.process, self.author))  
+        self.assertTrue(has_transition_perm(manuscript.review, self.author))  
         self.assertTrue(has_transition_perm(submission3.submit, self.author))   
         submission3.submit(self.author)
         submission3.save()
-        self.assertFalse(has_transition_perm(manuscript.process, self.author))  
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))  
         self.assertFalse(has_transition_perm(submission3.submit, self.author))   
-        with self.assertRaises(TransitionNotAllowed):
+        with self.assertRaises(TransitionNotAllowed): #can't submit twice
             submission3.submit(self.author)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_REVIEWING)
 
-        #-------------- Create curation (pass) -----------
+        #-------------- Create editor review (pass) -----------
+        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_EDITION)
+        self.assertTrue(has_transition_perm(submission3.add_edition_noop, self.editor))
+        edition3= m.Edition()
+        edition3.submission = submission3
+        edition3.save()
+        self.assertTrue(has_transition_perm(edition3.edit_noop, self.editor))
+        self.assertFalse(has_transition_perm(submission3.submit_edition, self.editor))
+        edition3._status = m.EDITION_NO_ISSUES
+        edition3.save()
+        self.assertTrue(has_transition_perm(submission3.submit_edition, self.editor))
+        submission3.submit_edition()
+        submission3.save()
+        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+
+        #-------------- Create curation (fail) -----------
         self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_CURATION)
         self.assertTrue(has_transition_perm(submission3.add_curation_noop, self.curator))
         curation3 = m.Curation()
         curation3.submission = submission3
         curation3.save()
         self.assertTrue(has_transition_perm(curation3.edit_noop, self.curator))
-        self.assertFalse(has_transition_perm(submission3.review, self.curator))
-        curation3._status = m.CURATION_NO_ISSUES
+        self.assertFalse(has_transition_perm(submission3.review_curation, self.curator))
+        curation3._status = m.CURATION_MINOR_ISSUES
         curation3.save()
-        self.assertTrue(has_transition_perm(submission3.review, self.curator))
-        submission3.review()
+        self.assertTrue(has_transition_perm(submission3.review_curation, self.curator))
+        submission3.review_curation()
         submission3.save()
-        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_PROCESSING)
+
+        #-------------- Create curator report -----------
+        self.assertTrue(has_transition_perm(submission3.generate_report, self.curator))
+        submission3.generate_report()
+        submission3.save()
+        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL)
+
+        #-------------- Create editor return -----------
+        self.assertTrue(has_transition_perm(submission3.return_submission, self.editor))
+        submission3.return_submission()
+        submission3.save()
+        self.assertEqual(submission3._status, m.SUBMISSION_RETURNED)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_AWAITING_RESUBMISSION)
+
+        #################### ROUND 4 #####################
+
+        #-------------- Create submission ----------------
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))
+        submission4 = m.Submission()
+        submission4.manuscript = manuscript
+        submission4.save()
+        self.assertTrue(has_transition_perm(manuscript.review, self.author))  
+        self.assertTrue(has_transition_perm(submission4.submit, self.author))   
+        submission4.submit(self.author)
+        submission4.save()
+        self.assertFalse(has_transition_perm(manuscript.review, self.author))  
+        self.assertFalse(has_transition_perm(submission4.submit, self.author))   
+        with self.assertRaises(TransitionNotAllowed): #can't submit twice
+            submission4.submit(self.author)
+
+        #-------------- Create editor review (pass) -----------
+        self.assertEqual(submission4._status, m.SUBMISSION_IN_PROGRESS_EDITION)
+        self.assertTrue(has_transition_perm(submission4.add_edition_noop, self.editor))
+        edition4= m.Edition()
+        edition4.submission = submission4
+        edition4.save()
+        self.assertTrue(has_transition_perm(edition4.edit_noop, self.editor))
+        self.assertFalse(has_transition_perm(submission4.submit_edition, self.editor))
+        edition4._status = m.EDITION_NO_ISSUES
+        edition4.save()
+        self.assertTrue(has_transition_perm(submission4.submit_edition, self.editor))
+        submission4.submit_edition()
+        submission4.save()
+        self.assertEqual(submission4._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+
+        #-------------- Create curation (pass) -----------
+        self.assertEqual(submission4._status, m.SUBMISSION_IN_PROGRESS_CURATION)
+        self.assertTrue(has_transition_perm(submission4.add_curation_noop, self.curator))
+        curation4 = m.Curation()
+        curation4.submission = submission4
+        curation4.save()
+        self.assertTrue(has_transition_perm(curation4.edit_noop, self.curator))
+        self.assertFalse(has_transition_perm(submission4.review_curation, self.curator))
+        curation4._status = m.CURATION_NO_ISSUES
+        curation4.save()
+        self.assertTrue(has_transition_perm(submission4.review_curation, self.curator))
+        submission4.review_curation()
+        submission4.save()
+        self.assertEqual(submission4._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
 
         #--------- Create verification (pass) ------------
-        self.assertEqual(submission3._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
-        self.assertTrue(has_transition_perm(submission3.add_verification_noop, self.verifier))
-        verification3 = m.Verification()
-        verification3.submission = submission3
-        verification3.save()
-        self.assertTrue(has_transition_perm(verification3.edit_noop, self.verifier))
-        self.assertFalse(has_transition_perm(submission3.review, self.verifier))
-        verification3._status = m.VERIFICATION_SUCCESS
-        verification3.save()
-        self.assertTrue(has_transition_perm(submission3.review, self.verifier))
-        submission3.review()
-        submission3.save()
-        self.assertEqual(submission3._status, m.SUBMISSION_REVIEWED)
+        self.assertEqual(submission4._status, m.SUBMISSION_IN_PROGRESS_VERIFICATION)
+        self.assertTrue(has_transition_perm(submission4.add_verification_noop, self.verifier))
+        verification4 = m.Verification()
+        verification4.submission = submission4
+        verification4.save()
+        self.assertTrue(has_transition_perm(verification4.edit_noop, self.verifier))
+        self.assertFalse(has_transition_perm(submission4.review_verification, self.verifier))
+        verification4._status = m.VERIFICATION_SUCCESS
+        verification4.save()
+        self.assertTrue(has_transition_perm(submission4.review_verification, self.verifier))
+        submission4.review_verification()
+        submission4.save()
+        self.assertEqual(submission4._status, m.SUBMISSION_REVIEWED_AWAITING_REPORT)
+        self.assertEqual(manuscript._status, m.MANUSCRIPT_PROCESSING)
+
+        #-------------- Create curator report -----------
+        self.assertTrue(has_transition_perm(submission4.generate_report, self.curator))
+        submission4.generate_report()
+        submission4.save()
+        self.assertEqual(submission4._status, m.SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL)
+
+        #-------------- Create editor return -----------
+        self.assertTrue(has_transition_perm(submission4.return_submission, self.editor))
+        submission4.return_submission()
+        submission4.save()
+        self.assertEqual(submission4._status, m.SUBMISSION_RETURNED)
         self.assertEqual(manuscript._status, m.MANUSCRIPT_COMPLETED)
-
-### Test Helpers ###
-
-#TODO: This is non-functional until we get integration tests set up
-def get_url_success_users(url, r_type, users):
-    success_users = []
-    for u in users:
-        #TOOD: change based upon get/post
-        result = self.client.get(url)
-        if(result.status_code == 200):
-            success_users.append(u)
-    return success_users

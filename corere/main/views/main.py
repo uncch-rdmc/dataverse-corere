@@ -25,6 +25,7 @@ def index(request):
                 'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
                 'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
                 'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
+                'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
                 }
         return render(request, "main/index.html", args)
     else:
@@ -33,7 +34,7 @@ def index(request):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not request.user.has_any_perm('view_manuscript', manuscript)):
+    if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
         logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
         raise Http404()
 
@@ -48,32 +49,37 @@ def open_binder(request, id=None):
 # I'm not sure if this will work best with multiple "endpoints" or one (see commented code below)
 
 @login_required
-def edit_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if id:
-        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_any_perm('change_note', note)):
+        note = get_object_or_404(m.Note, id=id, parent_edition=edition_id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        if(not request.user.has_any_perm( c.PERM_NOTE_CHANGE_N, note)):
             logger.warning("User id:{0} attempted to access Note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         message = 'Your note has been updated!'
         re_url = '../edit'
     else:
         note = m.Note()
+        if(edition_id):
+            note.parent_edition = get_object_or_404(m.Edition, id=edition_id)
+            if(not request.user.has_any_perm(c.PERM_MANU_APPROVE, note.parent_edition.submission.manuscript)):
+            #if(not has_transition_perm(note.parent_edition.edit_noop, request.user)):
+                logger.warning("User id:{0} attempted to create a note on edition id:{1} which they had no permission to".format(request.user.id, edition_id))
+                raise Http404()
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
-            
-            if(not request.user.has_any_perm('add_submission_to_manuscript', note.parent_submission.manuscript)):
+            if(not request.user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, note.parent_submission.manuscript)):
             #if(not has_transition_perm(note.parent_submission.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
                 raise Http404()
         elif(curation_id):
             note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
-            if(not request.user.has_any_perm('curate_manuscript', note.parent_curation.submission.manuscript)):
+            if(not request.user.has_any_perm(c.PERM_MANU_CURATE, note.parent_curation.submission.manuscript)):
             #if(not has_transition_perm(note.parent_curation.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on curation id:{1} which they had no permission to".format(request.user.id, curation_id))
                 raise Http404()
         elif(verification_id):
             note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
-            if(not request.user.has_any_perm('verify_manuscript', note.parent_verification.submission.manuscript)):
+            if(not request.user.has_any_perm(c.PERM_MANU_VERIFY, note.parent_verification.submission.manuscript)):
             #if(not has_transition_perm(note.parent_verification.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on verification id:{1} which they had no permission to".format(request.user.id, verification_id))
                 raise Http404()
@@ -87,9 +93,9 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
             for role in c.get_roles():
                 group = Group.objects.get(name=role)
                 if role in form.cleaned_data['scope']:
-                    assign_perm('view_note', group, note) 
+                    assign_perm(c.PERM_NOTE_VIEW_N, group, note) 
                 else:
-                    remove_perm('view_note', group, note)           
+                    remove_perm(c.PERM_NOTE_VIEW_N, group, note)           
             return redirect(re_url)
         else:
             #TODO: Return form errors correctly
@@ -98,10 +104,10 @@ def edit_note(request, id=None, submission_id=None, curation_id=None, verificati
     return render(request, 'main/form_create_note.html', {'form': form})
 
 @login_required
-def delete_note(request, id=None, submission_id=None, curation_id=None, verification_id=None):
+def delete_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
-        note = get_object_or_404(m.Note, id=id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
-        if(not request.user.has_any_perm('delete_note', note)):
+        note = get_object_or_404(m.Note, id=id, parent_edition=edition_id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+        if(not request.user.has_any_perm(c.PERM_NOTE_DELETE_N, note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()
         note.delete()
