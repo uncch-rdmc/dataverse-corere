@@ -62,29 +62,38 @@ def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id
         if(edition_id):
             note.parent_edition = get_object_or_404(m.Edition, id=edition_id)
             if(not request.user.has_any_perm(c.PERM_MANU_APPROVE, note.parent_edition.submission.manuscript)):
-            #if(not has_transition_perm(note.parent_edition.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on edition id:{1} which they had no permission to".format(request.user.id, edition_id))
                 raise Http404()
         if(submission_id):
             note.parent_submission = get_object_or_404(m.Submission, id=submission_id)
             if(not request.user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, note.parent_submission.manuscript)):
-            #if(not has_transition_perm(note.parent_submission.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on submission id:{1} which they had no permission to".format(request.user.id, submission_id))
                 raise Http404()
         elif(curation_id):
             note.parent_curation = get_object_or_404(m.Curation, id=curation_id)
             if(not request.user.has_any_perm(c.PERM_MANU_CURATE, note.parent_curation.submission.manuscript)):
-            #if(not has_transition_perm(note.parent_curation.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on curation id:{1} which they had no permission to".format(request.user.id, curation_id))
                 raise Http404()
         elif(verification_id):
             note.parent_verification = get_object_or_404(m.Verification, id=verification_id)
             if(not request.user.has_any_perm(c.PERM_MANU_VERIFY, note.parent_verification.submission.manuscript)):
-            #if(not has_transition_perm(note.parent_verification.edit_noop, request.user)):
                 logger.warning("User id:{0} attempted to create a note on verification id:{1} which they had no permission to".format(request.user.id, verification_id))
                 raise Http404()
         message = 'Your new note has been created!'
         re_url = './edit'
+
+    #Before any saving happens we check to ensure manuscript is not completed, and bail if it is
+    if(note.parent_submission is not None):
+        manuscript = note.parent_submission.manuscript
+    elif(note.parent_edition is not None):
+        manuscript = note.parent_edition.submission.manuscript
+    elif(note.parent_curation is not None):
+        manuscript = note.parent_curation.submission.manuscript    
+    elif(note.parent_verification is not None):
+        manuscript = note.parent_verification.submission.manuscript    
+    if(manuscript.is_complete()):
+        raise Http404()
+
     form = NoteForm(request.POST or None, request.FILES or None, instance=note)
     if request.method == 'POST': #MAD: Do I need better perms on this?
         if form.is_valid():
@@ -107,6 +116,19 @@ def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id
 def delete_note(request, id=None, edition_id=None, submission_id=None, curation_id=None, verification_id=None):
     if request.method == 'POST':
         note = get_object_or_404(m.Note, id=id, parent_edition=edition_id, parent_submission=submission_id, parent_curation=curation_id, parent_verification=verification_id)
+
+        #Before any saving happens we check to ensure manuscript is not completed, and bail if it is
+        if(note.parent_submission is not None):
+            manuscript = note.parent_submission.manuscript
+        elif(note.parent_edition is not None):
+            manuscript = note.parent_edition.submission.manuscript
+        elif(note.parent_curation is not None):
+            manuscript = note.parent_curation.submission.manuscript    
+        elif(note.parent_verification is not None):
+            manuscript = note.parent_verification.submission.manuscript    
+        if(manuscript.is_complete()):
+            raise Http404()
+
         if(not request.user.has_any_perm(c.PERM_NOTE_DELETE_N, note)):
             logger.warning("User id:{0} attempted to delete note id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
             raise Http404()

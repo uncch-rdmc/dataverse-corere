@@ -4,6 +4,7 @@ from django.http import Http404
 logger = logging.getLogger(__name__)  
 
 def binder_build_load(manuscript):
+    print("BINDER ADDR:")
     print(os.environ["BINDER_ADDR"])
 
     gitlab_url = urllib.parse.quote( (os.environ["GIT_LAB_URL"] + "/root/"+manuscript.gitlab_submissions_path), safe='')

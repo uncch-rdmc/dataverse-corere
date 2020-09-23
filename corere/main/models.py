@@ -469,14 +469,12 @@ class Submission(AbstractCreateUpdateModel):
         if(self.submission_curation._status == CURATION_NO_ISSUES):
             if(self.submission_verification._status == VERIFICATION_SUCCESS):
                 self.manuscript._status = MANUSCRIPT_COMPLETED
+                ## We decided to leave completed manuscripts in the list and toggle their visibility
                 # Delete existing groups when done for clean-up and reporting
-                # TODO: Update django admin manuscript delete method to delete these groups as well.
-                # It could be even better to extend the group model and have it connected to the manuscript...
-                Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-                Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                # MAD: Are we leaving behind any permissions?
+                # Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                # Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
+                # Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
+                # Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
 
                 self.manuscript.save()
                 return
@@ -574,6 +572,8 @@ class Manuscript(AbstractCreateUpdateModel):
             gitlab_create_manuscript_repo(self)
             gitlab_create_submissions_repo(self)
 
+    def is_complete(self):
+        return self._status == MANUSCRIPT_COMPLETED
             
     ##### django-fsm (workflow) related functions #####
 
@@ -607,8 +607,6 @@ class Manuscript(AbstractCreateUpdateModel):
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance))
     def add_submission_noop(self):
         return self._status
-
-
 
     #-----------------------
 

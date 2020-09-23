@@ -273,6 +273,22 @@
 },
 {
     "model": "sessions.session",
+    "pk": "0mq8ibr66qmzp0ttsh1z6w2fyqnipznl",
+    "fields": {
+        "session_data": "ZTYyM2I3ODdiMGQ3MjE2YzhlZjFjNWZhMzg5OTU5ZDNhODYwMGQ4MTp7Il9hdXRoX3VzZXJfaWQiOiI1IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiI5OWRjMjEyYmM5N2E4NDUzMjFjYjEwMjllYmNjMDU1OTdjMDAwOWE5In0=",
+        "expire_date": "2020-10-07T20:26:01.575Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "0mz6m96pbg5bb14hvkyov5cyokhi8y6g",
+    "fields": {
+        "session_data": "ZDU0MTBhMjU2YTk4YjE4MzEyNTY4YTlmNTY4YWE5YjljOTQxMDNmNzp7Il9hdXRoX3VzZXJfaWQiOiI0IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiI5OWRjMjEyYmM5N2E4NDUzMjFjYjEwMjllYmNjMDU1OTdjMDAwOWE5In0=",
+        "expire_date": "2020-10-07T20:24:56.110Z"
+    }
+},
+{
+    "model": "sessions.session",
     "pk": "ajugh1faqs93o20fpvuk0pcy110ywn34",
     "fields": {
         "session_data": "NzQ3OWYxNTAwNjE5NWMyN2QzOGU0NjNiYzczYmM0NjA1OTI4MTBjNjp7Il9hdXRoX3VzZXJfaWQiOiI0IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoic29jaWFsX2NvcmUuYmFja2VuZHMuZ29vZ2xlLkdvb2dsZU9BdXRoMiIsIl9hdXRoX3VzZXJfaGFzaCI6ImViNzRiMzMzZmM1ZDczNDg4NWFkOGU3ZWNhZmNiMWU3MjI3Y2VhNzMifQ==",
@@ -305,10 +321,18 @@
 },
 {
     "model": "sessions.session",
-    "pk": "w98kpham7grsouk7uiww40gd5mjxt69y",
+    "pk": "xndjri2bt79jcj2gi9ho7qws77jyn0il",
     "fields": {
-        "session_data": "ZjU4YmM1OGFjNzA5Y2FiMDY3OWZjMzZkNzkwZjI1NjlhZjZiNWY4Yjp7Il9hdXRoX3VzZXJfaWQiOiI1IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoic29jaWFsX2NvcmUuYmFja2VuZHMuZ29vZ2xlLkdvb2dsZU9BdXRoMiIsIl9hdXRoX3VzZXJfaGFzaCI6IjcxZTcyYjI1NGMxNWIwNTc5MjY2OTIxMTA1NmJhMzhmM2RjYTIzZTQifQ==",
-        "expire_date": "2020-10-02T21:53:37.716Z"
+        "session_data": "ZmFhMjZhNGE0NDFkNTYxNGE1MDdhZDYzYzJlYTliNzUzMGZmMzIxMDp7Il9hdXRoX3VzZXJfaWQiOiIzIiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiI5OWRjMjEyYmM5N2E4NDUzMjFjYjEwMjllYmNjMDU1OTdjMDAwOWE5In0=",
+        "expire_date": "2020-10-07T20:23:18.614Z"
+    }
+},
+{
+    "model": "sessions.session",
+    "pk": "zpnx3dz2e98mufutsivptajxj4yzy3ln",
+    "fields": {
+        "session_data": "MWNhMjk0NzFkYWIwYjQxNmNjMzI5ZTRkNmEyNTMxMTVhOThhM2VlODp7Il9hdXRoX3VzZXJfaWQiOiI2IiwiX2F1dGhfdXNlcl9iYWNrZW5kIjoiZGphbmdvLmNvbnRyaWIuYXV0aC5iYWNrZW5kcy5Nb2RlbEJhY2tlbmQiLCJfYXV0aF91c2VyX2hhc2giOiI5OWRjMjEyYmM5N2E4NDUzMjFjYjEwMjllYmNjMDU1OTdjMDAwOWE5In0=",
+        "expire_date": "2020-10-07T20:25:48.349Z"
     }
 },
 {
@@ -2542,6 +2566,70 @@
     "pk": 140,
     "fields": {
         "name": "Verifier Manuscript 34",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 141,
+    "fields": {
+        "name": "Editor Manuscript 35",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 142,
+    "fields": {
+        "name": "Author Manuscript 35",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 143,
+    "fields": {
+        "name": "Curator Manuscript 35",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 144,
+    "fields": {
+        "name": "Verifier Manuscript 35",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 145,
+    "fields": {
+        "name": "Editor Manuscript 36",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 146,
+    "fields": {
+        "name": "Author Manuscript 36",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 147,
+    "fields": {
+        "name": "Curator Manuscript 36",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 148,
+    "fields": {
+        "name": "Verifier Manuscript 36",
         "permissions": []
     }
 },
@@ -7306,6 +7394,266 @@
     }
 },
 {
+    "model": "guardian.groupobjectpermission",
+    "pk": 503,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 141
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 504,
+    "fields": {
+        "permission": 87,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 141
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 505,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 141
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 506,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 141
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 507,
+    "fields": {
+        "permission": 95,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 141
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 508,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 142
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 509,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 142
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 510,
+    "fields": {
+        "permission": 94,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 142
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 511,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 143
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 512,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 143
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 513,
+    "fields": {
+        "permission": 96,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 143
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 514,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 144
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 515,
+    "fields": {
+        "permission": 97,
+        "content_type": 23,
+        "object_pk": "35",
+        "group": 144
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 516,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 145
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 517,
+    "fields": {
+        "permission": 87,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 145
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 518,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 145
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 519,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 145
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 520,
+    "fields": {
+        "permission": 95,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 145
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 521,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 146
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 522,
+    "fields": {
+        "permission": 89,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 146
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 523,
+    "fields": {
+        "permission": 94,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 146
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 524,
+    "fields": {
+        "permission": 86,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 147
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 525,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 147
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 526,
+    "fields": {
+        "permission": 96,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 147
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 527,
+    "fields": {
+        "permission": 88,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 148
+    }
+},
+{
+    "model": "guardian.groupobjectpermission",
+    "pk": 528,
+    "fields": {
+        "permission": 97,
+        "content_type": 23,
+        "object_pk": "36",
+        "group": 148
+    }
+},
+{
     "model": "main.user",
     "pk": 1,
     "fields": {
@@ -7327,8 +7675,11 @@
             2,
             3,
             4,
+            129,
             5,
+            133,
             9,
+            137,
             13,
             17,
             21,
@@ -7360,16 +7711,16 @@
             90,
             93,
             97,
-            101,
             98,
+            101,
             105,
             106,
             109,
             121,
             125,
-            129,
-            133,
-            137
+            141,
+            145,
+            146
         ],
         "user_permissions": []
     }
@@ -7399,14 +7750,14 @@
     "model": "main.user",
     "pk": 3,
     "fields": {
-        "password": "!yGuWt2KrZ8vH2umPG5iJm0GMSNXEDFjMCvokh8bG",
-        "last_login": "2020-09-18T21:51:45.823Z",
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:23:18.516Z",
         "is_superuser": false,
         "username": "fakeauthor",
         "first_name": "Author",
         "last_name": "Fake",
         "email": "fakeauthor@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
         "date_joined": "2020-09-18T21:50:47.214Z",
         "invite_key": "",
@@ -7414,14 +7765,17 @@
         "gitlab_id": 2,
         "groups": [
             2,
-            34,
-            58,
+            130,
+            134,
             10,
-            42,
+            138,
             14,
             18,
-            50,
             26,
+            34,
+            42,
+            50,
+            58,
             62,
             70,
             78,
@@ -7431,9 +7785,7 @@
             110,
             122,
             126,
-            130,
-            134,
-            138
+            142
         ],
         "user_permissions": []
     }
@@ -7442,14 +7794,14 @@
     "model": "main.user",
     "pk": 4,
     "fields": {
-        "password": "!HyMDS27EECHw6heWbpEkswd9R2tbsvbtFoCuMtwt",
-        "last_login": "2020-09-18T21:52:41.006Z",
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:24:56.010Z",
         "is_superuser": false,
         "username": "fakeeditor",
         "first_name": "Editor",
         "last_name": "Fake",
         "email": "fakeeditor@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
         "date_joined": "2020-09-18T21:52:29.119Z",
         "invite_key": "",
@@ -7458,21 +7810,22 @@
         "groups": [
             1,
             33,
-            9,
-            41,
-            13,
-            49,
-            25,
-            57,
-            69,
-            77,
-            85,
-            93,
-            101,
-            109,
             121,
             129,
-            137
+            69,
+            101,
+            41,
+            9,
+            137,
+            13,
+            77,
+            109,
+            49,
+            85,
+            25,
+            93,
+            57,
+            141
         ],
         "user_permissions": []
     }
@@ -7481,14 +7834,14 @@
     "model": "main.user",
     "pk": 5,
     "fields": {
-        "password": "!bmAldTr9D6HWT1sx5toFNBarYcA38hevFbqwsXWg",
-        "last_login": "2020-09-18T21:53:37.624Z",
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:26:01.452Z",
         "is_superuser": false,
         "username": "fakecurator",
         "first_name": "Curator",
         "last_name": "Fake",
         "email": "fakecurator@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
         "date_joined": "2020-09-18T21:53:08.039Z",
         "invite_key": "",
@@ -7497,19 +7850,20 @@
         "groups": [
             35,
             4,
-            59,
+            71,
+            27,
+            103,
             11,
             43,
+            139,
             15,
-            51,
-            27,
-            71,
             79,
-            87,
-            95,
-            103,
             111,
-            139
+            51,
+            87,
+            59,
+            95,
+            143
         ],
         "user_permissions": []
     }
@@ -7518,35 +7872,36 @@
     "model": "main.user",
     "pk": 6,
     "fields": {
-        "password": "!TzvBnY2WBs2D12kNA64DkIfgpKXN6Yt67GM1PFS5",
-        "last_login": "2020-09-18T21:54:29.880Z",
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:25:48.247Z",
         "is_superuser": false,
         "username": "fakeverifier",
         "first_name": "Verifier",
         "last_name": "Fake",
         "email": "fakeverifier@gmail.com",
-        "is_staff": false,
+        "is_staff": true,
         "is_active": true,
         "date_joined": "2020-09-18T21:54:14.693Z",
         "invite_key": "",
         "invited_by": 1,
         "gitlab_id": 5,
         "groups": [
+            96,
             3,
             36,
+            72,
+            104,
             12,
             44,
-            60,
-            16,
-            52,
             28,
-            72,
+            140,
+            16,
             80,
-            88,
-            96,
-            104,
             112,
-            140
+            52,
+            88,
+            60,
+            144
         ],
         "user_permissions": []
     }
@@ -7723,6 +8078,44 @@
     }
 },
 {
+    "model": "main.historicalverification",
+    "pk": 10,
+    "fields": {
+        "id": 10,
+        "created_at": "2020-09-23T20:26:47.395Z",
+        "updated_at": "2020-09-23T20:26:47.395Z",
+        "history_change_list": "",
+        "_status": "success",
+        "software": "",
+        "creator": 6,
+        "last_editor": null,
+        "submission": 28,
+        "history_date": "2020-09-23T20:26:47.407Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 6
+    }
+},
+{
+    "model": "main.historicalverification",
+    "pk": 11,
+    "fields": {
+        "id": 11,
+        "created_at": "2020-09-23T20:30:20.634Z",
+        "updated_at": "2020-09-23T20:30:20.634Z",
+        "history_change_list": "",
+        "_status": "success",
+        "software": "",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 29,
+        "history_date": "2020-09-23T20:30:20.648Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.verification",
     "pk": 1,
     "fields": {
@@ -7837,6 +8230,32 @@
         "_status": "success_w_mod",
         "software": "",
         "submission": 27
+    }
+},
+{
+    "model": "main.verification",
+    "pk": 10,
+    "fields": {
+        "created_at": "2020-09-23T20:26:47.395Z",
+        "updated_at": "2020-09-23T20:26:47.395Z",
+        "creator": 6,
+        "last_editor": null,
+        "_status": "success",
+        "software": "",
+        "submission": 28
+    }
+},
+{
+    "model": "main.verification",
+    "pk": 11,
+    "fields": {
+        "created_at": "2020-09-23T20:30:20.634Z",
+        "updated_at": "2020-09-23T20:30:20.634Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "success",
+        "software": "",
+        "submission": 29
     }
 },
 {
@@ -8200,6 +8619,42 @@
     }
 },
 {
+    "model": "main.historicaledition",
+    "pk": 21,
+    "fields": {
+        "id": 20,
+        "created_at": "2020-09-23T20:25:21.378Z",
+        "updated_at": "2020-09-23T20:25:21.378Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 4,
+        "last_editor": null,
+        "submission": 28,
+        "history_date": "2020-09-23T20:25:21.392Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicaledition",
+    "pk": 22,
+    "fields": {
+        "id": 21,
+        "created_at": "2020-09-23T20:29:56.198Z",
+        "updated_at": "2020-09-23T20:29:56.198Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 29,
+        "history_date": "2020-09-23T20:29:56.210Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.edition",
     "pk": 1,
     "fields": {
@@ -8425,6 +8880,30 @@
         "last_editor": null,
         "_status": "no_issues",
         "submission": 27
+    }
+},
+{
+    "model": "main.edition",
+    "pk": 20,
+    "fields": {
+        "created_at": "2020-09-23T20:25:21.378Z",
+        "updated_at": "2020-09-23T20:25:21.378Z",
+        "creator": 4,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 28
+    }
+},
+{
+    "model": "main.edition",
+    "pk": 21,
+    "fields": {
+        "created_at": "2020-09-23T20:29:56.198Z",
+        "updated_at": "2020-09-23T20:29:56.198Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 29
     }
 },
 {
@@ -8662,6 +9141,42 @@
     }
 },
 {
+    "model": "main.historicalcuration",
+    "pk": 14,
+    "fields": {
+        "id": 14,
+        "created_at": "2020-09-23T20:26:16.846Z",
+        "updated_at": "2020-09-23T20:26:16.846Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 5,
+        "last_editor": null,
+        "submission": 28,
+        "history_date": "2020-09-23T20:26:16.882Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 5
+    }
+},
+{
+    "model": "main.historicalcuration",
+    "pk": 15,
+    "fields": {
+        "id": 15,
+        "created_at": "2020-09-23T20:30:08.428Z",
+        "updated_at": "2020-09-23T20:30:08.428Z",
+        "history_change_list": "",
+        "_status": "no_issues",
+        "creator": 1,
+        "last_editor": null,
+        "submission": 29,
+        "history_date": "2020-09-23T20:30:08.447Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
     "model": "main.curation",
     "pk": 1,
     "fields": {
@@ -8815,6 +9330,30 @@
         "last_editor": null,
         "_status": "no_issues",
         "submission": 27
+    }
+},
+{
+    "model": "main.curation",
+    "pk": 14,
+    "fields": {
+        "created_at": "2020-09-23T20:26:16.846Z",
+        "updated_at": "2020-09-23T20:26:16.846Z",
+        "creator": 5,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 28
+    }
+},
+{
+    "model": "main.curation",
+    "pk": 15,
+    "fields": {
+        "created_at": "2020-09-23T20:30:08.428Z",
+        "updated_at": "2020-09-23T20:30:08.428Z",
+        "creator": 1,
+        "last_editor": null,
+        "_status": "no_issues",
+        "submission": 29
     }
 },
 {
@@ -10585,6 +11124,272 @@
     }
 },
 {
+    "model": "main.historicalsubmission",
+    "pk": 94,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:23:30.236Z",
+        "history_change_list": "",
+        "_status": "new",
+        "version": 1,
+        "creator": 3,
+        "last_editor": null,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:23:30.247Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 3
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 95,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:24:23.626Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_edition",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 3,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:24:23.636Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 3
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 96,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:25:28.224Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_curation",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 4,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:25:28.234Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 97,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:26:28.368Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_verification",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 5,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:26:28.379Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 5
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 98,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:26:54.453Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "reviewed_awaiting_report",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 6,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:26:54.469Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 6
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 99,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:27:11.146Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "reviewed_awaiting_approve",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 5,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:27:11.158Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 5
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 100,
+    "fields": {
+        "id": 28,
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:27:30.314Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "returned",
+        "version": 1,
+        "creator": 3,
+        "last_editor": 4,
+        "manuscript": 35,
+        "history_date": "2020-09-23T20:27:30.324Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 101,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:29:30.527Z",
+        "history_change_list": "",
+        "_status": "new",
+        "version": 1,
+        "creator": 1,
+        "last_editor": null,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:29:30.538Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 102,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:29:40.987Z",
+        "history_change_list": "['last_editor', '_status']",
+        "_status": "in_progress_edition",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:29:41.000Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 103,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:30:00.489Z",
+        "history_change_list": "['_status']",
+        "_status": "in_progress_curation",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:30:00.499Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 104,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:30:13.505Z",
+        "history_change_list": "['_status']",
+        "_status": "in_progress_verification",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:30:13.518Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 105,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:30:24.925Z",
+        "history_change_list": "['_status']",
+        "_status": "reviewed_awaiting_report",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:30:24.936Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 106,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:30:58.228Z",
+        "history_change_list": "['_status']",
+        "_status": "reviewed_awaiting_approve",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:30:58.238Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalsubmission",
+    "pk": 107,
+    "fields": {
+        "id": 29,
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:31:18.073Z",
+        "history_change_list": "['_status']",
+        "_status": "returned",
+        "version": 1,
+        "creator": 1,
+        "last_editor": 1,
+        "manuscript": 36,
+        "history_date": "2020-09-23T20:31:18.082Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
     "model": "main.submission",
     "pk": 1,
     "fields": {
@@ -10932,6 +11737,32 @@
         "last_editor": 4,
         "_status": "returned",
         "manuscript": 34,
+        "version": 1
+    }
+},
+{
+    "model": "main.submission",
+    "pk": 28,
+    "fields": {
+        "created_at": "2020-09-23T20:23:30.236Z",
+        "updated_at": "2020-09-23T20:27:30.314Z",
+        "creator": 3,
+        "last_editor": 4,
+        "_status": "returned",
+        "manuscript": 35,
+        "version": 1
+    }
+},
+{
+    "model": "main.submission",
+    "pk": 29,
+    "fields": {
+        "created_at": "2020-09-23T20:29:30.527Z",
+        "updated_at": "2020-09-23T20:31:18.073Z",
+        "creator": 1,
+        "last_editor": 1,
+        "_status": "returned",
+        "manuscript": 36,
         "version": 1
     }
 },
@@ -15688,6 +16519,384 @@
     }
 },
 {
+    "model": "main.historicalmanuscript",
+    "pk": 177,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:21:13.352Z",
+        "history_change_list": "",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-23T20:21:13.365Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 178,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:21:16.176Z",
+        "history_change_list": "['last_editor', 'gitlab_manuscript_id', 'gitlab_manuscript_path']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:21:16.192Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 179,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:21:17.994Z",
+        "history_change_list": "['gitlab_submissions_id', 'gitlab_submissions_path']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:21:18.005Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 180,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:22:35.521Z",
+        "history_change_list": "['_status']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "awaiting_init",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:22:35.534Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 181,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:24:23.576Z",
+        "history_change_list": "['last_editor', '_status']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "reviewing",
+        "creator": 1,
+        "last_editor": 3,
+        "history_date": "2020-09-23T20:24:23.587Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 3
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 182,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:25:28.176Z",
+        "history_change_list": "['last_editor', '_status']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "processing",
+        "creator": 1,
+        "last_editor": 4,
+        "history_date": "2020-09-23T20:25:28.188Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 183,
+    "fields": {
+        "id": 35,
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:27:30.198Z",
+        "history_change_list": "['_status']",
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "completed",
+        "creator": 1,
+        "last_editor": 4,
+        "history_date": "2020-09-23T20:27:30.230Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 184,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:28:18.778Z",
+        "history_change_list": "",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": null,
+        "gitlab_manuscript_path": null,
+        "_status": "new",
+        "creator": 1,
+        "last_editor": null,
+        "history_date": "2020-09-23T20:28:18.790Z",
+        "history_change_reason": null,
+        "history_type": "+",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 185,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:28:22.385Z",
+        "history_change_list": "['last_editor', 'gitlab_manuscript_id', 'gitlab_manuscript_path']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": null,
+        "gitlab_submissions_path": null,
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:28:22.397Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 186,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:28:24.725Z",
+        "history_change_list": "['gitlab_submissions_id', 'gitlab_submissions_path']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "new",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:28:24.736Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 187,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:29:10.464Z",
+        "history_change_list": "['_status']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "awaiting_init",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:29:10.475Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 188,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:29:40.944Z",
+        "history_change_list": "['_status']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "reviewing",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:29:40.955Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 189,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:30:00.441Z",
+        "history_change_list": "['_status']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "processing",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:30:00.452Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
+    "model": "main.historicalmanuscript",
+    "pk": 190,
+    "fields": {
+        "id": 36,
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:31:18.025Z",
+        "history_change_list": "['_status']",
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "completed",
+        "creator": 1,
+        "last_editor": 1,
+        "history_date": "2020-09-23T20:31:18.037Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 1
+    }
+},
+{
     "model": "main.manuscript",
     "pk": 1,
     "fields": {
@@ -16264,7 +17473,7 @@
         "last_editor": 4,
         "uuid": "1996446a-0f20-462a-bde4-1171b4b74232",
         "pub_id": "",
-        "title": "Done Alluser",
+        "title": "Done Alluser BAD",
         "doi": "test",
         "open_data": false,
         "environment_info": [],
@@ -16285,7 +17494,7 @@
         "last_editor": 1,
         "uuid": "663d2228-b02f-46a8-8a49-c00002685ba3",
         "pub_id": "",
-        "title": "Done Nouser",
+        "title": "Done Nouser BAD",
         "doi": "test",
         "open_data": false,
         "environment_info": [],
@@ -16399,6 +17608,48 @@
         "gitlab_manuscript_id": 85,
         "gitlab_manuscript_path": "34_-_B4_Sub2_Alluser_Good_-_Manuscript",
         "_status": "awaiting_resub"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 35,
+    "fields": {
+        "created_at": "2020-09-23T20:21:13.352Z",
+        "updated_at": "2020-09-23T20:27:30.198Z",
+        "creator": 1,
+        "last_editor": 4,
+        "uuid": "fa8114aa-d95a-4e83-add2-e23ed312834d",
+        "pub_id": "",
+        "title": "Done Alluser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 94,
+        "gitlab_submissions_path": "35_-_Done_Alluser_newer_-_Submissions",
+        "gitlab_manuscript_id": 93,
+        "gitlab_manuscript_path": "35_-_Done_Alluser_newer_-_Manuscript",
+        "_status": "completed"
+    }
+},
+{
+    "model": "main.manuscript",
+    "pk": 36,
+    "fields": {
+        "created_at": "2020-09-23T20:28:18.778Z",
+        "updated_at": "2020-09-23T20:31:18.025Z",
+        "creator": 1,
+        "last_editor": 1,
+        "uuid": "47df0811-e3cc-43d6-bd6d-e4172afad4c6",
+        "pub_id": "",
+        "title": "Done Nouser newer",
+        "doi": "test",
+        "open_data": false,
+        "environment_info": [],
+        "gitlab_submissions_id": 96,
+        "gitlab_submissions_path": "36_-_Done_Nouser_newer_-_Submissions",
+        "gitlab_manuscript_id": 95,
+        "gitlab_manuscript_path": "36_-_Done_Nouser_newer_-_Manuscript",
+        "_status": "completed"
     }
 },
 {
@@ -16664,6 +17915,25 @@
         "tag": null,
         "description": "",
         "parent_submission": 27,
+        "parent_manuscript": null
+    }
+},
+{
+    "model": "main.gitlabfile",
+    "pk": 15,
+    "fields": {
+        "created_at": "2020-09-23T20:23:45.693Z",
+        "updated_at": "2020-09-23T20:23:45.693Z",
+        "creator": 3,
+        "last_editor": null,
+        "gitlab_blob_id": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "gitlab_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitlab_path": "README.md",
+        "gitlab_date": "2020-09-23T20:23:31Z",
+        "gitlab_size": 0,
+        "tag": null,
+        "description": "",
+        "parent_submission": 28,
         "parent_manuscript": null
     }
 },
@@ -18516,6 +19786,106 @@
         "history_change_reason": null,
         "history_type": "~",
         "history_user": 6
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 25,
+    "fields": {
+        "id": 3,
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:23:18.516Z",
+        "is_superuser": false,
+        "username": "fakeauthor",
+        "first_name": "Author",
+        "last_name": "Fake",
+        "email": "fakeauthor@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-09-18T21:50:47.214Z",
+        "history_change_list": "['password', 'last_login', 'is_staff']",
+        "invite_key": "",
+        "gitlab_id": 2,
+        "invited_by": 1,
+        "history_date": "2020-09-23T20:23:18.526Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 3
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 26,
+    "fields": {
+        "id": 4,
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:24:56.010Z",
+        "is_superuser": false,
+        "username": "fakeeditor",
+        "first_name": "Editor",
+        "last_name": "Fake",
+        "email": "fakeeditor@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-09-18T21:52:29.119Z",
+        "history_change_list": "['password', 'last_login', 'is_staff']",
+        "invite_key": "",
+        "gitlab_id": 3,
+        "invited_by": 1,
+        "history_date": "2020-09-23T20:24:56.021Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 4
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 27,
+    "fields": {
+        "id": 6,
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:25:48.247Z",
+        "is_superuser": false,
+        "username": "fakeverifier",
+        "first_name": "Verifier",
+        "last_name": "Fake",
+        "email": "fakeverifier@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-09-18T21:54:14.693Z",
+        "history_change_list": "['password', 'last_login', 'is_staff']",
+        "invite_key": "",
+        "gitlab_id": 5,
+        "invited_by": 1,
+        "history_date": "2020-09-23T20:25:48.258Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 6
+    }
+},
+{
+    "model": "main.historicaluser",
+    "pk": 28,
+    "fields": {
+        "id": 5,
+        "password": "pbkdf2_sha256$150000$lMZm8WIluWnJ$XrhCu+GWeGCdCW6zP0zbp7a3x4izKv2WHd2v9yjj8Yw=",
+        "last_login": "2020-09-23T20:26:01.452Z",
+        "is_superuser": false,
+        "username": "fakecurator",
+        "first_name": "Curator",
+        "last_name": "Fake",
+        "email": "fakecurator@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-09-18T21:53:08.039Z",
+        "history_change_list": "['password', 'last_login', 'is_staff']",
+        "invite_key": "",
+        "gitlab_id": 4,
+        "invited_by": 1,
+        "history_date": "2020-09-23T20:26:01.462Z",
+        "history_change_reason": null,
+        "history_type": "~",
+        "history_user": 5
     }
 },
 {
@@ -20952,6 +22322,94 @@
         "action_object_content_type": null,
         "action_object_object_id": null,
         "timestamp": "2020-09-21T16:54:48.874Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 71,
+    "fields": {
+        "level": "info",
+        "recipient": 3,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you author access to manuscript Done Alluser newer!",
+        "target_content_type": 23,
+        "target_object_id": "35",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-23T20:22:04.724Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 72,
+    "fields": {
+        "level": "info",
+        "recipient": 4,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you editor access to manuscript Done Alluser newer!",
+        "target_content_type": 23,
+        "target_object_id": "35",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-23T20:22:11.393Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 73,
+    "fields": {
+        "level": "info",
+        "recipient": 5,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you curator access to manuscript Done Alluser newer!",
+        "target_content_type": 23,
+        "target_object_id": "35",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-23T20:22:16.983Z",
+        "public": false,
+        "deleted": false,
+        "emailed": false,
+        "data": null
+    }
+},
+{
+    "model": "notifications.notification",
+    "pk": 74,
+    "fields": {
+        "level": "info",
+        "recipient": 6,
+        "unread": true,
+        "actor_content_type": 20,
+        "actor_object_id": "1",
+        "verb": "assigned",
+        "description": "madunlap@ad.unc.edu has given you verifier access to manuscript Done Alluser newer!",
+        "target_content_type": 23,
+        "target_object_id": "35",
+        "action_object_content_type": null,
+        "action_object_object_id": null,
+        "timestamp": "2020-09-23T20:22:22.490Z",
         "public": false,
         "deleted": false,
         "emailed": false,

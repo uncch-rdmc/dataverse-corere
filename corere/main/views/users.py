@@ -29,6 +29,8 @@ def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorInviteAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
+    if(manuscript.is_complete()):
+        raise Http404()
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     can_remove_author = request.user.has_any_perm(c.PERM_MANU_REMOVE_AUTHORS, manuscript)
     if request.method == 'POST':
@@ -64,6 +66,8 @@ def invite_assign_author(request, id=None):
 def unassign_author(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
+        if(manuscript.is_complete()):
+            raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
         manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
@@ -80,6 +84,8 @@ def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
+    if(manuscript.is_complete()):
+        raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
     manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     if request.method == 'POST':
@@ -106,6 +112,8 @@ def assign_editor(request, id=None):
 def unassign_editor(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
+        if(manuscript.is_complete()):
+            raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
         manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
@@ -123,6 +131,8 @@ def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
+    if(manuscript.is_complete()):
+        raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
     if request.method == 'POST':
@@ -149,6 +159,8 @@ def assign_curator(request, id=None):
 def unassign_curator(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
+        if(manuscript.is_complete()):
+            raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
@@ -165,6 +177,8 @@ def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
+    if(manuscript.is_complete()):
+        raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
     manu_verifier_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     if request.method == 'POST':
@@ -192,6 +206,8 @@ def assign_verifier(request, id=None):
 def unassign_verifier(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
+        if(manuscript.is_complete()):
+            raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
         manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:

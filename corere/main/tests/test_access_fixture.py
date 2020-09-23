@@ -60,8 +60,8 @@ class BaseTestWithFixture(TestCase):
     M_B4_APPR1_ALLUSER   = 25
     M_B4_APPR1_NOUSER    = 26  
     M_B4_SUB2_ALLUSER    = 34  # Manuscript awaiting second submission, all 4 roles
-    M_DONE_ALLUSER       = 28  # Manuscript completed, all roles (well actually not, they get removed currently)
-    M_DONE_NOUSER        = 29  # Manuscript completed, no roles   
+    M_DONE_ALLUSER       = 35  # Manuscript completed, all roles
+    M_DONE_NOUSER        = 36  # Manuscript completed, no roles   
 
     S_DUR_SUB1_ALLUSER   = 1
     S_DUR_SUB1_NOUSER    = 2
@@ -77,8 +77,8 @@ class BaseTestWithFixture(TestCase):
     S_DUR_VER1_ALLUSER   = 16
     S_DUR_VER1_NOUSER    = 17
     S_B4_SUB2_ALLUSER    = 22
-    S_DONE_ALLUSER       = 23
-    S_DONE_NOUSER        = 24
+    S_DONE_ALLUSER       = 28
+    S_DONE_NOUSER        = 29
     S_B4_ED1_ALLUSER     = 5
     S_B4_ED1_NOUSER      = 6
     S_DUR_ED1_ALLUSER    = 7
@@ -99,8 +99,8 @@ class BaseTestWithFixture(TestCase):
     E_DUR_VER1_ALLUSER   = 10
     E_DUR_VER1_NOUSER    = 11
     E_B4_SUB2_ALLUSER    = 19
-    E_DONE_ALLUSER       = 17
-    E_DONE_NOUSER        = 18
+    E_DONE_ALLUSER       = 20
+    E_DONE_NOUSER        = 21
     E_B4_REP1_ALLUSER    = 12
     E_B4_REP1_NOUSER     = 13
     E_B4_APPR1_ALLUSER   = 14
@@ -113,8 +113,8 @@ class BaseTestWithFixture(TestCase):
     C_DUR_VER1_ALLUSER   = 5
     C_DUR_VER1_NOUSER    = 6
     C_B4_SUB2_ALLUSER    = 13
-    C_DONE_ALLUSER       = 11
-    C_DONE_NOUSER        = 12
+    C_DONE_ALLUSER       = 14
+    C_DONE_NOUSER        = 15
     C_B4_REP1_ALLUSER    = 7
     C_B4_REP1_NOUSER     = 8
     C_B4_APPR1_ALLUSER   = 9
@@ -123,8 +123,8 @@ class BaseTestWithFixture(TestCase):
     V_DUR_VER1_ALLUSER   = 1
     V_DUR_VER1_NOUSER    = 2    
     V_B4_SUB2_ALLUSER    = 9
-    V_DONE_ALLUSER       = 7
-    V_DONE_NOUSER        = 8
+    V_DONE_ALLUSER       = 10
+    V_DONE_NOUSER        = 11
     V_B4_REP1_ALLUSER    = 3
     V_B4_REP1_NOUSER     = 4
     V_B4_APPR1_ALLUSER   = 5
@@ -181,7 +181,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_NOUSER    })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR})).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_NOUSER   })).status_code, 404)
 
         # pain to test # self.assertEqual(cl.get(reverse("account_associate_oauth")).status_code, 200)
@@ -201,7 +201,6 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         cl.force_login(author)   
 
         ###We only test binders we can't access, because it redirects to an external service (and the functionality is not flushed out)
-        self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_DONE_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_binder", kwargs={'id':self.M_NEW_NOUSER   })).status_code, 404)
 
         #Only editor/curator can progress manuscript
@@ -238,14 +237,14 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
         ### Author cannot delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
@@ -398,7 +397,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_CUR1_NOUSER })).status_code, 404)
@@ -411,7 +410,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -419,6 +418,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_NOUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_NOUSER })).status_code, 404)
         
+#TODO: Why is this commented out?
         ### Author cannot create these
         # self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
         # self.assertEqual(cl.get(reverse("submission_createcuration", kwargs={'submission_id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -434,7 +434,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_ALLUSER    })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_createnote", kwargs={'submission_id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -501,7 +501,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_CUR1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 404)
+        self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_ED1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_NOUSER  })).status_code, 404)
@@ -561,7 +561,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_NOUSER  })).status_code, 404)
@@ -618,7 +618,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         ### For author, read should be doable at any point there is a curation completed
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_NOUSER     })).status_code, 404)
  
         ### Author cannot add notes to verifications
@@ -704,23 +704,23 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 200)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         
         ### Curator should always be able to read manuscript contents, even if not assigned
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
@@ -728,14 +728,14 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 200)
         
         ### Curator can delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
@@ -757,32 +757,32 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         
         ### Only curators can unassign
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_NEW_NOUSER       })).status_code, 404)
@@ -791,32 +791,32 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 302)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_ALLUSER      })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 302)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 302)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_ALLUSER      })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 302)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 302)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -986,7 +986,7 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_CUR1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 404)
+        self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_NOUSER     })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_ED1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_NOUSER  })).status_code, 200)
@@ -1079,7 +1079,7 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404) #can't call twice
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
 #TODO: This shouldn't work, I think you can call progress again before the new verification has been saved?? I think its progressing the verification
-        #codebroken #self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 404)  
+        self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 404)  
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -1126,8 +1126,8 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("verification_deletenote", kwargs={'verification_id':self.V_B4_SUB2_ALLUSER, 'id':self.N_B4_SUB2_VERIF_AD})).status_code, 404)
 
 #TODO: This shouldn't work, I think you can call progress again before the new verification has been saved?? I think its progressing the verification
-        #codebroken #self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404) #can't call twice
+        self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404) #can't call twice
         self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_NOUSER })).status_code, 404)
 
 #####################################################################################################################################################
@@ -1145,7 +1145,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_NOUSER    })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR})).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_NOUSER   })).status_code, 404)
 
         # pain to test # self.assertEqual(cl.get(reverse("account_associate_oauth")).status_code, 200)
@@ -1183,23 +1183,23 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 200)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         
         ### Editors should always be able to read manuscript contents only when assigned
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
@@ -1207,14 +1207,14 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
         ### Editor can delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
@@ -1236,32 +1236,32 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         
         ### Only curators can unassign
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_NEW_NOUSER       })).status_code, 404)
@@ -1270,32 +1270,32 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -1369,7 +1369,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -1383,7 +1383,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -1465,7 +1465,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_CUR1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_ED1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_NOUSER  })).status_code, 404)
@@ -1525,7 +1525,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_NOUSER  })).status_code, 404)
@@ -1581,7 +1581,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         ### For editor, read should be doable at any point there is a curation completed
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_NOUSER     })).status_code, 404)
  
         ### Editor cannot add notes to verifications
@@ -1621,7 +1621,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_NOUSER    })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_NEW_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_B4_SUB1_AUTHOR})).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_table", kwargs={'manuscript_id':self.M_DONE_NOUSER   })).status_code, 404)
 
         # pain to test # self.assertEqual(cl.get(reverse("account_associate_oauth")).status_code, 200)
@@ -1658,23 +1658,23 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_NEW_ALLUSER    })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_SUB1_ALLUSER})).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_B4_ED1_ALLUSER})).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_edit", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_uploadfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 404)
-        #codebroken maybe #self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_fileslist", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 404)
         
         ### Verifier should always be able to read manuscript contents when assigned
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
@@ -1682,14 +1682,14 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_read", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_NEW_NOUSER        })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_ED1_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DUR_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_B4_SUB2_ALLUSER   })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
+        self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_ALLUSER   })).status_code, 200)
         self.assertEqual(cl.get(reverse("manuscript_readfiles", kwargs={'id':self.M_DONE_NOUSER   })).status_code, 404)
         
         ### Verifier cannot delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
@@ -1711,32 +1711,32 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_inviteassignauthor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigneditor", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assigncurator", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("manuscript_assignverifier", kwargs={'id':self.M_DONE_NOUSER      })).status_code, 404)
         
         ### Verifier cannot unassign
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_NEW_NOUSER       })).status_code, 404)
@@ -1745,32 +1745,32 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignauthor", kwargs={'user_id':3, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':3, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigneditor", kwargs={'user_id':4, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassigncurator", kwargs={'user_id':5, 'id':self.M_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_NOUSER       })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_NEW_ALLUSER      })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_SUB1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_B4_ED1_ALLUSER  })).status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.post(reverse("manuscript_unassignverifier", kwargs={'user_id':6, 'id':self.M_DONE_NOUSER      })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -1844,7 +1844,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_read", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -1858,7 +1858,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_readfiles", kwargs={'id':self.S_B4_ED1_NOUSER  })).status_code, 404)
@@ -1940,7 +1940,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_CUR1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 404)
+        self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_DUR_ED1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("edition_read", kwargs={'id':self.E_B4_CUR1_NOUSER  })).status_code, 404)
@@ -2000,7 +2000,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_ALLUSER  })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DONE_NOUSER     })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("curation_read", kwargs={'id':self.C_B4_VER1_NOUSER  })).status_code, 404)
@@ -2030,10 +2030,10 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("curation_deletenote", kwargs={'curation_id':self.C_B4_VER1_ALLUSER, 'id':self.N_B4_VER1_CURATOR_AD})).status_code, 404)
 
 #TODO: This shouldn't work, verifier should not be able to progress a curation
-        #codebroken #self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404) #can't call twice
-        #codebroken #self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
-        #codebroken #self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 404)  
+        self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404) #can't call twice
+        self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 404)  
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -2058,7 +2058,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         ### For verifiers, read should be doable at any point there is a curation completed
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_B4_SUB2_ALLUSER })).status_code, 200)
-        #codebroken #self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
+        self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_ALLUSER    })).status_code, 200)
         self.assertEqual(cl.get(reverse("verification_read", kwargs={'id':self.V_DONE_NOUSER     })).status_code, 404)
  
         # Verifiers can edit notes on curations when assigned
