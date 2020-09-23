@@ -149,6 +149,7 @@ class ManuscriptJson(CorereBaseDatatableView):
     def get_initial_queryset(self):
         return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
 
+    #Note: this isn't tied to the search bar in the datatable, that happens solely browserside
     def filter_queryset(self, qs):
         # use parameters passed in GET request to filter (search) queryset
         search = self.request.GET.get('search[value]', None)

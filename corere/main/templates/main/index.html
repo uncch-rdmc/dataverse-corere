@@ -6,6 +6,8 @@
 {% comment %} Manuscript Table {% endcomment %}
 
 <script type="text/javascript">
+    var search_completed_vis_toggle = true;
+    var search_curator_vis_toggle = true;
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
     // translations for datatables
 
@@ -197,14 +199,51 @@
                                         text: 'Add Verifier',
                                         name: 'assignverifier',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])   
                                             window.location.href = "manuscript/"+manuscript_id+"/assignverifier";
                                         },
                                         enabled: false
                                     },
                                 {% endif %}
                             ]
-                        }
+                        },
+                        {% endif %}
+                        //the default for the searches controlled by these two buttons is set later down
+                        {
+                            text: '<i class="far fa-eye-slash"></i> Completed',
+                            name: 'viewcompleted',
+                            className: 'visibilityButton',
+                            action: function ( e, dt, node, config ) {
+                                if(search_completed_vis_toggle == false) {
+                                    table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
+                                    search_completed_vis_toggle = true;
+                                    this.text( '<i class="far fa-eye-slash"></i> Completed' );
+                                    
+                                } else {
+                                    table.columns( 5 ).search( "" ).draw();
+                                    search_completed_vis_toggle = false;
+                                    this.text( '<i class="far fa-eye"></i> Completed' );
+                                }
+                            },
+                        },
+                        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        {
+                            text: '<i class="far fa-eye-slash"></i> All Curators',
+                            name: 'viewnotuserassigned',
+                            className: 'visibilityButton',
+                            action: function ( e, dt, node, config ) {
+                                if(search_curator_vis_toggle == false) {
+                                    table.columns( 10 ).search( "{{request.user.username}}" ).draw();
+                                    search_curator_vis_toggle = true;
+                                    this.text( '<i class="far fa-eye-slash"></i> All Curators' );
+                                    
+                                } else {
+                                    table.columns( 10 ).search( "" ).draw();
+                                    search_curator_vis_toggle = false;
+                                    this.text( '<i class="far fa-eye"></i> All Curators' );
+                                }
+                            },
+                        },
                         {% endif %}
                     ]
                 })
@@ -252,6 +291,12 @@
                 table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
                 table.buttons().container().prependTo("#manuscript_buttons");
 
+                table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
+                {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user.is_superuser %} 
+                table.columns( 10 ).search( "{{request.user.username}}" ).draw();
+                {% else %}
+                table.columns( 10 ).search( "" ).draw();
+                {% endif %}
                 function select_later() {
                     manuscript_id = table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
                     var avail_buttons = table.rows( { selected: true } ).data()[0][button_index];
