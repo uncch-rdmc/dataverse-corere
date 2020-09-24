@@ -683,7 +683,7 @@ class GitlabFile(AbstractCreateUpdateModel):
     gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
     gitlab_date = models.DateTimeField()
     gitlab_size = models.IntegerField()
-    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, blank=True, null=True) 
+    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES) 
     description = models.TextField(max_length=1024, default="")
 
     #linked = models.BooleanField(default=True)

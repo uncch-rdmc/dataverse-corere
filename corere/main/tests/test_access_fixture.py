@@ -1078,7 +1078,6 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_ALLUSER })).status_code, 404) #can't call twice
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_CUR1_NOUSER })).status_code, 404)
-#TODO: This shouldn't work, I think you can call progress again before the new verification has been saved?? I think its progressing the verification
         self.assertEqual(cl.post(reverse("curation_progress", kwargs={'id':self.C_DUR_VER1_ALLUSER })).status_code, 404)  
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
@@ -1125,7 +1124,6 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("verification_deletenote", kwargs={'verification_id':self.V_B4_SUB2_ALLUSER, 'id':self.N_B4_SUB2_VERIF})).status_code, 404)
         self.assertEqual(cl.post(reverse("verification_deletenote", kwargs={'verification_id':self.V_B4_SUB2_ALLUSER, 'id':self.N_B4_SUB2_VERIF_AD})).status_code, 404)
 
-#TODO: This shouldn't work, I think you can call progress again before the new verification has been saved?? I think its progressing the verification
         self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_ALLUSER })).status_code, 404) #can't call twice
         self.assertEqual(cl.post(reverse("verification_progress", kwargs={'id':self.V_DUR_VER1_NOUSER })).status_code, 404)
