@@ -743,6 +743,8 @@ class Note(AbstractCreateUpdateModel):
         raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
     
     def save(self, *args, **kwargs):
+        print("NOTESAVE")
+
         parents = 0
         parents += (self.parent_submission_id is not None)
         parents += (self.parent_edition_id is not None)

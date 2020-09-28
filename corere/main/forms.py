@@ -94,10 +94,11 @@ class NoteForm(forms.ModelForm):
 #     fields = ['text'],
 #     extra=1)
 
-NoteGitlabFileFormset = inlineformset_factory(m.GitlabFile, 
+NoteGitlabFileFormset = inlineformset_factory(
+    m.GitlabFile, 
     m.Note, 
-    fields = ['text'],
-    extra=0
+    extra=0,
+    fields = ("text",)
     )
 
 class BaseSubFileNoteFormSet(BaseInlineFormSet):
@@ -110,11 +111,33 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
             instance=form.instance,
             data=form.data if form.is_bound else None,
             files=form.files if form.is_bound else None,
-            # prefix='address-%s-%s' % (
-            #     form.prefix,
-            #     AddressFormset.get_default_prefix()),
+            prefix='note-%s-%s' % (
+                form.prefix,
+                NoteGitlabFileFormset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
             #extra=1
         )
+    
+    def is_valid(self):
+        result = super(BaseSubFileNoteFormSet, self).is_valid()
+
+        if self.is_bound:
+            for form in self.forms:
+                if hasattr(form, 'nested'):
+                    result = result and form.nested.is_valid()
+
+        return result
+
+    def save(self, commit=True):
+        print("INRIGHTSAVE1")
+        result = super(BaseSubFileNoteFormSet, self).save(commit=commit)
+
+        print(self.forms)
+        for form in self.forms:
+            if hasattr(form, 'nested'):
+                if not self._should_delete_form(form):
+                    form.nested.save(commit=commit)
+
+        return result
 
 #busted, halfway between note and gitlabfile
 # FileNoteFormSet = inlineformset_factory(
@@ -193,7 +216,7 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
 GitlabFileNoteFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
-    form=GitlabFileForm,
+    #form=GitlabFileForm,
     formset=BaseSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
     extra=0,

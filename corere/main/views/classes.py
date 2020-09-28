@@ -305,14 +305,15 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 #TODO: Reenable
-    #helper=GitlabFileFormSetHelper()
+    helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
         #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         formset = GitlabFileNoteFormSet(instance=self.object)
         return render(request, self.template, {
                   'parent':self.object,
-                  'children_formset':formset})
+                  'children_formset':formset,
+                  'helper': self.helper,})
         #self.object
 
         # helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
@@ -322,17 +323,22 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
         #     'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
 
     #Originally coppied from GenericCorereObjectView
-    # def post(self, request, *args, **kwargs):
-    #     #print(self.__dict__)
-    #     if self.form.is_valid():
-    #         self.form.save() #Note: this is what saves a newly created model instance
-    #         messages.add_message(request, messages.SUCCESS, self.message)
-    #         return redirect(self.redirect)
-    #     else:
-    #         logger.debug(self.form.errors)
-    #         #TODO: Pass back form errors
-    #     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-    #         'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+    def post(self, request, *args, **kwargs):
+        #print(self.__dict__)
+        formset = GitlabFileNoteFormSet(request.POST, instance=self.object)
+        if formset.is_valid():
+            print("OHGOOD")
+            formset.save() #Note: this is what saves a newly created model instance
+            messages.add_message(request, messages.SUCCESS, self.message)
+            return redirect(self.redirect)
+        else:
+            logger.debug(formset.errors)
+            #TODO: Pass back form errors
+
+        return render(request, self.template, {
+                  'parent':self.object,
+                  'children_formset':formset,
+                  'helper': self.helper,})
 
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
