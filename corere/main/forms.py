@@ -1,6 +1,6 @@
 import logging, os
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect
 from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
@@ -9,6 +9,7 @@ from django.conf import settings
 from . import constants as c
 from corere.main import models as m
 from django.contrib.auth.models import Group
+from django.forms.models import BaseInlineFormSet
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
 from corere.main.gitlab import helper_get_submission_branch_name
@@ -61,6 +62,77 @@ class SubmissionForm(forms.ModelForm):
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
     pass
+
+#------------ Note -------------
+
+class NoteForm(forms.ModelForm):
+    class Meta:
+        model = Note
+        fields = ['text','scope']
+
+    SCOPE_OPTIONS = (('public','Public'),('private','Private'))
+
+    scope = forms.ChoiceField(widget=forms.RadioSelect,
+                                        choices=SCOPE_OPTIONS, required=False)
+
+    def __init__ (self, *args, **kwargs):
+        super(NoteForm, self).__init__(*args, **kwargs)
+
+        #Populate scope field depending on existing roles
+        existing_roles = []
+        for role in c.get_roles():
+            role_perms = get_perms(Group.objects.get(name=role), self.instance)
+            if(c.PERM_NOTE_VIEW_N in role_perms):
+                existing_roles.append(role)
+        if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
+            self.fields['scope'].initial = 'public'
+        else:
+            self.fields['scope'].initial = 'private'
+
+# NoteSubFormset = inlineformset_factory(m.Submission, 
+#     m.Note, 
+#     fields = ['text'],
+#     extra=1)
+
+NoteGitlabFileFormset = inlineformset_factory(m.GitlabFile, 
+    m.Note, 
+    fields = ['text'],
+    extra=0
+    )
+
+class BaseSubFileNoteFormSet(BaseInlineFormSet):
+    
+    def add_fields(self, form, index):
+        super(BaseSubFileNoteFormSet, self).add_fields(form, index)
+
+        # save the formset in the 'nested' property
+        form.nested = NoteGitlabFileFormset(
+            instance=form.instance,
+            data=form.data if form.is_bound else None,
+            files=form.files if form.is_bound else None,
+            # prefix='address-%s-%s' % (
+            #     form.prefix,
+            #     AddressFormset.get_default_prefix()),
+            #extra=1
+        )
+
+#busted, halfway between note and gitlabfile
+# FileNoteFormSet = inlineformset_factory(
+#     Submission,
+#     GitlabFile,
+#     #form=NoteForm,
+#     formset=BaseSubmissionNoteFormSet,
+#     fields=('text','scope'),
+#     extra=1,
+#     can_delete=True,
+#     widgets={
+#         'text': TextInput(),
+#         'scope': RadioSelect()}
+# )            
+
+#TODO: Do I need a FormSetHelper (for crispy)
+
+#------------ GitlabFile -------------
 
 class GitlabFileForm(forms.ModelForm):
     class Meta:
@@ -118,6 +190,19 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
             },
         }
 
+GitlabFileNoteFormSet = inlineformset_factory(
+    Submission,
+    GitlabFile,
+    form=GitlabFileForm,
+    formset=BaseSubFileNoteFormSet,
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+    extra=0,
+    can_delete=False,
+    # widgets={
+    #     'gitlab_path': DownloadGitlabWidget(),
+    #     'description': TextInput() }
+)
+
 GitlabFileFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
@@ -162,6 +247,8 @@ class GitlabFileFormSetHelper(FormHelper):
         )
         self.render_required_fields = True
 
+#-------------------------
+
 #No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
@@ -203,27 +290,7 @@ class VerificationForm(forms.ModelForm):
 class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationForm):
     pass
 
-class NoteForm(forms.ModelForm):
-    class Meta:
-        model = Note
-        fields = ['text','scope']
-
-    SCOPE_OPTIONS = ((role,role) for role in c.get_roles())
-
-    scope = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple,
-                                          choices=SCOPE_OPTIONS, required=False)
-
-    def __init__ (self, *args, **kwargs):
-        super(NoteForm, self).__init__(*args, **kwargs)
-
-        #Populate scope field with existing roles
-        existing_scope = []
-        for role in c.get_roles():
-            role_perms = get_perms(Group.objects.get(name=role), self.instance)
-            if(c.PERM_NOTE_VIEW_N in role_perms):
-                existing_scope.append(role)
-        self.fields['scope'].initial = existing_scope
-        #print(self.fields['scope'].__dict__)
+#-------------------------
 
 class CustomSelect2UserWidget(forms.SelectMultiple):
     class Media:

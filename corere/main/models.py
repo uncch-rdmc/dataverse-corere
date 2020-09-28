@@ -713,6 +713,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
         super(GitlabFile, self).save(*args, **kwargs)
 
+#TODO: Now that notes are public/private, we should check on save to ensure roles are set right? Not sure how...
 class Note(AbstractCreateUpdateModel):
     text = models.TextField(default="")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])

@@ -98,13 +98,23 @@ def edit_note(request, id=None, edition_id=None, submission_id=None, curation_id
     if request.method == 'POST': #MAD: Do I need better perms on this?
         if form.is_valid():
             form.save()
-            #We go through all available role-groups and add/remove their permissions depending on whether they were selected
+            
+            #Somewhat inefficient, but we just delete all perms and readd on save. Safest.
             for role in c.get_roles():
                 group = Group.objects.get(name=role)
-                if role in form.cleaned_data['scope']:
-                    assign_perm(c.PERM_NOTE_VIEW_N, group, note) 
+                remove_perm(c.PERM_NOTE_VIEW_N, group, note)
+            if (form.cleaned_data['scope'] == 'public'):
+                for role in c.get_roles():
+                    group = Group.objects.get(name=role)
+                    assign_perm(c.PERM_NOTE_VIEW_N, group, note)
+            else: #private    
+                if(request.user.has_any_perm(c.PERM_MANU_CURATE, note.manuscript) or request.user.has_any_perm(c.PERM_MANU_VERIFY, note.manuscript)): #only users with certain roles can set private
+                    for role in c.get_private_roles():
+                        group = Group.objects.get(name=role)
+                        assign_perm(c.PERM_NOTE_VIEW_N, group, note)
                 else:
-                    remove_perm(c.PERM_NOTE_VIEW_N, group, note)           
+                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(request.user.id, id))
+                    raise Http404()
             return redirect(re_url)
         else:
             #TODO: Return form errors correctly

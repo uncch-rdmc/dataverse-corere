@@ -33,19 +33,6 @@
 </form>
 {% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}
 
-{% if not read_only %}
-<a href='createnote'>Add note</a> {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
-{% endif %}
-{% for note in notes %}
-    <p>{{note.text}} by {{note.creator}} 
-    {% if not read_only  %}
-        {% if user.username == note.creator.username %}
-            {% comment %} Delete probably shouldn't be a link? {% endcomment %}
-            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href="javascript:void(0)" onClick="deletenote({{note.id}});">Delete</a>)
-        {% endif %}
-    {% endif %}
-    </p> 
-{% endfor %}
-{% comment %} {% include "main/file_list.html" %} {% endcomment %}
+{% include "main/note_list.html" %}    
 
 {% endblock content %}

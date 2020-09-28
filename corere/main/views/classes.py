@@ -277,23 +277,62 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
 
+# #TODO: Do we need the gitlab mixin? probably?
+# #TODO: Do we need all the parameters being passed?
+# #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
+# class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+#     form = GitlabFileFormSet
+#     template = 'main/form_edit_files.html'
+#     #template = 'main/not_form_upload_files.html'
+#     #For TransitionPermissionMixin
+#     transition_method_name = 'edit_noop'
+#     helper=GitlabFileFormSetHelper()
+
+#     def get(self, request, *args, **kwargs):
+#         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+#         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+#             'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+#             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
 #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = GitlabFileFormSet
-    template = 'main/form_edit_files.html'
+    form = GitlabFileNoteFormSet
+    template = 'main/form_edit_files_notes.html'
     #template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
-    helper=GitlabFileFormSetHelper()
+#TODO: Reenable
+    #helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
-        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object) #TEST
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+        formset = GitlabFileNoteFormSet(instance=self.object)
+        return render(request, self.template, {
+                  'parent':self.object,
+                  'children_formset':formset})
+        #self.object
+
+        # helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+        # return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        #     'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+        #     'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+        #     'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+
+    #Originally coppied from GenericCorereObjectView
+    # def post(self, request, *args, **kwargs):
+    #     #print(self.__dict__)
+    #     if self.form.is_valid():
+    #         self.form.save() #Note: this is what saves a newly created model instance
+    #         messages.add_message(request, messages.SUCCESS, self.message)
+    #         return redirect(self.redirect)
+    #     else:
+    #         logger.debug(self.form.errors)
+    #         #TODO: Pass back form errors
+    #     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+    #         'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
 
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
