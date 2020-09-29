@@ -304,20 +304,23 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     #template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
-#TODO: Reenable
     helper=GitlabFileFormSetHelper()
 
     def get(self, request, *args, **kwargs):
-        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         formset = GitlabFileNoteFormSet(instance=self.object)
-        return render(request, self.template, {
-                  'parent':self.object,
-                  'children_formset':formset,
-                  'helper': self.helper,})
-        #self.object
+        # return render(request, self.template, {
+        #           'parent':self.object,
+        #           'children_formset':formset,
+        #           'helper': self.helper,})
+
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset,})
 
         # helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        # return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        # return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
         #     'git_id': self.object.manuscript.gitlab_submissions_id, 'object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
         #     'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
         #     'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
@@ -327,7 +330,6 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
         #print(self.__dict__)
         formset = GitlabFileNoteFormSet(request.POST, instance=self.object)
         if formset.is_valid():
-            print("OHGOOD")
             formset.save() #Note: this is what saves a newly created model instance
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)

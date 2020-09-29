@@ -221,9 +221,9 @@ GitlabFileNoteFormSet = inlineformset_factory(
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
     extra=0,
     can_delete=False,
-    # widgets={
-    #     'gitlab_path': DownloadGitlabWidget(),
-    #     'description': TextInput() }
+    widgets={
+        'gitlab_path': DownloadGitlabWidget(),
+        'description': TextInput() }
 )
 
 GitlabFileFormSet = inlineformset_factory(
@@ -255,7 +255,8 @@ class GitlabFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        self.template = 'bootstrap4/table_inline_formset.html'
+        # self.template = 'bootstrap4/table_inline_formset.html'
+        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
         #self.field_template = 'bootstrap4/layout/inline_field.html'
         self.layout = Layout(
@@ -264,9 +265,9 @@ class GitlabFileFormSetHelper(FormHelper):
             'tag',
             'description',
             ),
-            ButtonHolder(
-                Submit('submit', 'Submit', css_class='button white')
-            )
+            # ButtonHolder(
+            #     Submit('submit', 'Submit', css_class='button white')
+            # )
         )
         self.render_required_fields = True
 
