@@ -3,6 +3,16 @@
 {% load crispy_forms_field %}
 
 {% specialspaceless %}
+<script>
+    function showHideNoteSection(name) {
+        var x = document.getElementById(name);
+        if (x.style.display === "none") {
+            x.style.display = "";
+        } else {
+            x.style.display = "none";
+        }
+    }
+</script>
 {% if formset_tag %}
 <form {{ flat_attrs|safe }} method="{{ form_method }}" {% if formset.is_multipart %} enctype="multipart/form-data"{% endif %}>
 {% endif %}
@@ -26,27 +36,19 @@
                             </th>
                         {% endif %}
                     {% endfor %}
+                    <th class="col-form-label">Notes</th>
                 </tr>
             {% endif %}
         </thead>
 
         <tbody>
-            <tr class="d-none empty-form">
+            <tr class="d-none empty-form" >
                 {% for field in formset.empty_form %}
                     {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
                 {% endfor %}
             </tr>
 
             {% for form in formset %}
-                FORM
-                {% if form.nested %}
-                    {{ form.nested.management_form }}
-                    {{ form.nested.non_form_errors }}
-                    {% for nested_form in form.nested.forms %}
-                        NESTED!
-                        {{ nested_form|crispy }}
-                    {% endfor %}
-                {% endif%}
                 {% if form_show_errors and not form.is_extra %}
                     {% include "bootstrap4/errors.html" %}
                 {% endif %}
@@ -55,7 +57,39 @@
                     {% for field in form %}
                         {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
                     {% endfor %}
+                    <td>{{ form.nested.forms|length }} <button type="button" onclick="showHideNoteSection('{{ forloop.counter }}_notes_table')">show</button></td>
                 </tr>
+
+                {% if form.nested %}
+                    {{ form.nested.management_form }}
+                    {{ form.nested.non_form_errors }}
+                    <tr id="{{ forloop.counter }}_notes_table" style="display:none;">
+                        <td colspan=20>
+                            <table>
+                                <tr>
+                                    {% for field in form.nested.forms.0 %}
+                                        {% if field.label and not field.is_hidden %}
+                                            <th for="{{ field.auto_id }}" class="col-form-label {% if field.field.required %}requiredField{% endif %}">
+                                                {{ field.label|safe }}{% if field.field.required and not field|is_checkbox %}<span class="asteriskField">*</span>{% endif %}
+                                            </th>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+
+                            {% for nested_form in form.nested.forms %}
+                                <tr>
+                                {% for field in nested_form %}
+                                    {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
+                                {% endfor %}
+                                </tr>
+                                {% comment %} {{ nested_form|crispy }} {% endcomment %}
+                            {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                    
+                {% endif%}
+
             {% endfor %}
         </tbody>
     </table>

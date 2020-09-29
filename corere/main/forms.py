@@ -89,6 +89,10 @@ class NoteForm(forms.ModelForm):
         else:
             self.fields['scope'].initial = 'private'
 
+        #TODO: I don't think my save is enforcing this readonly!
+        self.fields['creator'].widget.attrs['readonly'] = True
+        self.fields['note_replied_to'].widget.attrs['readonly'] = True
+
 # NoteSubFormset = inlineformset_factory(m.Submission, 
 #     m.Note, 
 #     fields = ['text'],
@@ -98,14 +102,17 @@ NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
     m.Note, 
     extra=0,
-    fields = ("text",)
+    form=NoteForm,
+    fields=("creator","text","note_replied_to"),
+    widgets={
+        'text': TextInput() }
     )
 
 class BaseSubFileNoteFormSet(BaseInlineFormSet):
     
     def add_fields(self, form, index):
         super(BaseSubFileNoteFormSet, self).add_fields(form, index)
-
+        print(form.__dict__)
         # save the formset in the 'nested' property
         form.nested = NoteGitlabFileFormset(
             instance=form.instance,
@@ -128,7 +135,6 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
         return result
 
     def save(self, commit=True):
-        print("INRIGHTSAVE1")
         result = super(BaseSubFileNoteFormSet, self).save(commit=commit)
 
         print(self.forms)
@@ -158,6 +164,8 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
 #------------ GitlabFile -------------
 
 class GitlabFileForm(forms.ModelForm):
+    fakefield = forms.Field(required=False)
+
     class Meta:
         model = GitlabFile
         fields = ['gitlab_path']
@@ -187,11 +195,7 @@ class GitlabReadOnlyFileForm(forms.ModelForm):
         self.fields['description'].widget.attrs['readonly'] = True
 
 class DownloadGitlabWidget(forms.widgets.TextInput):
-    #template_name = 'django/forms/widgets/textarea.html'
     template_name = 'main/widget_download.html'
-
-    #Here get the kwarg from the form, need to include our token or whatever we are passing
-    #def get_form_kwargs()
 
     def get_context(self, name, value, attrs):
         try:
@@ -216,9 +220,9 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
 GitlabFileNoteFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
-    #form=GitlabFileForm,
+    form=GitlabFileForm,
     formset=BaseSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date', 'fakefield'),
     extra=0,
     can_delete=False,
     widgets={
@@ -247,7 +251,7 @@ GitlabReadOnlyFileFormSet = inlineformset_factory(
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
-        'description': TextInput() }
+        'description': TextInput()}
 )
 
 class GitlabFileFormSetHelper(FormHelper):
