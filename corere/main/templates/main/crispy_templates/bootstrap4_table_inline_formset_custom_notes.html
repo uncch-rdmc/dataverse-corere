@@ -31,7 +31,13 @@
                 <tr>
                     {% for field in formset.forms.0 %}
                         {% if field.label and not field.is_hidden %}
-                            <th for="{{ field.auto_id }}" class="col-form-label {% if field.field.required %}requiredField{% endif %}">
+                            <th for="{{ field.auto_id }}" class="col-form-label {% if field.field.required %}requiredField{% endif %}
+                            {% if field.label|safe == 'Gitlab path'%}w-25{% endif %}
+                            {% if field.label|safe == 'Description'%}w-25{% endif %}
+                            
+                            
+                            
+                            ">
                                 {{ field.label|safe }}{% if field.field.required and not field|is_checkbox %}<span class="asteriskField">*</span>{% endif %}
                             </th>
                         {% endif %}
@@ -54,10 +60,13 @@
                 {% endif %}
 
                 <tr>
+                    
                     {% for field in form %}
                         {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
                     {% endfor %}
-                    <td>{{ form.nested.forms|length }} <button type="button" onclick="showHideNoteSection('{{ forloop.counter }}_notes_table')">show</button></td>
+
+                    <td><div class="tableentryflex"><span style="padding-right: 6px;">{{ form.nested.forms|length }}</span> <input type="button" value="Show" onclick="showHideNoteSection('{{ forloop.counter }}_notes_table')"/></div></td>
+                    
                 </tr>
 
                 {% if form.nested %}
@@ -65,7 +74,7 @@
                     {{ form.nested.non_form_errors }}
                     <tr id="{{ forloop.counter }}_notes_table" style="display:none;">
                         <td colspan=20>
-                            <table>
+                            <table class="table table-striped table-sm">
                                 <tr>
                                     {% for field in form.nested.forms.0 %}
                                         {% if field.label and not field.is_hidden %}

@@ -23,9 +23,10 @@
         })
     }
 </script>
+<h5 class="my-3"> {{page_header}}: {{root_object_title}}</h5>
 <form action="" method="post">
     {% csrf_token %}
-    <h5 class="my-3"> {{role_name}} Management for Manuscript {{id}} </h5>
+    {% comment %} <h5 class="my-3"> {{role_name}} Management for Manuscript {{id}} </h5> {% endcomment %}
     <table>
         {{form|crispy}}
     </table>

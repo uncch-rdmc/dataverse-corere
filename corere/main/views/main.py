@@ -186,6 +186,6 @@ def delete_all_submission_files(request, submission_id):
 @login_required()
 def site_actions(request):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
-        return render(request, 'main/site_actions.html')
+        return render(request, 'main/site_actions.html', {'page_header': "site_actions"})
     else:
         raise Http404()

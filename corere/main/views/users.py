@@ -59,7 +59,7 @@ def invite_assign_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author})
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_header': "Invite and Assign Author to Manuscript"})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -105,7 +105,7 @@ def assign_editor(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all()})
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'page_header': "Assign Editor to Manuscript"})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -152,7 +152,7 @@ def assign_curator(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
-        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all()})
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'page_header': "Assign Curator to Manuscript"})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -198,7 +198,7 @@ def assign_verifier(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
-        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all()})
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'page_header': "Assign Verifier to Manuscript"})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
@@ -245,7 +245,7 @@ def account_user_details(request):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form})
+    return render(request, 'main/form_user_details.html', {'form': form, 'page_header': "Edit Account Details"})
 
 def logout_view(request):
     logout(request)

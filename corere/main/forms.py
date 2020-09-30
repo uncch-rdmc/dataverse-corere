@@ -11,7 +11,7 @@ from corere.main import models as m
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit
+from crispy_forms.layout import Layout, Field, ButtonHolder, Submit
 from corere.main.gitlab import helper_get_submission_branch_name
 logger = logging.getLogger(__name__)
 
@@ -89,9 +89,8 @@ class NoteForm(forms.ModelForm):
         else:
             self.fields['scope'].initial = 'private'
 
-        #TODO: I don't think my save is enforcing this readonly!
-        self.fields['creator'].widget.attrs['readonly'] = True
-        self.fields['note_replied_to'].widget.attrs['readonly'] = True
+        # self.fields['creator'].widget.attrs['readonly'] = True
+        # self.fields['note_replied_to'].widget.attrs['readonly'] = True
 
 # NoteSubFormset = inlineformset_factory(m.Submission, 
 #     m.Note, 
@@ -112,7 +111,6 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
     
     def add_fields(self, form, index):
         super(BaseSubFileNoteFormSet, self).add_fields(form, index)
-        print(form.__dict__)
         # save the formset in the 'nested' property
         form.nested = NoteGitlabFileFormset(
             instance=form.instance,
@@ -137,7 +135,6 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
     def save(self, commit=True):
         result = super(BaseSubFileNoteFormSet, self).save(commit=commit)
 
-        print(self.forms)
         for form in self.forms:
             if hasattr(form, 'nested'):
                 if not self._should_delete_form(form):
@@ -164,7 +161,7 @@ class BaseSubFileNoteFormSet(BaseInlineFormSet):
 #------------ GitlabFile -------------
 
 class GitlabFileForm(forms.ModelForm):
-    fakefield = forms.Field(required=False)
+    #fakefield = forms.Field(required=False)
 
     class Meta:
         model = GitlabFile
@@ -222,7 +219,7 @@ GitlabFileNoteFormSet = inlineformset_factory(
     GitlabFile,
     form=GitlabFileForm,
     formset=BaseSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date', 'fakefield'),
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
     extra=0,
     can_delete=False,
     widgets={
@@ -264,11 +261,10 @@ class GitlabFileFormSetHelper(FormHelper):
         self.form_tag = False
         #self.field_template = 'bootstrap4/layout/inline_field.html'
         self.layout = Layout(
-            Fieldset(
-            'gitlab_path',
-            'tag',
-            'description',
-            ),
+
+            Field('gitlab_path', th_class="w-50"),
+            Field('tag'),
+            Field('description'),
             # ButtonHolder(
             #     Submit('submit', 'Submit', css_class='button white')
             # )
