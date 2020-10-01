@@ -92,11 +92,41 @@ class NoteForm(forms.ModelForm):
         # self.fields['creator'].widget.attrs['readonly'] = True
         # self.fields['note_replied_to'].widget.attrs['readonly'] = True
 
-# NoteSubFormset = inlineformset_factory(m.Submission, 
-#     m.Note, 
-#     fields = ['text'],
-#     extra=1)
+#TODO: Making this generic may have been pointless, not sure if its needed?
+class BaseNoteFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super(BaseNoteFormSet, self).add_fields(form, index)
+        # save the formset in the 'nested' property
+        form.nested = self.nested_formset(
+            instance=form.instance,
+            data=form.data if form.is_bound else None,
+            files=form.files if form.is_bound else None,
+            prefix='note-%s-%s' % (
+                form.prefix,
+                self.nested_formset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
+            #extra=1
+        )
+    
+    def is_valid(self):
+        result = super(BaseNoteFormSet, self).is_valid()
 
+        if self.is_bound:
+            for form in self.forms:
+                if hasattr(form, 'nested'):
+                    result = result and form.nested.is_valid()
+
+        return result
+
+    def save(self, commit=True):
+        result = super(BaseNoteFormSet, self).save(commit=commit)
+
+        for form in self.forms:
+            if hasattr(form, 'nested'):
+                if not self._should_delete_form(form):
+                    form.nested.save(commit=commit)
+
+        return result
+        
 NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
     m.Note, 
@@ -107,56 +137,49 @@ NoteGitlabFileFormset = inlineformset_factory(
         'text': TextInput() }
     )
 
-class BaseSubFileNoteFormSet(BaseInlineFormSet):
-    
-    def add_fields(self, form, index):
-        super(BaseSubFileNoteFormSet, self).add_fields(form, index)
-        # save the formset in the 'nested' property
-        form.nested = NoteGitlabFileFormset(
-            instance=form.instance,
-            data=form.data if form.is_bound else None,
-            files=form.files if form.is_bound else None,
-            prefix='note-%s-%s' % (
-                form.prefix,
-                NoteGitlabFileFormset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
-            #extra=1
-        )
-    
-    def is_valid(self):
-        result = super(BaseSubFileNoteFormSet, self).is_valid()
+#Needed for another level of nesting
+class NestedSubFileNoteFormSet(BaseNoteFormSet):
+    nested_formset = NoteGitlabFileFormset
 
-        if self.is_bound:
-            for form in self.forms:
-                if hasattr(form, 'nested'):
-                    result = result and form.nested.is_valid()
+NoteSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Note, 
+    extra=0,
+    form=NoteForm,
+    fields=("creator","text","note_replied_to"),
+    widgets={
+        'text': TextInput() }
+    )
 
-        return result
+NoteEditionFormset = inlineformset_factory(
+    m.Edition, 
+    m.Note, 
+    extra=0,
+    form=NoteForm,
+    fields=("creator","text","note_replied_to"),
+    widgets={
+        'text': TextInput() }
+    )
 
-    def save(self, commit=True):
-        result = super(BaseSubFileNoteFormSet, self).save(commit=commit)
+NoteCurationFormset = inlineformset_factory(
+    m.Curation, 
+    m.Note, 
+    extra=0,
+    form=NoteForm,
+    fields=("creator","text","note_replied_to"),
+    widgets={
+        'text': TextInput() }
+    )
 
-        for form in self.forms:
-            if hasattr(form, 'nested'):
-                if not self._should_delete_form(form):
-                    form.nested.save(commit=commit)
-
-        return result
-
-#busted, halfway between note and gitlabfile
-# FileNoteFormSet = inlineformset_factory(
-#     Submission,
-#     GitlabFile,
-#     #form=NoteForm,
-#     formset=BaseSubmissionNoteFormSet,
-#     fields=('text','scope'),
-#     extra=1,
-#     can_delete=True,
-#     widgets={
-#         'text': TextInput(),
-#         'scope': RadioSelect()}
-# )            
-
-#TODO: Do I need a FormSetHelper (for crispy)
+NoteVerificationFormset = inlineformset_factory(
+    m.Curation, 
+    m.Note, 
+    extra=0,
+    form=NoteForm,
+    fields=("creator","text","note_replied_to"),
+    widgets={
+        'text': TextInput() }
+    )
 
 #------------ GitlabFile -------------
 
@@ -218,7 +241,7 @@ GitlabFileNoteFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
     form=GitlabFileForm,
-    formset=BaseSubFileNoteFormSet,
+    formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
     extra=0,
     can_delete=False,
@@ -227,22 +250,23 @@ GitlabFileNoteFormSet = inlineformset_factory(
         'description': TextInput() }
 )
 
-GitlabFileFormSet = inlineformset_factory(
-    Submission,
-    GitlabFile,
-    form=GitlabFileForm,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-    extra=0,
-    can_delete=False,
-    widgets={
-        'gitlab_path': DownloadGitlabWidget(),
-        'description': TextInput() }
-)
+# GitlabFileFormSet = inlineformset_factory(
+#     Submission,
+#     GitlabFile,
+#     form=GitlabFileForm,
+#     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+#     extra=0,
+#     can_delete=False,
+#     widgets={
+#         'gitlab_path': DownloadGitlabWidget(),
+#         'description': TextInput() }
+# )
 
-GitlabReadOnlyFileFormSet = inlineformset_factory(
+GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
     form=GitlabReadOnlyFileForm,
+    formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
     extra=0,
     can_delete=False,
@@ -272,6 +296,31 @@ class GitlabFileFormSetHelper(FormHelper):
         self.render_required_fields = True
 
 #-------------------------
+
+class NoteFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'
+        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        self.form_tag = False
+        #self.field_template = 'bootstrap4/layout/inline_field.html'
+        # self.layout = Layout(
+        #     Field('creator'),
+        #     Field('text'),
+        #     Field('note_replied_to'),
+        #     Field('scope')
+        #     # ButtonHolder(
+        #     #     Submit('submit', 'Submit', css_class='button white')
+        #     # )
+        # )
+        self.render_required_fields = True
+
+
+
+
+
 
 #No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc

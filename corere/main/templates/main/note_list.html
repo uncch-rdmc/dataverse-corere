@@ -1,17 +1,26 @@
+{% load crispy_forms_tags %}
+
 {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
 
-{% load concat %}
+{% comment %} {% load concat %}
 
 {% if not read_only %}
-<a href='createnote'>Add note</a> {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
+<a href='createnote'>Add note</a>
 {% endif %}
 {% for note in notes %}
     <p>{{note.text}} by {{note.creator}} 
     {% if not read_only  %}
         {% if user.username == note.creator.username %}
-            {% comment %} Delete probably shouldn't be a link? {% endcomment %}
             (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href="javascript:void(0)" onClick="deletenote({{note.id}});">Delete</a>)
         {% endif %}
     {% endif %}
     </p> 
-{% endfor %}
+{% endfor %} {% endcomment %}
+
+{% comment %} {% crispy children_formset helper %} {% endcomment %}
+<h6 class="my-3"> Notes </h6>
+
+{{ note_formset.management_form }}
+{{ note_formset.non_form_errors }}
+
+{% crispy note_formset note_helper %}

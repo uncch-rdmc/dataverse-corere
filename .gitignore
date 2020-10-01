@@ -22,3 +22,5 @@ corere-cloudrun-service.yaml
 !/docker/secret.web.sample.sh
 !/docker/secret.db.password.sample
 !/docker/secret.db.user.sample
+.vscode/.ropeproject/objectdb
+.vscode/.ropeproject/config.py

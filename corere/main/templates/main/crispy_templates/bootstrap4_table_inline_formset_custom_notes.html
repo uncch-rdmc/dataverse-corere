@@ -4,12 +4,14 @@
 
 {% specialspaceless %}
 <script>
-    function showHideNoteSection(name) {
+    function showHideNoteSection(caller, name) {
         var x = document.getElementById(name);
         if (x.style.display === "none") {
+            caller.value = "Hide";
             x.style.display = "";
         } else {
             x.style.display = "none";
+            caller.value = "Show";
         }
     }
 </script>
@@ -64,8 +66,15 @@
                     {% for field in form %}
                         {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
                     {% endfor %}
-
-                    <td><div class="tableentryflex"><span style="padding-right: 6px;">{{ form.nested.forms|length }}</span> <input type="button" value="Show" onclick="showHideNoteSection('{{ forloop.counter }}_notes_table')"/></div></td>
+                    
+                    <td>
+                        <div class="tableentryflex" style="padding-top: 3px;">
+                            <span style="padding-right: 6px; padding-top: 3px;">{{ form.nested.forms|length }}</span> 
+                            {% comment %} {% if form.nested.forms|length > 0%} {% endcomment %}
+                                <input type="button" style="width: 56px;" value="Show" onclick="showHideNoteSection(this, '{{ forloop.counter }}_notes_table')"/>
+                            {% comment %} {% endif %} {% endcomment %}
+                        </div>
+                    </td>
                     
                 </tr>
 
@@ -85,14 +94,14 @@
                                     {% endfor %}
                                 </tr>
 
-                            {% for nested_form in form.nested.forms %}
-                                <tr>
-                                {% for field in nested_form %}
-                                    {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
+                                {% for nested_form in form.nested.forms %}
+                                    <tr>
+                                    {% for field in nested_form %}
+                                        {% include 'bootstrap4/field.html' with tag="td" form_show_labels=False %}
+                                    {% endfor %}
+                                    </tr>
+                                    {% comment %} {{ nested_form|crispy }} {% endcomment %}
                                 {% endfor %}
-                                </tr>
-                                {% comment %} {{ nested_form|crispy }} {% endcomment %}
-                            {% endfor %}
                             </table>
                         </td>
                     </tr>

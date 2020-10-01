@@ -23,16 +23,17 @@
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-        {% crispy form helper %}
-    {% if not read_only %}
+    {% crispy form helper %}
+    {% include "main/note_list.html" %}    
+    {% comment %} {% if not read_only %} {% endcomment %}
     <input type="submit" name="submit" value="Save">
-    {% endif %}
+    {% comment %} {% endif %} {% endcomment %}
     {% block extrabuttons %}
     {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
 {% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}
 
-{% include "main/note_list.html" %}    
+
 
 {% endblock content %}

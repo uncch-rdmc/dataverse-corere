@@ -2,7 +2,8 @@ import logging, os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
-from corere.main.forms import * #TODO: bad practice and I don't use them all
+from corere.main import forms as f #TODO: bad practice and I don't use them all
+from .. import constants as c
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import has_transition_perm, TransitionNotAllowed
@@ -11,6 +12,7 @@ from corere.main.utils import fsm_check_transition_perm
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_submission_branch_name, helper_populate_gitlab_files_submission, _helper_generate_gitlab_project_name
+logger = logging.getLogger(__name__)  
 #from guardian.decorators import permission_required_or_404
 
 ##################### Class based object views #####################
@@ -37,8 +39,10 @@ class GenericCorereObjectView(View):
     notes = [] 
     repo_dict_list = []
     file_delete_url = None
-    helper = GenericFormSetHelper()
+    helper = f.GenericFormSetHelper()
     page_header = ""
+    note_formset = None
+    note_helper = None
 
     def dispatch(self, request, *args, **kwargs): 
         try:
@@ -55,23 +59,32 @@ class GenericCorereObjectView(View):
         else:
             root_object_title = self.object.submission.manuscript.title
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title })
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title,
+            'note_formset': self.note_formset(instance=self.object), 'note_helper': self.note_helper })
 
     def post(self, request, *args, **kwargs):
-        #print(self.__dict__)
+        formset = self.note_formset(request.POST, instance=self.object)
+
         if self.form.is_valid():
-            self.form.save() #Note: this is what saves a newly created model instance
-            messages.add_message(request, messages.SUCCESS, self.message)
-            return redirect(self.redirect)
+            if formset.is_valid():
+                if not self.read_only:
+                    self.form.save() #Note: this is what saves a newly created model instance
+                formset.save() #Note: this is what saves a newly created model instance
+                messages.add_message(request, messages.SUCCESS, self.message)
+                return redirect(self.redirect)
+            else:
+                logger.debug(self.form.errors)
+                #TODO: Pass back form errors?
         else:
             logger.debug(self.form.errors)
-            #TODO: Pass back form errors
+            #TODO: Pass back form errors?
+
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url})
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'note_formset': formset, 'note_helper': self.note_helper})
 
 class ReadOnlyCorereMixin(object):
     read_only = True
-    http_method_names = ['get']
+    http_method_names = ['get','post']
     
 #TODO: this needs to be dynamically getting its repo based upon manuscript/submissions
 class GitlabFilesMixin(object):
@@ -83,7 +96,6 @@ class GitlabFilesMixin(object):
             self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
         else:
-            #print(self.object.__dict__)
             logger.error("Attempted to load Gitlab file for an object which does not have gitlab files")
             #TODO: this should better error that the object provided doesn't have gitlab files
             raise Http404()
@@ -155,10 +167,6 @@ class TransitionPermissionMixin(object):
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
-    """ group_required - list of strings """
-    #TODO: Should this be instantiated?
-    #groups_required = []
-
     def dispatch(self, request, *args, **kwargs):
         if(len(self.groups_required)>0):
             if not request.user.is_authenticated:
@@ -180,7 +188,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
-    form = ManuscriptForm
+    form = f.ManuscriptForm
     #groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
     #For PermissionRequiredMixin
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
@@ -189,7 +197,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     page_header = "Create New Manuscript"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    form = ManuscriptForm
+    form = f.ManuscriptForm
     template = 'main/manuscript_super_form.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
@@ -199,7 +207,7 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
-    form = ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
+    form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
@@ -217,7 +225,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 #TODO: See if this can be done cleaner
 #TODO: Pass less parameters, especially token stuff
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
-    form = ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
+    form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
@@ -240,7 +248,7 @@ class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
             'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
-    form = ReadOnlyManuscriptForm
+    form = f.ReadOnlyManuscriptForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Manuscript"
@@ -271,7 +279,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
 # Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
-    form = SubmissionForm
+    #form = f.SubmissionForm
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -279,17 +287,19 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
     model = m.Submission
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
-    form = SubmissionForm
+    form = f.SubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_header = "Create New Submission"
 
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
-    form = SubmissionForm
+    form = f.SubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
+    note_formset = f.NoteSubmissionFormset
+    note_helper = f.NoteFormSetHelper()
 
 # #TODO: Do we need the gitlab mixin? probably?
 # #TODO: Do we need all the parameters being passed?
@@ -312,27 +322,26 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed?
 #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = GitlabFileNoteFormSet
+class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     template = 'main/form_edit_files_notes.html'
     #template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
-    transition_method_name = 'edit_noop'
-    helper=GitlabFileFormSetHelper()
+    helper=f.GitlabFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
 
     def get(self, request, *args, **kwargs):
         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        formset = GitlabFileNoteFormSet(instance=self.object)
+        formset = self.form#.__class__(instance=self.object) #I don't understand why we do this
         # return render(request, self.template, {
         #           'parent':self.object,
         #           'children_formset':formset,
         #           'helper': self.helper,})
 
+        
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header,})
+            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
         # helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         # return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
@@ -343,7 +352,7 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     #Originally coppied from GenericCorereObjectView
     def post(self, request, *args, **kwargs):
         #print(self.__dict__)
-        formset = GitlabFileNoteFormSet(request.POST, instance=self.object)
+        formset = self.form#.__class__(request.POST, instance=self.object)
         if formset.is_valid():
             formset.save() #Note: this is what saves a newly created model instance
             messages.add_message(request, messages.SUCCESS, self.message)
@@ -357,30 +366,41 @@ class SubmissionEditFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
                   'children_formset':formset,
                   'helper': self.helper,})
 
-#TODO: Do we need the gitlab mixin? probably?
-#TODO: Do we need all the parameters being passed?
-#TODO: Pass less parameters, especially token stuff
-class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = GitlabReadOnlyFileFormSet
-    template = 'main/form_edit_files.html'
-    #template = 'main/not_form_upload_files.html'
-    #For TransitionPermissionMixin
-    transition_method_name = 'view_noop'
-    page_header = "View Files for Submission"
-    helper=GitlabFileFormSetHelper()
+class SubmissionEditFilesView(GenericSubmissionFilesView):
+    transition_method_name = 'edit_noop'
+    form = f.GitlabFileNoteFormSet
 
-    def get(self, request, *args, **kwargs):
-        helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-            'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header})
+class SubmissionReadFilesView(GenericSubmissionFilesView):
+    transition_method_name = 'view_noop'
+    form = f.GitlabReadOnlyFileNoteFormSet
+    read_only = True
+
+# #TODO: DO WE NEED THIS? CAN WE JUST USE UPLOAD WITH READONLY AND NOTHING ELSE? AT LEAST MAYBE SIMPLIFY?
+# #TODO: Do we need the gitlab mixin? probably?
+# #TODO: Do we need all the parameters being passed?
+# #TODO: Pass less parameters, especially token stuff
+# class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
+#     form = f.GitlabReadOnlyFileFormSet
+#     template = 'main/form_edit_files_notes.html'
+#     #template = 'main/not_form_upload_files.html'
+#     #For TransitionPermissionMixin
+#     transition_method_name = 'view_noop'
+#     page_header = "View Files for Submission"
+#     helper=f.GitlabFileFormSetHelper()
+
+#     def get(self, request, *args, **kwargs):
+#         formset = f.GitlabFileNoteFormSet(instance=self.object) #Why do we need this and form?
+#         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+#         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'helper':self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+#             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+#             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header, 'children_formset':formset})
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = SubmissionUploadFilesForm
+    form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
@@ -401,13 +421,16 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header,
+            'note_formset': self.note_formset(instance=self.object), 'note_helper': self.note_helper})
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
-    form = ReadOnlySubmissionForm
+    form = f.ReadOnlySubmissionForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Submission"
+    note_formset = f.NoteSubmissionFormset
+    note_helper = f.NoteFormSetHelper()
 
 #TODO:Put another endpoint above here for submitting a submission for editor review ("SubmissionSubmit?")
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -472,7 +495,7 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
 # Do not call directly
 class GenericEditionView(NotesMixin, GenericCorereObjectView):
-    form = EditionForm
+    form = f.EditionForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
     parent_model = m.Submission
@@ -481,20 +504,20 @@ class GenericEditionView(NotesMixin, GenericCorereObjectView):
     redirect = '/'
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
-    form = EditionForm
+    form = f.EditionForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_edition_noop'
     transition_on_parent = True
     page_header = "Create New Edition"
 
 class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
-    form = EditionForm
+    form = f.EditionForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Edition"
 
 class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericEditionView):
-    form = ReadOnlyEditionForm
+    form = f.ReadOnlyEditionForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Edition"
@@ -523,7 +546,7 @@ class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericE
 
 # Do not call directly
 class GenericCurationView(NotesMixin, GenericCorereObjectView):
-    form = CurationForm
+    form = f.CurationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
     parent_model = m.Submission
@@ -532,20 +555,20 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
     redirect = '/'
 
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
-    form = CurationForm
+    form = f.CurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_curation_noop'
     transition_on_parent = True
     page_header = "Create Curation"
 
 class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
-    form = CurationForm
+    form = f.CurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Curation"
 
 class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericCurationView):
-    form = ReadOnlyCurationForm
+    form = f.ReadOnlyCurationForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Curation"
@@ -574,7 +597,7 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
 # Do not call directly
 class GenericVerificationView(NotesMixin, GenericCorereObjectView):
-    form = VerificationForm
+    form = f.VerificationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
     parent_model = m.Submission
@@ -583,20 +606,20 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
     redirect = '/'
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
-    form = VerificationForm
+    form = f.VerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'add_verification_noop'
     transition_on_parent = True
     page_header = "Create Verification"
 
 class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
-    form = VerificationForm
+    form = f.VerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Verification"
 
 class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericVerificationView):
-    form = ReadOnlyVerificationForm
+    form = f.ReadOnlyVerificationForm
     #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Verification"
