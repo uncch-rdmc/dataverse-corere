@@ -20,8 +20,6 @@ class ReadOnlyFormMixin(forms.ModelForm):
         super(ReadOnlyFormMixin, self).__init__(*args, **kwargs)
         
         for key in self.fields.keys():
-            #print(key)
-            self.fields[key].widget.attrs['readonly'] = True #May not do anything in django 2
             self.fields[key].disabled = True
 
     def save(self, *args, **kwargs):
@@ -89,8 +87,8 @@ class NoteForm(forms.ModelForm):
         else:
             self.fields['scope'].initial = 'private'
 
-        # self.fields['creator'].widget.attrs['readonly'] = True
-        # self.fields['note_replied_to'].widget.attrs['readonly'] = True
+        self.fields['creator'].disabled = True
+        self.fields['note_replied_to'].disabled = True
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
 class BaseNoteFormSet(BaseInlineFormSet):
@@ -193,10 +191,10 @@ class GitlabFileForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(GitlabFileForm, self).__init__(*args, **kwargs)
         self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].widget.attrs['readonly'] = True
-        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True
-        self.fields['gitlab_size'].widget.attrs['readonly'] = True
-        self.fields['gitlab_date'].widget.attrs['readonly'] = True
+        self.fields['gitlab_path'].disabled = True
+        self.fields['gitlab_sha256'].disabled = True
+        self.fields['gitlab_size'].disabled = True
+        self.fields['gitlab_date'].disabled = True
 
 class GitlabReadOnlyFileForm(forms.ModelForm):
     class Meta:
@@ -206,13 +204,13 @@ class GitlabReadOnlyFileForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
         self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].widget.attrs['readonly'] = True
-        self.fields['gitlab_sha256'].widget.attrs['readonly'] = True
-        self.fields['gitlab_size'].widget.attrs['readonly'] = True
-        self.fields['gitlab_date'].widget.attrs['readonly'] = True
+        self.fields['gitlab_path'].disabled = True
+        self.fields['gitlab_sha256'].disabled = True
+        self.fields['gitlab_size'].disabled = True
+        self.fields['gitlab_date'].disabled = True
         # All fields read only
-        self.fields['tag'].widget.attrs['readonly'] = True
-        self.fields['description'].widget.attrs['readonly'] = True
+        self.fields['tag'].disabled = True
+        self.fields['description'].disabled = True
 
 class DownloadGitlabWidget(forms.widgets.TextInput):
     template_name = 'main/widget_download.html'

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 #from guardian.decorators import permission_required_or_404
 
 ##################### Class based object views #####################
-#TODO: move these to own file?
 #TODO: "transition_method_name" is a bit misleading. We are (over)using transitions to do perm checks, but the no-ops aren't actually transitioning
 #TODO: Test whether I'm leaving open get/post calls on the generic when subclassing.
 
@@ -122,14 +121,6 @@ class NotesMixin(object):
 #
 #Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
 class GetOrGenerateObjectMixin(object):
-    #TODO: Should this be instantiated?
-    #object_friendly_name = None
-
-    #Instantiated in GenericCorereObjectView
-    # parent_reference_name = None
-    # parent_id_name = None
-    # parent_model = None
-
     #TODO: This gets called on every get, do we need to generate the messages this early?
     def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
@@ -149,8 +140,6 @@ class GetOrGenerateObjectMixin(object):
 #It expects that the object has been grabbed already, for example by GetCreateObjectMixin    
 #TODO: Is this specifically for noop transitions? if so we should name it that way.
 class TransitionPermissionMixin(object):
-    #TODO: Should this be instantiated?
-    transition_method_name = None
     transition_on_parent = False
     def dispatch(self, request, *args, **kwargs):
         if(self.transition_on_parent):
@@ -189,8 +178,6 @@ class GenericManuscriptView(GenericCorereObjectView):
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
     form = f.ManuscriptForm
-    #groups_required = [c.GROUP_ROLE_EDITOR] #For GroupRequiredMixin
-    #For PermissionRequiredMixin
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
@@ -199,7 +186,6 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = f.ManuscriptForm
     template = 'main/manuscript_super_form.html'
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Manuscript"
 
@@ -209,7 +195,6 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Upload Files for Manuscript"
 
@@ -227,7 +212,6 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Files for Manuscript"
 
@@ -249,7 +233,6 @@ class ManuscriptFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericManuscriptView):
     form = f.ReadOnlyManuscriptForm
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Manuscript"
 
@@ -279,7 +262,6 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
 # Do not call directly
 class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
-    #form = f.SubmissionForm
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -288,14 +270,12 @@ class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_header = "Create New Submission"
 
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
     note_formset = f.NoteSubmissionFormset
@@ -324,35 +304,22 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     template = 'main/form_edit_files_notes.html'
-    #template = 'main/not_form_upload_files.html'
-    #For TransitionPermissionMixin
     helper=f.GitlabFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
 
     def get(self, request, *args, **kwargs):
         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        formset = self.form#.__class__(instance=self.object) #I don't understand why we do this
-        # return render(request, self.template, {
-        #           'parent':self.object,
-        #           'children_formset':formset,
-        #           'helper': self.helper,})
-
+        #TODO: Can we just refer to form for everything and delete a bunch of stuff?
+        formset = self.form
         
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
-        # helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-        # return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
-        #     'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': "Submission for " + self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-        #     'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-        #     'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
-
     #Originally coppied from GenericCorereObjectView
     def post(self, request, *args, **kwargs):
-        #print(self.__dict__)
-        formset = self.form#.__class__(request.POST, instance=self.object)
+        formset = self.form
         if formset.is_valid():
             formset.save() #Note: this is what saves a newly created model instance
             messages.add_message(request, messages.SUCCESS, self.message)
@@ -375,10 +342,6 @@ class SubmissionReadFilesView(GenericSubmissionFilesView):
     form = f.GitlabReadOnlyFileNoteFormSet
     read_only = True
 
-# #TODO: DO WE NEED THIS? CAN WE JUST USE UPLOAD WITH READONLY AND NOTHING ELSE? AT LEAST MAYBE SIMPLIFY?
-# #TODO: Do we need the gitlab mixin? probably?
-# #TODO: Do we need all the parameters being passed?
-# #TODO: Pass less parameters, especially token stuff
 # class SubmissionReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
 #     form = f.GitlabReadOnlyFileFormSet
 #     template = 'main/form_edit_files_notes.html'
@@ -402,7 +365,6 @@ class SubmissionReadFilesView(GenericSubmissionFilesView):
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Upload Files for Submission"
 
@@ -426,13 +388,11 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GitlabFilesMixin, GenericSubmissionView):
     form = f.ReadOnlySubmissionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Submission"
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
 
-#TODO:Put another endpoint above here for submitting a submission for editor review ("SubmissionSubmit?")
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
@@ -440,7 +400,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             if not fsm_check_transition_perm(self.object.submit, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
-            try: #TODO: only do this if the reviewer selects a certain form button
+            try:
                 self.object.submit(request.user)
                 self.object.save()
             except TransitionNotAllowed as e:
@@ -459,7 +419,7 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             if not fsm_check_transition_perm(self.object.generate_report, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
-            try: #TODO: only do this if the reviewer selects a certain form button
+            try:
                 self.object.generate_report()
                 self.object.save()
             except TransitionNotAllowed as e:
@@ -478,7 +438,7 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             if not fsm_check_transition_perm(self.object.return_submission, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
-            try: #TODO: only do this if the reviewer selects a certain form button
+            try:
                 self.object.return_submission()
                 self.object.save()
             except TransitionNotAllowed as e:
@@ -505,20 +465,17 @@ class GenericEditionView(NotesMixin, GenericCorereObjectView):
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'add_edition_noop'
     transition_on_parent = True
     page_header = "Create New Edition"
 
 class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Edition"
 
 class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericEditionView):
     form = f.ReadOnlyEditionForm
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Edition"
 
@@ -556,20 +513,17 @@ class GenericCurationView(NotesMixin, GenericCorereObjectView):
 
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.CurationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'add_curation_noop'
     transition_on_parent = True
     page_header = "Create Curation"
 
 class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.CurationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Curation"
 
 class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  ReadOnlyCorereMixin, GenericCurationView):
     form = f.ReadOnlyCurationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Curation"
 
@@ -607,20 +561,17 @@ class GenericVerificationView(NotesMixin, GenericCorereObjectView):
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = f.VerificationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'add_verification_noop'
     transition_on_parent = True
     page_header = "Create Verification"
 
 class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
     form = f.VerificationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'edit_noop'
     page_header = "Edit Verification"
 
 class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, ReadOnlyCorereMixin, GenericVerificationView):
     form = f.ReadOnlyVerificationForm
-    #For TransitionPermissionMixin
     transition_method_name = 'view_noop'
     page_header = "View Verification"
     
