@@ -9,6 +9,9 @@
         if (x.style.display === "none") {
             caller.value = "Hide";
             x.style.display = "";
+            $('textarea').each(function () { //{%comment%} reset textarea heights as they get mangled by other resize code when hidden {%endcomment%}
+                this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
+                });
         } else {
             x.style.display = "none";
             caller.value = "Show";

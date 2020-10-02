@@ -1,6 +1,6 @@
 import logging, os
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea
 from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
@@ -132,7 +132,7 @@ NoteGitlabFileFormset = inlineformset_factory(
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': TextInput() }
+        'text': Textarea(attrs={'rows':1}) }
     )
 
 #Needed for another level of nesting
@@ -146,7 +146,7 @@ NoteSubmissionFormset = inlineformset_factory(
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': TextInput() }
+        'text': Textarea(attrs={'rows':1}) }
     )
 
 NoteEditionFormset = inlineformset_factory(
@@ -156,7 +156,7 @@ NoteEditionFormset = inlineformset_factory(
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': TextInput() }
+        'text': Textarea(attrs={'rows':1}) }
     )
 
 NoteCurationFormset = inlineformset_factory(
@@ -166,7 +166,7 @@ NoteCurationFormset = inlineformset_factory(
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': TextInput() }
+        'text': Textarea(attrs={'rows':1}) }
     )
 
 NoteVerificationFormset = inlineformset_factory(
@@ -176,7 +176,7 @@ NoteVerificationFormset = inlineformset_factory(
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': TextInput() }
+        'text': Textarea(attrs={'rows':1}) }
     )
 
 #------------ GitlabFile -------------
@@ -245,7 +245,7 @@ GitlabFileNoteFormSet = inlineformset_factory(
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
-        'description': TextInput() }
+        'description': Textarea(attrs={'rows':1}) }
 )
 
 # GitlabFileFormSet = inlineformset_factory(
@@ -270,7 +270,7 @@ GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
-        'description': TextInput()}
+        'description': Textarea(attrs={'rows':1})}
 )
 
 class GitlabFileFormSetHelper(FormHelper):

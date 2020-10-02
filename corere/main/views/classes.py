@@ -35,7 +35,6 @@ class GenericCorereObjectView(View):
     #TODO: Move definitions into mixins? Will that blow up?
     #NOTE: that these do not clear on their own and have to be cleared manually. There has to be a better way...
     #      If you don't clear them you get duplicate notes etc
-    notes = [] 
     repo_dict_list = []
     file_delete_url = None
     helper = f.GenericFormSetHelper()
@@ -51,7 +50,7 @@ class GenericCorereObjectView(View):
         return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
-    # Maybe find a way to pass the extra import in all the child views? Or you know, just specify the correct template :P
+    # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
@@ -61,7 +60,7 @@ class GenericCorereObjectView(View):
         else:
             root_object_title = self.object.submission.manuscript.title
 
-        context = {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset(instance=self.object)
@@ -91,7 +90,7 @@ class GenericCorereObjectView(View):
         else:
             logger.debug(self.form.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url}
         if(self.note_formset is not None):
             context['note_formset'] = formset
@@ -115,17 +114,17 @@ class GitlabFilesMixin(object):
         
         return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
 
-class NotesMixin(object):
-    def dispatch(self, request, *args, **kwargs): 
-        # try:
-        self.model._meta.get_field('notes')
-        self.notes = []
-        for note in self.object.notes.all():
-            if request.user.has_any_perm(c.PERM_NOTE_VIEW_N, note):
-                self.notes.append(note)
-            else:
-                logger.debug("user did not have permission for note: " + note.text)
-        return super(NotesMixin, self).dispatch(request, *args, **kwargs)
+# class NotesMixin(object):
+#     def dispatch(self, request, *args, **kwargs): 
+#         # try:
+#         self.model._meta.get_field('notes')
+#         self.notes = []
+#         for note in self.object.notes.all():
+#             if request.user.has_any_perm(c.PERM_NOTE_VIEW_N, note):
+#                 self.notes.append(note)
+#             else:
+#                 logger.debug("user did not have permission for note: " + note.text)
+#         return super(NotesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -216,7 +215,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     page_header = "Upload Files for Manuscript"
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
@@ -233,7 +232,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     read_only = True
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
@@ -272,7 +271,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 ############################################# SUBMISSION #############################################
 
 # Do not call directly
-class GenericSubmissionView(NotesMixin, GenericCorereObjectView):
+class GenericSubmissionView(GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -313,7 +312,7 @@ class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
         
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
@@ -351,7 +350,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     page_header = "Upload Files for Submission"
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'notes': self.notes, 'read_only': self.read_only, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
@@ -428,7 +427,7 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 ############################################## EDITION ##############################################
 
 # Do not call directly
-class GenericEditionView(NotesMixin, GenericCorereObjectView):
+class GenericEditionView(GenericCorereObjectView):
     form = f.EditionForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
@@ -481,7 +480,7 @@ class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericE
 ############################################## CURATION ##############################################
 
 # Do not call directly
-class GenericCurationView(NotesMixin, GenericCorereObjectView):
+class GenericCurationView(GenericCorereObjectView):
     form = f.CurationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"
@@ -534,7 +533,7 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 ############################################# VERIFICATION #############################################
 
 # Do not call directly
-class GenericVerificationView(NotesMixin, GenericCorereObjectView):
+class GenericVerificationView(GenericCorereObjectView):
     form = f.VerificationForm
     parent_reference_name = 'submission'
     parent_id_name = "submission_id"

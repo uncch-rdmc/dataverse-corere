@@ -3,49 +3,32 @@
 {% load concat %}
 {% load crispy_forms_tags %}
 {% load always_escape %}
-<script> 
-  gitlab_user_token = "{{gitlab_user_token}}"
-</script>
-{% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
 
-{% comment %} <form action="" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-        {% crispy form helper %}
-    {% if not read_only %}
-    <input type="submit" name="submit" value="Save">
-    <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = './uploadfiles';">
-    {% endif %}
-    {% block extrabuttons %}
-    {% endblock %}
-    <input type="button" value="Back" onClick="javascript:history.go(-1);">
-</form> {% endcomment %}
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form action="" method="post" enctype="multipart/form-data">
-{% csrf_token %}
-{{ children_formset.management_form }}
-{{ children_formset.non_form_errors }}
-{% crispy children_formset helper %}
+    {% csrf_token %}
+    {{ children_formset.management_form }}
+    {{ children_formset.non_form_errors }}
+    {% crispy children_formset helper %}
 
-{% comment %} {% for child_form in children_formset.forms %}
-{% crispy child_form helper %}
-
-    {% if child_form.nested %}
-        {{ child_form.nested.management_form }}
-        {{ child_form.nested.non_form_errors }}
-
-        {% for nested_form in child_form.nested.forms %}
-            {{ nested_form|crispy }}
-        {% endfor %}
-
+    {% if not read_only %}
+        <input type="submit" name="submit" value="Save">
+        <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = './uploadfiles';">
     {% endif %}
-
-{% endfor %} {% endcomment %}
-{% if not read_only %}
-<input type="submit" name="submit" value="Save">
-<input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = './uploadfiles';">
-{% endif %}
-{% block extrabuttons %}{% endblock %}
-<input type="button" value="Back" onClick="javascript:history.go(-1);">
+    {% block extrabuttons %}{% endblock %}
+    <input type="button" value="Back" onClick="javascript:history.go(-1);">
 </form>
+
+<script> 
+  gitlab_user_token = "{{gitlab_user_token}}"
+
+  $('textarea').each(function () {
+    this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
+    }).on('input', function () {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+    console.log(this.scrollHeight)
+  });
+</script>
 
 {% endblock content %}
