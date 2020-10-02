@@ -87,8 +87,8 @@ class NoteForm(forms.ModelForm):
         else:
             self.fields['scope'].initial = 'private'
 
-        self.fields['creator'].disabled = True
-        self.fields['note_replied_to'].disabled = True
+        # self.fields['creator'].disabled = True
+        # self.fields['note_replied_to'].disabled = True
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
 class BaseNoteFormSet(BaseInlineFormSet):
@@ -170,7 +170,7 @@ NoteCurationFormset = inlineformset_factory(
     )
 
 NoteVerificationFormset = inlineformset_factory(
-    m.Curation, 
+    m.Verification, 
     m.Note, 
     extra=0,
     form=NoteForm,
