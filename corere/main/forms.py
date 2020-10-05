@@ -128,11 +128,11 @@ class BaseNoteFormSet(BaseInlineFormSet):
 NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
     m.Note, 
-    extra=0,
+    extra=1,
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': Textarea(attrs={'rows':1}) }
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 #Needed for another level of nesting
@@ -142,41 +142,41 @@ class NestedSubFileNoteFormSet(BaseNoteFormSet):
 NoteSubmissionFormset = inlineformset_factory(
     m.Submission, 
     m.Note, 
-    extra=0,
+    extra=1,
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': Textarea(attrs={'rows':1}) }
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 NoteEditionFormset = inlineformset_factory(
     m.Edition, 
     m.Note, 
-    extra=0,
+    extra=1,
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': Textarea(attrs={'rows':1}) }
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 NoteCurationFormset = inlineformset_factory(
     m.Curation, 
     m.Note, 
-    extra=0,
+    extra=1,
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': Textarea(attrs={'rows':1}) }
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 NoteVerificationFormset = inlineformset_factory(
     m.Verification, 
     m.Note, 
-    extra=0,
+    extra=1,
     form=NoteForm,
     fields=("creator","text","note_replied_to"),
     widgets={
-        'text': Textarea(attrs={'rows':1}) }
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 #------------ GitlabFile -------------
