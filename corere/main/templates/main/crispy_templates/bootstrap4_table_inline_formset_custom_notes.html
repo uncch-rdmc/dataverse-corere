@@ -39,9 +39,6 @@
                             <th for="{{ field.auto_id }}" class="col-form-label {% if field.field.required %}requiredField{% endif %}
                             {% if field.label|safe == 'Gitlab path'%}w-25{% endif %}
                             {% if field.label|safe == 'Description'%}w-25{% endif %}
-                            
-                            
-                            
                             ">
                                 {{ field.label|safe }}{% if field.field.required and not field|is_checkbox %}<span class="asteriskField">*</span>{% endif %}
                             </th>
@@ -86,7 +83,7 @@
                     {{ form.nested.non_form_errors }}
                     <tr id="{{ forloop.counter }}_notes_table" style="display:none;">
                         <td colspan=20>
-                            <table class="table table-striped table-sm">
+                            <table class="table table-striped table-sm notes-table">
                                 <tr>
                                     {% for field in form.nested.forms.0 %}
                                         {% if field.label and not field.is_hidden %}

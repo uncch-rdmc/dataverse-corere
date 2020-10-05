@@ -1,6 +1,6 @@
 import logging, os
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField
 from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
@@ -66,7 +66,7 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
 class NoteForm(forms.ModelForm):
     class Meta:
         model = Note
-        fields = ['text','scope']
+        fields = ['text','scope','creator','note_replied_to']
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
 
@@ -87,8 +87,7 @@ class NoteForm(forms.ModelForm):
         else:
             self.fields['scope'].initial = 'private'
 
-        # self.fields['creator'].disabled = True
-        # self.fields['note_replied_to'].disabled = True
+        self.fields['creator'].disabled = True
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
 class BaseNoteFormSet(BaseInlineFormSet):
@@ -130,7 +129,7 @@ NoteGitlabFileFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
-    fields=("creator","text","note_replied_to"),
+    fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
@@ -144,7 +143,7 @@ NoteSubmissionFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
-    fields=("creator","text","note_replied_to"),
+    fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
@@ -154,7 +153,7 @@ NoteEditionFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
-    fields=("creator","text","note_replied_to"),
+    fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
@@ -164,8 +163,9 @@ NoteCurationFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
-    fields=("creator","text","note_replied_to"),
+    fields=("creator","text"),
     widgets={
+        # 'creator': CreatorChoiceField(),
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
@@ -174,7 +174,7 @@ NoteVerificationFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
-    fields=("creator","text","note_replied_to"),
+    fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
@@ -303,6 +303,7 @@ class NoteFormSetHelper(FormHelper):
         self.template = 'bootstrap4/table_inline_formset.html'
         #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
+        self.form_id = 'note'
         #self.field_template = 'bootstrap4/layout/inline_field.html'
         # self.layout = Layout(
         #     Field('creator'),

@@ -13,23 +13,6 @@
     })
 </script> {% endcomment %}
 
-{% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
-
-<script type="text/javascript">
-    function deletenote(noteid) {
-        var headers = new Headers();
-        headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch('deletenote/'+noteid, {
-            method: 'POST',
-            headers: headers, 
-            credentials: 'include'
-        }).then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            }
-        })
-    }
-</script>
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -44,8 +27,17 @@
     {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
-{% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}
-
-
+{% if obj_type != 'manuscript' %}
+<script>
+    {% comment %}
+    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
+    This was required to set the field to be the username. 
+    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
+    That being said, this is pretty brittle as well.
+    {% endcomment %}
+    var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
+    lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
+</script>
+{% endif %}
 
 {% endblock content %}
