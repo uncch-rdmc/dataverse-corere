@@ -3,6 +3,9 @@
 {% load concat %}
 {% load crispy_forms_tags %}
 {% load always_escape %}
+<script> 
+  gitlab_user_token = "{{gitlab_user_token}}"
+</script>
 
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form action="" method="post" enctype="multipart/form-data">
@@ -18,17 +21,5 @@
     {% block extrabuttons %}{% endblock %}
     <input type="button" value="Back" onClick="javascript:history.go(-1);">
 </form>
-
-<script> 
-  gitlab_user_token = "{{gitlab_user_token}}"
-
-  $('textarea').each(function () {
-    this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
-    }).on('input', function () {
-    this.style.height = 'auto';
-    this.style.height = (this.scrollHeight) + 'px';
-    console.log(this.scrollHeight)
-  });
-</script>
 
 {% endblock content %}
