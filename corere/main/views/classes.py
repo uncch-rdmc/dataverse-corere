@@ -41,6 +41,7 @@ class GenericCorereObjectView(View):
     page_header = ""
     note_formset = None
     note_helper = None
+    create = False #Used by default template
 
     def dispatch(self, request, *args, **kwargs): 
         try:
@@ -60,7 +61,7 @@ class GenericCorereObjectView(View):
         else:
             root_object_title = self.object.submission.manuscript.title
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset(instance=self.object)
@@ -90,7 +91,7 @@ class GenericCorereObjectView(View):
         else:
             logger.debug(self.form.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name,
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url}
         if(self.note_formset is not None):
             context['note_formset'] = formset
@@ -193,6 +194,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     accept_global_perms = True
     return_403 = True
     page_header = "Create New Manuscript"
+    create = True
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     form = f.ManuscriptForm
@@ -283,6 +285,7 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_header = "Create New Submission"
+    create = True
 
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -441,6 +444,7 @@ class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transition
     transition_method_name = 'add_edition_noop'
     transition_on_parent = True
     page_header = "Create New Edition"
+    create = True
 
 class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
@@ -494,6 +498,7 @@ class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     transition_method_name = 'add_curation_noop'
     transition_on_parent = True
     page_header = "Create Curation"
+    create = True
 
 class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.CurationForm
@@ -547,6 +552,7 @@ class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     transition_method_name = 'add_verification_noop'
     transition_on_parent = True
     page_header = "Create Verification"
+    create = True
 
 class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
     form = f.VerificationForm
