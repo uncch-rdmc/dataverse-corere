@@ -714,8 +714,9 @@ class GitlabFile(AbstractCreateUpdateModel):
         super(GitlabFile, self).save(*args, **kwargs)
 
 #TODO: Now that notes are public/private, we should check on save to ensure roles are set right? Not sure how...
+#Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="")
+    text = models.TextField(default="", blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 

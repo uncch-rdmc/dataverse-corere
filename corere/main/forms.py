@@ -13,6 +13,7 @@ from django.forms.models import BaseInlineFormSet
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit
 from corere.main.gitlab import helper_get_submission_branch_name
+from crequest.middleware import CrequestMiddleware
 logger = logging.getLogger(__name__)
 
 class ReadOnlyFormMixin(forms.ModelForm):
@@ -86,13 +87,19 @@ class NoteForm(forms.ModelForm):
             self.fields['scope'].initial = 'public'
         else:
             self.fields['scope'].initial = 'private'
-
         self.fields['creator'].disabled = True
 
+        if(self.instance.id): #if based off existing note
+            user = CrequestMiddleware.get_request().user
+            
+            if(not Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
+                for fkey, fval in self.fields.items():
+                    fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+
 #TODO: Making this generic may have been pointless, not sure if its needed?
-class BaseNoteFormSet(BaseInlineFormSet):
+class BaseFileNestingFormSet(BaseInlineFormSet):
     def add_fields(self, form, index):
-        super(BaseNoteFormSet, self).add_fields(form, index)
+        super(BaseFileNestingFormSet, self).add_fields(form, index)
         # save the formset in the 'nested' property
         form.nested = self.nested_formset(
             instance=form.instance,
@@ -105,7 +112,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
         )
     
     def is_valid(self):
-        result = super(BaseNoteFormSet, self).is_valid()
+        result = super(BaseFileNestingFormSet, self).is_valid()
 
         if self.is_bound:
             for form in self.forms:
@@ -115,7 +122,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
         return result
 
     def save(self, commit=True):
-        result = super(BaseNoteFormSet, self).save(commit=commit)
+        result = super(BaseFileNestingFormSet, self).save(commit=commit)
 
         for form in self.forms:
             if hasattr(form, 'nested'):
@@ -123,19 +130,35 @@ class BaseNoteFormSet(BaseInlineFormSet):
                     form.nested.save(commit=commit)
 
         return result
+
+class BaseNoteFormSet(BaseInlineFormSet):
+    #only allow deleting of user-owned notes
+    #we also disable the checkbox via JS
+
+    @property
+    def deleted_forms(self):
+        deleted_forms = super(BaseNoteFormSet, self).deleted_forms
+        user = CrequestMiddleware.get_request().user
+
+        for i, form in enumerate(deleted_forms):
+            if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+                deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
+
+        return deleted_forms
         
 NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
     m.Note, 
     extra=1,
     form=NoteForm,
+    formset=BaseNoteFormSet,
     fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
 #Needed for another level of nesting
-class NestedSubFileNoteFormSet(BaseNoteFormSet):
+class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
     nested_formset = NoteGitlabFileFormset
 
 NoteSubmissionFormset = inlineformset_factory(
@@ -143,6 +166,7 @@ NoteSubmissionFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
+    formset=BaseNoteFormSet,
     fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
@@ -153,6 +177,7 @@ NoteEditionFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
+    formset=BaseNoteFormSet,
     fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
@@ -163,6 +188,7 @@ NoteCurationFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
+    formset=BaseNoteFormSet,
     fields=("creator","text"),
     widgets={
         # 'creator': CreatorChoiceField(),
@@ -174,6 +200,7 @@ NoteVerificationFormset = inlineformset_factory(
     m.Note, 
     extra=1,
     form=NoteForm,
+    formset=BaseNoteFormSet,
     fields=("creator","text"),
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }

@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'crequest.middleware.CrequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corere.main.middleware.BaseMiddleware',
