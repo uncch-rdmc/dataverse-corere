@@ -713,9 +713,11 @@ class GitlabFile(AbstractCreateUpdateModel):
 
         super(GitlabFile, self).save(*args, **kwargs)
 
+#Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="")
+    text = models.TextField(default="", blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
@@ -724,7 +726,7 @@ class Note(AbstractCreateUpdateModel):
     parent_file = models.ForeignKey(GitlabFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
-    manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE)
+    manuscript = models.ForeignKey(Manuscript, on_delete=models.CASCADE)
 
     @property
     def parent(self):
@@ -746,12 +748,20 @@ class Note(AbstractCreateUpdateModel):
         parents += (self.parent_edition_id is not None)
         parents += (self.parent_curation_id is not None)
         parents += (self.parent_verification_id is not None)
+        parents += (self.parent_file_id is not None)
         if(parents > 1):
             raise AssertionError("Multiple parents set")
 
         first_save = False
         if not self.pk:
             first_save = True
+            if(self.manuscript_id is None):
+                if self.parent_submission_id is not None:
+                    self.manuscript = self.parent_submission.manuscript
+                elif self.parent_file_id is not None:
+                    self.manuscript = self.parent_file.parent_submission.manuscript
+                else:
+                    self.manuscript = self.parent.submission.manuscript
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 

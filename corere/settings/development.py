@@ -13,6 +13,9 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 DISABLE_GIT = False
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+CRISPY_FAIL_SILENTLY = not DEBUG
+
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_USE_TLS = True
 # EMAIL_HOST = 'smtp.gmail.com'

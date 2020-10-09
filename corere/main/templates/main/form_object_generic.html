@@ -3,49 +3,66 @@
 {% load concat %}
 {% load crispy_forms_tags %}
 
-{% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
-
+{% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
+{% comment %} 
+{% load static %}
+<script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
 <script type="text/javascript">
-    function deletenote(noteid) {
-        var headers = new Headers();
-        headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch('deletenote/'+noteid, {
-            method: 'POST',
-            headers: headers, 
-            credentials: 'include'
-        }).then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            }
-        })
-    }
-</script>
+    $(function() {
+        $('#generic_object_form tbody tr').formset();
+    })
+</script> {% endcomment %}
 
-<form action="" method="post" enctype="multipart/form-data">
+<h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-        {% crispy form helper %}
-    {% if not read_only %}
-    <input type="submit" name="submit" value="Save">
+    {% crispy form helper %}
+    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
+        {% include "main/note_list.html" %}    
     {% endif %}
+    {% comment %} {% if not read_only %} {% endcomment %}
+    <input type="submit" name="submit" value="Save">
+    {% comment %} {% endif %} {% endcomment %}
     {% block extrabuttons %}
     {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
-{% comment %}TODO: Move the below stuff to sub-templates and only use them on certain objects{% endcomment %}
+{% if obj_type != 'manuscript' %}
+<script>
+    {% comment %} 
+    Goes through each note and checks if the author is our user. If not, disables the delete checkbox
+    We do this before the other script to remove the delete option from new notes.
+    {% endcomment %}
+    for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
+        if(elem.tagName == 'TR') {
+            if(elem.firstElementChild.tagName == 'TD'){
+                creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
 
-{% if not read_only %}
-<a href='createnote'>Add note</a> {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
+                if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
+                    for(let celem of elem.childNodes) {
+                        if(celem.tagName == 'TD') {
+                            if(celem.id.endsWith('DELETE')) {
+                                celem.firstElementChild.firstElementChild.style.display = 'none'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {% comment %}
+    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
+    This was required to set the field to be the username. 
+    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
+    That being said, this is pretty brittle as well.
+    {% endcomment %}
+
+    var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
+    lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
+
+    
+</script>
 {% endif %}
-{% for note in notes %}
-    <p>{{note.text}} by {{note.creator}} 
-    {% if not read_only  %}
-        {% if user.username == note.creator.username %}
-            {% comment %} Delete probably shouldn't be a link? {% endcomment %}
-            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href="javascript:void(0)" onClick="deletenote({{note.id}});">Delete</a>)
-        {% endif %}
-    {% endif %}
-    </p> 
-{% endfor %}
-{% comment %} {% include "main/file_list.html" %} {% endcomment %}
 
 {% endblock content %}

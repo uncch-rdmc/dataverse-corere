@@ -12,6 +12,9 @@ GROUP_MANUSCRIPT_CURATOR_PREFIX = "Curator Manuscript"
 def get_roles():
     return [GROUP_ROLE_EDITOR, GROUP_ROLE_AUTHOR, GROUP_ROLE_VERIFIER, GROUP_ROLE_CURATOR]
 
+def get_private_roles():
+    return [GROUP_ROLE_VERIFIER, GROUP_ROLE_CURATOR]
+
 #Manuscript perm strings
 PERM_MANU_ADD_M = 'add_manuscript'
 PERM_MANU_CHANGE_M = 'change_manuscript'
