@@ -70,6 +70,13 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        if(isinstance(self.object, m.Manuscript)):
+            root_object_title = self.object.title
+        elif(isinstance(self.object, m.Submission)):
+            root_object_title = self.object.manuscript.title
+        else:
+            root_object_title = self.object.submission.manuscript.title
+
         if(not isinstance(self.object, m.Manuscript) and self.note_formset):
             formset = self.note_formset(request.POST, instance=self.object)
 
@@ -92,7 +99,7 @@ class GenericCorereObjectView(View):
             logger.debug(self.form.errors)
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url}
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
         if(self.note_formset is not None):
             context['note_formset'] = formset
         if(self.note_helper is not None):
@@ -330,10 +337,10 @@ class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         else:
             logger.debug(formset.errors)
 
-        return render(request, self.template, {
-                  'parent':self.object,
-                  'children_formset':formset,
-                  'helper': self.helper,})
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
+            'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
 class SubmissionEditFilesView(GenericSubmissionFilesView):
     transition_method_name = 'edit_noop'

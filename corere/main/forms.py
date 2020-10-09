@@ -116,8 +116,8 @@ class NoteForm(forms.ModelForm):
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
     def save(self, commit, *args, **kwargs):
-        print("SAVE")
-        print(self.__dict__)
+        #print("SAVE")
+        #print(self.__dict__)
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
             if(self.cleaned_data['creator'] != user):

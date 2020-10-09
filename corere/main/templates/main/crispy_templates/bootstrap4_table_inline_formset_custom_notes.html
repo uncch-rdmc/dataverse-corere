@@ -69,7 +69,7 @@
                     
                     <td>
                         <div class="tableentryflex" style="padding-top: 3px;">
-                            <span style="padding-right: 6px; padding-top: 3px;">{{ form.nested.forms|length|add:"-1" }}</span> 
+                            <span style="padding-right: 6px; padding-top: 3px; width: 19px">{{ form.nested.forms|length|add:"-1" }}</span> 
                             {% comment %} {% if form.nested.forms|length > 0%} {% endcomment %}
                                 <input type="button" style="width: 56px;" value="Show" onclick="showHideNoteSection(this, '{{ forloop.counter }}_notes_table')"/>
                             {% comment %} {% endif %} {% endcomment %}
