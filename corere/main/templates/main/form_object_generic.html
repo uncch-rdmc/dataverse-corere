@@ -57,6 +57,7 @@
     Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
     That being said, this is pretty brittle as well.
     {% endcomment %}
+
     var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
     lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
 

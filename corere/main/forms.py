@@ -14,6 +14,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit
 from corere.main.gitlab import helper_get_submission_branch_name
 from crequest.middleware import CrequestMiddleware
+from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 logger = logging.getLogger(__name__)
 
 class ReadOnlyFormMixin(forms.ModelForm):
@@ -76,25 +77,71 @@ class NoteForm(forms.ModelForm):
 
     def __init__ (self, *args, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
+        #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
+        #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
-        #Populate scope field depending on existing roles
-        existing_roles = []
-        for role in c.get_roles():
-            role_perms = get_perms(Group.objects.get(name=role), self.instance)
-            if(c.PERM_NOTE_VIEW_N in role_perms):
-                existing_roles.append(role)
-        if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
-            self.fields['scope'].initial = 'public'
+        path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0]
+        path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
+        user = CrequestMiddleware.get_request().user
+        if(path_obj_name == "submission"):
+            manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
+        elif(path_obj_name == "edition"):
+            manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
+        elif(path_obj_name == "curation"):
+            manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
+        elif(path_obj_name == "verification"):
+            manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
         else:
-            self.fields['scope'].initial = 'private'
-        self.fields['creator'].disabled = True
+            raise TypeError("Object name parsed from url string for note form does not match our lookup")
 
+        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+            self.fields.pop('scope')
+        else:       
+            #Populate scope field depending on existing roles
+            existing_roles = []
+            for role in c.get_roles():
+                role_perms = get_perms(Group.objects.get(name=role), self.instance)
+                if(c.PERM_NOTE_VIEW_N in role_perms):
+                    existing_roles.append(role)
+            if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
+                self.fields['scope'].initial = 'public'
+            else:
+                self.fields['scope'].initial = 'private'
+
+        self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
-            user = CrequestMiddleware.get_request().user
             
             if(not Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+
+    def save(self, commit, *args, **kwargs):
+        print("SAVE")
+        print(self.__dict__)
+        if(self.has_changed()):
+            user = CrequestMiddleware.get_request().user
+            if(self.cleaned_data['creator'] != user):
+                print("did not save note id: "+ str(self.instance.id))
+                pass #Do not save
+        super(NoteForm, self).save(commit, *args, **kwargs)
+        if('scope' in self.changed_data):
+            #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
+            for role in c.get_roles():
+                group = Group.objects.get(name=role)
+                remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+            if(self.cleaned_data['scope'] == 'public'):
+                for role in c.get_roles():
+                    group = Group.objects.get(name=role)
+                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+            else:
+                if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
+                    for role in c.get_private_roles():
+                        group = Group.objects.get(name=role)
+                        assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                else:
+                    #At this point we've saved already, maybe we shouldn't?
+                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
+                    raise Http404()
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
 class BaseFileNestingFormSet(BaseInlineFormSet):
@@ -132,9 +179,8 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
         return result
 
 class BaseNoteFormSet(BaseInlineFormSet):
-    #only allow deleting of user-owned notes
-    #we also disable the checkbox via JS
 
+    #only allow deleting of user-owned notes. we also disable the checkbox via JS
     @property
     def deleted_forms(self):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
@@ -145,7 +191,22 @@ class BaseNoteFormSet(BaseInlineFormSet):
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
 
         return deleted_forms
+
+    #only show private notes if user is curator/verifier on manuscript
+    def get_queryset(self):
+        if not hasattr(self, '_queryset'):
+            #print(self.instance.parent_submission)
+            #if(not CrequestMiddleware.get_request().user.has_any_perm(c.PERM_NOTE_VIEW_N, self.instance)):#.parent_submission.manuscript)):
+                #self._queryset = self.queryset.filter(text__startswith='why')
+            self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
+                #get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
+            #else:
+            #    self._queryset = self.queryset.filter()
+            if not self._queryset.ordered:
+                self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
+        return self._queryset
         
+
 NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
     m.Note, 

@@ -43,7 +43,6 @@
             if(elem.tagName == 'TR') {
                 if(elem.firstElementChild.tagName == 'TD'){
                     creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
-
                     if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
                         for(let celem of elem.childNodes) {
                             if(celem.tagName == 'TD') {
@@ -66,10 +65,9 @@
     That being said, this is pretty brittle as well.
     {% endcomment %}
     tables = document.getElementsByClassName("notes-table")
-    console.log(tables)
     for (let table of tables) {
-      var lastTr = table.lastElementChild.lastElementChild;
-      lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
+        var lastTr = table.lastElementChild.lastElementChild;
+        lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
     }
 
 
