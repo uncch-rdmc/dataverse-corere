@@ -24,8 +24,8 @@
     {{ children_formset.non_form_errors }}
     {% crispy children_formset helper %}
 
+    <input type="submit" name="submit" value="Save">
     {% if not read_only %}
-        <input type="submit" name="submit" value="Save">
         <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = './uploadfiles';">
     {% endif %}
     {% block extrabuttons %}{% endblock %}

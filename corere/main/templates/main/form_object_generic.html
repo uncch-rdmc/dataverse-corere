@@ -17,7 +17,7 @@
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form helper %}
-    {% if obj_type != 'manuscript' and not create %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
+    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
         {% include "main/note_list.html" %}    
     {% endif %}
     {% comment %} {% if not read_only %} {% endcomment %}

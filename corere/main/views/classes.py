@@ -286,6 +286,8 @@ class GenericSubmissionView(GenericCorereObjectView):
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    note_formset = f.NoteSubmissionFormset
+    note_helper = f.NoteFormSetHelper()
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -298,15 +300,12 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     form = f.SubmissionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
-    note_formset = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
+
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     form = f.ReadOnlySubmissionForm
     transition_method_name = 'view_noop'
     page_header = "View Submission"
-    note_formset = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
     read_only = True #We still allow post because you can still create/edit notes.
 
 #TODO: Do we need the gitlab mixin? probably?
@@ -349,6 +348,7 @@ class SubmissionEditFilesView(GenericSubmissionFilesView):
 class SubmissionReadFilesView(GenericSubmissionFilesView):
     transition_method_name = 'view_noop'
     form = f.GitlabReadOnlyFileNoteFormSet
+    read_only = True
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
@@ -444,6 +444,8 @@ class GenericEditionView(GenericCorereObjectView):
     parent_model = m.Submission
     object_friendly_name = 'edition'
     model = m.Edition
+    note_formset = f.NoteEditionFormset
+    note_helper = f.NoteFormSetHelper()
     redirect = '/'
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
@@ -457,15 +459,11 @@ class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPe
     form = f.EditionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Edition"
-    note_formset = f.NoteEditionFormset
-    note_helper = f.NoteFormSetHelper()
 
 class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.ReadOnlyEditionForm
     transition_method_name = 'view_noop'
     page_header = "View Edition"
-    note_formset = f.NoteEditionFormset
-    note_helper = f.NoteFormSetHelper()
     read_only = True #We still allow post because you can still create/edit notes.
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -499,6 +497,8 @@ class GenericCurationView(GenericCorereObjectView):
     object_friendly_name = 'curation'
     model = m.Curation
     redirect = '/'
+    note_formset = f.NoteCurationFormset
+    note_helper = f.NoteFormSetHelper()
 
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.CurationForm
@@ -511,15 +511,11 @@ class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionP
     form = f.CurationForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Curation"
-    note_formset = f.NoteCurationFormset
-    note_helper = f.NoteFormSetHelper()
 
 class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.ReadOnlyCurationForm
     transition_method_name = 'view_noop'
     page_header = "View Curation"
-    note_formset = f.NoteCurationFormset
-    note_helper = f.NoteFormSetHelper()
     read_only = True #We still allow post because you can still create/edit notes.
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -553,6 +549,8 @@ class GenericVerificationView(GenericCorereObjectView):
     object_friendly_name = 'verification'
     model = m.Verification
     redirect = '/'
+    note_formset = f.NoteVerificationFormset
+    note_helper = f.NoteFormSetHelper()
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = f.VerificationForm
@@ -565,15 +563,11 @@ class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     form = f.VerificationForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Verification"
-    note_formset = f.NoteVerificationFormset
-    note_helper = f.NoteFormSetHelper()
 
 class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = f.ReadOnlyVerificationForm
     transition_method_name = 'view_noop'
     page_header = "View Verification"
-    note_formset = f.NoteVerificationFormset
-    note_helper = f.NoteFormSetHelper()
     read_only = True #We still allow post because you can still create/edit notes.
     
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch

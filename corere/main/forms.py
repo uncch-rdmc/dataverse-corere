@@ -25,8 +25,7 @@ class ReadOnlyFormMixin(forms.ModelForm):
             self.fields[key].disabled = True
 
     def save(self, *args, **kwargs):
-        # do not do anything
-        pass
+        pass # do not do anything
 
 class GenericFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):
@@ -80,19 +79,28 @@ class NoteForm(forms.ModelForm):
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
-        path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0]
-        path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
         user = CrequestMiddleware.get_request().user
-        if(path_obj_name == "submission"):
-            manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
-        elif(path_obj_name == "edition"):
-            manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
-        elif(path_obj_name == "curation"):
-            manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
-        elif(path_obj_name == "verification"):
-            manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
-        else:
-            raise TypeError("Object name parsed from url string for note form does not match our lookup")
+        path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
+        try:
+            path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
+            if(path_obj_name == "submission"):
+                manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
+            elif(path_obj_name == "edition"):
+                manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
+            elif(path_obj_name == "curation"):
+                manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
+            elif(path_obj_name == "verification"):
+                manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
+            else:
+                raise TypeError("Object name parsed from url string for note form does not match our lookup")
+        except KeyError: #during creation, id we want is different
+            try: #creating a sub on a manuscript
+                manuscript = m.Manuscript.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['manuscript_id'])
+            except KeyError: #creating a edition/curation/verification on a submission
+                try:
+                    manuscript = m.Submission.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['submission_id']).manuscript
+                except KeyError:
+                    raise TypeError("Object name parsed from url string for note form does not match our lookup, during create")
 
         if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
             self.fields.pop('scope')
@@ -116,12 +124,9 @@ class NoteForm(forms.ModelForm):
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
     def save(self, commit, *args, **kwargs):
-        #print("SAVE")
-        #print(self.__dict__)
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
             if(self.cleaned_data['creator'] != user):
-                print("did not save note id: "+ str(self.instance.id))
                 pass #Do not save
         super(NoteForm, self).save(commit, *args, **kwargs)
         if('scope' in self.changed_data):
@@ -155,27 +160,22 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
             prefix='note-%s-%s' % (
                 form.prefix,
                 self.nested_formset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
-            #extra=1
         )
     
     def is_valid(self):
         result = super(BaseFileNestingFormSet, self).is_valid()
-
         if self.is_bound:
             for form in self.forms:
                 if hasattr(form, 'nested'):
                     result = result and form.nested.is_valid()
-
         return result
 
     def save(self, commit=True):
         result = super(BaseFileNestingFormSet, self).save(commit=commit)
-
         for form in self.forms:
             if hasattr(form, 'nested'):
                 if not self._should_delete_form(form):
                     form.nested.save(commit=commit)
-
         return result
 
 class BaseNoteFormSet(BaseInlineFormSet):
@@ -185,7 +185,6 @@ class BaseNoteFormSet(BaseInlineFormSet):
     def deleted_forms(self):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
         user = CrequestMiddleware.get_request().user
-
         for i, form in enumerate(deleted_forms):
             if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
@@ -195,13 +194,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
     #only show private notes if user is curator/verifier on manuscript
     def get_queryset(self):
         if not hasattr(self, '_queryset'):
-            #print(self.instance.parent_submission)
-            #if(not CrequestMiddleware.get_request().user.has_any_perm(c.PERM_NOTE_VIEW_N, self.instance)):#.parent_submission.manuscript)):
-                #self._queryset = self.queryset.filter(text__startswith='why')
             self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
-                #get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
-            #else:
-            #    self._queryset = self.queryset.filter()
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
         return self._queryset
@@ -270,8 +263,6 @@ NoteVerificationFormset = inlineformset_factory(
 #------------ GitlabFile -------------
 
 class GitlabFileForm(forms.ModelForm):
-    #fakefield = forms.Field(required=False)
-
     class Meta:
         model = GitlabFile
         fields = ['gitlab_path']
@@ -336,18 +327,6 @@ GitlabFileNoteFormSet = inlineformset_factory(
         'description': Textarea(attrs={'rows':1}) }
 )
 
-# GitlabFileFormSet = inlineformset_factory(
-#     Submission,
-#     GitlabFile,
-#     form=GitlabFileForm,
-#     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-#     extra=0,
-#     can_delete=False,
-#     widgets={
-#         'gitlab_path': DownloadGitlabWidget(),
-#         'description': TextInput() }
-# )
-
 GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
     Submission,
     GitlabFile,
@@ -366,18 +345,13 @@ class GitlabFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        # self.template = 'bootstrap4/table_inline_formset.html'
         self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
-        #self.field_template = 'bootstrap4/layout/inline_field.html'
         self.layout = Layout(
 
             Field('gitlab_path', th_class="w-50"),
             Field('tag'),
             Field('description'),
-            # ButtonHolder(
-            #     Submit('submit', 'Submit', css_class='button white')
-            # )
         )
         self.render_required_fields = True
 
@@ -389,25 +363,9 @@ class NoteFormSetHelper(FormHelper):
         self.form_method = 'post'
         self.form_class = 'form-inline'
         self.template = 'bootstrap4/table_inline_formset.html'
-        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
         self.form_id = 'note'
-        #self.field_template = 'bootstrap4/layout/inline_field.html'
-        # self.layout = Layout(
-        #     Field('creator'),
-        #     Field('text'),
-        #     Field('note_replied_to'),
-        #     Field('scope')
-        #     # ButtonHolder(
-        #     #     Submit('submit', 'Submit', css_class='button white')
-        #     # )
-        # )
         self.render_required_fields = True
-
-
-
-
-
 
 #No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
