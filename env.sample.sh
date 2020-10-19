@@ -21,6 +21,7 @@ export RECIPIENTS="email@email.com"
 
 #For the Postgres DB
 export POSTGRES_DB=corere
+export POSTGRES_HOST=localhost
 
 #Location for local file uploads (Manuscripts, etc)
 export MEDIA_ROOT=
