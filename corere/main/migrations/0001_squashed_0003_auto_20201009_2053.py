@@ -11,6 +11,7 @@ import django.utils.timezone
 import django_fsm
 import simple_history.models
 import uuid, os, sys
+from corere.main.gitlab import gitlab_create_user
 
 class Migration(migrations.Migration):
 
@@ -40,6 +41,7 @@ class Migration(migrations.Migration):
             #TODO: Pass in gitlab id here?
 
             superuser.save()
+            gitlab_create_user(superuser, is_admin=True)
 
     operations = [
         migrations.CreateModel(

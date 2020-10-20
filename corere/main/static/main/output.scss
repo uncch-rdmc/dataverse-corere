@@ -1,3 +1,9 @@
+/* 
+ * This file is named output.scss so the same name is generated when calling manage.py compress and when being created automatically.
+ * If you rename this, make sure to change your process on how nginx gets its files.
+ */
+
+
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
 .navbar {

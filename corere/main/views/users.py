@@ -288,7 +288,7 @@ def invite_user_not_author(request, role, role_text):
     else:
         raise Http404()
 
-
+#TODO: Should most of this be added to the user save method?
 def helper_create_user_and_invite(request, email, role):
     Invitation = get_invitation_model()
     invite = Invitation.create(email)#, inviter=request.user)
