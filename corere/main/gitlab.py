@@ -4,7 +4,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)  
 
 #https://docs.gitlab.com/ee/api/users.html#user-creation
-def gitlab_create_user(django_user):
+def gitlab_create_user(django_user, is_admin=False):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
         return
     else:
@@ -18,6 +18,7 @@ def gitlab_create_user(django_user):
                             'external':True, 
                             'private_profile':True , 
                             'skip_confirmation':True,
+                            'admin': is_admin,
                             #TODO: Once this issue is fixed, remove our random password generation. https://gitlab.com/gitlab-org/gitlab/-/issues/25802
                             'password' : ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))})
         django_user.gitlab_id = gitlab_user.id                   
