@@ -10,7 +10,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
-    var createSubButton = false;
+    var createSubButton = true; //TODO: This needs to be fixed
     //TODO: what this do?
     var dt_language = {
         "emptyTable":     "{% trans "No data available in table" %}",
@@ -94,7 +94,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "manuscript/"+ manuscript_id +"/createsubmission";
+                                    window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission";
                                 },
                                 enabled: createSubButton //this is actually stored in the manuscript button column and passed in
                             },
@@ -110,7 +110,7 @@
                                         name: 'editSubmission',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "submission/"+submission_id+"/edit";
+                                            window.location.href = "/submission/"+submission_id+"/edit";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -122,7 +122,7 @@
                                         name: 'editSubmissionFiles',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "submission/"+submission_id+"/editfiles";
+                                            window.location.href = "/submission/"+submission_id+"/editfiles";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -135,7 +135,7 @@
                                     name: 'viewSubmission',
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "submission/"+submission_id+"/view";
+                                        window.location.href = "/submission/"+submission_id+"/view";
                                     },
                                     init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -147,7 +147,7 @@
                                     name: 'viewSubmissionFiles',
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "submission/"+submission_id+"/viewfiles";
+                                        window.location.href = "/submission/"+submission_id+"/viewfiles";
                                     },
                                     init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -161,7 +161,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('submission/'+submission_id+'/progress', {
+                                            fetch('/submission/'+submission_id+'/progress', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -181,7 +181,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('submission/'+submission_id+'/generatereport', {
+                                            fetch('/submission/'+submission_id+'/generatereport', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -201,7 +201,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('submission/'+submission_id+'/return', {
+                                            fetch('/submission/'+submission_id+'/return', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -223,7 +223,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
                                 name: 'createEdition',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "submission/"+submission_id+"/createedition";
+                                    window.location.href = "/submission/"+submission_id+"/createedition";
                                 },
                                 enabled: false
                             },
@@ -239,7 +239,7 @@
                                         name: 'editEdition',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "edition/"+edition_id+"/edit";
+                                            window.location.href = "/edition/"+edition_id+"/edit";
                                         },
                                         enabled: false
                                     },
@@ -249,7 +249,7 @@
                                     name: 'viewEdition',
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "edition/"+edition_id+"/view";
+                                        window.location.href = "/edition/"+edition_id+"/view";
                                     },
                                     enabled: false
                                 },
@@ -260,7 +260,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('edition/'+edition_id+'/progress', {
+                                            fetch('/edition/'+edition_id+'/progress', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -282,7 +282,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
                                 name: 'createCuration',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "submission/"+submission_id+"/createcuration";
+                                    window.location.href = "/submission/"+submission_id+"/createcuration";
                                 },
                                 enabled: false
                             },
@@ -298,7 +298,7 @@
                                         name: 'editCuration',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "curation/"+curation_id+"/edit";
+                                            window.location.href = "/curation/"+curation_id+"/edit";
                                         },
                                         enabled: false
                                     },
@@ -308,7 +308,7 @@
                                     name: 'viewCuration',
                                     action: function ( e, dt, node, config ) {
                                         //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "curation/"+curation_id+"/view";
+                                        window.location.href = "/curation/"+curation_id+"/view";
                                     },
                                     enabled: false
                                 },
@@ -319,7 +319,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('curation/'+curation_id+'/progress', {
+                                            fetch('/curation/'+curation_id+'/progress', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -340,7 +340,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Verification',
                                 name: 'createVerification',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "submission/"+submission_id+"/createverification";
+                                    window.location.href = "/submission/"+submission_id+"/createverification";
                                 },
                                 enabled: false
                             },
@@ -356,7 +356,7 @@
                                         name: 'editVerification',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "verification/"+verification_id+"/edit";
+                                            window.location.href = "/verification/"+verification_id+"/edit";
                                         },
                                         enabled: false
                                     },
@@ -366,7 +366,7 @@
                                         name: 'viewVerification',
                                         action: function ( e, dt, node, config ) {
                                             //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "verification/"+verification_id+"/view";
+                                            window.location.href = "/verification/"+verification_id+"/view";
                                         },
                                         enabled: false
                                     },
@@ -377,7 +377,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('verification/'+verification_id+'/progress', {
+                                            fetch('/verification/'+verification_id+'/progress', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'

@@ -145,10 +145,13 @@ class GetOrGenerateObjectMixin(object):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been updated!'
-        elif not self.read_only: #kwargs.get(self.parent_id_name) and 
+        elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
+                print("The object create method I didn't want called after create got called")
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
+                if(self.parent_reference_name == "submission"):
+                    setattr(self.object, "manuscript", self.object.submission.manuscript)
             self.message = 'Your new '+self.object_friendly_name +' has been created!'
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
@@ -275,7 +278,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################# SUBMISSION #############################################
 
@@ -394,7 +397,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
@@ -413,7 +416,7 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
@@ -432,7 +435,7 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################## EDITION ##############################################
 
@@ -484,7 +487,7 @@ class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericE
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################## CURATION ##############################################
 
@@ -536,7 +539,7 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################# VERIFICATION #############################################
 
@@ -588,4 +591,4 @@ class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))

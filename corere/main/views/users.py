@@ -55,7 +55,7 @@ def invite_assign_author(request, id=None):
                 #Admin gave Author access to Matthew for manuscript bug5
                 notification_msg = '{0} has given you author access to manuscript {1}!'.format(request.user.email, manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-            return redirect('/')
+            return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
@@ -101,7 +101,7 @@ def assign_editor(request, id=None):
                 logger.info('You have given {0} editor access to manuscript {1}!'.format(u.email, manuscript.title))
                 notification_msg = '{0} has given you editor access to manuscript {1}!'.format(request.user.email, manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-            return redirect('/')
+            return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
@@ -148,7 +148,7 @@ def assign_curator(request, id=None):
                 logger.info('You have given {0} curator access to manuscript {1}!'.format(u.email, manuscript.title))
                 notification_msg = '{0} has given you curator access to manuscript {1}!'.format(request.user.email, manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-            return redirect('/')
+            return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
@@ -194,7 +194,7 @@ def assign_verifier(request, id=None):
                 logger.info('You have given {0} verifier access to manuscript {1}!'.format(u.email, manuscript.title))
                 notification_msg = '{0} has given you verifier access to manuscript {1}!'.format(request.user.email, manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-            return redirect('/')
+            return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),

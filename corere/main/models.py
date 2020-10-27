@@ -90,6 +90,7 @@ class Verification(AbstractCreateUpdateModel):
     software = models.TextField()
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
 
     class Meta:
         default_permissions = ()
@@ -140,6 +141,7 @@ class Edition(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW)
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
 
     class Meta:
         default_permissions = ()
@@ -195,6 +197,7 @@ class Curation(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
 
     class Meta:
         default_permissions = ()
