@@ -1,4 +1,4 @@
-import logging
+import logging, json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -33,6 +33,32 @@ def index(request):
 
 @login_required
 def manuscript_overview(request, id=None):
+    manuscript = get_object_or_404(m.Manuscript, id=id)
+    manuscript_avail_buttons = []
+    if(has_transition_perm(manuscript.edit_noop, request.user)):
+        manuscript_avail_buttons.append('editManuscript')
+        manuscript_avail_buttons.append('editManuscriptFiles')
+    elif(has_transition_perm(manuscript.view_noop, request.user)):
+        manuscript_avail_buttons.append('viewManuscript')
+        manuscript_avail_buttons.append('viewManuscriptFiles')
+    if(has_transition_perm(manuscript.begin, request.user)):
+        manuscript_avail_buttons.append('progressManuscript')
+    #TODO: add launchNotebook once integration is better
+    # MAD: Should we change these to be transitions?
+    if(not manuscript.is_complete()):
+        if(request.user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
+            manuscript_avail_buttons.append('inviteassignauthor')
+        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
+            manuscript_avail_buttons.append('assigneditor')
+        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
+            manuscript_avail_buttons.append('assigncurator')
+        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
+            manuscript_avail_buttons.append('assignverifier')
+    if(has_transition_perm(manuscript.add_submission_noop, request.user)):
+        manuscript_avail_buttons.append('createSubmission')
+
+    print(json.dumps(manuscript_avail_buttons))
+
     args = {'user':     request.user, 
             "manuscript_id": id,
             'submission_columns':  helper_submission_columns(request.user),
@@ -40,7 +66,8 @@ def manuscript_overview(request, id=None):
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
             'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
             'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
-            # 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
+            'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
+            'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
             }
     return render(request, "main/manuscript_overview.html", args)
 

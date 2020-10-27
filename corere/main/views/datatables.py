@@ -121,6 +121,7 @@ class ManuscriptJson(CorereBaseDatatableView):
         elif column == 'buttons':
             user = self.request.user
             avail_buttons = []
+#TODO: This is no longer needed with the new manuscript overview page
             if(has_transition_perm(manuscript.edit_noop, user)):
                 avail_buttons.append('editManuscript')
                 avail_buttons.append('editManuscriptFiles')

@@ -392,6 +392,144 @@
                                 {% endif %}
                             ]
                         },
+                        //MANUSCRIPT BUTTONS
+                        {
+                            extend: 'collection',
+                            text: 'Manuscript Actions',
+                            fade: 0,
+                            buttons: [
+                                //TODO: This perm is different than the one for progress. 
+                                // I think its because we want non-editors to create as well, but should doublecheck.
+                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
+                                    {
+                                        text: 'Edit',
+                                        name: 'editManuscript',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "/manuscript/"+manuscript_id+"/edit";
+                                        },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
+                                        enabled: false
+                                    },
+                                    {
+                                        text: 'Edit Files',
+                                        name: 'editManuscriptFiles',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles";
+                                        },
+                                        init: function ( dt, node, config ) {
+                                            node.css("display", "none");
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {
+                                    text: 'View',
+                                    name: 'viewManuscript',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "/manuscript/"+manuscript_id+"/view";
+                                    },
+                                    init: function ( dt, node, config ) {
+                                        node.css("display", "none");
+                                    },
+                                    enabled: false
+                                },
+                                {
+                                    text: 'View Files',
+                                    name: 'viewManuscriptFiles',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "/manuscript/"+manuscript_id+"/viewfiles";
+                                    },
+                                    init: function ( dt, node, config ) {
+                                        node.css("display", "none");
+                                    },
+                                    enabled: false
+                                },
+                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Hand-off to Authors',
+                                        name: 'progressManuscript',
+                                        action: function ( e, dt, node, config ) {
+                                            var headers = new Headers();
+                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                            fetch('/manuscript/'+manuscript_id+'/progress', {
+                                                method: 'POST',
+                                                headers: headers, 
+                                                credentials: 'include'
+                                            }).then(response => {
+                                                if (response.redirected) {
+                                                    window.location.href = response.url;
+                                                }
+                                            })
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {
+                                    text: 'Launch Notebook',
+                                    name: 'launchNotebook',
+                                    action: function ( e, dt, node, config ) {
+                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                        window.location.href = "/manuscript/"+manuscript_id+"/binder";
+                                    },
+                                    enabled: true
+                                },
+                            ]
+                        },
+                        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        {
+                            extend: 'collection',
+                            text: 'Manuscript Members',
+                            fade: 0,
+                            buttons: [
+                                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
+                                    {
+                                        text: 'Invite/Add Author',
+                                        name: 'inviteassignauthor',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor";
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                    {
+                                        text: 'Add Editor',
+                                        name: 'assigneditor',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assigneditor";
+                                        },
+                                        enabled: false
+                                    },
+                                    {
+                                        text: 'Add Curator',
+                                        name: 'assigncurator',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assigncurator";
+                                        },
+                                        enabled: false
+                                    },
+                                    {
+                                        text: 'Add Verifier',
+                                        name: 'assignverifier',
+                                        action: function ( e, dt, node, config ) {
+                                            //console.log(dt.rows( { selected: true } ).data()[0][0])   
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assignverifier";
+                                        },
+                                        enabled: false
+                                    },
+                                {% endif %}
+                            ]
+                        },
+                        {% endif %}
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -444,7 +582,15 @@
                     console.log('Table row deselected');
                 } ).row(':last').select();
                 sub_table_callback(table)
-                table.buttons().container().prependTo("#submission_buttons");
+                //table.buttons().container().prependTo("#submission_buttons");
+
+                manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
+                for(var i in manuscript_avail_buttons) {
+                    console.log("var: " + i)
+                    console.log(table.button(manuscript_avail_buttons[i]+':name'))
+                    table.button(manuscript_avail_buttons[i]+':name').enable(true);
+                    table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
+                }
             }
             })
     });
