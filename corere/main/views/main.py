@@ -32,6 +32,19 @@ def index(request):
         return render(request, "main/login.html")
 
 @login_required
+def manuscript_overview(request, id=None):
+    args = {'user':     request.user, 
+            "manuscript_id": id,
+            'submission_columns':  helper_submission_columns(request.user),
+            'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
+            'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
+            'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
+            'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
+            # 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
+            }
+    return render(request, "main/manuscript_overview.html", args)
+
+@login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):

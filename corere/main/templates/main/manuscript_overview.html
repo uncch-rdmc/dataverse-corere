@@ -3,14 +3,14 @@
 {% load auth_extras %}
 {% block content %}
 
-{% comment %} Manuscript Table {% endcomment %}
+
+
+
+
 
 <script type="text/javascript">
-    var search_completed_vis_toggle = true;
-    var search_curator_vis_toggle = true;
-    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
-    // translations for datatables
-
+    var manuscript_id = {{manuscript_id}};
+    var createSubButton = false;
     //TODO: what this do?
     var dt_language = {
         "emptyTable":     "{% trans "No data available in table" %}",
@@ -36,307 +36,13 @@
         }
     }
 
-    $(document).ready(function() {
-        //var builtColumns = [];
-        //var builtFields = [];
-        dt_man_ajax = $.ajax({
-            url: MANUSCRIPT_LIST_JSON_URL,
-            cache: false,
-            success: function (response) {
-                var [columns_config, button_index] = constructTable(response.data[0]);
-                var last_row;
-                var select_timeout;
-                //console.log(response.data)
-                var table = $('#manuscript_table').DataTable({
-                    language: dt_language,  // global variable defined in html
-                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
-                    searching: true,
-                    processing: true,
-                                        //serverSide: true, //currently broken, not sure if needed
-                    stateSave: true,
-                    paging: true,
-                    select: 'single',
-                    columns: columns_config,
-                    dom: 'Bfrtpl',
-                    keys: true, //for keyboard
-                    rowId: 'id', //for retaining selected row
-                                        //dom: 'Bfrtip', //old setting which is broken, should understand better
-                    data: response.data.slice(1),
-                    buttons: [
-                    {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
-                        {
-                            text: '<i class="fas fa-plus"></i> &nbsp;Create Manuscript',
-                            name: 'createManuscript',
-                            action: function ( e, dt, node, config ) {
-                                window.location.href = "manuscript/create";
-                            },
-                        },
-                    {% endif %}
-                        {
-                            text: 'Work On Manuscript',
-                            name: 'workOnManuscript',
-                            action: function ( e, dt, node, config ) {
-                                window.location.href = "manuscript/" + manuscript_id;
-                            },
-                        },
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Actions',
-                            fade: 0,
-                            buttons: [
-                                //TODO: This perm is different than the one for progress. 
-                                // I think its because we want non-editors to create as well, but should doublecheck.
-                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/edit";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Edit Files',
-                                        name: 'editManuscriptFiles',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/uploadfiles";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'View',
-                                    name: 'viewManuscript',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "manuscript/"+manuscript_id+"/view";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {
-                                    text: 'View Files',
-                                    name: 'viewManuscriptFiles',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "manuscript/"+manuscript_id+"/viewfiles";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Hand-off to Authors',
-                                        name: 'progressManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('manuscript/'+manuscript_id+'/progress', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'Launch Notebook',
-                                    name: 'launchNotebook',
-                                    action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                        window.location.href = "manuscript/"+manuscript_id+"/binder";
-                                    },
-                                    enabled: true
-                                },
-                            ]
-                        },
-                        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Members',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Invite/Add Author',
-                                        name: 'inviteassignauthor',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/inviteassignauthor";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Add Editor',
-                                        name: 'assigneditor',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/assigneditor";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Curator',
-                                        name: 'assigncurator',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
-                                            window.location.href = "manuscript/"+manuscript_id+"/assigncurator";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Verifier',
-                                        name: 'assignverifier',
-                                        action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])   
-                                            window.location.href = "manuscript/"+manuscript_id+"/assignverifier";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
-                        },
-                        {% endif %}
-                        //the default for the searches controlled by these two buttons is set later down
-                        {
-                            text: '<i class="far fa-eye-slash"></i> Completed',
-                            name: 'viewcompleted',
-                            className: 'visibilityButton',
-                            action: function ( e, dt, node, config ) {
-                                if(search_completed_vis_toggle == false) {
-                                    table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
-                                    search_completed_vis_toggle = true;
-                                    this.text( '<i class="far fa-eye-slash"></i> Completed' );
-                                    
-                                } else {
-                                    table.columns( 5 ).search( "" ).draw();
-                                    search_completed_vis_toggle = false;
-                                    this.text( '<i class="far fa-eye"></i> Completed' );
-                                }
-                            },
-                        },
-                        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                        {
-                            text: '<i class="far fa-eye-slash"></i> All Curators',
-                            name: 'viewnotuserassigned',
-                            className: 'visibilityButton',
-                            action: function ( e, dt, node, config ) {
-                                if(search_curator_vis_toggle == false) {
-                                    table.columns( 10 ).search( "{{request.user.username}}" ).draw();
-                                    search_curator_vis_toggle = true;
-                                    this.text( '<i class="far fa-eye-slash"></i> All Curators' );
-                                    
-                                } else {
-                                    table.columns( 10 ).search( "" ).draw();
-                                    search_curator_vis_toggle = false;
-                                    this.text( '<i class="far fa-eye"></i> All Curators' );
-                                }
-                            },
-                        },
-                        {% endif %}
-                    ]
-                })
-                .on( 'select', function ( e, dt, type, indexes ) {
-                    //We delay select until no events have fired for a bit so that we don't do a zillion queries
-                    //and also jam up the submission table reloading
-                    clearTimeout(select_timeout); //clear existing timeout if needed
-                    select_timeout = setTimeout(select_later, 100);
-                } )
-                .on( 'deselect', function ( e, dt, type, indexes ) {
-                    var count = dt.rows( { selected: true } ).count();
-                    if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
-                        dt.button('editManuscript:name').enable(false);
-                        dt.button('editManuscript:name').nodes().css("display", "none");
-                        dt.button('editManuscriptFiles:name').enable(false);
-                        dt.button('editManuscriptFiles:name').nodes().css("display", "none");
-                        dt.button('viewManuscript:name').enable(false);
-                        dt.button('viewManuscript:name').nodes().css("display", "none");
-                        dt.button('viewManuscriptFiles:name').enable(false);
-                        dt.button('viewManuscriptFiles:name').nodes().css("display", "none");
-                        dt.button('inviteassignauthor:name').enable(false);
-                        dt.button('assigncurator:name').enable(false);
-                        dt.button('assignverifier:name').enable(false);                        
-                        dt.button('progressManuscript:name').enable(false);
-                        dt.button('launchNotebook:name').enable(false);
-                        //.nodes().addClass('hidden');
-                    }
-                    document.getElementById("submission_table_holder").style.display = "none"; //hide element
-                    //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
-                } )
-                .on('key-focus', function (e, dt, cell, originalEvent) {
-                    //'key-focus' triggers on mouse events too, which we don't want
-                    if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
-                        //dt.rows().deselect();
-                        dt.row( cell.index().row ).select();
-                        last_row = cell.index().row;
-                    }
-                });
-                var selected_row = 0
-                if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
-                    selected_row = table.cell( { focused: true } ).index().row
-                } else { //select cell if none selected, allows instant keyboard use
-                    table.cell({ row: selected_row, column: 0 }).focus();
-                }
-                table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
-                table.buttons().container().prependTo("#manuscript_buttons");
+    //dt_submission;
+    function sub_table_callback(table) {
+        dt_submission = table;
+        //use return_first variable here
+    }
 
-                table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
-                {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user.is_superuser %} 
-                table.columns( 10 ).search( "{{request.user.username}}" ).draw();
-                {% else %}
-                table.columns( 10 ).search( "" ).draw();
-                {% endif %}
-                function select_later() {
-                    manuscript_id = table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    var avail_buttons = table.rows( { selected: true } ).data()[0][button_index];
-                    var createSubButton = false;
-                    for(var i in avail_buttons) {
-                        //console.log(avail_buttons[i])
-                        if(avail_buttons[i] == 'createSubmission') {
-                            createSubButton = true;
-                        } else {
-                            table.button(avail_buttons[i]+':name').enable(true);
-                            table.button(avail_buttons[i]+':name').nodes().css("display", "block");
-                        }
-                    }
-                    document.getElementById("submission_table_holder").style.display = "block"; //show element
-                    
-                    if (typeof dt_submission !== 'undefined') {
-                        console.log(dt_submission.context)
-                        
-                        //if (dt_submission.context.length) {
-                        console.log("DESTROY")
-                        dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
-                        //}
-                    }
-                    createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
-                    //console.log('Table row selected: ' + document.getElementById("submission_table").style.display);
-                }
-            }
-        })
-
-    });
-
-    //What is the goal here?
+   //What is the goal here?
     // - Define array rendering
     // - make table more dynamic
     // - NAMES
@@ -360,22 +66,11 @@
         return [columns_config, button_index];
     } 
 
-</script>
 
-
-{% comment %} Submission Table {% endcomment %}
-
-<script type="text/javascript">
-    //dt_submission;
-    function sub_table_callback(table) {
-        dt_submission = table;
-        //use return_first variable here
-    }
-
-    function createSubmissionTable(url, createSubButton) { 
+    $(document).ready(function() {
         console.log("Create sub outside")
         $.ajax({
-            url: url,
+            url: "/manuscript/"+ manuscript_id +"/submission_table",
             cache: false,
             success: function (response) {
                 console.log("Create sub inside")
@@ -752,27 +447,10 @@
                 table.buttons().container().prependTo("#submission_buttons");
             }
             })
-    };
+    });
 </script>
 
-{% comment %} <div id="submission_table_wrapper" style="display:none"> {% endcomment %}
-
-<div>
-    <div class="table_holder" id="manuscript_table_holder">
-        <h5 class="my-3"> Manuscripts </h5>
-        <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
-            {% comment %} <div id="manuscript_buttons" class="d-flex justify-content-left mb-1"></div> {% endcomment %}
-            <thead>
-                {% for field in manuscript_columns %}
-                    <th>{{ field }}</th>
-                {% endfor %}
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="table_holder" id="submission_table_holder">
+<div class="table_holder" id="submission_table_holder">
         <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
             <hr>
             <h5 class="my-3"> Submissions </h5> {% comment %} here to be placed below the hr we need to show hide {% endcomment %}
@@ -786,7 +464,5 @@
             </tbody>
         </table>
     </div >
-</div>
-{% comment %} </div> {% endcomment %}
 
 {% endblock %}
