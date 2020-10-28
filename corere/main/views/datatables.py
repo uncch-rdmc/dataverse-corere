@@ -48,7 +48,6 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
         return col_data
 
     def prepare_results(self, qs):
-#MADTEST: subset of results here! (MISSING)
         data = []
         #TODO: Confirm this works right with pagination
         data.append(self.get_columns()) #adds headers to grab in js for dynamic support
@@ -87,19 +86,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    # This defines the columns a user can view for a table.
-    # TODO: Controll in a more centralized manner for security
-    # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
-    # MAD: This should be using guardian???
-    columns = []
-    # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-    columns += ['id','pub_id','title','doi','open_data','_status','created_at','updated_at','authors','editors','curators','verifiers','buttons']
-    # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
-    # if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
-    # if(user.groups.filter(name=c.GROUP_ROLE_EDITOR).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
+    columns = ['id','pub_id','title','doi','open_data','_status','created_at','updated_at']
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
@@ -111,41 +98,7 @@ class ManuscriptJson(CorereBaseDatatableView):
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
 
-    def render_column(self, manuscript, column):
-        if column == 'authors':
-            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))])
-        elif column == 'curators':
-            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
-        elif column == 'verifiers':
-            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))])
-        elif column == 'buttons':
-            user = self.request.user
-            avail_buttons = []
-#TODO: This is no longer needed with the new manuscript overview page
-            if(has_transition_perm(manuscript.edit_noop, user)):
-                avail_buttons.append('editManuscript')
-                avail_buttons.append('editManuscriptFiles')
-            elif(has_transition_perm(manuscript.view_noop, user)):
-                avail_buttons.append('viewManuscript')
-                avail_buttons.append('viewManuscriptFiles')
-            if(has_transition_perm(manuscript.begin, user)):
-                avail_buttons.append('progressManuscript')
-            #TODO: add launchNotebook once integration is better
-            # MAD: Should we change these to be transitions?
-            if(not manuscript.is_complete()):
-                if(user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
-                    avail_buttons.append('inviteassignauthor')
-                if(user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
-                    avail_buttons.append('assigneditor')
-                if(user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
-                    avail_buttons.append('assigncurator')
-                if(user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
-                    avail_buttons.append('assignverifier')
-            if(has_transition_perm(manuscript.add_submission_noop, user)):
-                avail_buttons.append('createSubmission')
-            return avail_buttons
-        else:
-            return super(ManuscriptJson, self).render_column(manuscript, column)
+    # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
 
     def get_initial_queryset(self):
         return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
@@ -158,19 +111,9 @@ class ManuscriptJson(CorereBaseDatatableView):
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
         return qs
 
+
 def helper_submission_columns(user):
-    # This defines the columns a user can view for a table.
-    # NOTE: If any of the columns defined here are just numbers, it opens a security issue with restricting datatable info. See the comment in extract_datatables_column_data
-    # MAD: This should be using guardian???
     columns = ['id','submission_status','edition_id','edition_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
-    # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','status','created_at','updated_at','authors','submissions','verifications','curations','buttons']
-    # if(user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
-    # if(user.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
-    # if(user.groups.filter(name=c.GROUP_ROLE_EDITOR).exists()):
-    #     columns += ['id','pub_id','title','doi','open_data','authors']
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 class SubmissionJson(CorereBaseDatatableView):

@@ -9,36 +9,8 @@
     var search_completed_vis_toggle = true;
     var search_curator_vis_toggle = true;
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
-    // translations for datatables
 
-    //TODO: what this do?
-    var dt_language = {
-        "emptyTable":     "{% trans "No data available in table" %}",
-        "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
-        "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
-        "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
-        "infoPostFix":    "",
-        "thousands":      ",",
-        "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
-        "loadingRecords": "{% trans "Loading..." %}",
-        "processing":     "{% trans "Processing..." %}",
-        "search":         "{% trans "Search:" %}",
-        "zeroRecords":    "{% trans "No matching records found" %}",
-        "paginate": {
-            "first":      "{% trans "First" %}",
-            "last":       "{% trans "Last" %}",
-            "next":       "{% trans "Next" %}",
-            "previous":   "{% trans "Previous" %}"
-        },
-        "aria": {
-            "sortAscending":  "{% trans ": activate to sort column ascending" %}",
-            "sortDescending": "{% trans ": activate to sort column descending" %}"
-        }
-    }
-
-    $(document).ready(function() {
-        //var builtColumns = [];
-        //var builtFields = [];
+    $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
             cache: false,
@@ -46,13 +18,10 @@
                 var [columns_config, button_index] = constructTable(response.data[0]);
                 var last_row;
                 var select_timeout;
-                //console.log(response.data)
                 var table = $('#manuscript_table').DataTable({
-                    language: dt_language,  // global variable defined in html
                     lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
                     searching: true,
                     processing: true,
-                                        //serverSide: true, //currently broken, not sure if needed
                     stateSave: true,
                     paging: true,
                     select: 'single',
@@ -60,7 +29,6 @@
                     dom: 'Bfrtpl',
                     keys: true, //for keyboard
                     rowId: 'id', //for retaining selected row
-                                        //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
                     {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
@@ -120,35 +88,16 @@
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
-                    //We delay select until no events have fired for a bit so that we don't do a zillion queries
-                    //and also jam up the submission table reloading
-                    clearTimeout(select_timeout); //clear existing timeout if needed
-                    select_timeout = setTimeout(select_later, 100);
+                    manuscript_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+                    var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
+
+                    dt.button('workOnManuscript:name').enable(true);
                 } )
-                .on( 'deselect', function ( e, dt, type, indexes ) { //TODO: Delete entirely?
-                    var count = dt.rows( { selected: true } ).count();
-                    if(count == 0) { //This is not dynamic because we can't ensure we know all the possible buttons by looking at a certain row
-                        //dt.button('editManuscript:name').enable(false);
-                        //dt.button('editManuscript:name').nodes().css("display", "none");
-                        //dt.button('editManuscriptFiles:name').enable(false);
-                        //dt.button('editManuscriptFiles:name').nodes().css("display", "none");
-                        //dt.button('viewManuscript:name').enable(false);
-                        //dt.button('viewManuscript:name').nodes().css("display", "none");
-                        //dt.button('viewManuscriptFiles:name').enable(false);
-                        //dt.button('viewManuscriptFiles:name').nodes().css("display", "none");
-                        //dt.button('inviteassignauthor:name').enable(false);
-                        //dt.button('assigncurator:name').enable(false);
-                        //dt.button('assignverifier:name').enable(false);                        
-                        //dt.button('progressManuscript:name').enable(false);
-                        //dt.button('launchNotebook:name').enable(false);
-                    }
-                    document.getElementById("submission_table_holder").style.display = "none"; //hide element
-                    //console.log('Table row deselected: ' + document.getElementById("submission_table").style.display);
+                .on( 'deselect', function ( e, dt, type, indexes ) {
+                    dt.button('workOnManuscript:name').enable(false);
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
-                    //'key-focus' triggers on mouse events too, which we don't want
                     if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
-                        //dt.rows().deselect();
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
@@ -168,68 +117,29 @@
                 {% else %}
                 table.columns( 10 ).search( "" ).draw();
                 {% endif %}
-                function select_later() {
-                    manuscript_id = table.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    var avail_buttons = table.rows( { selected: true } ).data()[0][button_index];
-                    var createSubButton = false;
-                    for(var i in avail_buttons) {
-                        //console.log(avail_buttons[i])
-                        if(avail_buttons[i] == 'createSubmission') {
-                            createSubButton = true;
-                        } else {
-                            table.button(avail_buttons[i]+':name').enable(true);
-                            table.button(avail_buttons[i]+':name').nodes().css("display", "block");
-                        }
-                    }
-                    //document.getElementById("submission_table_holder").style.display = "block"; //show element
-                    
-                    //if (typeof dt_submission !== 'undefined') {
-                    //    console.log(dt_submission.context)
-                        
-                        //if (dt_submission.context.length) {
-                    //    console.log("DESTROY")
-                    //    dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
-                        //}
-                    //}
-                    //createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
-                    //console.log('Table row selected: ' + document.getElementById("submission_table").style.display);
-                }
             }
         })
 
     });
 
-    //What is the goal here?
-    // - Define array rendering
-    // - make table more dynamic
-    // - NAMES
     function constructTable(columns) {
         var columns_config = [];
         var button_index;
-        //console.log("CONSTRUCT TABLE")
         for (var c in columns) {
             var column_settings = {name: columns[c]}
-            if(columns[c] === 'buttons') {
-                column_settings.visible = false;
-                button_index = c;
-            } else if(columns[c] === 'edition_id' || columns[c] === 'curation_id' || columns[c] === 'verification_id' 
-                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'editors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            if( columns[c] === 'created_at' || columns[c] === 'updated_at' ) {
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
-            //console.log(column_settings);
         }
-        //console.log(columns_config);
         return [columns_config, button_index];
     } 
-
 </script>
 
 <div>
     <div class="main_holder" id="manuscript_table_holder">
         <h5 class="my-3"> Manuscripts </h5>
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
-            {% comment %} <div id="manuscript_buttons" class="d-flex justify-content-left mb-1"></div> {% endcomment %}
             <thead>
                 {% for field in manuscript_columns %}
                     <th>{{ field }}</th>
@@ -240,6 +150,5 @@
         </table>
     </div>
 </div>
-{% comment %} </div> {% endcomment %}
 
 {% endblock %}

@@ -3,53 +3,17 @@
 {% load auth_extras %}
 {% block content %}
 
-
-
-
-
-
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
-    var createSubButton = {{create_sub_allowed}}; //TODO: This needs to be fixed
-    //TODO: what this do?
-    var dt_language = {
-        "emptyTable":     "{% trans "No data available in table" %}",
-        "info":           "{% trans "Showing _START_ to _END_ of _TOTAL_ entries" %}",
-        "infoEmpty":      "{% trans "Showing 0 to 0 of 0 entries" %}",
-        "infoFiltered":   "{% trans "(filtered from _MAX_ total entries)" %}",
-        "infoPostFix":    "",
-        "thousands":      ",",
-        "lengthMenu":     "{% trans "Show _MENU_ entries" %}",
-        "loadingRecords": "{% trans "Loading..." %}",
-        "processing":     "{% trans "Processing..." %}",
-        "search":         "{% trans "Search:" %}",
-        "zeroRecords":    "{% trans "No matching records found" %}",
-        "paginate": {
-            "first":      "{% trans "First" %}",
-            "last":       "{% trans "Last" %}",
-            "next":       "{% trans "Next" %}",
-            "previous":   "{% trans "Previous" %}"
-        },
-        "aria": {
-            "sortAscending":  "{% trans ": activate to sort column ascending" %}",
-            "sortDescending": "{% trans ": activate to sort column descending" %}"
-        }
-    }
+    var createSubButton = {{create_sub_allowed}};
 
-    //dt_submission;
     function sub_table_callback(table) {
         dt_submission = table;
-        //use return_first variable here
     }
 
-   //What is the goal here?
-    // - Define array rendering
-    // - make table more dynamic
-    // - NAMES
     function constructTable(columns) {
         var columns_config = [];
         var button_index;
-        //console.log("CONSTRUCT TABLE")
         for (var c in columns) {
             var column_settings = {name: columns[c]}
             if(columns[c] === 'buttons') {
@@ -60,12 +24,9 @@
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
-            //console.log(column_settings);
         }
-        //console.log(columns_config);
         return [columns_config, button_index];
     } 
-
 
     $(document).ready(function() {
         console.log("Create sub outside")
@@ -75,18 +36,14 @@
             success: function (response) {
                 console.log("Create sub inside")
                 var [columns_config, button_index] = constructTable(response.data[0]);
-                //console.log(response.data)
                 var table = $('#submission_table').DataTable({
-                    language: dt_language,  // global variable defined in html
                     lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
                     searching: true,
                     processing: true,
-                    //serverSide: true, //currently broken, not sure if needed
                     stateSave: true,
                     select: 'single',
                     columns: columns_config,
                     dom: 'Bfrt',
-                    //dom: 'Bfrtip', //old setting which is broken, should understand better
                     data: response.data.slice(1),
                     buttons: [
                         {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
@@ -96,7 +53,7 @@
                                 action: function ( e, dt, node, config ) {
                                     window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission";
                                 },
-                                enabled: createSubButton //this is actually stored in the manuscript button column and passed in
+                                enabled: createSubButton
                             },
                         {% endif %}
                         {
@@ -109,7 +66,6 @@
                                         text: 'Edit',
                                         name: 'editSubmission',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/submission/"+submission_id+"/edit";
                                         },
                                         init: function ( dt, node, config ) {
@@ -121,7 +77,6 @@
                                         text: 'Edit Files',
                                         name: 'editSubmissionFiles',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/submission/"+submission_id+"/editfiles";
                                         },
                                         init: function ( dt, node, config ) {
@@ -134,7 +89,6 @@
                                     text: 'View',
                                     name: 'viewSubmission',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/submission/"+submission_id+"/view";
                                     },
                                     init: function ( dt, node, config ) {
@@ -146,7 +100,7 @@
                                     text: 'View Files',
                                     name: 'viewSubmissionFiles',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
+
                                         window.location.href = "/submission/"+submission_id+"/viewfiles";
                                     },
                                     init: function ( dt, node, config ) {
@@ -217,7 +171,6 @@
                             ]
                         },
 
-
                         {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
@@ -238,7 +191,6 @@
                                         text: 'Edit',
                                         name: 'editEdition',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/edition/"+edition_id+"/edit";
                                         },
                                         enabled: false
@@ -248,7 +200,6 @@
                                     text: 'View',
                                     name: 'viewEdition',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/edition/"+edition_id+"/view";
                                     },
                                     enabled: false
@@ -276,7 +227,6 @@
                             ]
                         },
 
-
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
@@ -297,7 +247,6 @@
                                         text: 'Edit',
                                         name: 'editCuration',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/curation/"+curation_id+"/edit";
                                         },
                                         enabled: false
@@ -307,7 +256,6 @@
                                     text: 'View',
                                     name: 'viewCuration',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/curation/"+curation_id+"/view";
                                     },
                                     enabled: false
@@ -355,7 +303,6 @@
                                         text: 'Edit',
                                         name: 'editVerification',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/verification/"+verification_id+"/edit";
                                         },
                                         enabled: false
@@ -365,7 +312,6 @@
                                         text: 'View',
                                         name: 'viewVerification',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/verification/"+verification_id+"/view";
                                         },
                                         enabled: false
@@ -392,20 +338,18 @@
                                 {% endif %}
                             ]
                         },
+
                         //MANUSCRIPT BUTTONS
                         {
                             extend: 'collection',
                             text: 'Manuscript Actions',
                             fade: 0,
                             buttons: [
-                                //TODO: This perm is different than the one for progress. 
-                                // I think its because we want non-editors to create as well, but should doublecheck.
                                 {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
                                     {
                                         text: 'Edit',
                                         name: 'editManuscript',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/manuscript/"+manuscript_id+"/edit";
                                         },
                                         init: function ( dt, node, config ) {
@@ -417,7 +361,6 @@
                                         text: 'Edit Files',
                                         name: 'editManuscriptFiles',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles";
                                         },
                                         init: function ( dt, node, config ) {
@@ -430,7 +373,6 @@
                                     text: 'View',
                                     name: 'viewManuscript',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/manuscript/"+manuscript_id+"/view";
                                     },
                                     init: function ( dt, node, config ) {
@@ -442,7 +384,6 @@
                                     text: 'View Files',
                                     name: 'viewManuscriptFiles',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/manuscript/"+manuscript_id+"/viewfiles";
                                     },
                                     init: function ( dt, node, config ) {
@@ -474,7 +415,6 @@
                                     text: 'Launch Notebook',
                                     name: 'launchNotebook',
                                     action: function ( e, dt, node, config ) {
-                                        //console.log(dt.rows( { selected: true } ).data()[0][0])
                                         window.location.href = "/manuscript/"+manuscript_id+"/binder";
                                     },
                                     enabled: true
@@ -492,7 +432,6 @@
                                         text: 'Invite/Add Author',
                                         name: 'inviteassignauthor',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor";
                                         },
                                         enabled: false
@@ -503,7 +442,6 @@
                                         text: 'Add Editor',
                                         name: 'assigneditor',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/manuscript/"+manuscript_id+"/assigneditor";
                                         },
                                         enabled: false
@@ -512,7 +450,6 @@
                                         text: 'Add Curator',
                                         name: 'assigncurator',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])
                                             window.location.href = "/manuscript/"+manuscript_id+"/assigncurator";
                                         },
                                         enabled: false
@@ -521,7 +458,6 @@
                                         text: 'Add Verifier',
                                         name: 'assignverifier',
                                         action: function ( e, dt, node, config ) {
-                                            //console.log(dt.rows( { selected: true } ).data()[0][0])   
                                             window.location.href = "/manuscript/"+manuscript_id+"/assignverifier";
                                         },
                                         enabled: false
@@ -582,7 +518,6 @@
                     console.log('Table row deselected');
                 } ).row(':last').select();
                 sub_table_callback(table)
-                //table.buttons().container().prependTo("#submission_buttons");
 
                 manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
                 for(var i in manuscript_avail_buttons) {
@@ -596,21 +531,17 @@
     });
 </script>
 <div class="main_holder">
-<h5 class="my-3"> Manuscript Info </h5> {% comment %} here to be placed below the hr we need to show hide {% endcomment %}
+<h5 class="my-3"> Manuscript Info </h5>
     Title: {{manuscript_title}}</br>
     Author: {{manuscript_authors}} </br>
     Editor: {{manuscript_editors}} </br>
     Status: {{manuscript_status}} </br>
-
 </div>
-
-
 
 <div class="main_holder" id="submission_table_holder">
         <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
             <hr>
-            <h5 class="my-3"> Submissions </h5> {% comment %} here to be placed below the hr we need to show hide {% endcomment %}
-            {% comment %} <div id="submission_buttons" class="d-flex justify-content-left mb-1"></div> {% endcomment %}
+            <h5 class="my-3"> Submissions </h5> 
             <thead>
                 {% for field in submission_columns %}
                     <th>{{ field }}</th>

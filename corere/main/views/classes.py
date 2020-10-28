@@ -56,10 +56,8 @@ class GenericCorereObjectView(View):
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
-        elif(isinstance(self.object, m.Submission)):
-            root_object_title = self.object.manuscript.title
         else:
-            root_object_title = self.object.submission.manuscript.title
+            root_object_title = self.object.manuscript.title
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
@@ -72,13 +70,10 @@ class GenericCorereObjectView(View):
     def post(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
-        elif(isinstance(self.object, m.Submission)):
-            root_object_title = self.object.manuscript.title
         else:
-            root_object_title = self.object.submission.manuscript.title
-
-        if(not isinstance(self.object, m.Manuscript) and self.note_formset):
-            formset = self.note_formset(request.POST, instance=self.object)
+            root_object_title = self.object.manuscript.title
+            if(self.note_formset):
+                formset = self.note_formset(request.POST, instance=self.object)
 
         if self.form.is_valid():
             if(not isinstance(self.object, m.Manuscript) and self.note_formset):
@@ -121,18 +116,6 @@ class GitlabFilesMixin(object):
             raise Http404()
         
         return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
-
-# class NotesMixin(object):
-#     def dispatch(self, request, *args, **kwargs): 
-#         # try:
-#         self.model._meta.get_field('notes')
-#         self.notes = []
-#         for note in self.object.notes.all():
-#             if request.user.has_any_perm(c.PERM_NOTE_VIEW_N, note):
-#                 self.notes.append(note)
-#             else:
-#                 logger.debug("user did not have permission for note: " + note.text)
-#         return super(NotesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
