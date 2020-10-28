@@ -56,10 +56,8 @@ class GenericCorereObjectView(View):
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
-        elif(isinstance(self.object, m.Submission)):
-            root_object_title = self.object.manuscript.title
         else:
-            root_object_title = self.object.submission.manuscript.title
+            root_object_title = self.object.manuscript.title
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
@@ -72,13 +70,10 @@ class GenericCorereObjectView(View):
     def post(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
-        elif(isinstance(self.object, m.Submission)):
-            root_object_title = self.object.manuscript.title
         else:
-            root_object_title = self.object.submission.manuscript.title
-
-        if(not isinstance(self.object, m.Manuscript) and self.note_formset):
-            formset = self.note_formset(request.POST, instance=self.object)
+            root_object_title = self.object.manuscript.title
+            if(self.note_formset):
+                formset = self.note_formset(request.POST, instance=self.object)
 
         if self.form.is_valid():
             if(not isinstance(self.object, m.Manuscript) and self.note_formset):
@@ -122,18 +117,6 @@ class GitlabFilesMixin(object):
         
         return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
 
-# class NotesMixin(object):
-#     def dispatch(self, request, *args, **kwargs): 
-#         # try:
-#         self.model._meta.get_field('notes')
-#         self.notes = []
-#         for note in self.object.notes.all():
-#             if request.user.has_any_perm(c.PERM_NOTE_VIEW_N, note):
-#                 self.notes.append(note)
-#             else:
-#                 logger.debug("user did not have permission for note: " + note.text)
-#         return super(NotesMixin, self).dispatch(request, *args, **kwargs)
-
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
 #Maybe I'm missing something but for now this is the way its happening
@@ -145,10 +128,13 @@ class GetOrGenerateObjectMixin(object):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been updated!'
-        elif not self.read_only: #kwargs.get(self.parent_id_name) and 
+        elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
+                print("The object create method I didn't want called after create got called")
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
+                if(self.parent_reference_name == "submission"):
+                    setattr(self.object, "manuscript", self.object.submission.manuscript)
             self.message = 'Your new '+self.object_friendly_name +' has been created!'
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
@@ -193,6 +179,11 @@ class GroupRequiredMixin(object):
 class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
+
+    def post(self, request, *args, **kwargs):
+        #self.redirect = "/manuscript/"+str(self.object.id) #id is not set at this point. So for now just returning to root
+        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
+
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
@@ -261,6 +252,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def post(self, request, *args, **kwargs):
         try:
             if not fsm_check_transition_perm(self.object.begin, request.user): 
+                print(str(self.object))
                 logger.error("PermissionDenied")
                 raise Http404()
             try:
@@ -269,13 +261,12 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################# SUBMISSION #############################################
 
@@ -288,6 +279,10 @@ class GenericSubmissionView(GenericCorereObjectView):
     model = m.Submission
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
+
+    def post(self, request, *args, **kwargs):
+        self.redirect = "/manuscript/"+str(self.object.id)
+        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -394,7 +389,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
@@ -413,7 +408,7 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
@@ -432,7 +427,7 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################## EDITION ##############################################
 
@@ -446,7 +441,6 @@ class GenericEditionView(GenericCorereObjectView):
     model = m.Edition
     note_formset = f.NoteEditionFormset
     note_helper = f.NoteFormSetHelper()
-    redirect = '/'
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
@@ -484,7 +478,7 @@ class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericE
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################## CURATION ##############################################
 
@@ -496,7 +490,6 @@ class GenericCurationView(GenericCorereObjectView):
     parent_model = m.Submission
     object_friendly_name = 'curation'
     model = m.Curation
-    redirect = '/'
     note_formset = f.NoteCurationFormset
     note_helper = f.NoteFormSetHelper()
 
@@ -536,7 +529,7 @@ class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 ############################################# VERIFICATION #############################################
 
@@ -548,7 +541,6 @@ class GenericVerificationView(GenericCorereObjectView):
     parent_model = m.Submission
     object_friendly_name = 'verification'
     model = m.Verification
-    redirect = '/'
     note_formset = f.NoteVerificationFormset
     note_helper = f.NoteFormSetHelper()
 
@@ -588,4 +580,4 @@ class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/')
+        return redirect('/manuscript/'+str(self.object.manuscript.id))

@@ -5,6 +5,7 @@ from corere.main.views import datatables, main, users, classes
 urlpatterns = [ 
     path('', main.index, name="index"),
     path('manuscript_table', datatables.ManuscriptJson.as_view(), name="manuscript_table"),
+    path('manuscript/<int:id>', main.manuscript_overview, name="manuscript_overview"),
     path('manuscript/<int:manuscript_id>/submission_table', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
