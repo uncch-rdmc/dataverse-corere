@@ -10,7 +10,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
-    var createSubButton = true; //TODO: This needs to be fixed
+    var createSubButton = {{create_sub_allowed}}; //TODO: This needs to be fixed
     //TODO: what this do?
     var dt_language = {
         "emptyTable":     "{% trans "No data available in table" %}",
@@ -595,8 +595,18 @@
             })
     });
 </script>
+<div class="main_holder">
+<h5 class="my-3"> Manuscript Info </h5> {% comment %} here to be placed below the hr we need to show hide {% endcomment %}
+    Title: {{manuscript_title}}</br>
+    Author: {{manuscript_authors}} </br>
+    Editor: {{manuscript_editors}} </br>
+    Status: {{manuscript_status}} </br>
 
-<div class="table_holder" id="submission_table_holder">
+</div>
+
+
+
+<div class="main_holder" id="submission_table_holder">
         <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
             <hr>
             <h5 class="my-3"> Submissions </h5> {% comment %} here to be placed below the hr we need to show hide {% endcomment %}

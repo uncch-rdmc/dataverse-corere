@@ -181,17 +181,17 @@
                             table.button(avail_buttons[i]+':name').nodes().css("display", "block");
                         }
                     }
-                    document.getElementById("submission_table_holder").style.display = "block"; //show element
+                    //document.getElementById("submission_table_holder").style.display = "block"; //show element
                     
-                    if (typeof dt_submission !== 'undefined') {
-                        console.log(dt_submission.context)
+                    //if (typeof dt_submission !== 'undefined') {
+                    //    console.log(dt_submission.context)
                         
                         //if (dt_submission.context.length) {
-                        console.log("DESTROY")
-                        dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
+                    //    console.log("DESTROY")
+                    //    dt_submission.destroy(); //there may be a better way to update instead of destroy https://datatables.net/manual/tech-notes/3
                         //}
-                    }
-                    createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
+                    //}
+                    //createSubmissionTable("manuscript/"+ manuscript_id +"/submission_table", createSubButton)
                     //console.log('Table row selected: ' + document.getElementById("submission_table").style.display);
                 }
             }
@@ -226,7 +226,7 @@
 </script>
 
 <div>
-    <div class="table_holder" id="manuscript_table_holder">
+    <div class="main_holder" id="manuscript_table_holder">
         <h5 class="my-3"> Manuscripts </h5>
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
             {% comment %} <div id="manuscript_buttons" class="d-flex justify-content-left mb-1"></div> {% endcomment %}

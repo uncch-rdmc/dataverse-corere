@@ -197,6 +197,11 @@ class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
 
+    def post(self, request, *args, **kwargs):
+        #self.redirect = "/manuscript/"+str(self.object.id) #id is not set at this point. So for now just returning to root
+        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
+
+
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
     form = f.ManuscriptForm
@@ -264,6 +269,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def post(self, request, *args, **kwargs):
         try:
             if not fsm_check_transition_perm(self.object.begin, request.user): 
+                print(str(self.object))
                 logger.error("PermissionDenied")
                 raise Http404()
             try:
@@ -272,7 +278,6 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-
             self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
@@ -291,6 +296,10 @@ class GenericSubmissionView(GenericCorereObjectView):
     model = m.Submission
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
+
+    def post(self, request, *args, **kwargs):
+        self.redirect = "/manuscript/"+str(self.object.id)
+        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -449,7 +458,6 @@ class GenericEditionView(GenericCorereObjectView):
     model = m.Edition
     note_formset = f.NoteEditionFormset
     note_helper = f.NoteFormSetHelper()
-    redirect = '/'
 
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
@@ -499,7 +507,6 @@ class GenericCurationView(GenericCorereObjectView):
     parent_model = m.Submission
     object_friendly_name = 'curation'
     model = m.Curation
-    redirect = '/'
     note_formset = f.NoteCurationFormset
     note_helper = f.NoteFormSetHelper()
 
@@ -551,7 +558,6 @@ class GenericVerificationView(GenericCorereObjectView):
     parent_model = m.Submission
     object_friendly_name = 'verification'
     model = m.Verification
-    redirect = '/'
     note_formset = f.NoteVerificationFormset
     note_helper = f.NoteFormSetHelper()
 
