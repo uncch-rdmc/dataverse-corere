@@ -18,10 +18,28 @@
     {% csrf_token %}
     {% crispy form helper %}
 
-    {% comment %}Not sure what these two lines even do {% endcomment %}
-    {{ edition_formset.management_form }}
-    {{ edition_formset.non_form_errors }}
-    {% crispy edition_formset helper %}
+    {% if edition_formset %}
+        Edition:
+        {% comment %}Not sure what these two lines even do {% endcomment %}
+        {{ edition_formset.management_form }}
+        {{ edition_formset.non_form_errors }}
+        {% crispy edition_formset helper %}
+    {% endif %}
+    {% if curation_formset %}
+        Curation:
+        {% comment %}Not sure what these two lines even do {% endcomment %}
+        {{ curation_formset.management_form }}
+        {{ curation_formset.non_form_errors }}
+        {% crispy curation_formset helper %}
+    {% endif %}
+    {% if verification_formset %}
+        Verification:
+        {% comment %}Not sure what these two lines even do {% endcomment %}
+        {{ verification_formset.management_form }}
+        {{ verification_formset.non_form_errors }}
+        {% crispy verification_formset helper %}
+    {% endif %}
+
     {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
         {% include "main/note_list.html" %}    
     {% endif %}

@@ -41,6 +41,8 @@ class GenericCorereObjectView(View):
     page_header = ""
     note_formset = None
     edition_formset = None
+    curation_formset = None
+    verification_formset = None
     note_helper = None
     create = False #Used by default template
 
@@ -53,6 +55,8 @@ class GenericCorereObjectView(View):
 
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
     # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
+
+#TODO: Simplify now that submission does its own get/post
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
@@ -295,9 +299,119 @@ class GenericSubmissionView(GenericCorereObjectView):
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
 
+    def get(self, request, *args, **kwargs):
+        self.add_formsets(request)
+        root_object_title = self.object.manuscript.title
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        
+        if(self.note_formset is not None):
+            context['note_formset'] = self.note_formset(instance=self.object)
+        if(self.edition_formset is not None):
+            context['edition_formset'] = self.edition_formset(instance=self.object)
+        if(self.curation_formset is not None):
+            context['curation_formset'] = self.curation_formset(instance=self.object)
+        if(self.verification_formset is not None):
+            context['verification_formset'] = self.verification_formset(instance=self.object)
+        if(self.note_helper is not None):
+            context['note_helper'] = self.note_helper
+
+        return render(request, self.template, context)
+
     def post(self, request, *args, **kwargs):
+        self.add_formsets(request)
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
-        return super(GenericSubmissionView, self).post(request, *args, **kwargs)
+
+        root_object_title = self.object.manuscript.title
+        if(self.note_formset):
+            note_formset = self.note_formset(request.POST, instance=self.object)
+        if(self.edition_formset):
+            edition_formset = self.edition_formset(request.POST, instance=self.object)
+        if(self.curation_formset):
+            curation_formset = self.curation_formset(request.POST, instance=self.object)
+        if(self.verification_formset):
+            verification_formset = self.verification_formset(request.POST, instance=self.object)
+
+        if self.form.is_valid():
+            if not self.read_only:
+                self.form.save() #Note: this is what saves a newly created model instance
+            if(self.note_formset):
+                if note_formset.is_valid():
+                    note_formset.save()
+            if(self.edition_formset):
+                if edition_formset.is_valid():
+                    edition_formset.save()
+                    messages.add_message(request, messages.SUCCESS, self.message)
+                else:
+                    logger.debug(self.form.errors)
+            if(self.curation_formset):
+                if curation_formset.is_valid():
+                    curation_formset.save()
+                    messages.add_message(request, messages.SUCCESS, self.message)
+                else:
+                    logger.debug(self.form.errors)
+            if(self.verification_formset):
+                print(self.verification_formset.form.__dict__)
+                if verification_formset.is_valid():
+                    verification_formset.save()
+                    messages.add_message(request, messages.SUCCESS, self.message)
+                else:
+                    logger.debug(self.form.errors)
+            return redirect(self.redirect)
+        else:
+            logger.debug(self.form.errors)
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        
+        if(self.note_formset is not None):
+            context['note_formset'] = formset
+        if(self.edition_formset is not None):
+            context['edition_formset'] = self.edition_formset(instance=self.object)
+        if(self.curation_formset is not None):
+            context['curation_formset'] = self.curation_formset(instance=self.object)
+        if(self.verification_formset is not None):
+            context['verification_formset'] = self.verification_formset(instance=self.object)
+    
+        if(self.note_helper is not None):
+            context['note_helper'] = self.note_helper
+
+        return render(request, self.template, context)
+
+    #self.object is always submission
+    def add_formsets(self, request):
+        if(has_transition_perm(self.object.add_edition_noop, request.user)):
+            self.edition_formset = f.EditionSubmissionFormset
+        else:
+            try:
+                if(has_transition_perm(self.object.submission_edition.edit_noop, request.user)):
+                    self.edition_formset = f.EditionSubmissionFormset
+                elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
+                    self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+            except m.Edition.DoesNotExist:
+                pass
+
+        if(has_transition_perm(self.object.add_curation_noop, request.user)):
+            self.curation_formset = f.CurationSubmissionFormset
+        else:
+            try:
+                if(has_transition_perm(self.object.submission_curation.edit_noop, request.user)):
+                    self.curation_formset = f.CurationSubmissionFormset
+                elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
+                    self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+            except m.Curation.DoesNotExist:
+                pass
+
+        if(has_transition_perm(self.object.add_verification_noop, request.user)):
+            self.verification_formset = f.VerificationSubmissionFormset
+        else:
+            try:
+                if(has_transition_perm(self.object.submission_verification.edit_noop, request.user)):
+                    self.verification_formset = f.VerificationSubmissionFormset
+                elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
+                    self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+            except m.Verification.DoesNotExist:
+                pass
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -306,13 +420,13 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     page_header = "Create New Submission"
     create = True
 
-class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
+#Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
+#TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
+class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     form = f.SubmissionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
-    edition_formset = f.EditionSubmissionFormset
     template = 'main/form_object_submission.html'
-
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
     form = f.ReadOnlySubmissionForm

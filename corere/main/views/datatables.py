@@ -170,12 +170,42 @@ class SubmissionJson(CorereBaseDatatableView):
             return ''
         elif column == 'buttons': 
             avail_buttons = []
-            if(has_transition_perm(submission.edit_noop, user)):
+
+#TODO: Here we allow edit submission to be done at multiple phases
+            if(has_transition_perm(submission.edit_noop, user)
+               or has_transition_perm(submission.add_edition_noop, user)
+               or has_transition_perm(submission.add_curation_noop, user)
+               or has_transition_perm(submission.add_verification_noop, user) ):
                 avail_buttons.append('editSubmission')
                 avail_buttons.append('editSubmissionFiles')
-            elif(has_transition_perm(submission.view_noop, user)):
-                avail_buttons.append('viewSubmission')
-                avail_buttons.append('viewSubmissionFiles')
+            else:
+                try:
+                    if(has_transition_perm(submission.submission_edition.edit_noop, user)):
+                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('editSubmissionFiles')
+                except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if(has_transition_perm(submission.submission_curation.edit_noop, user)):
+                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('editSubmissionFiles')
+                except m.Submission.submission_curation.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if(has_transition_perm(submission.submission_verification.edit_noop, user)):
+                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('editSubmissionFiles')
+                except m.Submission.submission_verification.RelatedObjectDoesNotExist:
+                    pass
+
+
+#TODO: Probably delete this after we move everything to submission
+            # elif(has_transition_perm(submission.view_noop, user)):
+            #     avail_buttons.append('viewSubmission')
+            #     avail_buttons.append('viewSubmissionFiles')
+
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.generate_report, user)):

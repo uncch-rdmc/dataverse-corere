@@ -101,6 +101,13 @@ class Verification(AbstractCreateUpdateModel):
                 raise FieldError('A verification cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_VERIFICATION)
         except Verification.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
+        try:
+            self.manuscript #to see if not set
+        except Verification.manuscript.RelatedObjectDoesNotExist:
+            self.manuscript = self.submission.manuscript
+
+        # if(not self.manuscript):
+        #     self.manuscript = self.submission.manuscript
         super(Verification, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####
@@ -152,6 +159,10 @@ class Edition(AbstractCreateUpdateModel):
                 raise FieldError('A edition cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_EDITION)
         except Edition.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
+        try:
+            self.manuscript #to see if not set
+        except Edition.manuscript.RelatedObjectDoesNotExist:
+            self.manuscript = self.submission.manuscript
         super(Edition, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####
@@ -208,6 +219,10 @@ class Curation(AbstractCreateUpdateModel):
                 raise FieldError('A curation cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_CURATION)
         except Curation.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
+        try:
+            self.manuscript #to see if not set
+        except Curation.manuscript.RelatedObjectDoesNotExist:
+            self.manuscript = self.submission.manuscript
         super(Curation, self).save(*args, **kwargs)
 
     ##### django-fsm (workflow) related functions #####

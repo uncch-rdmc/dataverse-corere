@@ -439,3 +439,58 @@ class EditUserForm(forms.ModelForm):
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+
+
+EditionSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Edition, 
+    extra=1,
+    form=EditionForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyEditionSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Edition, 
+    extra=1,
+    form=ReadOnlyEditionForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+CurationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=1,
+    form=CurationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyCurationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=1,
+    form=ReadOnlyCurationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+VerificationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=1,
+    form=VerificationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=1,
+    form=ReadOnlyVerificationForm,
+    fields=("_status",),
+    can_delete = False,
+)
