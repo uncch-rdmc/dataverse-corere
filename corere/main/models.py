@@ -149,7 +149,7 @@ class Edition(AbstractCreateUpdateModel):
     def save(self, *args, **kwargs):
         try:
             if(self.submission._status != SUBMISSION_IN_PROGRESS_EDITION):
-                raise FieldError('A curation cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_EDITION)
+                raise FieldError('A edition cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_EDITION)
         except Edition.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
         super(Edition, self).save(*args, **kwargs)

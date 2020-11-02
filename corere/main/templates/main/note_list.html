@@ -2,22 +2,6 @@
 
 {% comment %} This gets added to manuscript but I'm not sure it should be {% endcomment %}
 
-{% comment %} {% load concat %}
-
-{% if not read_only %}
-<a href='createnote'>Add note</a>
-{% endif %}
-{% for note in notes %}
-    <p>{{note.text}} by {{note.creator}} 
-    {% if not read_only  %}
-        {% if user.username == note.creator.username %}
-            (<a href={{ 'editnote/'|concat:note.id}}>Edit</a>) (<a href="javascript:void(0)" onClick="deletenote({{note.id}});">Delete</a>)
-        {% endif %}
-    {% endif %}
-    </p> 
-{% endfor %} {% endcomment %}
-
-{% comment %} {% crispy children_formset helper %} {% endcomment %}
 <h6 class="my-3"> Notes </h6>
 
 {{ note_formset.management_form }}

@@ -40,6 +40,7 @@ class GenericCorereObjectView(View):
     helper = f.GenericFormSetHelper()
     page_header = ""
     note_formset = None
+    edition_formset = None
     note_helper = None
     create = False #Used by default template
 
@@ -63,24 +64,34 @@ class GenericCorereObjectView(View):
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset(instance=self.object)
+
+        if(self.edition_formset is not None):
+            context['edition_formset'] = self.edition_formset(instance=self.object)
+
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        print(self.redirect)
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
         else:
             root_object_title = self.object.manuscript.title
             if(self.note_formset):
-                formset = self.note_formset(request.POST, instance=self.object)
+                note_formset = self.note_formset(request.POST, instance=self.object)
+            if(self.edition_formset):
+                edition_formset = self.edition_formset(request.POST, instance=self.object)
 
         if self.form.is_valid():
             if(not isinstance(self.object, m.Manuscript) and self.note_formset):
-                if formset.is_valid():
+                if note_formset.is_valid():
                     if not self.read_only:
                         self.form.save() #Note: this is what saves a newly created model instance
-                    formset.save() #Note: this is what saves a newly created model instance
+                    note_formset.save() #Note: this is what saves a newly created model instance
+                    if(self.edition_formset):
+                        if edition_formset.is_valid():
+                            edition_formset.save()
                     messages.add_message(request, messages.SUCCESS, self.message)
                     return redirect(self.redirect)
                 else:
@@ -97,6 +108,10 @@ class GenericCorereObjectView(View):
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
         if(self.note_formset is not None):
             context['note_formset'] = formset
+
+        if(self.edition_formset is not None):
+            context['edition_formset'] = self.edition_formset(instance=self.object)
+
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
         return render(request, self.template, context)
@@ -281,8 +296,8 @@ class GenericSubmissionView(GenericCorereObjectView):
     note_helper = f.NoteFormSetHelper()
 
     def post(self, request, *args, **kwargs):
-        self.redirect = "/manuscript/"+str(self.object.id)
-        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
+        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
+        return super(GenericSubmissionView, self).post(request, *args, **kwargs)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm
@@ -295,6 +310,8 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     form = f.SubmissionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
+    edition_formset = f.EditionSubmissionFormset
+    template = 'main/form_object_submission.html'
 
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
@@ -442,6 +459,10 @@ class GenericEditionView(GenericCorereObjectView):
     note_formset = f.NoteEditionFormset
     note_helper = f.NoteFormSetHelper()
 
+    def post(self, request, *args, **kwargs):
+        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
+        return super(GenericEditionView, self).post(request, *args, **kwargs)
+
 class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
     form = f.EditionForm
     transition_method_name = 'add_edition_noop'
@@ -493,6 +514,10 @@ class GenericCurationView(GenericCorereObjectView):
     note_formset = f.NoteCurationFormset
     note_helper = f.NoteFormSetHelper()
 
+    def post(self, request, *args, **kwargs):
+        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
+        return super(GenericCurationView, self).post(request, *args, **kwargs)
+
 class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
     form = f.CurationForm
     transition_method_name = 'add_curation_noop'
@@ -543,6 +568,10 @@ class GenericVerificationView(GenericCorereObjectView):
     model = m.Verification
     note_formset = f.NoteVerificationFormset
     note_helper = f.NoteFormSetHelper()
+
+    def post(self, request, *args, **kwargs):
+        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
+        return super(GenericVerificationView, self).post(request, *args, **kwargs)
 
 class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
     form = f.VerificationForm
