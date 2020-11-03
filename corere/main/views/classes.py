@@ -1,4 +1,4 @@
-import logging, os
+import logging, os, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -351,12 +351,41 @@ class GenericSubmissionView(GenericCorereObjectView):
                 else:
                     logger.debug(self.form.errors)
             if(self.verification_formset):
-                print(self.verification_formset.form.__dict__)
                 if verification_formset.is_valid():
                     verification_formset.save()
                     messages.add_message(request, messages.SUCCESS, self.message)
                 else:
                     logger.debug(self.form.errors)
+
+            print('submit_progress_submission')
+            try:
+                if request.POST.get('submit_progress_submission'):
+                    if not fsm_check_transition_perm(self.object.submit, request.user): 
+                        logger.debug("PermissionDenied")
+                        raise Http404()
+                    self.object.submit(request.user)
+                    self.object.save()
+                elif request.POST.get('submit_progress_edition'):
+                    if not fsm_check_transition_perm(self.object.submit_edition, request.user):
+                        logger.debug("PermissionDenied")
+                        raise Http404()
+                    self.object.submit_edition()
+                    self.object.save()
+                elif request.POST.get('submit_progress_curation'):
+                    if not fsm_check_transition_perm(self.object.review_curation, request.user):
+                        logger.debug("PermissionDenied")
+                        raise Http404()
+                    self.object.review_curation()
+                    self.object.save()
+                elif request.POST.get('submit_progress_verification'):
+                    if not fsm_check_transition_perm(self.object.review_verification, request.user):
+                        logger.debug("PermissionDenied")
+                        raise Http404()
+                    self.object.review_verification()
+                    self.object.save()
+            except TransitionNotAllowed as e:
+                logger.error("TransitionNotAllowed: " + str(e))
+                raise
             return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)
@@ -418,6 +447,7 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_header = "Create New Submission"
+    template = 'main/form_object_submission.html'
     create = True
 
 #Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
@@ -505,6 +535,9 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
     def post(self, request, *args, **kwargs):
+        print("SUBMISSION PROGRESS")
+        print(self.__dict__)
+        print(request.__dict__)
         try:
             if not fsm_check_transition_perm(self.object.submit, request.user): 
                 logger.debug("PermissionDenied")
