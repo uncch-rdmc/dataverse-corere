@@ -200,11 +200,13 @@ class SubmissionJson(CorereBaseDatatableView):
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
 
-
+            if(has_transition_perm(submission.view_noop, user)):
+                if('editSubmission' not in avail_buttons):
+                    avail_buttons.append('viewSubmission')
+                if('editSubmissionFiles' not in avail_buttons):
+                    avail_buttons.append('viewSubmissionFiles')
 #TODO: Probably delete this after we move everything to submission
-            # elif(has_transition_perm(submission.view_noop, user)):
-            #     avail_buttons.append('viewSubmission')
-            #     avail_buttons.append('viewSubmissionFiles')
+
 
             if(has_transition_perm(submission.submit, user)):
                 avail_buttons.append('progressSubmission')
@@ -213,42 +215,42 @@ class SubmissionJson(CorereBaseDatatableView):
             if(has_transition_perm(submission.return_submission, user)):
                 avail_buttons.append('returnSubmission')
 
-            if(has_transition_perm(submission.add_edition_noop, user)):
-                avail_buttons.append('createEdition')
-            try:
-                if(has_transition_perm(submission.submission_edition.edit_noop, user)):
-                    avail_buttons.append('editEdition')
-                elif(has_transition_perm(submission.submission_edition.view_noop, user)):
-                    avail_buttons.append('viewEdition')
-                    #DO. I don't know if submission needs a "process" option or if I need to change multiple checks here or something....
-                if(has_transition_perm(submission.submit_edition, user)): #TODO: same review check for edition and verification. Either make smarter or refactor the model
-                    avail_buttons.append('progressEdition')
-            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
-                pass
+            # if(has_transition_perm(submission.add_edition_noop, user)):
+            #     avail_buttons.append('createEdition')
+            # try:
+            #     if(has_transition_perm(submission.submission_edition.edit_noop, user)):
+            #         avail_buttons.append('editEdition')
+            #     elif(has_transition_perm(submission.submission_edition.view_noop, user)):
+            #         avail_buttons.append('viewEdition')
+            #         #DO. I don't know if submission needs a "process" option or if I need to change multiple checks here or something....
+            #     if(has_transition_perm(submission.submit_edition, user)): #TODO: same review check for edition and verification. Either make smarter or refactor the model
+            #         avail_buttons.append('progressEdition')
+            # except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+            #     pass
 
-            if(has_transition_perm(submission.add_curation_noop, user)):
-                avail_buttons.append('createCuration')
-            try:
-                if(has_transition_perm(submission.submission_curation.edit_noop, user)):
-                    avail_buttons.append('editCuration')
-                elif(has_transition_perm(submission.submission_curation.view_noop, user)):
-                    avail_buttons.append('viewCuration')
-                if(has_transition_perm(submission.review_curation, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
-                    avail_buttons.append('progressCuration')
-            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
-                pass
+            # if(has_transition_perm(submission.add_curation_noop, user)):
+            #     avail_buttons.append('createCuration')
+            # try:
+            #     if(has_transition_perm(submission.submission_curation.edit_noop, user)):
+            #         avail_buttons.append('editCuration')
+            #     elif(has_transition_perm(submission.submission_curation.view_noop, user)):
+            #         avail_buttons.append('viewCuration')
+            #     if(has_transition_perm(submission.review_curation, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+            #         avail_buttons.append('progressCuration')
+            # except m.Submission.submission_curation.RelatedObjectDoesNotExist:
+            #     pass
 
-            if(has_transition_perm(submission.add_verification_noop, user)):
-                avail_buttons.append('createVerification')
-            try:
-                if(has_transition_perm(submission.submission_verification.edit_noop, user)):
-                    avail_buttons.append('editVerification')
-                elif(has_transition_perm(submission.submission_verification.view_noop, user)):
-                    avail_buttons.append('viewVerification')  
-                if(has_transition_perm(submission.review_verification, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
-                    avail_buttons.append('progressVerification')
-            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
-                pass
+            # if(has_transition_perm(submission.add_verification_noop, user)):
+            #     avail_buttons.append('createVerification')
+            # try:
+            #     if(has_transition_perm(submission.submission_verification.edit_noop, user)):
+            #         avail_buttons.append('editVerification')
+            #     elif(has_transition_perm(submission.submission_verification.view_noop, user)):
+            #         avail_buttons.append('viewVerification')  
+            #     if(has_transition_perm(submission.review_verification, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
+            #         avail_buttons.append('progressVerification')
+            # except m.Submission.submission_verification.RelatedObjectDoesNotExist:
+            #     pass
 
             return avail_buttons
         else:

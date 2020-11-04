@@ -285,7 +285,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
+        return redirect('/manuscript/'+str(self.object.id))
 
 ############################################# SUBMISSION #############################################
 
