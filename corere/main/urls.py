@@ -32,26 +32,11 @@ urlpatterns = [
     path('submission/<int:id>/fileslist', classes.SubmissionFilesListView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view', classes.SubmissionReadView.as_view(), name="submission_read"),
     path('submission/<int:id>/viewfiles', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
-    path('submission/<int:submission_id>/createedition', classes.EditionCreateView.as_view(), name="submission_createedition"),
-    path('submission/<int:submission_id>/createcuration', classes.CurationCreateView.as_view(), name="submission_createcuration"),
-    path('submission/<int:submission_id>/createverification', classes.VerificationCreateView.as_view(), name="submission_createverification"),
     path('submission/<int:submission_id>/deletefile', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress', classes.SubmissionProgressView.as_view(), name="submission_progress"),
     path('submission/<int:id>/generatereport', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return', classes.SubmissionReturnView.as_view(), name="submission_return"),
-
-    path('edition/<int:id>/edit', classes.EditionEditView.as_view(), name="edition_edit"),
-    path('edition/<int:id>/view', classes.EditionReadView.as_view(), name="edition_read"),
-    path('edition/<int:id>/progress', classes.EditionProgressView.as_view(), name="edition_progress"),
-
-    path('curation/<int:id>/edit', classes.CurationEditView.as_view(), name="curation_edit"),
-    path('curation/<int:id>/view', classes.CurationReadView.as_view(), name="curation_read"),
-    path('curation/<int:id>/progress', classes.CurationProgressView.as_view(), name="curation_progress"),
-
-    path('verification/<int:id>/edit', classes.VerificationEditView.as_view(), name="verification_edit"),
-    path('verification/<int:id>/view', classes.VerificationReadView.as_view(), name="verification_read"),
-    path('verification/<int:id>/progress', classes.VerificationProgressView.as_view(), name="verification_progress"),
 
     path('logout', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>', users.account_associate_oauth, name="account_associate_oauth"),

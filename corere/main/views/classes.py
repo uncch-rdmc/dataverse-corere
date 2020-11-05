@@ -56,7 +56,7 @@ class GenericCorereObjectView(View):
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
     # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
 
-#TODO: Simplify now that submission does its own get/post
+    #The generic get/post is used by manuscript and submission file views.
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
@@ -66,14 +66,7 @@ class GenericCorereObjectView(View):
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
-        if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset(instance=self.object)
 
-        if(self.edition_formset is not None):
-            context['edition_formset'] = self.edition_formset(instance=self.object)
-
-        if(self.note_helper is not None):
-            context['note_helper'] = self.note_helper
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
@@ -82,42 +75,18 @@ class GenericCorereObjectView(View):
             root_object_title = self.object.title
         else:
             root_object_title = self.object.manuscript.title
-            if(self.note_formset):
-                note_formset = self.note_formset(request.POST, instance=self.object)
-            if(self.edition_formset):
-                edition_formset = self.edition_formset(request.POST, instance=self.object)
 
         if self.form.is_valid():
-            if(not isinstance(self.object, m.Manuscript) and self.note_formset):
-                if note_formset.is_valid():
-                    if not self.read_only:
-                        self.form.save() #Note: this is what saves a newly created model instance
-                    note_formset.save() #Note: this is what saves a newly created model instance
-                    if(self.edition_formset):
-                        if edition_formset.is_valid():
-                            edition_formset.save()
-                    messages.add_message(request, messages.SUCCESS, self.message)
-                    return redirect(self.redirect)
-                else:
-                    logger.debug(self.form.errors)
-            else: #this is a bit unweildy
-                if not self.read_only:
-                    self.form.save() #Note: this is what saves a newly created model instance
-                messages.add_message(request, messages.SUCCESS, self.message)
-                return redirect(self.redirect)
+            if not self.read_only:
+                self.form.save() #Note: this is what saves a newly created model instance
+            messages.add_message(request, messages.SUCCESS, self.message)
+            return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
-        if(self.note_formset is not None):
-            context['note_formset'] = formset
 
-        if(self.edition_formset is not None):
-            context['edition_formset'] = self.edition_formset(instance=self.object)
-
-        if(self.note_helper is not None):
-            context['note_helper'] = self.note_helper
         return render(request, self.template, context)
     
 #TODO: this needs to be dynamically getting its repo based upon manuscript/submissions
@@ -463,6 +432,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     transition_method_name = 'view_noop'
     page_header = "View Submission"
     read_only = True #We still allow post because you can still create/edit notes.
+    template = 'main/form_object_submission.html'
 
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed? Especially for read?
@@ -590,170 +560,5 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
-
-############################################## EDITION ##############################################
-
-# Do not call directly
-class GenericEditionView(GenericCorereObjectView):
-    form = f.EditionForm
-    parent_reference_name = 'submission'
-    parent_id_name = "submission_id"
-    parent_model = m.Submission
-    object_friendly_name = 'edition'
-    model = m.Edition
-    note_formset = f.NoteEditionFormset
-    note_helper = f.NoteFormSetHelper()
-
-    def post(self, request, *args, **kwargs):
-        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
-        return super(GenericEditionView, self).post(request, *args, **kwargs)
-
-class EditionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
-    form = f.EditionForm
-    transition_method_name = 'add_edition_noop'
-    transition_on_parent = True
-    page_header = "Create New Edition"
-    create = True
-
-class EditionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
-    form = f.EditionForm
-    transition_method_name = 'edit_noop'
-    page_header = "Edit Edition"
-
-class EditionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericEditionView):
-    form = f.ReadOnlyEditionForm
-    transition_method_name = 'view_noop'
-    page_header = "View Edition"
-    read_only = True #We still allow post because you can still create/edit notes.
-
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class EditionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericEditionView):
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.submission.submit_edition, request.user):
-                logger.debug("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.submission.submit_edition()
-                self.object.submission.save()
-            except TransitionNotAllowed:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
-            messages.add_message(request, messages.SUCCESS, self.message)
-        except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
-
-############################################## CURATION ##############################################
-
-# Do not call directly
-class GenericCurationView(GenericCorereObjectView):
-    form = f.CurationForm
-    parent_reference_name = 'submission'
-    parent_id_name = "submission_id"
-    parent_model = m.Submission
-    object_friendly_name = 'curation'
-    model = m.Curation
-    note_formset = f.NoteCurationFormset
-    note_helper = f.NoteFormSetHelper()
-
-    def post(self, request, *args, **kwargs):
-        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
-        return super(GenericCurationView, self).post(request, *args, **kwargs)
-
-class CurationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
-    form = f.CurationForm
-    transition_method_name = 'add_curation_noop'
-    transition_on_parent = True
-    page_header = "Create Curation"
-    create = True
-
-class CurationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
-    form = f.CurationForm
-    transition_method_name = 'edit_noop'
-    page_header = "Edit Curation"
-
-class CurationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCurationView):
-    form = f.ReadOnlyCurationForm
-    transition_method_name = 'view_noop'
-    page_header = "View Curation"
-    read_only = True #We still allow post because you can still create/edit notes.
-
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class CurationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCurationView):
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.submission.review_curation, request.user):
-                logger.debug("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.submission.review_curation()
-                self.object.submission.save()
-            except TransitionNotAllowed:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
-            messages.add_message(request, messages.SUCCESS, self.message)
-        except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
-
-############################################# VERIFICATION #############################################
-
-# Do not call directly
-class GenericVerificationView(GenericCorereObjectView):
-    form = f.VerificationForm
-    parent_reference_name = 'submission'
-    parent_id_name = "submission_id"
-    parent_model = m.Submission
-    object_friendly_name = 'verification'
-    model = m.Verification
-    note_formset = f.NoteVerificationFormset
-    note_helper = f.NoteFormSetHelper()
-
-    def post(self, request, *args, **kwargs):
-        self.redirect = "/manuscript/"+str(self.object.manuscript.id)
-        return super(GenericVerificationView, self).post(request, *args, **kwargs)
-
-class VerificationCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
-    form = f.VerificationForm
-    transition_method_name = 'add_verification_noop'
-    transition_on_parent = True
-    page_header = "Create Verification"
-    create = True
-
-class VerificationEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin,  GenericVerificationView):
-    form = f.VerificationForm
-    transition_method_name = 'edit_noop'
-    page_header = "Edit Verification"
-
-class VerificationReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericVerificationView):
-    form = f.ReadOnlyVerificationForm
-    transition_method_name = 'view_noop'
-    page_header = "View Verification"
-    read_only = True #We still allow post because you can still create/edit notes.
-    
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class VerificationProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericVerificationView):
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.submission.review_verification, request.user):
-                logger.debug("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.submission.review_verification()
-                self.object.submission.save()
-            except TransitionNotAllowed:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was progressed!'
-            messages.add_message(request, messages.SUCCESS, self.message)
-        except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be progressed, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
