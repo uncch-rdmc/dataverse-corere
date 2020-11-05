@@ -61,9 +61,9 @@
                             text: 'Submission Actions',
                             fade: 0,
                             buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
+                                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR %}  {% endcomment %}
                                     {
-                                        text: 'Edit',
+                                        text: 'Edit/Progress',
                                         name: 'editSubmission',
                                         action: function ( e, dt, node, config ) {
                                             window.location.href = "/submission/"+submission_id+"/edit";
@@ -84,7 +84,7 @@
                                         },
                                         enabled: false
                                     },
-                                {% endif %}
+                                {% comment %} {% endif %} {% endcomment %}
                                 {
                                     text: 'View',
                                     name: 'viewSubmission',
@@ -108,7 +108,7 @@
                                         },
                                     enabled: false
                                 },
-                                {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
+                                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
                                     {
                                         text: 'Hand-off to Editors',
                                         name: 'progressSubmission',
@@ -127,7 +127,7 @@
                                         },
                                         enabled: false
                                     },
-                                {% endif %}
+                                {% endif %} {% endcomment %}
                                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                                     {
                                         text: 'Generate Report',
@@ -171,6 +171,7 @@
                             ]
                         },
 
+                        {% comment %} 
                         {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
@@ -226,7 +227,6 @@
                                 {% endif %}
                             ]
                         },
-
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                             {
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
@@ -338,6 +338,7 @@
                                 {% endif %}
                             ]
                         },
+                                                {% endcomment %}
 
                         //MANUSCRIPT BUTTONS
                         {
@@ -491,6 +492,8 @@
                         dt.button('editSubmissionFiles:name').nodes().css("display", "none");
                         dt.button('viewSubmission:name').enable(false);
                         dt.button('viewSubmission:name').nodes().css("display", "none");
+                        dt.button('viewSubmissionFiles:name').enable(false);
+                        dt.button('viewSubmissionFiles:name').nodes().css("display", "none");
                         dt.button('progressSubmission:name').enable(false);
 
                         dt.button('createEdition:name').enable(false);

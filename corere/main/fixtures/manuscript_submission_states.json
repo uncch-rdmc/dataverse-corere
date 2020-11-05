@@ -8125,6 +8125,7 @@
         "last_editor": null,
         "_status": "major_issues",
         "software": "",
+        "manuscript": 21,
         "submission": 16
     }
 },
@@ -8138,6 +8139,7 @@
         "last_editor": null,
         "_status": "minor_issues",
         "software": "",
+        "manuscript": 22,
         "submission": 17
     }
 },
@@ -8151,6 +8153,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 23,
         "submission": 18
     }
 },
@@ -8164,6 +8167,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 24,
         "submission": 19
     }
 },
@@ -8177,6 +8181,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 25,
         "submission": 20
     }
 },
@@ -8190,6 +8195,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 26,
         "submission": 21
     }
 },
@@ -8203,6 +8209,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 28,
         "submission": 23
     }
 },
@@ -8216,6 +8223,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 29,
         "submission": 24
     }
 },
@@ -8229,6 +8237,7 @@
         "last_editor": null,
         "_status": "success_w_mod",
         "software": "",
+        "manuscript": 34,
         "submission": 27
     }
 },
@@ -8242,6 +8251,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 35,
         "submission": 28
     }
 },
@@ -8255,6 +8265,7 @@
         "last_editor": null,
         "_status": "success",
         "software": "",
+        "manuscript": 36,
         "submission": 29
     }
 },
@@ -8663,6 +8674,7 @@
         "creator": 4,
         "last_editor": 4,
         "_status": "issues",
+        "manuscript": 12,
         "submission": 7
     }
 },
@@ -8675,6 +8687,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "issues",
+        "manuscript": 13,
         "submission": 8
     }
 },
@@ -8687,6 +8700,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 14,
         "submission": 9
     }
 },
@@ -8699,6 +8713,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 15,
         "submission": 10
     }
 },
@@ -8711,6 +8726,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 16,
         "submission": 11
     }
 },
@@ -8723,6 +8739,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 17,
         "submission": 12
     }
 },
@@ -8735,6 +8752,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 18,
         "submission": 13
     }
 },
@@ -8747,6 +8765,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 19,
         "submission": 14
     }
 },
@@ -8759,6 +8778,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 20,
         "submission": 15
     }
 },
@@ -8771,6 +8791,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 21,
         "submission": 16
     }
 },
@@ -8783,6 +8804,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 22,
         "submission": 17
     }
 },
@@ -8795,6 +8817,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 23,
         "submission": 18
     }
 },
@@ -8807,6 +8830,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 24,
         "submission": 19
     }
 },
@@ -8819,6 +8843,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 25,
         "submission": 20
     }
 },
@@ -8831,6 +8856,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 26,
         "submission": 21
     }
 },
@@ -8843,6 +8869,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "issues",
+        "manuscript": 27,
         "submission": 22
     }
 },
@@ -8855,6 +8882,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 28,
         "submission": 23
     }
 },
@@ -8867,6 +8895,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 29,
         "submission": 24
     }
 },
@@ -8879,6 +8908,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 34,
         "submission": 27
     }
 },
@@ -8891,6 +8921,7 @@
         "creator": 4,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 35,
         "submission": 28
     }
 },
@@ -8903,6 +8934,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 36,
         "submission": 29
     }
 },
@@ -9185,6 +9217,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "major_issues",
+        "manuscript": 17,
         "submission": 12
     }
 },
@@ -9197,6 +9230,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "major_issues",
+        "manuscript": 18,
         "submission": 13
     }
 },
@@ -9209,6 +9243,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 19,
         "submission": 14
     }
 },
@@ -9221,6 +9256,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 20,
         "submission": 15
     }
 },
@@ -9233,6 +9269,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 21,
         "submission": 16
     }
 },
@@ -9245,6 +9282,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 22,
         "submission": 17
     }
 },
@@ -9257,6 +9295,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 23,
         "submission": 18
     }
 },
@@ -9269,6 +9308,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 24,
         "submission": 19
     }
 },
@@ -9281,6 +9321,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 25,
         "submission": 20
     }
 },
@@ -9293,6 +9334,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 25,
         "submission": 21
     }
 },
@@ -9305,6 +9347,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 28,
         "submission": 23
     }
 },
@@ -9317,6 +9360,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 29,
         "submission": 24
     }
 },
@@ -9329,6 +9373,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 34,
         "submission": 27
     }
 },
@@ -9341,6 +9386,7 @@
         "creator": 5,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 35,
         "submission": 28
     }
 },
@@ -9353,6 +9399,7 @@
         "creator": 1,
         "last_editor": null,
         "_status": "no_issues",
+        "manuscript": 36,
         "submission": 29
     }
 },
