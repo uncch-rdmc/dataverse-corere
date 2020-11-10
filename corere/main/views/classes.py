@@ -37,6 +37,7 @@ class GenericCorereObjectView(View):
     #      If you don't clear them you get duplicate notes etc
     repo_dict_list = []
     file_delete_url = None
+    #TODO: This is too much. Need a better way to deal with these params. Also some are for manuscript and some are for submission
     helper = f.GenericFormSetHelper()
     page_header = ""
     note_formset = None
@@ -181,7 +182,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             root_object_title = self.object.manuscript.title
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+        context = {'form': self.form, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 'inline_helper': f.GenericInlineFormSetHelper(), 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
 
         if(self.author_formset is not None):
@@ -229,7 +230,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             logger.debug(self.form.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+        context = {'form': self.form, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 'inline_helper': f.GenericInlineFormSetHelper(), 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
 
         if(self.author_formset is not None):

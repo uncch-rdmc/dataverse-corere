@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class AbstractCreateUpdateModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='created at', help_text='Date model was created')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='updated at', help_text='Date model was last updated')
-    creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True, verbose_name='Creator User', help_text='User who created this model')
-    last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True, verbose_name='Last Updating User', help_text='User who last edited this model')
+    creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True, verbose_name='Creator User')
+    last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True, verbose_name='Last Updating User')
 
     def save(self, *args, **kwargs):
         if hasattr(local, 'user'):
@@ -280,6 +280,11 @@ class Submission(AbstractCreateUpdateModel):
     version = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
+    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
+    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
+    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='If yes, are you permitted to share these data with Odum for verification only?')
+    
     class Meta:
         default_permissions = ()
 

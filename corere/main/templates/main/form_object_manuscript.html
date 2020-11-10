@@ -4,36 +4,36 @@
 {% load crispy_forms_tags %}
 
 {% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
-{% comment %} 
 {% load static %}
 <script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
 <script type="text/javascript">
     $(function() {
         $('#generic_object_form tbody tr').formset();
+        console.log($('.formset_row-{{ formset.prefix }}'));
     })
-</script> {% endcomment %}
+</script>
 
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% crispy form helper %}
+    {% crispy form manuscript_helper %}
     {% if author_formset %}
         Authors:
         {{ author_formset.management_form }}
         {{ author_formset.non_form_errors }}
-        {% crispy author_formset helper %}
+        {% crispy author_formset inline_helper %}
     {% endif %}
     {% if data_source_formset %}
         Data Source:
         {{ data_source_formset.management_form }}
         {{ data_source_formset.non_form_errors }}
-        {% crispy data_source_formset helper %}
+        {% crispy data_source_formset inline_helper %}
     {% endif %}
     {% if keyword_formset %}
         Keywords:
         {{ keyword_formset.management_form }}
         {{ keyword_formset.non_form_errors }}
-        {% crispy keyword_formset helper %}
+        {% crispy keyword_formset inline_helper %}
     {% endif %}
 
     {% comment %} {% if not read_only %} {% endcomment %}

@@ -12,7 +12,7 @@ from corere.main import models as m
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, ButtonHolder, Submit
+from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from corere.main.gitlab import helper_get_submission_branch_name
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
@@ -32,6 +32,33 @@ class GenericFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_tag = False
+
+class ManuscriptFormHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+        #self.form_class = 'form-horizontal'
+        # self.label_class = 'col-lg-2'
+        # self.field_class = 'col-lg-8'
+        self.layout = Layout(
+            'title','pub_id','description','subject',
+            Div(
+                Div('qual_analysis',css_class='col-md-6',),
+                Div('qdr_review',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('producer_first_name',css_class='col-md-6',),
+                Div('producer_last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('contact_first_name',css_class='col-md-6',),
+                Div('contact_last_name',css_class='col-md-6',),
+                Div('contact_email',css_class='col-md-6',),
+                css_class='row',
+            )
+        )
 
 class ManuscriptForm(forms.ModelForm):
     class Meta:
@@ -55,7 +82,7 @@ class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
 class SubmissionForm(forms.ModelForm):
     class Meta:
         model = m.Submission
-        fields = []
+        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
 
     def __init__ (self, *args, **kwargs):
         super(SubmissionForm, self).__init__(*args, **kwargs)
@@ -497,6 +524,21 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 )
 
 ####### MANUSCRIPT ######
+
+class GenericInlineFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'#'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        self.form_tag = False
+        # self.layout = Layout(
+
+        #     Field('gitlab_path', th_class="w-50"),
+        #     Field('tag'),
+        #     Field('description'),
+        # )
+        self.render_required_fields = True
 
 class AuthorForm(forms.ModelForm):
     class Meta:
