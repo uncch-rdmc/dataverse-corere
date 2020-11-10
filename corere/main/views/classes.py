@@ -43,6 +43,9 @@ class GenericCorereObjectView(View):
     edition_formset = None
     curation_formset = None
     verification_formset = None
+    author_formset = None
+    data_source_formset = None
+    keyword_formset = None 
     note_helper = None
     create = False #Used by default template
 
@@ -56,7 +59,7 @@ class GenericCorereObjectView(View):
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
     # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
 
-    #The generic get/post is used by manuscript and submission file views.
+    #The generic get/post is used by submission file views.
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
@@ -167,10 +170,76 @@ class GroupRequiredMixin(object):
 class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
+    template = 'main/form_object_manuscript.html'
+
+    def get(self, request, *args, **kwargs):
+        self.author_formset = f.AuthorManuscriptFormset
+        self.data_source_formset = f.DataSourceManuscriptFormset
+        self.keyword_formset = f.KeywordManuscriptFormset
+        if(isinstance(self.object, m.Manuscript)):
+            root_object_title = self.object.title
+        else:
+            root_object_title = self.object.manuscript.title
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+
+        if(self.author_formset is not None):
+            context['author_formset'] = self.author_formset(instance=self.object)
+        if(self.data_source_formset is not None):
+            context['data_source_formset'] = self.data_source_formset(instance=self.object)
+        if(self.keyword_formset is not None):
+            context['keyword_formset'] = self.keyword_formset(instance=self.object)
+
+        return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        #self.redirect = "/manuscript/"+str(self.object.id) #id is not set at this point. So for now just returning to root
-        return super(GenericManuscriptView, self).post(request, *args, **kwargs)
+        print(self.redirect)
+        self.author_formset = f.AuthorManuscriptFormset
+        self.data_source_formset = f.DataSourceManuscriptFormset
+        self.keyword_formset = f.KeywordManuscriptFormset
+        if(isinstance(self.object, m.Manuscript)):
+            root_object_title = self.object.title
+        else:
+            root_object_title = self.object.manuscript.title
+
+#TODO: IS THIS DOING ANYTHING? CAN IT BE BETTER?
+        if(self.author_formset):
+            author_formset = self.author_formset(request.POST, instance=self.object)
+        if(self.data_source_formset):
+            data_source_formset = self.data_source_formset(request.POST, instance=self.object)
+        if(self.keyword_formset):
+            keyword_formset = self.keyword_formset(request.POST, instance=self.object)
+
+        if self.form.is_valid():
+            if not self.read_only:
+                self.form.save() #Note: this is what saves a newly created model instance
+                if(self.author_formset):
+                    if author_formset.is_valid():
+                        author_formset.save()
+                if(self.data_source_formset):
+                    if data_source_formset.is_valid():
+                        data_source_formset.save()
+                if(self.keyword_formset):
+                    if keyword_formset.is_valid():
+                        keyword_formset.save()
+            
+            messages.add_message(request, messages.SUCCESS, self.message)
+            return redirect(self.redirect)
+        else:
+            logger.debug(self.form.errors)
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+
+        if(self.author_formset is not None):
+            context['author_formset'] = self.author_formset(instance=self.object)
+        if(self.data_source_formset is not None):
+            context['data_source_formset'] = self.data_source_formset(instance=self.object)
+        if(self.keyword_formset is not None):
+            context['keyword_formset'] = self.keyword_formset(instance=self.object)
+
+        return render(request, self.template, context)
 
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
@@ -292,6 +361,8 @@ class GenericSubmissionView(GenericCorereObjectView):
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
         root_object_title = self.object.manuscript.title
+
+#TODO: IS THIS DOING ANYTHING?
         if(self.note_formset):
             note_formset = self.note_formset(request.POST, instance=self.object)
         if(self.edition_formset):
@@ -304,27 +375,28 @@ class GenericSubmissionView(GenericCorereObjectView):
         if self.form.is_valid():
             if not self.read_only:
                 self.form.save() #Note: this is what saves a newly created model instance
-            if(self.note_formset):
+                if(self.edition_formset):
+                    if edition_formset.is_valid():
+                        edition_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.curation_formset):
+                    if curation_formset.is_valid():
+                        curation_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.verification_formset):
+                    if verification_formset.is_valid():
+                        verification_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+            if(self.note_formset): #these can be saved even if read only (though I'm not sure our implementation will still use that field anyways)
                 if note_formset.is_valid():
                     note_formset.save()
-            if(self.edition_formset):
-                if edition_formset.is_valid():
-                    edition_formset.save()
-                    messages.add_message(request, messages.SUCCESS, self.message)
-                else:
-                    logger.debug(self.form.errors)
-            if(self.curation_formset):
-                if curation_formset.is_valid():
-                    curation_formset.save()
-                    messages.add_message(request, messages.SUCCESS, self.message)
-                else:
-                    logger.debug(self.form.errors)
-            if(self.verification_formset):
-                if verification_formset.is_valid():
-                    verification_formset.save()
-                    messages.add_message(request, messages.SUCCESS, self.message)
-                else:
-                    logger.debug(self.form.errors)
+            
 
             print('submit_progress_submission')
             try:
@@ -376,7 +448,6 @@ class GenericSubmissionView(GenericCorereObjectView):
 
         return render(request, self.template, context)
 
-    #self.object is always submission
     def add_formsets(self, request):
         if(has_transition_perm(self.object.add_edition_noop, request.user)):
             self.edition_formset = f.EditionSubmissionFormset

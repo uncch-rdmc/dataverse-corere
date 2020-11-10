@@ -1,7 +1,8 @@
 import logging, os
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField
-from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
+from django.contrib.postgres.fields import ArrayField
+#from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
@@ -34,9 +35,9 @@ class GenericFormSetHelper(FormHelper):
 
 class ManuscriptForm(forms.ModelForm):
     class Meta:
-        model = Manuscript
-        fields = ['title','doi','open_data']#,'authors']
-
+        model = m.Manuscript
+        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
+            'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
     def __init__ (self, *args, **kwargs):
         super(ManuscriptForm, self).__init__(*args, **kwargs)
 
@@ -47,13 +48,13 @@ class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptForm):
 #We just leverage the existing form infrastructure for perm checks etc
 class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
     class Meta:
-        model = Manuscript
+        model = m.Manuscript
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
 class SubmissionForm(forms.ModelForm):
     class Meta:
-        model = Submission
+        model = m.Submission
         fields = []
 
     def __init__ (self, *args, **kwargs):
@@ -66,7 +67,7 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
 
 class NoteForm(forms.ModelForm):
     class Meta:
-        model = Note
+        model = m.Note
         fields = ['text','scope','creator','note_replied_to']
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
@@ -264,7 +265,7 @@ NoteVerificationFormset = inlineformset_factory(
 
 class GitlabFileForm(forms.ModelForm):
     class Meta:
-        model = GitlabFile
+        model = m.GitlabFile
         fields = ['gitlab_path']
 
     def __init__ (self, *args, **kwargs):
@@ -277,7 +278,7 @@ class GitlabFileForm(forms.ModelForm):
 
 class GitlabReadOnlyFileForm(forms.ModelForm):
     class Meta:
-        model = GitlabFile
+        model = m.GitlabFile
         fields = ['gitlab_path']
 
     def __init__ (self, *args, **kwargs):
@@ -315,8 +316,8 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
         }
 
 GitlabFileNoteFormSet = inlineformset_factory(
-    Submission,
-    GitlabFile,
+    m.Submission,
+    m.GitlabFile,
     form=GitlabFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
@@ -328,8 +329,8 @@ GitlabFileNoteFormSet = inlineformset_factory(
 )
 
 GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
-    Submission,
-    GitlabFile,
+    m.Submission,
+    m.GitlabFile,
     form=GitlabReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
@@ -371,13 +372,13 @@ class NoteFormSetHelper(FormHelper):
 #We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
     class Meta:
-        model = Submission
+        model = m.Submission
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
 class EditionForm(forms.ModelForm):
     class Meta:
-        model = Edition
+        model = m.Edition
         fields = ['_status']
 
     def __init__ (self, *args, **kwargs):
@@ -388,7 +389,7 @@ class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionForm):
 
 class CurationForm(forms.ModelForm):
     class Meta:
-        model = Curation
+        model = m.Curation
         fields = ['_status']
 
     def __init__ (self, *args, **kwargs):
@@ -399,7 +400,7 @@ class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
 
 class VerificationForm(forms.ModelForm):
     class Meta:
-        model = Verification
+        model = m.Verification
         fields = ['_status']
 
     def __init__ (self, *args, **kwargs):
@@ -420,20 +421,20 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 class AuthorInviteAddForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
 class EditorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
 
 class CuratorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
 
 class VerifierAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
 
 class EditUserForm(forms.ModelForm):
     class Meta:
-        model = User
+        model = m.User
         fields = ['username', 'email', 'first_name', 'last_name']
 
 #Note: not used on Authors, as we always want them assigned when created
@@ -493,4 +494,57 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
     form=ReadOnlyVerificationForm,
     fields=("_status",),
     can_delete = False,
+)
+
+####### MANUSCRIPT ######
+
+class AuthorForm(forms.ModelForm):
+    class Meta:
+        model = m.Author
+        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
+
+    def __init__ (self, *args, **kwargs):
+        super(AuthorForm, self).__init__(*args, **kwargs)
+
+AuthorManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.Author,  
+    extra=1,
+    form=AuthorForm,
+    fields=("first_name","last_name","identifier_scheme", "identifier", "position"),
+    can_delete = True,
+)
+
+class DataSourceForm(forms.ModelForm):
+    class Meta:
+        model = m.DataSource
+        fields = ["text"]
+
+    def __init__ (self, *args, **kwargs):
+        super(DataSourceForm, self).__init__(*args, **kwargs)
+
+DataSourceManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.DataSource,  
+    extra=1,
+    form=DataSourceForm,
+    fields=("text",),
+    can_delete = True,
+)
+
+class KeywordForm(forms.ModelForm):
+    class Meta:
+        model = m.Keyword
+        fields = ["text"]
+
+    def __init__ (self, *args, **kwargs):
+        super(KeywordForm, self).__init__(*args, **kwargs)
+
+KeywordManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.Keyword,  
+    extra=1,
+    form=KeywordForm,
+    fields=("text",),
+    can_delete = True,
 )

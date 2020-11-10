@@ -86,7 +86,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = ['id','pub_id','title','doi','open_data','_status','created_at','updated_at']
+    columns = ['id','pub_id','title','_status','created_at','updated_at']
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
@@ -271,6 +271,6 @@ class SubmissionJson(CorereBaseDatatableView):
         # use parameters passed in GET request to filter (search) queryset
         search = self.request.GET.get('search[value]', None)
         if search:
-            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
+            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search))
         return qs
 

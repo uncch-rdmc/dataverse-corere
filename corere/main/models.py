@@ -20,15 +20,16 @@ from corere.main import constants as c
 from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo, gitlab_create_submission_branch, helper_get_submission_branch_name
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
+from django.contrib.postgres.fields import ArrayField
 
 logger = logging.getLogger(__name__)  
 ####################################################
 
 class AbstractCreateUpdateModel(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True)
-    last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='created at', help_text='Date model was created')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='updated at', help_text='Date model was last updated')
+    creator = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="creator_%(class)ss", blank=True, null=True, verbose_name='Creator User', help_text='User who created this model')
+    last_editor = models.ForeignKey('User', on_delete=models.SET_NULL, related_name="last_editor_%(class)ss", blank=True, null=True, verbose_name='Last Updating User', help_text='User who last edited this model')
 
     def save(self, *args, **kwargs):
         if hasattr(local, 'user'):
@@ -86,8 +87,7 @@ VERIFICATION_RESULT_CHOICES = (
 )
 
 class Verification(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW)
-    software = models.TextField()
+    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='verification status', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
@@ -145,7 +145,7 @@ EDITION_RESULT_CHOICES = (
 )
 
 class Edition(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW)
+    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW, verbose_name='editor approval', help_text='Was the submission approved by the editor')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -205,7 +205,7 @@ CURATION_RESULT_CHOICES = (
 )
 
 class Curation(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW)
+    _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW, verbose_name='curation', help_text='Was the submission approved by the curator')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -275,9 +275,9 @@ SUBMISSION_RESULT_CHOICES = (
 #May also be needed for curation/verification, otherwise you may end up with one that is an orphan.
 class Submission(AbstractCreateUpdateModel):
     #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
-    _status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW)
+    _status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
-    version = models.IntegerField()
+    version = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     class Meta:
@@ -503,6 +503,43 @@ class Submission(AbstractCreateUpdateModel):
 
 ####################################################
 
+#ORCID, ISNI, LCNA, VIAF, GND, DAI, ResearcherID, ScopusID
+ID_SCHEME_ORCID = 'ORCID' 
+ID_SCHEME_ISNI = 'ISNI'
+ID_SCHEME_LCNA = 'LCNA'
+ID_SCHEME_VIAF = 'VIAF'
+ID_SCHEME_GND = 'GND'
+ID_SCHEME_DAI = 'DAI'
+ID_SCHEME_REID = 'ResearcherID'
+ID_SCHEME_SCID = 'ScopusID'
+
+AUTHOR_IDENTIFIER_SCHEME = (
+    (ID_SCHEME_ORCID, 'ORCID'), 
+    (ID_SCHEME_ISNI, 'ISNI'),
+    (ID_SCHEME_LCNA, 'LCNA'),
+    (ID_SCHEME_VIAF, 'VIAF'),
+    (ID_SCHEME_GND, 'GND'),
+    (ID_SCHEME_DAI, 'DAI'),
+    (ID_SCHEME_REID, 'ResearcherID'),
+    (ID_SCHEME_SCID, 'ScopusID')
+)
+
+class Author(models.Model):
+    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='first name')
+    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='last name')
+    identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=AUTHOR_IDENTIFIER_SCHEME, verbose_name='identifier scheme') 
+    identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='identifier')
+    position = models.IntegerField(verbose_name='position', help_text='Position/order of the author in the list of authors')
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
+
+class DataSource(models.Model):
+    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='data source')
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_data_sources")
+
+class Keyword(models.Model):
+    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='keyword')
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_keywords")
+
 #model states
 MANUSCRIPT_NEW = 'new' 
 MANUSCRIPT_AWAITING_INITIAL = 'awaiting_init'
@@ -520,18 +557,56 @@ MANUSCRIPT_STATUS_CHOICES = (
     (MANUSCRIPT_COMPLETED, 'Completed'),
 )
 
+SUBJECT_AGRICULTURAL = 'agricultural'
+SUBJECT_ARTS_AND_HUMANITIES = 'arts'
+SUBJECT_ASTRONOMY_ASTROPHYSICS = 'astronomy'
+SUBJECT_BUSINESS_MANAGEMENT = 'business'
+SUBJECT_CHEMISTRY = 'chemistry'
+SUBJECT_COMPUTER_INFORMATION = 'computer'
+SUBJECT_ENVIRONMENTAL = 'environmental'
+SUBJECT_ENGINEERING = 'engineering'
+SUBJECT_LAW = 'law'
+SUBJECT_MATHEMATICS = 'mathematics'
+SUBJECT_HEALTH = 'health'
+SUBJECT_PHYSICS = 'physics'
+SUBJECT_SOCIAL = 'social'
+SUBJECT_OTHER = 'other'
+
+MANUSCRIPT_SUBJECT_CHOICES = (
+    (SUBJECT_AGRICULTURAL, 'Agricultural Sciences'),
+    (SUBJECT_ARTS_AND_HUMANITIES, 'Arts and Humanities'),
+    (SUBJECT_ASTRONOMY_ASTROPHYSICS, 'Astronomy and Astrophysics'),
+    (SUBJECT_BUSINESS_MANAGEMENT, 'Business and Management'),
+    (SUBJECT_CHEMISTRY, 'Chemistry'),
+    (SUBJECT_COMPUTER_INFORMATION, 'Computer and Information Science'),
+    (SUBJECT_ENVIRONMENTAL, 'Earth and Environmental Sciences'),
+    (SUBJECT_ENGINEERING, 'Engineering'),
+    (SUBJECT_LAW, 'Law'),
+    (SUBJECT_MATHEMATICS, 'Mathematical Sciences'),
+    (SUBJECT_HEALTH, 'Medicine, Health and Life Sciences'),
+    (SUBJECT_PHYSICS, 'Physics'),
+    (SUBJECT_SOCIAL, 'Social Sciences'),
+    (SUBJECT_OTHER, 'Other')
+)
+
 class Manuscript(AbstractCreateUpdateModel):
-    uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
-    pub_id = models.CharField(max_length=200, default="", db_index=True)
-    title = models.TextField(max_length=200, blank=False, null=False, default="")
-    doi = models.CharField(max_length=200, default="", db_index=True)
-    open_data = models.BooleanField(default=False)
-    environment_info = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
+    title = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
+    pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
+    qual_analysis = models.BooleanField(default=False, verbose_name='qualitative analysis', help_text='Whether this manuscript needs qualitative analysis')
+    qdr_review = models.CharField(max_length=1024, blank=False, null=False, default="", verbose_name='QDR Review Info', help_text='Details about the review performed by QDR')
+    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='contact first name', help_text='First name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='contact last name', help_text='Last name of the publication contact that will be stored in Dataverse')
+    contact_email = models.EmailField(blank=True, verbose_name='contact email address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    description = models.CharField(max_length=1024, blank=False, null=False, default="", verbose_name='description', help_text='Additional info about the manuscript')
+    subject = models.CharField(max_length=14, blank=False, null=False,  choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='subject') 
+    producer_first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='producer first name')
+    producer_last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='producer last name')
+    _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW, verbose_name='manuscript status', help_text='The overall status of the manuscript in the review process')
     gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
     gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
     gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
     gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
-    _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW)
+    uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     def __str__(self):
@@ -697,12 +772,12 @@ FILE_TAG_CHOICES = (
 
 class GitlabFile(AbstractCreateUpdateModel):
     gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
-    gitlab_sha256 = models.CharField(max_length=64) #, default="", )
-    gitlab_path = models.TextField(max_length=4096, blank=True, null=True)
-    gitlab_date = models.DateTimeField()
-    gitlab_size = models.IntegerField()
-    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES) 
-    description = models.TextField(max_length=1024, default="")
+    gitlab_sha256 = models.CharField(max_length=64, verbose_name='SHA-256', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
+    gitlab_path = models.CharField(max_length=4096, blank=True, null=True, verbose_name='file path', help_text='The path to the file')
+    gitlab_date = models.DateTimeField(verbose_name='file creation date')
+    gitlab_size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
+    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, verbose_name='file type') 
+    description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
@@ -733,7 +808,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="", blank=True)
+    text = models.TextField(default="", blank=True, verbose_name='note text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 

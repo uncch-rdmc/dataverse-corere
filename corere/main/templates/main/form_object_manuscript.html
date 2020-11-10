@@ -1,0 +1,84 @@
+{% extends "main/layout.html" %}
+{% block content %}
+{% load concat %}
+{% load crispy_forms_tags %}
+
+{% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
+{% comment %} 
+{% load static %}
+<script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
+<script type="text/javascript">
+    $(function() {
+        $('#generic_object_form tbody tr').formset();
+    })
+</script> {% endcomment %}
+
+<h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% crispy form helper %}
+    {% if author_formset %}
+        Authors:
+        {{ author_formset.management_form }}
+        {{ author_formset.non_form_errors }}
+        {% crispy author_formset helper %}
+    {% endif %}
+    {% if data_source_formset %}
+        Data Source:
+        {{ data_source_formset.management_form }}
+        {{ data_source_formset.non_form_errors }}
+        {% crispy data_source_formset helper %}
+    {% endif %}
+    {% if keyword_formset %}
+        Keywords:
+        {{ keyword_formset.management_form }}
+        {{ keyword_formset.non_form_errors }}
+        {% crispy keyword_formset helper %}
+    {% endif %}
+
+    {% comment %} {% if not read_only %} {% endcomment %}
+    <input type="submit" name="submit" value="Save">
+    {% comment %} {% endif %} {% endcomment %}
+    {% block extrabuttons %}
+    {% endblock %}
+    <input type=button value="Back" onClick="javascript:history.go(-1);">
+</form>
+{% if obj_type != 'manuscript' %}
+<script>
+    {% comment %} 
+    Goes through each note and checks if the author is our user. If not, disables the delete checkbox
+    We do this before the other script to remove the delete option from new notes.
+    {% endcomment %}
+    for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
+        if(elem.tagName == 'TR') {
+            if(elem.firstElementChild.tagName == 'TD'){
+                creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
+
+                if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
+                    for(let celem of elem.childNodes) {
+                        if(celem.tagName == 'TD') {
+                            if(celem.id.endsWith('DELETE')) {
+                                celem.firstElementChild.firstElementChild.style.display = 'none'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {% comment %}
+    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
+    This was required to set the field to be the username. 
+    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
+    That being said, this is pretty brittle as well.
+    {% endcomment %}
+
+    var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
+    lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
+
+    
+</script>
+{% endif %}
+
+{% endblock content %}
