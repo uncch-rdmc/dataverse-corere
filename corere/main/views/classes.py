@@ -48,6 +48,11 @@ class GenericCorereObjectView(View):
     data_source_formset = None
     keyword_formset = None 
     note_helper = None
+    v_metadata_formset = None
+    v_metadata_package_formset = None
+    v_metadata_software_formset = None
+    v_metadata_badge_formset = None
+    v_metadata_audit_formset = None
     create = False #Used by default template
 
     def dispatch(self, request, *args, **kwargs): 
@@ -182,15 +187,16 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             root_object_title = self.object.manuscript.title
 
-        context = {'form': self.form, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 'inline_helper': f.GenericInlineFormSetHelper(), 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
+            'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         if(self.author_formset is not None):
-            context['author_formset'] = self.author_formset(instance=self.object)
+            context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
         if(self.data_source_formset is not None):
-            context['data_source_formset'] = self.data_source_formset(instance=self.object)
+            context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
         if(self.keyword_formset is not None):
-            context['keyword_formset'] = self.keyword_formset(instance=self.object)
+            context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
 
         return render(request, self.template, context)
 
@@ -206,11 +212,11 @@ class GenericManuscriptView(GenericCorereObjectView):
 
 #TODO: IS THIS DOING ANYTHING? CAN IT BE BETTER?
         if(self.author_formset):
-            author_formset = self.author_formset(request.POST, instance=self.object)
+            author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
         if(self.data_source_formset):
-            data_source_formset = self.data_source_formset(request.POST, instance=self.object)
+            data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
         if(self.keyword_formset):
-            keyword_formset = self.keyword_formset(request.POST, instance=self.object)
+            keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
 
         if self.form.is_valid():
             if not self.read_only:
@@ -230,15 +236,16 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             logger.debug(self.form.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 'inline_helper': f.GenericInlineFormSetHelper(), 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
+            'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         if(self.author_formset is not None):
-            context['author_formset'] = self.author_formset(instance=self.object)
+            context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
         if(self.data_source_formset is not None):
-            context['data_source_formset'] = self.data_source_formset(instance=self.object)
+            context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
         if(self.keyword_formset is not None):
-            context['keyword_formset'] = self.keyword_formset(instance=self.object)
+            context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
 
         return render(request, self.template, context)
 
@@ -341,17 +348,29 @@ class GenericSubmissionView(GenericCorereObjectView):
     def get(self, request, *args, **kwargs):
         self.add_formsets(request)
         root_object_title = self.object.manuscript.title
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title,
+            'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset(instance=self.object)
+            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset") #TODO: This was set to `= formset`, maybe can delete that variable now?
         if(self.edition_formset is not None):
-            context['edition_formset'] = self.edition_formset(instance=self.object)
+            context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):
-            context['curation_formset'] = self.curation_formset(instance=self.object)
+            context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
         if(self.verification_formset is not None):
-            context['verification_formset'] = self.verification_formset(instance=self.object)
+            context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
+        if(self.v_metadata_formset is not None):
+            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+        if(self.v_metadata_package_formset is not None):
+            context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object, prefix="v_metadata_package_formset")
+        if(self.v_metadata_software_formset is not None):
+            context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object, prefix="v_metadata_software_formset")
+        if(self.v_metadata_badge_formset is not None):
+            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object, prefix="v_metadata_badge_formset")
+        if(self.v_metadata_audit_formset is not None):
+            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object, prefix="v_metadata_audit_formset")
+
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
 
@@ -365,13 +384,24 @@ class GenericSubmissionView(GenericCorereObjectView):
 
 #TODO: IS THIS DOING ANYTHING?
         if(self.note_formset):
-            note_formset = self.note_formset(request.POST, instance=self.object)
+            note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset")
         if(self.edition_formset):
-            edition_formset = self.edition_formset(request.POST, instance=self.object)
+            edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if(self.curation_formset):
-            curation_formset = self.curation_formset(request.POST, instance=self.object)
+            curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.verification_formset):
-            verification_formset = self.verification_formset(request.POST, instance=self.object)
+            verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
+
+        if(self.v_metadata_formset):
+            v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+        if(self.v_metadata_package_formset):
+            v_metadata_package_formset = self.v_metadata_package_formset(request.POST, instance=self.object, prefix="v_metadata_package_formset")
+        if(self.v_metadata_software_formset):
+            v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object, prefix="v_metadata_software_formset")
+        if(self.v_metadata_badge_formset):
+            v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object, prefix="v_metadata_badge_formset")
+        if(self.v_metadata_audit_formset):
+            v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object, prefix="v_metadata_audit_formset")
 
         if self.form.is_valid():
             if not self.read_only:
@@ -394,11 +424,41 @@ class GenericSubmissionView(GenericCorereObjectView):
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
                         logger.debug(self.form.errors)
+                if(self.v_metadata_formset):
+                    if v_metadata_formset.is_valid():
+                        v_metadata_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.v_metadata_package_formset):
+                    if v_metadata_package_formset.is_valid():
+                        v_metadata_package_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.v_metadata_software_formset):
+                    if v_metadata_software_formset.is_valid():
+                        v_metadata_software_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.v_metadata_badge_formset):
+                    if v_metadata_badge_formset.is_valid():
+                        v_metadata_badge_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+                if(self.v_metadata_audit_formset):
+                    if v_metadata_audit_formset.is_valid():
+                        v_metadata_audit_formset.save()
+                        messages.add_message(request, messages.SUCCESS, self.message)
+                    else:
+                        logger.debug(self.form.errors)
+
             if(self.note_formset): #these can be saved even if read only (though I'm not sure our implementation will still use that field anyways)
                 if note_formset.is_valid():
                     note_formset.save()
             
-
             print('submit_progress_submission')
             try:
                 if request.POST.get('submit_progress_submission'):
@@ -432,18 +492,29 @@ class GenericSubmissionView(GenericCorereObjectView):
         else:
             logger.debug(self.form.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
+            'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title,
+            'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
-            context['note_formset'] = formset
+            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset") #TODO: This was set to `= formset`, maybe can delete that variable now?
         if(self.edition_formset is not None):
-            context['edition_formset'] = self.edition_formset(instance=self.object)
+            context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):
-            context['curation_formset'] = self.curation_formset(instance=self.object)
+            context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
         if(self.verification_formset is not None):
-            context['verification_formset'] = self.verification_formset(instance=self.object)
-    
+            context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
+        if(self.v_metadata_formset is not None):
+            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+        if(self.v_metadata_package_formset is not None):
+            context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object, prefix="v_metadata_package_formset")
+        if(self.v_metadata_software_formset is not None):
+            context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object, prefix="v_metadata_software_formset")
+        if(self.v_metadata_badge_formset is not None):
+            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object, prefix="v_metadata_badge_formset")
+        if(self.v_metadata_audit_formset is not None):
+            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object, prefix="v_metadata_audit_formset")
+
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
 
@@ -482,6 +553,13 @@ class GenericSubmissionView(GenericCorereObjectView):
                     self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
             except m.Verification.DoesNotExist:
                 pass
+
+        #TODO: Figure out how we should do perms for these
+        self.v_metadata_formset = f.VMetadataSubmissionFormset
+        self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormset
+        self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
+        self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
+        self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
     form = f.SubmissionForm

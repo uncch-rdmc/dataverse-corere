@@ -5,11 +5,24 @@
 
 {% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
 {% load static %}
-<script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
+<script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
-    $(function() {
-        $('#generic_object_form tbody tr').formset();
-        console.log($('.formset_row-{{ formset.prefix }}'));
+    $(function () {
+        $('#author_table tbody tr').formset({
+            prefix: '{{ author_formset.prefix }}',
+            formCssClass: 'author_table',
+            addText: 'add author'
+        });
+        $('#data_source_table tbody tr').formset({
+            prefix: '{{ data_source_formset.prefix }}',
+            formCssClass: 'data_source_table',
+            addText: 'add data source'
+        });
+        $('#keyword_table tbody tr').formset({
+            prefix: '{{ keyword_formset.prefix }}',
+            formCssClass: 'keyword_table',
+            addText: 'add keyword'
+        });
     })
 </script>
 
@@ -19,21 +32,18 @@
     {% crispy form manuscript_helper %}
     {% if author_formset %}
         Authors:
-        {{ author_formset.management_form }}
         {{ author_formset.non_form_errors }}
-        {% crispy author_formset inline_helper %}
+        {% crispy author_formset author_inline_helper %}
     {% endif %}
     {% if data_source_formset %}
         Data Source:
-        {{ data_source_formset.management_form }}
         {{ data_source_formset.non_form_errors }}
-        {% crispy data_source_formset inline_helper %}
+        {% crispy data_source_formset data_source_inline_helper %}
     {% endif %}
     {% if keyword_formset %}
         Keywords:
-        {{ keyword_formset.management_form }}
         {{ keyword_formset.non_form_errors }}
-        {% crispy keyword_formset inline_helper %}
+        {% crispy keyword_formset keyword_inline_helper %}
     {% endif %}
 
     {% comment %} {% if not read_only %} {% endcomment %}

@@ -37,9 +37,7 @@ class ManuscriptFormHelper(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_tag = False
-        #self.form_class = 'form-horizontal'
-        # self.label_class = 'col-lg-2'
-        # self.field_class = 'col-lg-8'
+
         self.layout = Layout(
             'title','pub_id','description','subject',
             Div(
@@ -348,7 +346,7 @@ GitlabFileNoteFormSet = inlineformset_factory(
     form=GitlabFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
-    extra=0,
+    extra=1,
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
@@ -361,7 +359,7 @@ GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
     form=GitlabReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-    extra=0,
+    extra=1,
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
@@ -526,12 +524,14 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 ####### MANUSCRIPT ######
 
 class GenericInlineFormSetHelper(FormHelper):
-     def __init__(self, *args, **kwargs):
+     def __init__(self, form_id="", *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
         self.template = 'bootstrap4/table_inline_formset.html'#'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
+        # if 'form_id' in kwargs:
+        self.form_id = form_id
         # self.layout = Layout(
 
         #     Field('gitlab_path', th_class="w-50"),
@@ -588,5 +588,90 @@ KeywordManuscriptFormset = inlineformset_factory(
     extra=1,
     form=KeywordForm,
     fields=("text",),
+    can_delete = True,
+)
+
+class VMetadataPackageForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataPackage
+        fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
+
+    def __init__ (self, *args, **kwargs):
+        super(VMetadataPackageForm, self).__init__(*args, **kwargs)
+
+VMetadataPackageVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataPackage,  
+    extra=1,
+    form=VMetadataPackageForm,
+    fields=("name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"),
+    can_delete = True,
+)
+
+class VMetadataSoftwareForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataSoftware
+        fields = ["name","version", "code_repo_url"]
+
+    def __init__ (self, *args, **kwargs):
+        super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
+
+VMetadataSoftwareVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataSoftware,  
+    extra=1,
+    form=VMetadataSoftwareForm,
+    fields=("name","version", "code_repo_url"),
+    can_delete = True,
+)
+
+class VMetadataBadgeForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataBadge
+        fields = ["name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+
+    def __init__ (self, *args, **kwargs):
+        super(VMetadataBadgeForm, self).__init__(*args, **kwargs)
+
+VMetadataBadgeVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataBadge,  
+    extra=1,
+    form=VMetadataBadgeForm,
+    fields=("name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"),
+    can_delete = True,
+)
+
+class VMetadataAuditForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataAudit
+        fields = ["name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"]
+
+    def __init__ (self, *args, **kwargs):
+        super(VMetadataAuditForm, self).__init__(*args, **kwargs)
+
+VMetadataAuditVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataAudit,  
+    extra=1,
+    form=VMetadataAuditForm,
+    fields=("name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"),
+    can_delete = True,
+)
+
+class VMetadataForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadata
+        fields = ["operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+
+    def __init__ (self, *args, **kwargs):
+        super(VMetadataForm, self).__init__(*args, **kwargs)
+
+VMetadataSubmissionFormset = inlineformset_factory(
+    m.Submission,
+    m.VerificationMetadata,  
+    extra=1,
+    form=VMetadataForm,
+    fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
     can_delete = True,
 )

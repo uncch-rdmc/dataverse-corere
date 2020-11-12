@@ -868,6 +868,54 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
+#TODO: Package and software seem extremely similar, maybe we don't need both
+class VerificationMetadataPackage(models.Model):
+    name = models.CharField(max_length=200, default="", verbose_name='name')
+    version = models.CharField(max_length=200, default="", verbose_name='version')
+    source_default_repo = models.BooleanField(default=False, verbose_name='default repository')
+    source_cran = models.BooleanField(default=False, verbose_name='CRAN')
+    source_author_website = models.BooleanField(default=False, verbose_name='author website')
+    source_dataverse = models.BooleanField(default=False, verbose_name='dataverse archive')
+    source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='other')
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_packages")
+
+class VerificationMetadataSoftware(models.Model):
+    name = models.CharField(max_length=200, default="", verbose_name='name')
+    version = models.CharField(max_length=200, default="", verbose_name='version')
+    code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='code repository url')
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
+
+class VerificationMetadataBadge(models.Model):
+    name = models.CharField(max_length=200, default="", verbose_name='name')
+    type = models.CharField(max_length=200, default="", verbose_name='type')
+    version = models.CharField(max_length=200, default="", verbose_name='version')
+    definition_url = models.URLField(max_length=200, default="", verbose_name='definition url')
+    logo_url = models.URLField(max_length=200, default="", verbose_name='logo url')
+    issuing_org = models.CharField(max_length=200, default="", verbose_name='issuing organization')
+    issuing_date = models.DateField(verbose_name='issuing date')
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+
+class VerificationMetadataAudit(models.Model):
+    name = models.CharField(max_length=200, default="", verbose_name='name')
+    version = models.CharField(max_length=200, default="", verbose_name='version')
+    url = models.URLField(max_length=200, default="", verbose_name='url')
+    organization = models.CharField(max_length=200, default="", verbose_name='organization')
+    verified_results = models.CharField(max_length=200, default="", verbose_name='verified results')
+    code_executability = models.CharField(max_length=200, default="", verbose_name='code executability')
+    exceptions = models.CharField(max_length=200, default="", verbose_name='exceptions')
+    exception_reason = models.CharField(max_length=200, default="", verbose_name='exception reason')
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+
+class VerificationMetadata(AbstractCreateUpdateModel):
+    operating_system = models.CharField(max_length=200, default="", verbose_name='operating system')
+    machine_type = models.CharField(max_length=200, default="", verbose_name='machine type')
+    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='scheduler module')
+    platform = models.CharField(max_length=200, default="", verbose_name='platform')
+    processor_reqs = models.CharField(max_length=200, default="", verbose_name='processor requirements')
+    host_url = models.URLField(max_length=200, default="", verbose_name='hosting institution url')
+    memory_reqs = models.CharField(max_length=200, default="", verbose_name='memory reqirements')
+    submission = models.ForeignKey('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+
 ############### POST-SAVE ################
 
 # post-save signal to update history with list of fields changed

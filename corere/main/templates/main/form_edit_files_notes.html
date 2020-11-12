@@ -10,7 +10,7 @@
 {% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
 {% comment %} 
 {% load static %}
-<script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
+<script src="{% static 'main/jquery.formset.20201005.coreremod.min.js' %}"></script>
 <script type="text/javascript">
     $(function() {
         $('#file_note_nested_form tbody tr').formset();
@@ -20,7 +20,6 @@
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ children_formset.management_form }}
     {{ children_formset.non_form_errors }}
     {% crispy children_formset helper %}
 
