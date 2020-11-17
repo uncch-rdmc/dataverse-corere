@@ -1,6 +1,8 @@
 {% load crispy_forms_tags %}
 {% load crispy_forms_utils %}
 {% load crispy_forms_field %}
+{% load static %}
+<script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 
 {% specialspaceless %}
 <script>
@@ -81,6 +83,15 @@
                 {% if form.nested %}
                     {{ form.nested.management_form }}
                     {{ form.nested.non_form_errors }}
+                    <script type="text/javascript">
+                        $(function() {
+                            $('#{{ forloop.counter }}_notes_table tbody tr').formset({
+                                //prefix: '{{ v_metadata_package_formset.prefix }}',
+                                formCssClass: '{{ forloop.counter }}_notes_table',
+                                addText: 'add note'
+                            });
+                        })
+                    </script>
                     <tr id="{{ forloop.counter }}_notes_table" style="display:none;">
                         <td colspan=20>
                             <table class="table table-striped table-sm notes-table">

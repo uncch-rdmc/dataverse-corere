@@ -914,7 +914,7 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     processor_reqs = models.CharField(max_length=200, default="", verbose_name='processor requirements')
     host_url = models.URLField(max_length=200, default="", verbose_name='hosting institution url')
     memory_reqs = models.CharField(max_length=200, default="", verbose_name='memory reqirements')
-    submission = models.ForeignKey('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
 
 ############### POST-SAVE ################
 

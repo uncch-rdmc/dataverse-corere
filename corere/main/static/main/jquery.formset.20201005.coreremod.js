@@ -13,6 +13,8 @@
     $.fn.formset = function(opts)
     {
         var options = $.extend({}, $.fn.formset.defaults, opts),
+            clickCount = options.prefix + "clickcount"
+            window[clickCount] = 0
             flatExtraClasses = options.extraClasses.join(' '),
             totalForms = $('#id_' + options.prefix + '-TOTAL_FORMS'),
             maxForms = $('#id_' + options.prefix + '-MAX_NUM_FORMS'),
@@ -167,12 +169,12 @@
             } else {
                 // Otherwise, use the last form in the formset; this works much better if you've got
                 // extra (>= 1) forms (thnaks to justhamade for pointing this out):
-                if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').hide();
-
-                //ODUM CORERE: Also hide the th for the formCssClass
-                console.log($('.' + options.formCssClass).length)
-                if (options.hideLastAddForm && $('.' + options.formCssClass).length < 3 ) $('.' + options.formCssClass + ':last').parent().parent().find('th').hide();
-
+                //CORERE: Only hide header and first ("blank") entry if there are no errors returned from django
+                if($('.' + options.formCssClass + ':last').parent().parent().find('tbody')[0].querySelectorAll(".invalid-feedback").length == 0){
+                    if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').hide();
+                    //ODUM CORERE: Also hide the th for the formCssClass
+                    if (options.hideLastAddForm && $('.' + options.formCssClass).length < 3 ) $('.' + options.formCssClass + ':last').parent().parent().find('th').hide();
+                }
                 template = $('.' + options.formCssClass + ':last').clone(true).removeAttr('id');
                 template.find('input:hidden[id $= "-DELETE"]').remove();
                 // Clear all cloned fields, except those the user wants to keep (thanks to brunogola for the suggestion):
@@ -213,26 +215,33 @@
             if (hideAddButton) addButton.hide();
 
             addButton.click(function() {
-                if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').parent().parent().find('th').show(); //CORERE
-                var formCount = parseInt(totalForms.val()),
-                    row = options.formTemplate.clone(true).removeClass('formset-custom-template'),
-                    buttonRow = $($(this).parents('tr.' + options.formCssClass + '-add').get(0) || this),
-                    delCssSelector = $.trim(options.deleteCssClass).replace(/\s+/g, '.');
-                applyExtraClasses(row, formCount);
-                row.insertBefore(buttonRow).show();
-                row.find(childElementSelector).each(function() {
-                    updateElementIndex($(this), options.prefix, formCount);
-                });
-                totalForms.val(formCount + 1);
-                // Check if we're above the minimum allowed number of forms -> show all delete link(s)
-                // if (showDeleteLinks()){
-                //     $('a.' + delCssSelector).each(function(){$(this).show();});
-                // }
-                // Check if we've exceeded the maximum allowed number of forms:
-                if (!showAddButton()) buttonRow.hide();
-                // If a post-add callback was supplied, call it with the added form:
-                if (options.added) options.added(row);
-                return false;
+                //CORERE: Track number of times the add has been clicked. First time just reveal hidden extra instead
+                window[clickCount]++
+                if(window[clickCount] == 1) {
+                    if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').parent().parent().find('th').show();
+                    if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').parent().parent().find('tr').show();
+                }
+                else {
+                    var formCount = parseInt(totalForms.val()),
+                        row = options.formTemplate.clone(true).removeClass('formset-custom-template'),
+                        buttonRow = $($(this).parents('tr.' + options.formCssClass + '-add').get(0) || this),
+                        delCssSelector = $.trim(options.deleteCssClass).replace(/\s+/g, '.');
+                    applyExtraClasses(row, formCount);
+                    row.insertBefore(buttonRow).show();
+                    row.find(childElementSelector).each(function() {
+                        updateElementIndex($(this), options.prefix, formCount);
+                    });
+                    totalForms.val(formCount + 1);
+                    // Check if we're above the minimum allowed number of forms -> show all delete link(s)
+                    // if (showDeleteLinks()){
+                    //     $('a.' + delCssSelector).each(function(){$(this).show();});
+                    // }
+                    // Check if we've exceeded the maximum allowed number of forms:
+                    if (!showAddButton()) buttonRow.hide();
+                    // If a post-add callback was supplied, call it with the added form:
+                    if (options.added) options.added(row);
+                    return false;
+                }
             });
         }
 

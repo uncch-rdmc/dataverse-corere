@@ -145,7 +145,7 @@ class NoteForm(forms.ModelForm):
         self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
             
-            if(not Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
@@ -346,7 +346,7 @@ GitlabFileNoteFormSet = inlineformset_factory(
     form=GitlabFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
-    extra=1,
+    extra=0,
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),
@@ -359,7 +359,7 @@ GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
     form=GitlabReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-    extra=1,
+    extra=0,
     can_delete=False,
     widgets={
         'gitlab_path': DownloadGitlabWidget(),

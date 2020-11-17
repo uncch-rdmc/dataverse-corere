@@ -179,9 +179,10 @@ class GenericManuscriptView(GenericCorereObjectView):
     template = 'main/form_object_manuscript.html'
 
     def get(self, request, *args, **kwargs):
-        self.author_formset = f.AuthorManuscriptFormset
-        self.data_source_formset = f.DataSourceManuscriptFormset
-        self.keyword_formset = f.KeywordManuscriptFormset
+        self.author_formset = f.AuthorManuscriptFormset(instance=self.object, prefix="author_formset")
+        self.data_source_formset = f.DataSourceManuscriptFormset(instance=self.object, prefix="data_source_formset")
+        self.keyword_formset = f.KeywordManuscriptFormset(instance=self.object, prefix="keyword_formset")
+
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
         else:
@@ -191,61 +192,45 @@ class GenericManuscriptView(GenericCorereObjectView):
             'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
-        if(self.author_formset is not None):
-            context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
-        if(self.data_source_formset is not None):
-            context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
-        if(self.keyword_formset is not None):
-            context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
+        context['author_formset'] = self.author_formset
+        context['data_source_formset'] = self.data_source_formset
+        context['keyword_formset'] = self.keyword_formset
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        print(self.redirect)
-        self.author_formset = f.AuthorManuscriptFormset
-        self.data_source_formset = f.DataSourceManuscriptFormset
-        self.keyword_formset = f.KeywordManuscriptFormset
+        self.author_formset = f.AuthorManuscriptFormset(request.POST, instance=self.object, prefix="author_formset")
+        self.data_source_formset = f.DataSourceManuscriptFormset(request.POST, instance=self.object, prefix="data_source_formset")
+        self.keyword_formset = f.KeywordManuscriptFormset(request.POST, instance=self.object, prefix="keyword_formset")
+
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
         else:
             root_object_title = self.object.manuscript.title
 
-#TODO: IS THIS DOING ANYTHING? CAN IT BE BETTER?
-        if(self.author_formset):
-            author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
-        if(self.data_source_formset):
-            data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
-        if(self.keyword_formset):
-            keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
-
-        if self.form.is_valid():
-            if not self.read_only:
-                self.form.save() #Note: this is what saves a newly created model instance
-                if(self.author_formset):
-                    if author_formset.is_valid():
-                        author_formset.save()
-                if(self.data_source_formset):
-                    if data_source_formset.is_valid():
-                        data_source_formset.save()
-                if(self.keyword_formset):
-                    if keyword_formset.is_valid():
-                        keyword_formset.save()
+        if not self.read_only and self.form.is_valid() and self.author_formset.is_valid() and self.data_source_formset.is_valid() and self.keyword_formset.is_valid():
+            self.form.save()
+            self.author_formset.save()
+            self.data_source_formset.save()
+            self.keyword_formset.save()
             
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
         else:
-            logger.debug(self.form.errors)
+            logger.debug(self.form.errors)      
+            logger.debug(self.author_formset.errors)
+            logger.debug(self.data_source_formset.errors)
+            logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
             'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
-        if(self.author_formset is not None):
-            context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
-        if(self.data_source_formset is not None):
-            context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
-        if(self.keyword_formset is not None):
-            context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
+        ##print(self.author_formset.__dict__)
+
+        context['author_formset'] = self.author_formset
+        context['data_source_formset'] = self.data_source_formset
+        context['keyword_formset'] = self.keyword_formset
 
         return render(request, self.template, context)
 
@@ -362,14 +347,24 @@ class GenericSubmissionView(GenericCorereObjectView):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
         if(self.v_metadata_formset is not None):
             context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
-        if(self.v_metadata_package_formset is not None):
-            context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object, prefix="v_metadata_package_formset")
-        if(self.v_metadata_software_formset is not None):
-            context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object, prefix="v_metadata_software_formset")
-        if(self.v_metadata_badge_formset is not None):
-            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object, prefix="v_metadata_badge_formset")
-        if(self.v_metadata_audit_formset is not None):
-            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object, prefix="v_metadata_audit_formset")
+        try:
+            if(self.v_metadata_package_formset is not None):
+                context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
+            if(self.v_metadata_software_formset is not None):
+                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+            if(self.v_metadata_badge_formset is not None):
+                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+            if(self.v_metadata_audit_formset is not None):
+                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+            if(self.v_metadata_package_formset is not None):
+                context['v_metadata_package_formset'] = self.v_metadata_package_formset(prefix="v_metadata_package_formset")
+            if(self.v_metadata_software_formset is not None):
+                context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
+            if(self.v_metadata_badge_formset is not None):
+                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
+            if(self.v_metadata_audit_formset is not None):
+                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
@@ -391,17 +386,28 @@ class GenericSubmissionView(GenericCorereObjectView):
             curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.verification_formset):
             verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
-
         if(self.v_metadata_formset):
             v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
-        if(self.v_metadata_package_formset):
-            v_metadata_package_formset = self.v_metadata_package_formset(request.POST, instance=self.object, prefix="v_metadata_package_formset")
-        if(self.v_metadata_software_formset):
-            v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object, prefix="v_metadata_software_formset")
-        if(self.v_metadata_badge_formset):
-            v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object, prefix="v_metadata_badge_formset")
-        if(self.v_metadata_audit_formset):
-            v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object, prefix="v_metadata_audit_formset")
+
+        #TODO: not sure if we need to do this ID logic in the post    
+        try:
+            if(self.v_metadata_package_formset is not None):
+                v_metadata_package_formset = self.v_metadata_package_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
+            if(self.v_metadata_software_formset is not None):
+                v_metadata_software_formset = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+            if(self.v_metadata_badge_formset is not None):
+                v_metadata_badge_formset = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+            if(self.v_metadata_audit_formset is not None):
+                v_metadata_audit_formset = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+            if(self.v_metadata_package_formset is not None):
+                v_metadata_package_formset = self.v_metadata_package_formset(prefix="v_metadata_package_formset")
+            if(self.v_metadata_software_formset is not None):
+                v_metadata_software_formset = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
+            if(self.v_metadata_badge_formset is not None):
+                v_metadata_badge_formset = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
+            if(self.v_metadata_audit_formset is not None):
+                v_metadata_audit_formset = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
 
         if self.form.is_valid():
             if not self.read_only:
@@ -411,6 +417,7 @@ class GenericSubmissionView(GenericCorereObjectView):
                         edition_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
+#TODO: Should be logging the correct form errors!
                         logger.debug(self.form.errors)
                 if(self.curation_formset):
                     if curation_formset.is_valid():
