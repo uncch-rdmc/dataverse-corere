@@ -179,10 +179,6 @@ class GenericManuscriptView(GenericCorereObjectView):
     template = 'main/form_object_manuscript.html'
 
     def get(self, request, *args, **kwargs):
-        self.author_formset = f.AuthorManuscriptFormset(instance=self.object, prefix="author_formset")
-        self.data_source_formset = f.DataSourceManuscriptFormset(instance=self.object, prefix="data_source_formset")
-        self.keyword_formset = f.KeywordManuscriptFormset(instance=self.object, prefix="keyword_formset")
-
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
         else:
@@ -192,9 +188,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
-        context['author_formset'] = self.author_formset
-        context['data_source_formset'] = self.data_source_formset
-        context['keyword_formset'] = self.keyword_formset
+        context['author_formset'] = f.AuthorManuscriptFormset(instance=self.object, prefix="author_formset")
+        context['data_source_formset'] = f.DataSourceManuscriptFormset(instance=self.object, prefix="data_source_formset")
+        context['keyword_formset'] = f.KeywordManuscriptFormset(instance=self.object, prefix="keyword_formset")
 
         return render(request, self.template, context)
 
@@ -320,8 +316,8 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
 ############################################# SUBMISSION #############################################
 
-# Do not call directly
-class GenericSubmissionView(GenericCorereObjectView):
+# Do not call directly. Used for the main submission form
+class GenericSubmissionFormView(GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -377,7 +373,6 @@ class GenericSubmissionView(GenericCorereObjectView):
 
         root_object_title = self.object.manuscript.title
 
-#TODO: IS THIS DOING ANYTHING?
         if(self.note_formset):
             note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset")
         if(self.edition_formset):
@@ -418,49 +413,49 @@ class GenericSubmissionView(GenericCorereObjectView):
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
 #TODO: Should be logging the correct form errors!
-                        logger.debug(self.form.errors)
+                        logger.debug(self.edition_formset.errors)
                 if(self.curation_formset):
                     if curation_formset.is_valid():
                         curation_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.curation_formset.errors)
                 if(self.verification_formset):
                     if verification_formset.is_valid():
                         verification_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.verification_formset.errors)
                 if(self.v_metadata_formset):
                     if v_metadata_formset.is_valid():
                         v_metadata_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.v_metadata_formset.errors)
                 if(self.v_metadata_package_formset):
                     if v_metadata_package_formset.is_valid():
                         v_metadata_package_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.v_metadata_package_formset.errors)
                 if(self.v_metadata_software_formset):
                     if v_metadata_software_formset.is_valid():
                         v_metadata_software_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.v_metadata_software_formset.errors)
                 if(self.v_metadata_badge_formset):
                     if v_metadata_badge_formset.is_valid():
                         v_metadata_badge_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.v_metadata_badge_formset.errors)
                 if(self.v_metadata_audit_formset):
                     if v_metadata_audit_formset.is_valid():
                         v_metadata_audit_formset.save()
                         messages.add_message(request, messages.SUCCESS, self.message)
                     else:
-                        logger.debug(self.form.errors)
+                        logger.debug(self.v_metadata_audit_formset.errors)
 
             if(self.note_formset): #these can be saved even if read only (though I'm not sure our implementation will still use that field anyways)
                 if note_formset.is_valid():
@@ -568,7 +563,23 @@ class GenericSubmissionView(GenericCorereObjectView):
         self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
         self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
 
-class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionView):
+        # print("=== Inline Formset Questions ===")
+        # print(self.v_metadata_audit_formset.__dict__)
+        #print(self.v_metadata_audit_formset.form.__dict__)
+        #print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
+        # self.v_metadata_audit_formset.form.base_fields['name'].disabled = True
+        # print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
+        # print("=== Restrictor Tests ===")
+        # print(f.VMetadataSubmissionFormset.form.base_fields['host_url'].__dict__)
+        # print(f.VMetadataSubmissionFormsetRestrictTest.form.base_fields['host_url'].__dict__)
+        
+       
+        #print(f.VMetadataSubmissionFormset.form.__dict__)
+        #print(f.testfactorydict['0'].form.__dict__)
+        # print(f.VMetadataSubmissionFormset.__dict__)
+        # print(f.testfactorydict['1'].__dict__)
+
+class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     form = f.SubmissionForm
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
@@ -578,13 +589,13 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 
 #Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
-class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     form = f.SubmissionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
     template = 'main/form_object_submission.html'
 
-class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
     transition_method_name = 'view_noop'
     page_header = "View Submission"
@@ -594,10 +605,15 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed? Especially for read?
 #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files_notes.html'
     helper=f.GitlabFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
 
     def get(self, request, *args, **kwargs):
         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
@@ -636,11 +652,16 @@ class SubmissionReadFilesView(GenericSubmissionFilesView):
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_header = "Upload Files for Submission"
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
@@ -650,9 +671,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header})
 
 #Used for ajax refreshing in EditFiles
-class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericSubmissionView):
+class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
@@ -660,7 +686,15 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    note_formset = f.NoteSubmissionFormset
+    note_helper = f.NoteFormSetHelper()
+
     def post(self, request, *args, **kwargs):
         print("SUBMISSION PROGRESS")
         print(self.__dict__)
@@ -682,7 +716,13 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+
     def post(self, request, *args, **kwargs):
         try:
             if not fsm_check_transition_perm(self.object.generate_report, request.user): 
@@ -701,7 +741,13 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionView):
+class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+
     def post(self, request, *args, **kwargs):
         try:
             if not fsm_check_transition_perm(self.object.return_submission, request.user): 

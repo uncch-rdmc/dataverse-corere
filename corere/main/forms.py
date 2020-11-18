@@ -1,6 +1,6 @@
-import logging, os
+import logging, os, copy
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
 from django.contrib.postgres.fields import ArrayField
 #from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
 #from invitations.models import Invitation
@@ -548,6 +548,15 @@ class AuthorForm(forms.ModelForm):
     def __init__ (self, *args, **kwargs):
         super(AuthorForm, self).__init__(*args, **kwargs)
 
+class BaseAuthorManuscriptFormset(BaseInlineFormSet):
+    def clean(self):
+        position_list = []
+        for fdata in self.cleaned_data:
+            if('position' in fdata): #skip empty form
+                position_list.append(fdata['position'])
+        if(sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1):
+            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
+
 AuthorManuscriptFormset = inlineformset_factory(
     m.Manuscript,
     m.Author,  
@@ -555,6 +564,7 @@ AuthorManuscriptFormset = inlineformset_factory(
     form=AuthorForm,
     fields=("first_name","last_name","identifier_scheme", "identifier", "position"),
     can_delete = True,
+    formset=BaseAuthorManuscriptFormset
 )
 
 class DataSourceForm(forms.ModelForm):
@@ -675,3 +685,83 @@ VMetadataSubmissionFormset = inlineformset_factory(
     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
     can_delete = True,
 )
+
+#OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
+#The next question becomes whether its really worth it?
+#... well, we can use the "non-dynamic" forms for admin and just generate one for each of the four roles
+#... meh, I think its actually better to just re-define the form for admin with no changes
+#... This also scales ok because it preserves any other configuration done in the base form
+#... ... Well except for the formset_factory which is defined twice currently. Maybe I can use type() to subclass it as well.
+#... ... Doesn't seem to work as expected. I don't understand factory functions
+
+# What is my plan?
+# Define all forms manually, using inheritance
+# Define formsets programatically, using type?
+
+
+
+
+
+##### SEMI WORKING TEST
+
+testfactorydict = {}
+for x in range(5):
+    afield = VMetadataForm.base_fields['operating_system']
+    afield.disabled = True
+    field_defs = {
+        'operating_system': afield
+        }
+    DynamicFormClass = type("DynamicForm"+str(x), (VMetadataForm,), field_defs)
+
+    # formset_defs = {
+    #     'form': DynamicFormClass
+    #     }
+    # testfactorydict[str(x)] = type("DynamicFormset"+str(x), (VMetadataSubmissionFormset,), formset_defs)
+    testfactorydict[str(x)] = inlineformset_factory(
+        m.Submission,
+        m.VerificationMetadata,  
+        extra=1,
+        form=VMetadataForm,
+        fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
+        can_delete = True,
+    )
+
+
+##### NOT WORKING JUNK
+
+#Input: takes your inlineformset_factory, a list of disabled fields, a list of fields to remove
+#Output: a new inlineformset_factory with these fields changed
+# def inlineformset_factory_restrictor(if_factory, disable_fields, remove_fields):
+#     altered_if_factory = copy.deepcopy(if_factory)
+#     altered_if_form = copy.deepcopy(altered_if_factory.form)
+#     #print(altered_if_factory.form.base_fields)
+#     altered_if_factory.form = altered_if_form
+#     #altered_if_factory.form.base_fields['host_url'].disabled = True
+#     return altered_if_factory  
+
+#VMetadataSubmissionFormsetRestrictTest = inlineformset_factory_restrictor(VMetadataSubmissionFormset, [], [])
+
+    #testfactorydict[str(x)] = VMetadataSubmissionFormset
+
+    # testfactorydict[str(x)] = inlineformset_factory(
+    #     m.Submission,
+    #     m.VerificationMetadata,  
+    #     extra=1,
+    #     form=DynamicFormClass,
+    #     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
+    #     can_delete = True,
+    # )
+
+
+# class GitlabFileForm(forms.ModelForm):
+#     class Meta:
+#         model = m.GitlabFile
+#         fields = ['gitlab_path']
+
+#     def __init__ (self, *args, **kwargs):
+#         super(GitlabFileForm, self).__init__(*args, **kwargs)
+#         self.fields['gitlab_path'].widget.object_instance = self.instance
+#         self.fields['gitlab_path'].disabled = True
+#         self.fields['gitlab_sha256'].disabled = True
+#         self.fields['gitlab_size'].disabled = True
+#         self.fields['gitlab_date'].disabled = True
