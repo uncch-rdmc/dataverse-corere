@@ -233,7 +233,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
 #NOTE: LoginRequiredMixin has to be the leftmost. So we have to put it on every "real" view. Yes it sucks.
 class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, PermissionRequiredMixin, GenericManuscriptView):
-    form = f.ManuscriptForm
+    form = f.ManuscriptAuthorForm
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
@@ -241,7 +241,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     create = True
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    form = f.ManuscriptForm
+    form = f.ManuscriptAuthorForm
     template = 'main/manuscript_super_form.html'
     transition_method_name = 'edit_noop'
     page_header = "Edit Manuscript"

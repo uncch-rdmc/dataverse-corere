@@ -18,6 +18,8 @@ from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 logger = logging.getLogger(__name__)
 
+#------------ Base -------------
+
 class ReadOnlyFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(ReadOnlyFormMixin, self).__init__(*args, **kwargs)
@@ -33,49 +35,85 @@ class GenericFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_tag = False
 
-class ManuscriptFormHelper(FormHelper):
-     def __init__(self, *args, **kwargs):
+class GenericInlineFormSetHelper(FormHelper):
+     def __init__(self, form_id="", *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'#'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
         self.form_tag = False
+        # if 'form_id' in kwargs:
+        self.form_id = form_id
+        # self.layout = Layout(
 
-        self.layout = Layout(
-            'title','pub_id','description','subject',
-            Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
-                css_class='row',
-            ),
-            Div(
-                Div('producer_first_name',css_class='col-md-6',),
-                Div('producer_last_name',css_class='col-md-6',),
-                css_class='row',
-            ),
-            Div(
-                Div('contact_first_name',css_class='col-md-6',),
-                Div('contact_last_name',css_class='col-md-6',),
-                Div('contact_email',css_class='col-md-6',),
-                css_class='row',
-            )
-        )
+        #     Field('gitlab_path', th_class="w-50"),
+        #     Field('tag'),
+        #     Field('description'),
+        # )
+        self.render_required_fields = True
 
-class ManuscriptForm(forms.ModelForm):
+#-------------------------
+
+class CustomSelect2UserWidget(forms.SelectMultiple):
+    class Media:
+        js = ('main/select2_table.js',)
+
+    def render(self, name, value, attrs=None, renderer=None):
+        return super().render(name, value, attrs, renderer)
+
+class AuthorInviteAddForm(forms.Form):
+    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
+    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+
+class EditorAddForm(forms.Form):
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
+
+class CuratorAddForm(forms.Form):
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
+
+class VerifierAddForm(forms.Form):
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
+
+class EditUserForm(forms.ModelForm):
     class Meta:
-        model = m.Manuscript
-        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
-            'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+        model = m.User
+        fields = ['username', 'email', 'first_name', 'last_name']
+
+#Note: not used on Authors, as we always want them assigned when created
+class UserInviteForm(forms.Form):
+    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+
+class AuthorForm(forms.ModelForm):
+    class Meta:
+        model = m.Author
+        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
+
     def __init__ (self, *args, **kwargs):
-        super(ManuscriptForm, self).__init__(*args, **kwargs)
+        super(AuthorForm, self).__init__(*args, **kwargs)
 
-class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptForm):
-    pass
+class BaseAuthorManuscriptFormset(BaseInlineFormSet):
+    def clean(self):
+        position_list = []
+        for fdata in self.cleaned_data:
+            if('position' in fdata): #skip empty form
+                position_list.append(fdata['position'])
+        if(sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1):
+            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
 
-#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
-#We just leverage the existing form infrastructure for perm checks etc
-class ManuscriptFilesForm(ReadOnlyFormMixin, ManuscriptForm):
-    class Meta:
-        model = m.Manuscript
-        fields = []#['title','doi','open_data']#,'authors']
-    pass
+AuthorManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.Author,  
+    extra=1,
+    form=AuthorForm,
+    fields=("first_name","last_name","identifier_scheme", "identifier", "position"),
+    can_delete = True,
+    formset=BaseAuthorManuscriptFormset
+)
+
+#------------ Submission/Curation/Edition/Note/GitlabFile Views Forms -------------
+# (Notes/GitlabFile are not on manuscript so makes sense to go here)
+#TODO: Sort this more
 
 class SubmissionForm(forms.ModelForm):
     class Meta:
@@ -87,8 +125,6 @@ class SubmissionForm(forms.ModelForm):
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
     pass
-
-#------------ Note -------------
 
 class NoteForm(forms.ModelForm):
     class Meta:
@@ -224,7 +260,58 @@ class BaseNoteFormSet(BaseInlineFormSet):
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
         return self._queryset
-        
+
+class NoteFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'
+        self.form_tag = False
+        self.form_id = 'note'
+        self.render_required_fields = True
+
+#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
+    class Meta:
+        model = m.Submission
+        fields = []#['title','doi','open_data']#,'authors']
+    pass
+
+class EditionForm(forms.ModelForm):
+    class Meta:
+        model = m.Edition
+        fields = ['_status']
+
+    def __init__ (self, *args, **kwargs):
+        super(EditionForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionForm):
+    pass
+
+class CurationForm(forms.ModelForm):
+    class Meta:
+        model = m.Curation
+        fields = ['_status']
+
+    def __init__ (self, *args, **kwargs):
+        super(CurationForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
+    pass
+
+class VerificationForm(forms.ModelForm):
+    class Meta:
+        model = m.Verification
+        fields = ['_status']
+
+    def __init__ (self, *args, **kwargs):
+        super(VerificationForm, self).__init__(*args, **kwargs)
+
+class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationForm):
+    pass
+
 
 NoteGitlabFileFormset = inlineformset_factory(
     m.GitlabFile, 
@@ -285,6 +372,60 @@ NoteVerificationFormset = inlineformset_factory(
     widgets={
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
+
+EditionSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Edition, 
+    extra=1,
+    form=EditionForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyEditionSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Edition, 
+    extra=1,
+    form=ReadOnlyEditionForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+CurationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=1,
+    form=CurationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyCurationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=1,
+    form=ReadOnlyCurationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+VerificationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=1,
+    form=VerificationForm,
+    fields=("_status",),
+    can_delete = False,
+)
+
+ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=1,
+    form=ReadOnlyVerificationForm,
+    fields=("_status",),
+    can_delete = False,
+)
 
 #------------ GitlabFile -------------
 
@@ -381,225 +522,6 @@ class GitlabFileFormSetHelper(FormHelper):
         )
         self.render_required_fields = True
 
-#-------------------------
-
-class NoteFormSetHelper(FormHelper):
-     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.form_method = 'post'
-        self.form_class = 'form-inline'
-        self.template = 'bootstrap4/table_inline_formset.html'
-        self.form_tag = False
-        self.form_id = 'note'
-        self.render_required_fields = True
-
-#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
-#We just leverage the existing form infrastructure for perm checks etc
-class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
-    class Meta:
-        model = m.Submission
-        fields = []#['title','doi','open_data']#,'authors']
-    pass
-
-class EditionForm(forms.ModelForm):
-    class Meta:
-        model = m.Edition
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(EditionForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionForm):
-    pass
-
-class CurationForm(forms.ModelForm):
-    class Meta:
-        model = m.Curation
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(CurationForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
-    pass
-
-class VerificationForm(forms.ModelForm):
-    class Meta:
-        model = m.Verification
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(VerificationForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationForm):
-    pass
-
-#-------------------------
-
-class CustomSelect2UserWidget(forms.SelectMultiple):
-    class Media:
-        js = ('main/select2_table.js',)
-
-    def render(self, name, value, attrs=None, renderer=None):
-        return super().render(name, value, attrs, renderer)
-
-class AuthorInviteAddForm(forms.Form):
-    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
-    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
-
-class EditorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
-
-class CuratorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
-
-class VerifierAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
-
-class EditUserForm(forms.ModelForm):
-    class Meta:
-        model = m.User
-        fields = ['username', 'email', 'first_name', 'last_name']
-
-#Note: not used on Authors, as we always want them assigned when created
-class UserInviteForm(forms.Form):
-    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-
-
-EditionSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Edition, 
-    extra=1,
-    form=EditionForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyEditionSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Edition, 
-    extra=1,
-    form=ReadOnlyEditionForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-CurationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Curation, 
-    extra=1,
-    form=CurationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyCurationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Curation, 
-    extra=1,
-    form=ReadOnlyCurationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-VerificationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Verification, 
-    extra=1,
-    form=VerificationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Verification, 
-    extra=1,
-    form=ReadOnlyVerificationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-####### MANUSCRIPT ######
-
-class GenericInlineFormSetHelper(FormHelper):
-     def __init__(self, form_id="", *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.form_method = 'post'
-        self.form_class = 'form-inline'
-        self.template = 'bootstrap4/table_inline_formset.html'#'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
-        self.form_tag = False
-        # if 'form_id' in kwargs:
-        self.form_id = form_id
-        # self.layout = Layout(
-
-        #     Field('gitlab_path', th_class="w-50"),
-        #     Field('tag'),
-        #     Field('description'),
-        # )
-        self.render_required_fields = True
-
-class AuthorForm(forms.ModelForm):
-    class Meta:
-        model = m.Author
-        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
-
-    def __init__ (self, *args, **kwargs):
-        super(AuthorForm, self).__init__(*args, **kwargs)
-
-class BaseAuthorManuscriptFormset(BaseInlineFormSet):
-    def clean(self):
-        position_list = []
-        for fdata in self.cleaned_data:
-            if('position' in fdata): #skip empty form
-                position_list.append(fdata['position'])
-        if(sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1):
-            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
-
-AuthorManuscriptFormset = inlineformset_factory(
-    m.Manuscript,
-    m.Author,  
-    extra=1,
-    form=AuthorForm,
-    fields=("first_name","last_name","identifier_scheme", "identifier", "position"),
-    can_delete = True,
-    formset=BaseAuthorManuscriptFormset
-)
-
-class DataSourceForm(forms.ModelForm):
-    class Meta:
-        model = m.DataSource
-        fields = ["text"]
-
-    def __init__ (self, *args, **kwargs):
-        super(DataSourceForm, self).__init__(*args, **kwargs)
-
-DataSourceManuscriptFormset = inlineformset_factory(
-    m.Manuscript,
-    m.DataSource,  
-    extra=1,
-    form=DataSourceForm,
-    fields=("text",),
-    can_delete = True,
-)
-
-class KeywordForm(forms.ModelForm):
-    class Meta:
-        model = m.Keyword
-        fields = ["text"]
-
-    def __init__ (self, *args, **kwargs):
-        super(KeywordForm, self).__init__(*args, **kwargs)
-
-KeywordManuscriptFormset = inlineformset_factory(
-    m.Manuscript,
-    m.Keyword,  
-    extra=1,
-    form=KeywordForm,
-    fields=("text",),
-    can_delete = True,
-)
 
 class VMetadataPackageForm(forms.ModelForm):
     class Meta:
@@ -686,6 +608,169 @@ VMetadataSubmissionFormset = inlineformset_factory(
     can_delete = True,
 )
 
+############# Manuscript Views Forms #############
+#-------------
+#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+#We just leverage the existing form infrastructure for perm checks etc
+class ManuscriptFilesForm(ReadOnlyFormMixin, forms.ModelForm):
+    class Meta:
+        model = m.Manuscript
+        fields = []#['title','doi','open_data']#,'authors']
+    pass
+
+class ManuscriptFormHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            'title','pub_id','description','subject',
+            Div(
+                Div('qual_analysis',css_class='col-md-6',),
+                Div('qdr_review',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('producer_first_name',css_class='col-md-6',),
+                Div('producer_last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('contact_first_name',css_class='col-md-6',),
+                Div('contact_last_name',css_class='col-md-6',),
+                Div('contact_email',css_class='col-md-6',),
+                css_class='row',
+            )
+        )
+
+#------------- Base Manuscript -------------
+
+class ManuscriptBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Manuscript
+        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
+            'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+
+
+#May be unneeded
+class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
+    pass
+
+#May be unneeded
+class ManuscriptAdminForm(ManuscriptBaseForm):
+    pass
+
+class ManuscriptAuthorForm(ManuscriptBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        self.fields['pub_id'].disabled = True
+        self.fields['qdr_review'].disabled = True
+
+class ManuscriptEditorForm(ManuscriptBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        self.fields['description'].disabled = True
+        self.fields['subject'].disabled = True
+        self.fields['contact_first_name'].disabled = True
+        self.fields['contact_last_name'].disabled = True
+        self.fields['contact_email'].disabled = True
+        self.fields['producer_first_name'].disabled = True
+        self.fields['producer_last_name'].disabled = True
+        #self.fields['qdr_review'].disabled = True
+
+class ManuscriptCuratorForm(ManuscriptBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        self.fields['pub_id'].disabled = True
+
+class ManuscriptVerifierForm(ManuscriptBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        self.fields['pub_id'].disabled = True
+        self.fields['title'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['qdr_review'].disabled = True
+        self.fields['contact_first_name'].disabled = True
+        self.fields['contact_last_name'].disabled = True
+        self.fields['contact_email'].disabled = True
+        self.fields['description'].disabled = True
+        self.fields['subject'].disabled = True
+        self.fields['producer_first_name'].disabled = True
+        self.fields['producer_last_name'].disabled = True
+
+#------------- Data Source -------------
+
+class DataSourceBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.DataSource
+        fields = ["text"]
+
+#May be unneeded
+class DataSourceAdminForm(DataSourceBaseForm):
+    pass
+
+class DataSourceAuthorForm(DataSourceBaseForm):
+    pass
+
+class DataSourceEditorForm(DataSourceBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(DataSourceForm, self).__init__(*args, **kwargs)
+        self.fields['text'].disabled = True
+
+class DataSourceCuratorForm(DataSourceBaseForm):
+    pass
+
+class DataSourceVerifierForm(DataSourceBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(DataSourceForm, self).__init__(*args, **kwargs)
+        self.fields['text'].disabled = True
+
+DataSourceManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.DataSource,  
+    extra=1,
+    form=DataSourceAdminForm,
+    fields=("text",),
+    can_delete = True,
+)
+
+#------------- Keyword -------------
+
+class KeywordBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Keyword
+        fields = ["text"]
+
+class KeywordAdminForm(KeywordBaseForm):
+    pass
+
+class KeywordAuthorForm(KeywordBaseForm):
+    pass
+
+class KeywordEditorForm(KeywordBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(KeywordForm, self).__init__(*args, **kwargs)
+        self.fields['text'].disabled = True
+
+class KeywordCuratorForm(KeywordBaseForm):
+    pass
+
+class KeywordVerifierForm(KeywordBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super(KeywordForm, self).__init__(*args, **kwargs)
+        self.fields['text'].disabled = True
+
+KeywordManuscriptFormset = inlineformset_factory(
+    m.Manuscript,
+    m.Keyword,  
+    extra=1,
+    form=KeywordAdminForm,
+    fields=("text",),
+    can_delete = True,
+)
+
+
+
 #OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
 #The next question becomes whether its really worth it?
 #... well, we can use the "non-dynamic" forms for admin and just generate one for each of the four roles
@@ -704,27 +789,27 @@ VMetadataSubmissionFormset = inlineformset_factory(
 
 ##### SEMI WORKING TEST
 
-testfactorydict = {}
-for x in range(5):
-    afield = VMetadataForm.base_fields['operating_system']
-    afield.disabled = True
-    field_defs = {
-        'operating_system': afield
-        }
-    DynamicFormClass = type("DynamicForm"+str(x), (VMetadataForm,), field_defs)
+# testfactorydict = {}
+# for x in range(5):
+#     afield = VMetadataForm.base_fields['operating_system']
+#     afield.disabled = True
+#     field_defs = {
+#         'operating_system': afield
+#         }
+#     DynamicFormClass = type("DynamicForm"+str(x), (VMetadataForm,), field_defs)
 
-    # formset_defs = {
-    #     'form': DynamicFormClass
-    #     }
-    # testfactorydict[str(x)] = type("DynamicFormset"+str(x), (VMetadataSubmissionFormset,), formset_defs)
-    testfactorydict[str(x)] = inlineformset_factory(
-        m.Submission,
-        m.VerificationMetadata,  
-        extra=1,
-        form=VMetadataForm,
-        fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-        can_delete = True,
-    )
+#     # formset_defs = {
+#     #     'form': DynamicFormClass
+#     #     }
+#     # testfactorydict[str(x)] = type("DynamicFormset"+str(x), (VMetadataSubmissionFormset,), formset_defs)
+#     testfactorydict[str(x)] = inlineformset_factory(
+#         m.Submission,
+#         m.VerificationMetadata,  
+#         extra=1,
+#         form=VMetadataForm,
+#         fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
+#         can_delete = True,
+#     )
 
 
 ##### NOT WORKING JUNK

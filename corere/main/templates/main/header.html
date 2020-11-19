@@ -2,6 +2,7 @@
 {% load bootstrap_msg_class_lvls %}
 {% load notifications_tags %}
 {% load auth_extras %}
+{% load groups_contain_count %}
 
 <div> {# div ends in footer.html #}
 
@@ -26,6 +27,44 @@
             {% if request.user|has_group:"Role Curator" %} 
               <a class="dropdown-item" href="/site_actions">Site Actions</a>
             {% endif%}
+            {% if request.user|groups_contain_count:"Role" > 1 or request.user.is_superuser %}
+              <div class="dropdown-divider"></div>
+              {% if request.user|has_group:"Role Author" %} 
+                {% if request.session.active_role == "Role Author" %} 
+                  <a class="dropdown-item disabled" >Switch to Author Role</a>
+                {% else %}
+                  <a class="dropdown-item" href="/switch_role?role=Role Author&next={{request.path_info}}">Switch to Author Role</a>
+                {% endif %}
+              {% endif%}
+              {% if request.user|has_group:"Role Editor" %} 
+                {% if request.session.active_role == "Role Editor" %} 
+                  <a class="dropdown-item disabled" >Switch to Editor Role</a>
+                {% else %}
+                  <a class="dropdown-item" href="/switch_role?role=Role Editor&next={{request.path_info}}">Switch to Editor Role</a>
+                {% endif %}
+              {% endif%}
+              {% if request.user|has_group:"Role Curator" %} 
+                {% if request.session.active_role == "Role Curator" %} 
+                  <a class="dropdown-item disabled" >Switch to Curator Role</a>
+                {% else %}
+                  <a class="dropdown-item" href="/switch_role?role=Role Curator&next={{request.path_info}}">Switch to Curator Role</a>
+                {% endif %}
+              {% endif%}
+              {% if request.user|has_group:"Role Verifier" %} 
+                {% if request.session.active_role == "Role Verifier" %} 
+                  <a class="dropdown-item disabled" >Switch to Verifier Role</a>
+                {% else %}
+                  <a class="dropdown-item" href="/switch_role?role=Role Verifier&next={{request.path_info}}">Switch to Verifier Role</a>
+                {% endif %}
+              {% endif%}
+              {% if request.user.is_superuser %} 
+                {% if request.session.active_role == "Admin" %} 
+                  <a class="dropdown-item disabled" >Switch to Admin Role</a>
+                {% else %}
+                  <a class="dropdown-item" href="/switch_role?role=Admin&next={{request.path_info}}">Switch to Admin Role</a>
+                {% endif %}   
+              {% endif%}
+            {% endif%}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="/logout">Logout</a>
           </div>
@@ -38,6 +77,7 @@
                   return parseInt($(this).text()) == 0;
               }).hide();
           </script>
+
       </li>
     </ul>
   </div>

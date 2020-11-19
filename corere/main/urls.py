@@ -46,4 +46,5 @@ urlpatterns = [
     path('site_actions/inviteeditor', users.invite_editor, name="inviteeditor"),
     path('site_actions/invitecurator', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier', users.invite_verifier, name="inviteverifier"),
+    path('switch_role', main.switch_role, name="switch_role"),
 ]

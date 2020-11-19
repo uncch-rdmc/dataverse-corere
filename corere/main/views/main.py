@@ -133,3 +133,20 @@ def site_actions(request):
         return render(request, 'main/site_actions.html', {'page_header': "site_actions"})
     else:
         raise Http404()
+
+#NOTE: if we use cookies for session this may no longer be safe
+@login_required()
+def switch_role(request):
+    role_string = request.GET.get('role', '')
+    if(role_string == "Admin"):
+        if(request.user.is_superuser):
+            request.session['active_role'] = role_string
+        else:
+            logger.warning("User " + request.user.username + " attempted to switch their active role to admin which they do not have")
+    else:
+        role = Group.objects.get(name=role_string)
+        if role in request.user.groups.all():
+            request.session['active_role'] = role_string
+        else:
+            logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_string +")")
+    return redirect(request.GET.get('next', ''))
