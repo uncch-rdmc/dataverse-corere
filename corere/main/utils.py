@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)  
+from django.http import Http404
 #from corere.main.models import Manuscript, User
 
 # For use by the python-social-auth library pipeline.
@@ -32,3 +33,27 @@ def fsm_check_transition_perm(bound_method, user):
             #meta.has_transition(current_state) and
             #meta.conditions_met(im_self, current_state) and
             meta.has_transition_perm(im_self, current_state, user))
+
+# If the user has the session role for the manuscript, return it
+# Otherwise, return a role they do have based on a set order
+def get_role_name_for_form(user, manuscript, session):
+    group_base_string = " Manuscript " + str(manuscript.id)
+    group_string = session.get("active_role","") + group_base_string
+    if "active_role" in session and user.groups.filter(name=group_string).exists():
+        return session["active_role"]
+    else:
+        logger.info("User "+ user.username +" active_role "+ session["active_role"] +" is not available for them on manuscript " + str(manuscript.id) + ". This may be because they have different roles for different manuscripts.")
+        if user.is_superuser:
+            return "Admin"
+        elif user.groups.filter(name="Curator"+group_base_string).exists():
+            return "Curator"
+        elif user.groups.filter(name="Verifier"+group_base_string).exists():
+            return "Verifier"
+        elif user.groups.filter(name="Editor"+group_base_string).exists():
+            return "Editor"
+        elif user.groups.filter(name="Author"+group_base_string).exists():
+            return "Author"
+        else:
+            logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
+            raise Http404()
+    

@@ -1,4 +1,4 @@
-import logging, os, copy
+import logging, os, copy, sys
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
 from django.contrib.postgres.fields import ArrayField
@@ -52,6 +52,8 @@ class GenericInlineFormSetHelper(FormHelper):
         # )
         self.render_required_fields = True
 
+list_of_roles = ["Admin","Author","Editor","Curator","Verifier"]
+
 #-------------------------
 
 class CustomSelect2UserWidget(forms.SelectMultiple):
@@ -83,33 +85,6 @@ class EditUserForm(forms.ModelForm):
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-
-class AuthorForm(forms.ModelForm):
-    class Meta:
-        model = m.Author
-        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
-
-    def __init__ (self, *args, **kwargs):
-        super(AuthorForm, self).__init__(*args, **kwargs)
-
-class BaseAuthorManuscriptFormset(BaseInlineFormSet):
-    def clean(self):
-        position_list = []
-        for fdata in self.cleaned_data:
-            if('position' in fdata): #skip empty form
-                position_list.append(fdata['position'])
-        if(sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1):
-            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
-
-AuthorManuscriptFormset = inlineformset_factory(
-    m.Manuscript,
-    m.Author,  
-    extra=1,
-    form=AuthorForm,
-    fields=("first_name","last_name","identifier_scheme", "identifier", "position"),
-    can_delete = True,
-    formset=BaseAuthorManuscriptFormset
-)
 
 #------------ Submission/Curation/Edition/Note/GitlabFile Views Forms -------------
 # (Notes/GitlabFile are not on manuscript so makes sense to go here)
@@ -651,24 +626,22 @@ class ManuscriptBaseForm(forms.ModelForm):
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
             'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
 
-
-#May be unneeded
+#All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
     pass
 
-#May be unneeded
-class ManuscriptAdminForm(ManuscriptBaseForm):
+class ManuscriptForm_Admin(ManuscriptBaseForm):
     pass
 
-class ManuscriptAuthorForm(ManuscriptBaseForm):
+class ManuscriptForm_Author(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['qdr_review'].disabled = True
 
-class ManuscriptEditorForm(ManuscriptBaseForm):
+class ManuscriptForm_Editor(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['description'].disabled = True
         self.fields['subject'].disabled = True
         self.fields['contact_first_name'].disabled = True
@@ -676,16 +649,15 @@ class ManuscriptEditorForm(ManuscriptBaseForm):
         self.fields['contact_email'].disabled = True
         self.fields['producer_first_name'].disabled = True
         self.fields['producer_last_name'].disabled = True
-        #self.fields['qdr_review'].disabled = True
 
-class ManuscriptCuratorForm(ManuscriptBaseForm):
+class ManuscriptForm_Curator(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
 
-class ManuscriptVerifierForm(ManuscriptBaseForm):
+class ManuscriptForm_Verifier(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(ManuscriptAuthorForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['title'].disabled = True
         self.fields['qual_analysis'].disabled = True
@@ -698,6 +670,13 @@ class ManuscriptVerifierForm(ManuscriptBaseForm):
         self.fields['producer_first_name'].disabled = True
         self.fields['producer_last_name'].disabled = True
 
+ManuscriptForms = {
+    "Admin": ManuscriptForm_Admin,
+    "Author": ManuscriptForm_Author,
+    "Editor": ManuscriptForm_Editor,
+    "Curator": ManuscriptForm_Curator,
+    "Verifier": ManuscriptForm_Verifier,
+}
 #------------- Data Source -------------
 
 class DataSourceBaseForm(forms.ModelForm):
@@ -705,33 +684,45 @@ class DataSourceBaseForm(forms.ModelForm):
         model = m.DataSource
         fields = ["text"]
 
-#May be unneeded
-class DataSourceAdminForm(DataSourceBaseForm):
+class DataSourceForm_Admin(DataSourceBaseForm):
     pass
 
-class DataSourceAuthorForm(DataSourceBaseForm):
+class DataSourceForm_Author(DataSourceBaseForm):
     pass
 
-class DataSourceEditorForm(DataSourceBaseForm):
+class DataSourceForm_Editor(DataSourceBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(DataSourceForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['text'].disabled = True
 
-class DataSourceCuratorForm(DataSourceBaseForm):
+class DataSourceForm_Curator(DataSourceBaseForm):
     pass
 
-class DataSourceVerifierForm(DataSourceBaseForm):
+class DataSourceForm_Verifier(DataSourceBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(DataSourceForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['text'].disabled = True
 
-DataSourceManuscriptFormset = inlineformset_factory(
+DataSourceManuscriptFormsets = {}
+for role_str in list_of_roles:
+    DataSourceManuscriptFormsets[role_str] = inlineformset_factory(
     m.Manuscript,
     m.DataSource,  
-    extra=1,
-    form=DataSourceAdminForm,
-    fields=("text",),
-    can_delete = True,
+    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
+    form=getattr(sys.modules[__name__], "DataSourceForm_"+role_str),
+    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
+) 
+
+#All Manuscript fields are visible to all users, so no role-based forms
+class ReadOnlyDataSourceForm(ReadOnlyFormMixin, DataSourceBaseForm):
+    pass
+
+ReadOnlyDataSourceFormSet = inlineformset_factory(
+    m.Manuscript,
+    m.DataSource,  
+    extra=0,
+    form=ReadOnlyDataSourceForm,
+    can_delete=False,
 )
 
 #------------- Keyword -------------
@@ -741,35 +732,112 @@ class KeywordBaseForm(forms.ModelForm):
         model = m.Keyword
         fields = ["text"]
 
-class KeywordAdminForm(KeywordBaseForm):
+class KeywordForm_Admin(KeywordBaseForm):
     pass
 
-class KeywordAuthorForm(KeywordBaseForm):
+class KeywordForm_Author(KeywordBaseForm):
     pass
 
-class KeywordEditorForm(KeywordBaseForm):
+class KeywordForm_Editor(KeywordBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(KeywordForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['text'].disabled = True
 
-class KeywordCuratorForm(KeywordBaseForm):
+class KeywordForm_Curator(KeywordBaseForm):
     pass
 
-class KeywordVerifierForm(KeywordBaseForm):
+class KeywordForm_Verifier(KeywordBaseForm):
     def __init__ (self, *args, **kwargs):
-        super(KeywordForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['text'].disabled = True
 
-KeywordManuscriptFormset = inlineformset_factory(
+KeywordManuscriptFormsets = {}
+for role_str in list_of_roles:
+    KeywordManuscriptFormsets[role_str] = inlineformset_factory(
     m.Manuscript,
     m.Keyword,  
-    extra=1,
-    form=KeywordAdminForm,
-    fields=("text",),
-    can_delete = True,
+    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
+    form=getattr(sys.modules[__name__], "KeywordForm_"+role_str),
+    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
+) 
+
+#All Manuscript fields are visible to all users, so no role-based forms
+class ReadOnlyKeywordForm(ReadOnlyFormMixin, KeywordBaseForm):
+    pass
+
+ReadOnlyKeywordFormSet = inlineformset_factory(
+    m.Manuscript,
+    m.Keyword,  
+    extra=0,
+    form=ReadOnlyKeywordForm,
+    can_delete=False,
 )
 
+#------------- Author (Not User/Role) -------------
 
+class AuthorBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Author
+        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
+
+class AuthorForm_Admin(AuthorBaseForm):
+    pass
+
+class AuthorForm_Author(AuthorBaseForm):
+    pass
+
+class AuthorForm_Editor(AuthorBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["first_name"].disabled = True
+        self.fields["last_name"].disabled = True
+        self.fields["identifier_scheme"].disabled = True
+        self.fields["identifier"].disabled = True
+        self.fields["position"].disabled = True
+
+class AuthorForm_Curator(AuthorBaseForm):
+    pass
+
+class AuthorForm_Verifier(AuthorBaseForm):
+    def __init__ (self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["first_name"].disabled = True
+        self.fields["last_name"].disabled = True
+        self.fields["identifier_scheme"].disabled = True
+        self.fields["identifier"].disabled = True
+        self.fields["position"].disabled = True
+
+class BaseAuthorManuscriptFormset(BaseInlineFormSet):
+    def clean(self):
+        position_list = []
+        for fdata in self.cleaned_data:
+            if('position' in fdata): #skip empty form
+                position_list.append(fdata['position'])
+        if(len(position_list) != 0 and ( sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1)):
+            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
+
+AuthorManuscriptFormsets = {}
+for role_str in list_of_roles:
+    AuthorManuscriptFormsets[role_str] = inlineformset_factory(
+    m.Manuscript,
+    m.Author,  
+    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
+    form=getattr(sys.modules[__name__], "AuthorForm_"+role_str),
+    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
+    formset=BaseAuthorManuscriptFormset
+)
+
+#All Manuscript fields are visible to all users, so no role-based forms
+class ReadOnlyAuthorForm(ReadOnlyFormMixin, AuthorBaseForm):
+    pass
+
+ReadOnlyAuthorFormSet = inlineformset_factory(
+    m.Manuscript,
+    m.Author,  
+    extra=0,
+    form=ReadOnlyAuthorForm,
+    can_delete=False,
+)
 
 #OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
 #The next question becomes whether its really worth it?

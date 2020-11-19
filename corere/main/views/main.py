@@ -138,15 +138,16 @@ def site_actions(request):
 @login_required()
 def switch_role(request):
     role_string = request.GET.get('role', '')
+    role_full_string = "Role " + role_string
     if(role_string == "Admin"):
         if(request.user.is_superuser):
             request.session['active_role'] = role_string
         else:
             logger.warning("User " + request.user.username + " attempted to switch their active role to admin which they do not have")
     else:
-        role = Group.objects.get(name=role_string)
+        role = Group.objects.get(name=role_full_string)
         if role in request.user.groups.all():
             request.session['active_role'] = role_string
         else:
-            logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_string +")")
+            logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_full_string +")")
     return redirect(request.GET.get('next', ''))

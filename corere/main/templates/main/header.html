@@ -30,31 +30,31 @@
             {% if request.user|groups_contain_count:"Role" > 1 or request.user.is_superuser %}
               <div class="dropdown-divider"></div>
               {% if request.user|has_group:"Role Author" %} 
-                {% if request.session.active_role == "Role Author" %} 
+                {% if request.session.active_role == "Author" %} 
                   <a class="dropdown-item disabled" >Switch to Author Role</a>
                 {% else %}
-                  <a class="dropdown-item" href="/switch_role?role=Role Author&next={{request.path_info}}">Switch to Author Role</a>
+                  <a class="dropdown-item" href="/switch_role?role=Author&next={{request.path_info}}">Switch to Author Role</a>
                 {% endif %}
               {% endif%}
               {% if request.user|has_group:"Role Editor" %} 
-                {% if request.session.active_role == "Role Editor" %} 
+                {% if request.session.active_role == "Editor" %} 
                   <a class="dropdown-item disabled" >Switch to Editor Role</a>
                 {% else %}
-                  <a class="dropdown-item" href="/switch_role?role=Role Editor&next={{request.path_info}}">Switch to Editor Role</a>
+                  <a class="dropdown-item" href="/switch_role?role=Editor&next={{request.path_info}}">Switch to Editor Role</a>
                 {% endif %}
               {% endif%}
               {% if request.user|has_group:"Role Curator" %} 
-                {% if request.session.active_role == "Role Curator" %} 
+                {% if request.session.active_role == "Curator" %} 
                   <a class="dropdown-item disabled" >Switch to Curator Role</a>
                 {% else %}
-                  <a class="dropdown-item" href="/switch_role?role=Role Curator&next={{request.path_info}}">Switch to Curator Role</a>
+                  <a class="dropdown-item" href="/switch_role?role=Curator&next={{request.path_info}}">Switch to Curator Role</a>
                 {% endif %}
               {% endif%}
               {% if request.user|has_group:"Role Verifier" %} 
-                {% if request.session.active_role == "Role Verifier" %} 
+                {% if request.session.active_role == "Verifier" %} 
                   <a class="dropdown-item disabled" >Switch to Verifier Role</a>
                 {% else %}
-                  <a class="dropdown-item" href="/switch_role?role=Role Verifier&next={{request.path_info}}">Switch to Verifier Role</a>
+                  <a class="dropdown-item" href="/switch_role?role=Verifier&next={{request.path_info}}">Switch to Verifier Role</a>
                 {% endif %}
               {% endif%}
               {% if request.user.is_superuser %} 

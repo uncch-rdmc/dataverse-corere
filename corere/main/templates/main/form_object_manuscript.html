@@ -8,21 +8,27 @@
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
     $(function () {
+        {% if author_formset.extra != 0 %}
         $('#author_table tbody tr').formset({
             prefix: '{{ author_formset.prefix }}',
             formCssClass: 'author_table',
             addText: 'add author'
         });
+        {% endif %}
+        {% if data_source_formset.extra != 0 %}
         $('#data_source_table tbody tr').formset({
             prefix: '{{ data_source_formset.prefix }}',
             formCssClass: 'data_source_table',
             addText: 'add data source'
         });
+        {% endif %}
+        {% if keyword_formset.extra != 0 %}
         $('#keyword_table tbody tr').formset({
             prefix: '{{ keyword_formset.prefix }}',
             formCssClass: 'keyword_table',
             addText: 'add keyword'
         });
+        {% endif %}
     })
 </script>
 
@@ -46,9 +52,9 @@
         {% crispy keyword_formset keyword_inline_helper %}
     {% endif %}
 
-    {% comment %} {% if not read_only %} {% endcomment %}
+    {% if not read_only %}
     <input type="submit" name="submit" value="Save">
-    {% comment %} {% endif %} {% endcomment %}
+    {% endif %}
     {% block extrabuttons %}
     {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
