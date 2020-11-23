@@ -42,18 +42,8 @@ class GenericCorereObjectView(View):
     helper = f.GenericFormSetHelper()
     page_header = ""
     note_formset = None
-    edition_formset = None
-    curation_formset = None
-    verification_formset = None
-    author_formset = None
-    data_source_formset = None
-    keyword_formset = None 
     note_helper = None
-    v_metadata_formset = None
-    v_metadata_package_formset = None
-    v_metadata_software_formset = None
-    v_metadata_badge_formset = None
-    v_metadata_audit_formset = None
+    
     create = False #Used by default template
 
     def dispatch(self, request, *args, **kwargs): 
@@ -186,6 +176,9 @@ class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
     template = 'main/form_object_manuscript.html'
+    author_formset = None
+    data_source_formset = None
+    keyword_formset = None 
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -348,6 +341,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
 
+    edition_formset = None
+    curation_formset = None
+    verification_formset = None
+    v_metadata_formset = None
+    v_metadata_package_formset = None
+    v_metadata_software_formset = None
+    v_metadata_badge_formset = None
+    v_metadata_audit_formset = None
+
     def get(self, request, *args, **kwargs):
         self.add_formsets(request)
         root_object_title = self.object.manuscript.title
@@ -396,148 +398,154 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         root_object_title = self.object.manuscript.title
 
         if(self.note_formset):
-            note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset")
+            self.note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset")
         if(self.edition_formset):
-            edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
+            self.edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if(self.curation_formset):
-            curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
+            self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.verification_formset):
-            verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
+            self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
         if(self.v_metadata_formset):
-            v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
         #TODO: not sure if we need to do this ID logic in the post    
         try:
             if(self.v_metadata_package_formset is not None):
-                v_metadata_package_formset = self.v_metadata_package_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
+                self.v_metadata_package_formset = self.v_metadata_package_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
-                v_metadata_software_formset = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
-                v_metadata_badge_formset = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
             if(self.v_metadata_audit_formset is not None):
-                v_metadata_audit_formset = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
         except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
             if(self.v_metadata_package_formset is not None):
-                v_metadata_package_formset = self.v_metadata_package_formset(prefix="v_metadata_package_formset")
+                self.v_metadata_package_formset = self.v_metadata_package_formset(request.POST, prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
-                v_metadata_software_formset = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
+                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
-                v_metadata_badge_formset = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
+                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
             if(self.v_metadata_audit_formset is not None):
-                v_metadata_audit_formset = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
+                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
 
-        if self.form.is_valid():
-            if not self.read_only:
+        #Do I really want to initialize all the formsets? If so, bool(self.edition_formset) is an existence check, otherwise gotta do a bit more
+        #What is possibly better is to create a list of formsets and iterate through them for the checks...
+
+        print("BOOL")
+        # print(self.edition_formset is None)
+        # print(self.edition_formset is None or edition_formset.is_valid() )
+
+        # print(v_metadata_formset.is_valid())
+        # print(v_metadata_package_formset.is_valid())
+        # print(self.v_metadata_package_formset is None or v_metadata_package_formset.is_valid()) #BOOOOM
+        # print(self.v_metadata_software_formset.__dict__)
+        # print(self.v_metadata_badge_formset is None or v_metadata_badge_formset.is_valid()) #BOOM
+        # print(self.v_metadata_badge_formset.__dict__)
+        # print(self.v_metadata_audit_formset is None or v_metadata_audit_formset.is_valid()) #BOOOOOOOM
+        # print(self.v_metadata_software_formset.__dict__)
+
+        #This code checks whether to attempt saving, seeing that each formset that exists is valid
+        #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
+        if not self.read_only:
+            if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
+                and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
+                and (self.v_metadata_package_formset is None or self.v_metadata_package_formset.is_valid()) and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
+                and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
+                ):
                 self.form.save() #Note: this is what saves a newly created model instance
                 if(self.edition_formset):
-                    if edition_formset.is_valid():
-                        edition_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-#TODO: Should be logging the correct form errors!
-                        logger.debug(self.edition_formset.errors)
+                    self.edition_formset.save()
                 if(self.curation_formset):
-                    if curation_formset.is_valid():
-                        curation_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.curation_formset.errors)
+                    self.curation_formset.save()
                 if(self.verification_formset):
-                    if verification_formset.is_valid():
-                        verification_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.verification_formset.errors)
+                    self.verification_formset.save()
                 if(self.v_metadata_formset):
-                    if v_metadata_formset.is_valid():
-                        v_metadata_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.v_metadata_formset.errors)
+                    self.v_metadata_formset.save()
                 if(self.v_metadata_package_formset):
-                    if v_metadata_package_formset.is_valid():
-                        v_metadata_package_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.v_metadata_package_formset.errors)
+                    self.v_metadata_package_formset.save()
                 if(self.v_metadata_software_formset):
-                    if v_metadata_software_formset.is_valid():
-                        v_metadata_software_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.v_metadata_software_formset.errors)
+                    self.v_metadata_software_formset.save()
                 if(self.v_metadata_badge_formset):
-                    if v_metadata_badge_formset.is_valid():
-                        v_metadata_badge_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.v_metadata_badge_formset.errors)
-                if(self.v_metadata_audit_formset):
-                    if v_metadata_audit_formset.is_valid():
-                        v_metadata_audit_formset.save()
-                        messages.add_message(request, messages.SUCCESS, self.message)
-                    else:
-                        logger.debug(self.v_metadata_audit_formset.errors)
+                    self.v_metadata_badge_formset.save()
+                if(self.v_metadata_audit_formset): 
+                    self.v_metadata_audit_formset.save()
+                if(self.note_formset is not None and self.note_formset.is_valid()):
+                    self.note_formset.save()
 
-            if(self.note_formset): #these can be saved even if read only (though I'm not sure our implementation will still use that field anyways)
-                if note_formset.is_valid():
-                    note_formset.save()
-            
-            print('submit_progress_submission')
-            try:
-                if request.POST.get('submit_progress_submission'):
-                    if not fsm_check_transition_perm(self.object.submit, request.user): 
-                        logger.debug("PermissionDenied")
-                        raise Http404()
-                    self.object.submit(request.user)
-                    self.object.save()
-                elif request.POST.get('submit_progress_edition'):
-                    if not fsm_check_transition_perm(self.object.submit_edition, request.user):
-                        logger.debug("PermissionDenied")
-                        raise Http404()
-                    self.object.submit_edition()
-                    self.object.save()
-                elif request.POST.get('submit_progress_curation'):
-                    if not fsm_check_transition_perm(self.object.review_curation, request.user):
-                        logger.debug("PermissionDenied")
-                        raise Http404()
-                    self.object.review_curation()
-                    self.object.save()
-                elif request.POST.get('submit_progress_verification'):
-                    if not fsm_check_transition_perm(self.object.review_verification, request.user):
-                        logger.debug("PermissionDenied")
-                        raise Http404()
-                    self.object.review_verification()
-                    self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
-            return redirect(self.redirect)
+                try:
+                    if request.POST.get('submit_progress_submission'):
+                        if not fsm_check_transition_perm(self.object.submit, request.user): 
+                            logger.debug("PermissionDenied")
+                            raise Http404()
+                        self.object.submit(request.user)
+                        self.object.save()
+                    elif request.POST.get('submit_progress_edition'):
+                        if not fsm_check_transition_perm(self.object.submit_edition, request.user):
+                            logger.debug("PermissionDenied")
+                            raise Http404()
+                        self.object.submit_edition()
+                        self.object.save()
+                    elif request.POST.get('submit_progress_curation'):
+                        if not fsm_check_transition_perm(self.object.review_curation, request.user):
+                            logger.debug("PermissionDenied")
+                            raise Http404()
+                        self.object.review_curation()
+                        self.object.save()
+                    elif request.POST.get('submit_progress_verification'):
+                        if not fsm_check_transition_perm(self.object.review_verification, request.user):
+                            logger.debug("PermissionDenied")
+                            raise Http404()
+                        self.object.review_verification()
+                        self.object.save()
+                except TransitionNotAllowed as e:
+                    logger.error("TransitionNotAllowed: " + str(e))
+                    raise
+
+                return redirect(self.redirect)
+
+            else:
+                if(self.edition_formset):
+                    logger.debug(self.edition_formset.errors)
+                if(self.curation_formset):
+                    logger.debug(self.curation_formset.errors)
+                if(self.verification_formset):
+                    logger.debug(self.verification_formset.errors)
+                if(self.v_metadata_formset):
+                    logger.debug(self.v_metadata_formset.errors)
+                if(self.v_metadata_package_formset):
+                    logger.debug(self.v_metadata_package_formset.errors)
+                if(self.v_metadata_software_formset):
+                    logger.debug(self.v_metadata_software_formset.errors)
+                if(self.v_metadata_badge_formset):
+                    logger.debug(self.v_metadata_badge_formset.errors)
+                if(self.v_metadata_audit_formset): 
+                    logger.debug(self.v_metadata_audit_formset.errors)
         else:
-            logger.debug(self.form.errors)
+            if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
+                self.note_formset.save()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title,
             'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset") #TODO: This was set to `= formset`, maybe can delete that variable now?
+            context['note_formset'] = self.note_formset
         if(self.edition_formset is not None):
-            context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
+            context['edition_formset'] = self.edition_formset
         if(self.curation_formset is not None):
-            context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
+            context['curation_formset'] = self.curation_formset
         if(self.verification_formset is not None):
-            context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
+            context['verification_formset'] = self.verification_formset
         if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+            context['v_metadata_formset'] = self.v_metadata_formset
         if(self.v_metadata_package_formset is not None):
-            context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object, prefix="v_metadata_package_formset")
+            context['v_metadata_package_formset'] = self.v_metadata_package_formset
         if(self.v_metadata_software_formset is not None):
-            context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object, prefix="v_metadata_software_formset")
+            context['v_metadata_software_formset'] = self.v_metadata_software_formset
         if(self.v_metadata_badge_formset is not None):
-            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object, prefix="v_metadata_badge_formset")
+            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
         if(self.v_metadata_audit_formset is not None):
-            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object, prefix="v_metadata_audit_formset")
+            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
