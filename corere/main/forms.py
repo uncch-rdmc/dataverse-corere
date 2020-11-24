@@ -18,6 +18,9 @@ from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 logger = logging.getLogger(__name__)
 
+### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
+###  will break logic for generating form/formset lists
+
 #------------ Base -------------
 
 class ReadOnlyFormMixin(forms.ModelForm):
@@ -86,502 +89,13 @@ class EditUserForm(forms.ModelForm):
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
-#------------ Submission/Curation/Edition/Note/GitlabFile Views Forms -------------
-# (Notes/GitlabFile are not on manuscript so makes sense to go here)
-#TODO: Sort this more
-
-class SubmissionForm(forms.ModelForm):
-    class Meta:
-        model = m.Submission
-        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
-
-    def __init__ (self, *args, **kwargs):
-        super(SubmissionForm, self).__init__(*args, **kwargs)
-
-class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionForm):
-    pass
-
-class NoteForm(forms.ModelForm):
-    class Meta:
-        model = m.Note
-        fields = ['text','scope','creator','note_replied_to']
-
-    SCOPE_OPTIONS = (('public','Public'),('private','Private'))
-
-    scope = forms.ChoiceField(widget=forms.RadioSelect,
-                                        choices=SCOPE_OPTIONS, required=False)
-
-    def __init__ (self, *args, **kwargs):
-        super(NoteForm, self).__init__(*args, **kwargs)
-        #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
-        #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
-
-        user = CrequestMiddleware.get_request().user
-        path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
-        try:
-            path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
-            if(path_obj_name == "submission"):
-                manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
-            elif(path_obj_name == "edition"):
-                manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "curation"):
-                manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "verification"):
-                manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
-            else:
-                raise TypeError("Object name parsed from url string for note form does not match our lookup")
-        except KeyError: #during creation, id we want is different
-            try: #creating a sub on a manuscript
-                manuscript = m.Manuscript.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['manuscript_id'])
-            except KeyError: #creating a edition/curation/verification on a submission
-                try:
-                    manuscript = m.Submission.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['submission_id']).manuscript
-                except KeyError:
-                    raise TypeError("Object name parsed from url string for note form does not match our lookup, during create")
-
-        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
-            self.fields.pop('scope')
-        else:       
-            #Populate scope field depending on existing roles
-            existing_roles = []
-            for role in c.get_roles():
-                role_perms = get_perms(Group.objects.get(name=role), self.instance)
-                if(c.PERM_NOTE_VIEW_N in role_perms):
-                    existing_roles.append(role)
-            if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
-                self.fields['scope'].initial = 'public'
-            else:
-                self.fields['scope'].initial = 'private'
-
-        self.fields['creator'].disabled = True
-        if(self.instance.id): #if based off existing note
-            
-            if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
-                for fkey, fval in self.fields.items():
-                    fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
-
-    def save(self, commit, *args, **kwargs):
-        if(self.has_changed()):
-            user = CrequestMiddleware.get_request().user
-            if(self.cleaned_data['creator'] != user):
-                pass #Do not save
-        super(NoteForm, self).save(commit, *args, **kwargs)
-        if('scope' in self.changed_data):
-            #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
-            for role in c.get_roles():
-                group = Group.objects.get(name=role)
-                remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            if(self.cleaned_data['scope'] == 'public'):
-                for role in c.get_roles():
-                    group = Group.objects.get(name=role)
-                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            else:
-                if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
-                    for role in c.get_private_roles():
-                        group = Group.objects.get(name=role)
-                        assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-                else:
-                    #At this point we've saved already, maybe we shouldn't?
-                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
-                    raise Http404()
-
-#TODO: Making this generic may have been pointless, not sure if its needed?
-class BaseFileNestingFormSet(BaseInlineFormSet):
-    def add_fields(self, form, index):
-        super(BaseFileNestingFormSet, self).add_fields(form, index)
-        # save the formset in the 'nested' property
-        form.nested = self.nested_formset(
-            instance=form.instance,
-            data=form.data if form.is_bound else None,
-            files=form.files if form.is_bound else None,
-            prefix='note-%s-%s' % (
-                form.prefix,
-                self.nested_formset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
-        )
-    
-    def is_valid(self):
-        result = super(BaseFileNestingFormSet, self).is_valid()
-        if self.is_bound:
-            for form in self.forms:
-                if hasattr(form, 'nested'):
-                    result = result and form.nested.is_valid()
-        return result
-
-    def save(self, commit=True):
-        result = super(BaseFileNestingFormSet, self).save(commit=commit)
-        for form in self.forms:
-            if hasattr(form, 'nested'):
-                if not self._should_delete_form(form):
-                    form.nested.save(commit=commit)
-        return result
-
-class BaseNoteFormSet(BaseInlineFormSet):
-
-    #only allow deleting of user-owned notes. we also disable the checkbox via JS
-    @property
-    def deleted_forms(self):
-        deleted_forms = super(BaseNoteFormSet, self).deleted_forms
-        user = CrequestMiddleware.get_request().user
-        for i, form in enumerate(deleted_forms):
-            if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
-                deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
-
-        return deleted_forms
-
-    #only show private notes if user is curator/verifier on manuscript
-    def get_queryset(self):
-        if not hasattr(self, '_queryset'):
-            self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
-            if not self._queryset.ordered:
-                self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
-        return self._queryset
-
-class NoteFormSetHelper(FormHelper):
-     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.form_method = 'post'
-        self.form_class = 'form-inline'
-        self.template = 'bootstrap4/table_inline_formset.html'
-        self.form_tag = False
-        self.form_id = 'note'
-        self.render_required_fields = True
-
 #No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
-class SubmissionUploadFilesForm(ReadOnlyFormMixin, SubmissionForm):
+class SubmissionUploadFilesForm(ReadOnlyFormMixin, forms.ModelForm):
     class Meta:
         model = m.Submission
         fields = []#['title','doi','open_data']#,'authors']
     pass
-
-class EditionForm(forms.ModelForm):
-    class Meta:
-        model = m.Edition
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(EditionForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionForm):
-    pass
-
-class CurationForm(forms.ModelForm):
-    class Meta:
-        model = m.Curation
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(CurationForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationForm):
-    pass
-
-class VerificationForm(forms.ModelForm):
-    class Meta:
-        model = m.Verification
-        fields = ['_status']
-
-    def __init__ (self, *args, **kwargs):
-        super(VerificationForm, self).__init__(*args, **kwargs)
-
-class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationForm):
-    pass
-
-
-NoteGitlabFileFormset = inlineformset_factory(
-    m.GitlabFile, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-#Needed for another level of nesting
-class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
-    nested_formset = NoteGitlabFileFormset
-
-NoteSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteEditionFormset = inlineformset_factory(
-    m.Edition, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteCurationFormset = inlineformset_factory(
-    m.Curation, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        # 'creator': CreatorChoiceField(),
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteVerificationFormset = inlineformset_factory(
-    m.Verification, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-EditionSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Edition, 
-    extra=1,
-    form=EditionForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyEditionSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Edition, 
-    extra=1,
-    form=ReadOnlyEditionForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-CurationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Curation, 
-    extra=1,
-    form=CurationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyCurationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Curation, 
-    extra=1,
-    form=ReadOnlyCurationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-VerificationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Verification, 
-    extra=1,
-    form=VerificationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
-    m.Submission, 
-    m.Verification, 
-    extra=1,
-    form=ReadOnlyVerificationForm,
-    fields=("_status",),
-    can_delete = False,
-)
-
-#------------ GitlabFile -------------
-
-class GitlabFileForm(forms.ModelForm):
-    class Meta:
-        model = m.GitlabFile
-        fields = ['gitlab_path']
-
-    def __init__ (self, *args, **kwargs):
-        super(GitlabFileForm, self).__init__(*args, **kwargs)
-        self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].disabled = True
-        self.fields['gitlab_sha256'].disabled = True
-        self.fields['gitlab_size'].disabled = True
-        self.fields['gitlab_date'].disabled = True
-
-class GitlabReadOnlyFileForm(forms.ModelForm):
-    class Meta:
-        model = m.GitlabFile
-        fields = ['gitlab_path']
-
-    def __init__ (self, *args, **kwargs):
-        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
-        self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].disabled = True
-        self.fields['gitlab_sha256'].disabled = True
-        self.fields['gitlab_size'].disabled = True
-        self.fields['gitlab_date'].disabled = True
-        # All fields read only
-        self.fields['tag'].disabled = True
-        self.fields['description'].disabled = True
-
-class DownloadGitlabWidget(forms.widgets.TextInput):
-    template_name = 'main/widget_download.html'
-
-    def get_context(self, name, value, attrs):
-        try:
-            #TODO: If root changes in our env variables this will break
-            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
-            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
-                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
-        except AttributeError as e:
-            self.download_url = ""
-        return {
-            'widget': {
-                'name': name,
-                'is_hidden': self.is_hidden,
-                'required': self.is_required,
-                'value': self.format_value(value),
-                'attrs': self.build_attrs(self.attrs, attrs),
-                'template_name': self.template_name,
-                'download_url': self.download_url 
-            },
-        }
-
-GitlabFileNoteFormSet = inlineformset_factory(
-    m.Submission,
-    m.GitlabFile,
-    form=GitlabFileForm,
-    formset=NestedSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
-    extra=0,
-    can_delete=False,
-    widgets={
-        'gitlab_path': DownloadGitlabWidget(),
-        'description': Textarea(attrs={'rows':1}) }
-)
-
-GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
-    m.Submission,
-    m.GitlabFile,
-    form=GitlabReadOnlyFileForm,
-    formset=NestedSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-    extra=0,
-    can_delete=False,
-    widgets={
-        'gitlab_path': DownloadGitlabWidget(),
-        'description': Textarea(attrs={'rows':1})}
-)
-
-class GitlabFileFormSetHelper(FormHelper):
-     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.form_method = 'post'
-        self.form_class = 'form-inline'
-        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
-        self.form_tag = False
-        self.layout = Layout(
-
-            Field('gitlab_path', th_class="w-50"),
-            Field('tag'),
-            Field('description'),
-        )
-        self.render_required_fields = True
-
-
-class VMetadataPackageForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataPackage
-        fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
-
-    def __init__ (self, *args, **kwargs):
-        super(VMetadataPackageForm, self).__init__(*args, **kwargs)
-
-VMetadataPackageVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataPackage,  
-    extra=1,
-    form=VMetadataPackageForm,
-    fields=("name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"),
-    can_delete = True,
-)
-
-class VMetadataSoftwareForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataSoftware
-        fields = ["name","version", "code_repo_url"]
-
-    def __init__ (self, *args, **kwargs):
-        super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
-
-VMetadataSoftwareVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataSoftware,  
-    extra=1,
-    form=VMetadataSoftwareForm,
-    fields=("name","version", "code_repo_url"),
-    can_delete = True,
-)
-
-class VMetadataBadgeForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataBadge
-        fields = ["name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
-
-    def __init__ (self, *args, **kwargs):
-        super(VMetadataBadgeForm, self).__init__(*args, **kwargs)
-
-VMetadataBadgeVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataBadge,  
-    extra=1,
-    form=VMetadataBadgeForm,
-    fields=("name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"),
-    can_delete = True,
-)
-
-class VMetadataAuditForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataAudit
-        fields = ["name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"]
-
-    def __init__ (self, *args, **kwargs):
-        super(VMetadataAuditForm, self).__init__(*args, **kwargs)
-
-VMetadataAuditVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataAudit,  
-    extra=1,
-    form=VMetadataAuditForm,
-    fields=("name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"),
-    can_delete = True,
-)
-
-class VMetadataForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadata
-        fields = ["operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
-
-    def __init__ (self, *args, **kwargs):
-        super(VMetadataForm, self).__init__(*args, **kwargs)
-
-VMetadataSubmissionFormset = inlineformset_factory(
-    m.Submission,
-    m.VerificationMetadata,  
-    extra=1,
-    form=VMetadataForm,
-    fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-    can_delete = True,
-)
 
 ############# Manuscript Views Forms #############
 #-------------
@@ -706,12 +220,12 @@ class DataSourceForm_Verifier(DataSourceBaseForm):
 DataSourceManuscriptFormsets = {}
 for role_str in list_of_roles:
     DataSourceManuscriptFormsets[role_str] = inlineformset_factory(
-    m.Manuscript,
-    m.DataSource,  
-    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
-    form=getattr(sys.modules[__name__], "DataSourceForm_"+role_str),
-    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
-) 
+        m.Manuscript,
+        m.DataSource,  
+        extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else 0,
+        form=getattr(sys.modules[__name__], "DataSourceForm_"+role_str),
+        can_delete = True if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else False,
+    ) 
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyDataSourceForm(ReadOnlyFormMixin, DataSourceBaseForm):
@@ -754,12 +268,12 @@ class KeywordForm_Verifier(KeywordBaseForm):
 KeywordManuscriptFormsets = {}
 for role_str in list_of_roles:
     KeywordManuscriptFormsets[role_str] = inlineformset_factory(
-    m.Manuscript,
-    m.Keyword,  
-    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
-    form=getattr(sys.modules[__name__], "KeywordForm_"+role_str),
-    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
-) 
+        m.Manuscript,
+        m.Keyword,  
+        extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else 0,
+        form=getattr(sys.modules[__name__], "KeywordForm_"+role_str),
+        can_delete = True if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else False,
+    ) 
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyKeywordForm(ReadOnlyFormMixin, KeywordBaseForm):
@@ -773,7 +287,7 @@ ReadOnlyKeywordFormSet = inlineformset_factory(
     can_delete=False,
 )
 
-#------------- Author (Not User/Role) -------------
+#------------- Author (Connected to manuscript, Not User Model) -------------
 
 class AuthorBaseForm(forms.ModelForm):
     class Meta:
@@ -819,13 +333,13 @@ class BaseAuthorManuscriptFormset(BaseInlineFormSet):
 AuthorManuscriptFormsets = {}
 for role_str in list_of_roles:
     AuthorManuscriptFormsets[role_str] = inlineformset_factory(
-    m.Manuscript,
-    m.Author,  
-    extra=1 if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else 0,
-    form=getattr(sys.modules[__name__], "AuthorForm_"+role_str),
-    can_delete = True if(role_str == "Admin " or role_str == "Author" or role_str == "Curator") else False,
-    formset=BaseAuthorManuscriptFormset
-)
+        m.Manuscript,
+        m.Author,  
+        extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else 0,
+        form=getattr(sys.modules[__name__], "AuthorForm_"+role_str),
+        can_delete = True if(role_str == "Admin" or role_str == "Author" or role_str == "Curator") else False,
+        formset=BaseAuthorManuscriptFormset
+    )
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyAuthorForm(ReadOnlyFormMixin, AuthorBaseForm):
@@ -839,6 +353,787 @@ ReadOnlyAuthorFormSet = inlineformset_factory(
     can_delete=False,
 )
 
+############# Note Forms ############# (PROBABLY COLLAPSE INTO TOP)
+
+class NoteForm(forms.ModelForm):
+    class Meta:
+        model = m.Note
+        fields = ['text','scope','creator','note_replied_to']
+
+    SCOPE_OPTIONS = (('public','Public'),('private','Private'))
+
+    scope = forms.ChoiceField(widget=forms.RadioSelect,
+                                        choices=SCOPE_OPTIONS, required=False)
+
+    def __init__ (self, *args, **kwargs):
+        super(NoteForm, self).__init__(*args, **kwargs)
+        #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
+        #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
+
+        user = CrequestMiddleware.get_request().user
+        path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
+        try:
+            path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
+            if(path_obj_name == "submission"):
+                manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
+            elif(path_obj_name == "edition"):
+                manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
+            elif(path_obj_name == "curation"):
+                manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
+            elif(path_obj_name == "verification"):
+                manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
+            else:
+                raise TypeError("Object name parsed from url string for note form does not match our lookup")
+        except KeyError: #during creation, id we want is different
+            try: #creating a sub on a manuscript
+                manuscript = m.Manuscript.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['manuscript_id'])
+            except KeyError: #creating a edition/curation/verification on a submission
+                try:
+                    manuscript = m.Submission.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['submission_id']).manuscript
+                except KeyError:
+                    raise TypeError("Object name parsed from url string for note form does not match our lookup, during create")
+
+        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+            self.fields.pop('scope')
+        else:       
+            #Populate scope field depending on existing roles
+            existing_roles = []
+            for role in c.get_roles():
+                role_perms = get_perms(Group.objects.get(name=role), self.instance)
+                if(c.PERM_NOTE_VIEW_N in role_perms):
+                    existing_roles.append(role)
+            if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
+                self.fields['scope'].initial = 'public'
+            else:
+                self.fields['scope'].initial = 'private'
+
+        self.fields['creator'].disabled = True
+        if(self.instance.id): #if based off existing note
+            
+            if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
+                for fkey, fval in self.fields.items():
+                    fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+
+    def save(self, commit, *args, **kwargs):
+        if(self.has_changed()):
+            user = CrequestMiddleware.get_request().user
+            if(self.cleaned_data['creator'] != user):
+                pass #Do not save
+        super(NoteForm, self).save(commit, *args, **kwargs)
+        if('scope' in self.changed_data):
+            #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
+            for role in c.get_roles():
+                group = Group.objects.get(name=role)
+                remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+            if(self.cleaned_data['scope'] == 'public'):
+                for role in c.get_roles():
+                    group = Group.objects.get(name=role)
+                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+            else:
+                if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
+                    for role in c.get_private_roles():
+                        group = Group.objects.get(name=role)
+                        assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                else:
+                    #At this point we've saved already, maybe we shouldn't?
+                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
+                    raise Http404()
+
+class BaseNoteFormSet(BaseInlineFormSet):
+    #only allow deleting of user-owned notes. we also disable the checkbox via JS
+    @property
+    def deleted_forms(self):
+        deleted_forms = super(BaseNoteFormSet, self).deleted_forms
+        user = CrequestMiddleware.get_request().user
+        for i, form in enumerate(deleted_forms):
+            if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+                deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
+
+        return deleted_forms
+
+    #only show private notes if user is curator/verifier on manuscript
+    def get_queryset(self):
+        if not hasattr(self, '_queryset'):
+            self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
+            if not self._queryset.ordered:
+                self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
+        return self._queryset
+
+class NoteFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'bootstrap4/table_inline_formset.html'
+        self.form_tag = False
+        self.form_id = 'note'
+        self.render_required_fields = True
+
+NoteSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
+
+NoteEditionFormset = inlineformset_factory(
+    m.Edition, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
+
+NoteCurationFormset = inlineformset_factory(
+    m.Curation, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        # 'creator': CreatorChoiceField(),
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
+
+NoteVerificationFormset = inlineformset_factory(
+    m.Verification, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
+
+############# GitlabFile (File Metadata) Views Forms #############
+
+#TODO: Making this generic may have been pointless, not sure if its needed?
+class BaseFileNestingFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super(BaseFileNestingFormSet, self).add_fields(form, index)
+        # save the formset in the 'nested' property
+        form.nested = self.nested_formset(
+            instance=form.instance,
+            data=form.data if form.is_bound else None,
+            files=form.files if form.is_bound else None,
+            prefix='note-%s-%s' % (
+                form.prefix,
+                self.nested_formset.get_default_prefix()), #Defining prefix seems nessecary for getting save to work
+        )
+    
+    def is_valid(self):
+        result = super(BaseFileNestingFormSet, self).is_valid()
+        if self.is_bound:
+            for form in self.forms:
+                if hasattr(form, 'nested'):
+                    result = result and form.nested.is_valid()
+        return result
+
+    def save(self, commit=True):
+        result = super(BaseFileNestingFormSet, self).save(commit=commit)
+        for form in self.forms:
+            if hasattr(form, 'nested'):
+                if not self._should_delete_form(form):
+                    form.nested.save(commit=commit)
+        return result
+
+NoteGitlabFileFormset = inlineformset_factory(
+    m.GitlabFile, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
+
+class GitlabFileForm(forms.ModelForm):
+    class Meta:
+        model = m.GitlabFile
+        fields = ['gitlab_path']
+
+    def __init__ (self, *args, **kwargs):
+        super(GitlabFileForm, self).__init__(*args, **kwargs)
+        self.fields['gitlab_path'].widget.object_instance = self.instance
+        self.fields['gitlab_path'].disabled = True
+        self.fields['gitlab_sha256'].disabled = True
+        self.fields['gitlab_size'].disabled = True
+        self.fields['gitlab_date'].disabled = True
+
+class GitlabReadOnlyFileForm(forms.ModelForm):
+    class Meta:
+        model = m.GitlabFile
+        fields = ['gitlab_path']
+
+    def __init__ (self, *args, **kwargs):
+        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
+        self.fields['gitlab_path'].widget.object_instance = self.instance
+        self.fields['gitlab_path'].disabled = True
+        self.fields['gitlab_sha256'].disabled = True
+        self.fields['gitlab_size'].disabled = True
+        self.fields['gitlab_date'].disabled = True
+        # All fields read only
+        self.fields['tag'].disabled = True
+        self.fields['description'].disabled = True
+
+class DownloadGitlabWidget(forms.widgets.TextInput):
+    template_name = 'main/widget_download.html'
+
+    def get_context(self, name, value, attrs):
+        try:
+            #TODO: If root changes in our env variables this will break
+            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
+            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
+                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
+        except AttributeError as e:
+            self.download_url = ""
+        return {
+            'widget': {
+                'name': name,
+                'is_hidden': self.is_hidden,
+                'required': self.is_required,
+                'value': self.format_value(value),
+                'attrs': self.build_attrs(self.attrs, attrs),
+                'template_name': self.template_name,
+                'download_url': self.download_url 
+            },
+        }
+
+#Needed for another level of nesting
+class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
+    nested_formset = NoteGitlabFileFormset
+
+GitlabFileNoteFormSet = inlineformset_factory(
+    m.Submission,
+    m.GitlabFile,
+    form=GitlabFileForm,
+    formset=NestedSubFileNoteFormSet,
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
+    extra=0,
+    can_delete=False,
+    widgets={
+        'gitlab_path': DownloadGitlabWidget(),
+        'description': Textarea(attrs={'rows':1}) }
+)
+
+GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
+    m.Submission,
+    m.GitlabFile,
+    form=GitlabReadOnlyFileForm,
+    formset=NestedSubFileNoteFormSet,
+    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+    extra=0,
+    can_delete=False,
+    widgets={
+        'gitlab_path': DownloadGitlabWidget(),
+        'description': Textarea(attrs={'rows':1})}
+)
+
+class GitlabFileFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        self.form_tag = False
+        self.layout = Layout(
+
+            Field('gitlab_path', th_class="w-50"),
+            Field('tag'),
+            Field('description'),
+        )
+        self.render_required_fields = True
+
+############# Submission/Edition/Curation/Verification Views Forms #############
+
+#------------- Base Submission -------------
+
+class SubmissionBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
+
+    # def __init__ (self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+
+class SubmissionForm_Admin(SubmissionBaseForm):
+    pass
+
+class SubmissionForm_Author(SubmissionBaseForm):
+    pass
+
+class SubmissionForm_Editor(ReadOnlyFormMixin, SubmissionBaseForm):
+    pass
+
+class SubmissionForm_Curator(ReadOnlyFormMixin, SubmissionBaseForm):
+    pass
+
+class SubmissionForm_Verifier(ReadOnlyFormMixin, SubmissionBaseForm):
+    pass
+
+SubmissionForms = {
+    "Admin": SubmissionForm_Admin,
+    "Author": SubmissionForm_Author,
+    "Editor": SubmissionForm_Editor,
+    "Curator": SubmissionForm_Curator,
+    "Verifier": SubmissionForm_Verifier,
+}
+
+class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
+    pass
+
+#------------- Edition -------------
+
+class EditionBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Edition
+        fields = ['_status']
+
+class EditionForm_Admin(EditionBaseForm):
+    pass
+
+# #TODO: I'm not sure that we need an Author form for this objects, as they never see it.
+# class EditionForm_Author(ReadOnlyFormMixin, EditionBaseForm):
+#     class Meta:
+#         model = m.Edition
+#         fields = []
+
+class EditionForm_Editor(EditionBaseForm):
+    pass
+
+class EditionForm_Curator(ReadOnlyFormMixin, EditionBaseForm):
+    pass
+
+class EditionForm_Verifier(ReadOnlyFormMixin, EditionBaseForm):
+    pass
+
+EditionSubmissionFormsets = {}
+for role_str in list_of_roles:
+    try:
+        EditionSubmissionFormsets[role_str] = inlineformset_factory(
+            m.Submission, 
+            m.Edition, 
+            extra=1 if(role_str == "Admin" or role_str == "Editor") else 0,
+            form=getattr(sys.modules[__name__], "EditionForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+#We just hide edition entirely when its not readable, so no role-based forms
+class ReadOnlyEditionForm(ReadOnlyFormMixin, EditionBaseForm):
+    pass
+
+ReadOnlyEditionSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Edition, 
+    extra=0,
+    form=ReadOnlyEditionForm,
+    can_delete = False,
+)
+
+#------------- Curation -------------
+
+class CurationBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Curation
+        fields = ['_status']
+
+class CurationForm_Admin(CurationBaseForm):
+    pass
+
+# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
+# class CurationForm_Author(ReadOnlyFormMixin, CurationBaseForm):
+#     class Meta:
+#         model = m.Curation
+#         fields = []
+
+# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
+# class CurationForm_Editor(ReadOnlyFormMixin, CurationBaseForm):
+#     class Meta:
+#         model = m.Curation
+#         fields = []
+
+class CurationForm_Curator(CurationBaseForm):
+    pass
+
+class CurationForm_Verifier(ReadOnlyFormMixin, CurationBaseForm):
+    pass
+
+CurationSubmissionFormsets = {}
+for role_str in list_of_roles:
+    try:
+        CurationSubmissionFormsets[role_str] = inlineformset_factory(
+            m.Submission, 
+            m.Curation, 
+            extra=1 if(role_str == "Admin" or role_str == "Curator") else 0,
+            form=getattr(sys.modules[__name__], "CurationForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+#We just hide curation entirely when its not readable, so no role-based forms
+class ReadOnlyCurationForm(ReadOnlyFormMixin, CurationBaseForm):
+    pass
+
+ReadOnlyCurationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=0,
+    form=ReadOnlyCurationForm,
+    can_delete = False,
+)
+
+#------------- Verification -------------
+
+class VerificationBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.Verification
+        fields = ['_status']
+
+class VerificationForm_Admin(VerificationBaseForm):
+    pass
+
+# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
+# class VerificationForm_Author(ReadOnlyFormMixin, VerificationBaseForm):
+#     class Meta:
+#         model = m.Verification
+#         fields = []
+
+# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
+# class VerificationForm_Editor(ReadOnlyFormMixin, VerificationBaseForm):
+#     class Meta:
+#         model = m.Verification
+#         fields = []
+
+class VerificationForm_Curator(ReadOnlyFormMixin, VerificationBaseForm):
+    pass
+
+class VerificationForm_Verifier(VerificationBaseForm):
+    pass
+
+VerificationSubmissionFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VerificationSubmissionFormsets[role_str] = inlineformset_factory(
+            m.Submission, 
+            m.Verification, 
+            extra=1 if(role_str == "Admin" or role_str == "Verifier") else 0,
+            form=getattr(sys.modules[__name__], "VerificationForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+#We just hide verification entirely when its not readable, so no role-based forms
+class ReadOnlyVerificationForm(ReadOnlyFormMixin, VerificationBaseForm):
+    pass
+
+ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=0,
+    form=ReadOnlyVerificationForm,
+    can_delete = False,
+)
+
+#------------ Verification Metadata - Main -------------
+
+class VMetadataBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadata
+        fields = ["operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(VMetadataForm, self).__init__(*args, **kwargs)
+
+class VMetadataForm_Admin(VMetadataBaseForm):
+    pass
+
+class VMetadataForm_Author(VMetadataBaseForm):
+    pass
+
+class VMetadataForm_Editor(ReadOnlyFormMixin, VMetadataBaseForm):
+    pass
+
+class VMetadataForm_Curator(VMetadataBaseForm):
+    pass
+
+class VMetadataForm_Verifier(VMetadataBaseForm):
+    pass
+
+VMetadataSubmissionFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VMetadataSubmissionFormsets[role_str] = inlineformset_factory(
+            m.Submission, 
+            m.VerificationMetadata, 
+            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+            form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
+    pass
+
+ReadOnlyVMetadataSubmissionFormset = inlineformset_factory(
+    m.Submission, 
+    m.VerificationMetadata, 
+    extra=0,
+    form=ReadOnlyVMetadataForm,
+    can_delete = False,
+)
+
+# VMetadataSubmissionFormset = inlineformset_factory(
+#     m.Submission,
+#     m.VerificationMetadata,  
+#     extra=1,
+#     form=VMetadataForm,
+#     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
+#     can_delete = True,
+# )
+
+#------------ Verification Metadata - Package -------------
+
+class VMetadataPackageBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataPackage
+        fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(VMetadataPackageForm, self).__init__(*args, **kwargs)
+
+class VMetadataPackageForm_Admin(VMetadataPackageBaseForm):
+    pass
+
+class VMetadataPackageForm_Author(VMetadataPackageBaseForm):
+    pass
+
+class VMetadataPackageForm_Editor(ReadOnlyFormMixin, VMetadataPackageBaseForm):
+    pass
+
+class VMetadataPackageForm_Curator(VMetadataPackageBaseForm):
+    pass
+
+class VMetadataPackageForm_Verifier(VMetadataPackageBaseForm):
+    pass
+
+VMetadataPackageVMetadataFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VMetadataPackageVMetadataFormsets[role_str] = inlineformset_factory(
+            m.VerificationMetadata,  
+            m.VerificationMetadataPackage,  
+            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+            form=getattr(sys.modules[__name__], "VMetadataPackageForm_"+role_str),
+            can_delete = True,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+class ReadOnlyVMetadataPackageForm(ReadOnlyFormMixin, VMetadataPackageBaseForm):
+    pass
+
+ReadOnlyVMetadataPackageVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataPackage,  
+    extra=0,
+    form=ReadOnlyVMetadataPackageForm,
+    can_delete = False,
+)
+
+
+# VMetadataPackageVMetadataFormset = inlineformset_factory(
+#     m.VerificationMetadata,  
+#     m.VerificationMetadataPackage,  
+#     extra=1,
+#     form=VMetadataPackageForm,
+#     fields=("name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"),
+#     can_delete = True,
+# )
+
+#------------ Verification Metadata - Software -------------
+
+class VMetadataSoftwareBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataSoftware
+        fields = ["name","version", "code_repo_url"]
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
+
+class VMetadataSoftwareForm_Admin(VMetadataSoftwareBaseForm):
+    pass
+
+class VMetadataSoftwareForm_Author(VMetadataSoftwareBaseForm):
+    pass
+
+class VMetadataSoftwareForm_Editor(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+    pass
+
+class VMetadataSoftwareForm_Curator(VMetadataSoftwareBaseForm):
+    pass
+
+class VMetadataSoftwareForm_Verifier(VMetadataSoftwareBaseForm):
+    pass
+
+VMetadataSoftwareVMetadataFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VMetadataSoftwareVMetadataFormsets[role_str] = inlineformset_factory(
+            m.VerificationMetadata,  
+            m.VerificationMetadataSoftware,  
+            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+            form=getattr(sys.modules[__name__], "VMetadataSoftwareForm_"+role_str),
+            can_delete = True,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+# VMetadataSoftwareVMetadataFormset = inlineformset_factory(
+#     m.VerificationMetadata,  
+#     m.VerificationMetadataSoftware,  
+#     extra=1,
+#     form=VMetadataSoftwareForm,
+#     fields=("name","version", "code_repo_url"),
+#     can_delete = True,
+# )
+
+class ReadOnlyVMetadataSoftwareForm(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+    pass
+
+ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataSoftware,  
+    extra=0,
+    form=ReadOnlyVMetadataSoftwareForm,
+    can_delete = False,
+)
+
+#------------ Verification Metadata - Badge -------------
+
+class VMetadataBadgeBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataBadge
+        fields = ["name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(VMetadataBadgeForm, self).__init__(*args, **kwargs)
+
+class VMetadataBadgeForm_Admin(VMetadataBadgeBaseForm):
+    pass
+
+class VMetadataBadgeForm_Curator(VMetadataBadgeBaseForm):
+    pass
+
+#No forms for other roles as they cannot view
+
+VMetadataBadgeVMetadataFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VMetadataBadgeVMetadataFormsets[role_str] = inlineformset_factory(
+            m.VerificationMetadata,  
+            m.VerificationMetadataBadge,  
+            extra=1 if(role_str == "Admin" or role_str == "Curator" ) else 0,
+            form=getattr(sys.modules[__name__], "VMetadataBadgeForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+# VMetadataBadgeVMetadataFormset = inlineformset_factory(
+#     m.VerificationMetadata,  
+#     m.VerificationMetadataBadge,  
+#     extra=1,
+#     form=VMetadataBadgeForm,
+#     fields=("name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"),
+#     can_delete = True,
+# )
+
+class ReadOnlyVMetadataBadgeForm(ReadOnlyFormMixin, VMetadataBadgeBaseForm):
+    pass
+
+ReadOnlyVMetadataBadgeVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataBadge,  
+    extra=0,
+    form=ReadOnlyVMetadataBadgeForm,
+    can_delete = False,
+)
+
+#------------ Verification Metadata - Audit -------------
+
+class VMetadataAuditBaseForm(forms.ModelForm):
+    class Meta:
+        model = m.VerificationMetadataAudit
+        fields = ["name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"]
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(VMetadataAuditForm, self).__init__(*args, **kwargs)
+
+
+class VMetadataAuditForm_Admin(VMetadataAuditBaseForm):
+    pass
+
+class VMetadataAuditForm_Curator(VMetadataAuditBaseForm):
+    pass
+
+#No forms for other roles as they cannot view
+
+VMetadataAuditVMetadataFormsets = {}
+for role_str in list_of_roles:
+    try:
+        VMetadataAuditVMetadataFormsets[role_str] = inlineformset_factory(
+            m.VerificationMetadata,  
+            m.VerificationMetadataAudit,  
+            extra=1 if(role_str == "Admin" or role_str == "Curator") else 0,
+            form=getattr(sys.modules[__name__], "VMetadataAuditForm_"+role_str),
+            can_delete = False,
+        ) 
+    except AttributeError:
+        pass #If no form for role we should never show the form, so pass
+
+
+# VMetadataAuditVMetadataFormset = inlineformset_factory(
+#     m.VerificationMetadata,  
+#     m.VerificationMetadataAudit,  
+#     extra=1,
+#     form=VMetadataAuditForm,
+#     fields=("name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"),
+#     can_delete = True,
+# )
+
+class ReadOnlyVMetadataAuditForm(ReadOnlyFormMixin, VMetadataAuditBaseForm):
+    pass
+
+ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
+    m.VerificationMetadata,  
+    m.VerificationMetadataAudit,  
+    extra=0,
+    form=ReadOnlyVMetadataAuditForm,
+    can_delete = False,
+)
+
+
+
+
+
+
+
+
 #OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
 #The next question becomes whether its really worth it?
 #... well, we can use the "non-dynamic" forms for admin and just generate one for each of the four roles
@@ -850,6 +1145,7 @@ ReadOnlyAuthorFormSet = inlineformset_factory(
 # What is my plan?
 # Define all forms manually, using inheritance
 # Define formsets programatically, using type?
+
 
 
 

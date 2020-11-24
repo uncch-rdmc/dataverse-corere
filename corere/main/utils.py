@@ -39,6 +39,7 @@ def fsm_check_transition_perm(bound_method, user):
 def get_role_name_for_form(user, manuscript, session):
     group_base_string = " Manuscript " + str(manuscript.id)
     group_string = session.get("active_role","") + group_base_string
+
     if "active_role" in session and user.groups.filter(name=group_string).exists():
         return session["active_role"]
     else:

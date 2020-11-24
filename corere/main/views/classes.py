@@ -239,8 +239,6 @@ class GenericManuscriptView(GenericCorereObjectView):
             'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
-        ##print(self.author_formset.__dict__)
-
         context['author_formset'] = self.author_formset
         context['data_source_formset'] = self.data_source_formset
         context['keyword_formset'] = self.keyword_formset
@@ -351,7 +349,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     v_metadata_audit_formset = None
 
     def get(self, request, *args, **kwargs):
-        self.add_formsets(request)
         root_object_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title,
@@ -392,7 +389,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        self.add_formsets(request)
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
         root_object_title = self.object.manuscript.title
@@ -552,46 +548,105 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         return render(request, self.template, context)
 
-    def add_formsets(self, request):
-        if(has_transition_perm(self.object.add_edition_noop, request.user)):
-            self.edition_formset = f.EditionSubmissionFormset
-        else:
-            try:
-                if(has_transition_perm(self.object.submission_edition.edit_noop, request.user)):
-                    self.edition_formset = f.EditionSubmissionFormset
-                elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
-                    self.edition_formset = f.ReadOnlyEditionSubmissionFormset
-            except m.Edition.DoesNotExist:
-                pass
+    #TODO: Move this to the top, after (probably) deleting add_formsets
+    def dispatch(self, request, *args, **kwargs):
+        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session)
+        print(role_name)
 
-        if(has_transition_perm(self.object.add_curation_noop, request.user)):
-            self.curation_formset = f.CurationSubmissionFormset
-        else:
-            try:
-                if(has_transition_perm(self.object.submission_curation.edit_noop, request.user)):
-                    self.curation_formset = f.CurationSubmissionFormset
-                elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
-                    self.curation_formset = f.ReadOnlyCurationSubmissionFormset
-            except m.Curation.DoesNotExist:
-                pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.form = f.SubmissionForms[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.form = f.ReadOnlySubmissionForm
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_edition_noop, request.user) or has_transition_perm(self.object.submission_edition.edit_noop, request.user))):
+                self.edition_formset = f.EditionSubmissionFormsets[role_name]
+            elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
+                self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+        except (m.Edition.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+                self.curation_formset = f.CurationSubmissionFormsets[role_name]
+            elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
+                self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+        except (m.Curation.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
+                self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+            elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
+                self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+        except (m.Verification.DoesNotExist, KeyError):
+            pass
 
-        if(has_transition_perm(self.object.add_verification_noop, request.user)):
-            self.verification_formset = f.VerificationSubmissionFormset
-        else:
-            try:
-                if(has_transition_perm(self.object.submission_verification.edit_noop, request.user)):
-                    self.verification_formset = f.VerificationSubmissionFormset
-                elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
-                    self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
-            except m.Verification.DoesNotExist:
-                pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_package_formset = f.ReadOnlyVMetadataPackageVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
 
         #TODO: Figure out how we should do perms for these
-        self.v_metadata_formset = f.VMetadataSubmissionFormset
-        self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormset
-        self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
-        self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
-        self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
+        #self.v_metadata_formset = f.VMetadataSubmissionFormset
+        #self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormset
+        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
+        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
+        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
+
+
+
+
+        return super().dispatch(request, *args, **kwargs)
+
+        # if self.read_only:
+        #     #All Manuscript fields are visible to all users, so no role-based forms
+        #     self.form = f.ReadOnlyManuscriptForm
+        #     self.author_formset = f.ReadOnlyAuthorFormSet
+        #     self.data_source_formset = f.ReadOnlyDataSourceFormSet
+        #     self.keyword_formset = f.ReadOnlyKeywordFormSet
+        # else:
+        #     role_name = get_role_name_for_form(request.user, self.object, request.session)
+        #     self.form = f.ManuscriptForms[role_name]
+        #     self.author_formset = f.AuthorManuscriptFormsets[role_name]
+        #     self.data_source_formset = f.DataSourceManuscriptFormsets[role_name]
+        #     self.keyword_formset = f.KeywordManuscriptFormsets[role_name]
+        
+
+
+
 
         # print("=== Inline Formset Questions ===")
         # print(self.v_metadata_audit_formset.__dict__)
@@ -610,7 +665,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         # print(f.testfactorydict['1'].__dict__)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
-    form = f.SubmissionForm
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_header = "Create New Submission"
@@ -620,7 +674,6 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
-    form = f.SubmissionForm
     transition_method_name = 'edit_noop'
     page_header = "Edit Submission"
     template = 'main/form_object_submission.html'
