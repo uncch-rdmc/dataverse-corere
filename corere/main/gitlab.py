@@ -1,4 +1,4 @@
-import gitlab, logging, os, re, random, string
+import gitlab, logging, os, re, random, string, time
 from corere.main import models as m #TODO: Switch to GitlabFile
 from django.conf import settings
 logger = logging.getLogger(__name__)  
@@ -263,8 +263,6 @@ def gitlab_delete_file(obj_type, obj, repo_id, file_path):
         else:
             raise ValueError
 
-        
-
 #Delete the existing branch and make a new one off master (which has nothing?)
 #This code only works for submissions
 #How do we get branch name from repo id?
@@ -299,6 +297,32 @@ def gitlab_submission_delete_all_files(submission):
 # https://docs.gitlab.com/ee/api/users.html#create-an-impersonation-token
 def gitlab_generate_impersonation_token(self, token_user, timeout=1):
     pass
+
+#----- Used by gitlabdeleteall management command
+def gitlab_delete_all_projects():
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    projects = gl.projects.list()
+    print(len(projects))
+    for project in projects:
+        project.delete()
+        time.sleep(1)
+    return len(projects)
+
+def gitlab_delete_all_users_besides_root():
+    if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):
+        return
+    gl = gitlab.Gitlab(os.environ["GIT_LAB_URL"], private_token=os.environ["GIT_PRIVATE_ADMIN_TOKEN"])
+    users = gl.users.list()
+    print(len(users))
+    for user in users:
+        if(user.username != "root"):
+            user.delete()   
+            time.sleep(1)
+    return len(users)
+
+
 
 #TODO: Find a better way to clarify that some helpers I expect to be called outside and some not.
 #Some say its not best practice to have these helpers in here, but I want all the gitlab functions clustered...
