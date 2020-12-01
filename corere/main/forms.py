@@ -11,6 +11,7 @@ from . import constants as c
 from corere.main import models as m
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
+from django.core.exceptions import FieldDoesNotExist
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from corere.main.gitlab import helper_get_submission_branch_name
@@ -56,6 +57,22 @@ class GenericInlineFormSetHelper(FormHelper):
         self.render_required_fields = True
 
 list_of_roles = ["Admin","Author","Editor","Curator","Verifier"]
+
+#Helper that adds all help text as a popover.
+def tooltip_labels(model, field_strings):
+    fields_html = {}
+    for field_string in field_strings:
+        try:
+            field = model._meta.get_field(field_string)
+        except FieldDoesNotExist:
+            continue #if custom field we skip it
+
+        html = '<span >'+field.verbose_name+'</span>'
+        if(field.help_text != ""):
+            html += '<button type="button" class="btn btn-secondary btn-sm" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'">?</button>'
+            #html += '<a tabindex="0" role="button" data-toggle="tooltip" data-placement="auto" data-content="' + field.help_text + '"> test <span class="glyphicon glyphicon-info-sign"></span></a>'
+        fields_html[field.name] = html
+    return fields_html
 
 #-------------------------
 
@@ -139,6 +156,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         model = m.Manuscript
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
             'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+        labels = tooltip_labels(model, fields)
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
@@ -197,6 +215,7 @@ class DataSourceBaseForm(forms.ModelForm):
     class Meta:
         model = m.DataSource
         fields = ["text"]
+        labels = tooltip_labels(model, fields)
 
 class DataSourceForm_Admin(DataSourceBaseForm):
     pass
@@ -245,6 +264,7 @@ class KeywordBaseForm(forms.ModelForm):
     class Meta:
         model = m.Keyword
         fields = ["text"]
+        labels = tooltip_labels(model, fields)
 
 class KeywordForm_Admin(KeywordBaseForm):
     pass
@@ -293,6 +313,7 @@ class AuthorBaseForm(forms.ModelForm):
     class Meta:
         model = m.Author
         fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
+        labels = tooltip_labels(model, fields)
 
 class AuthorForm_Admin(AuthorBaseForm):
     pass
@@ -359,6 +380,7 @@ class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
         fields = ['text','scope','creator','note_replied_to']
+        labels = tooltip_labels(model, fields)
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
 
@@ -658,10 +680,32 @@ class GitlabFileFormSetHelper(FormHelper):
 
 #------------- Base Submission -------------
 
+#TESTTEST
+
+
+
+# def popover_html(field):
+#     html = field.verbose_name
+#     if(field.help_text != ""):
+#         html += '<button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="top" title="'+field.help_text+'">?</button>'
+#     return html
+
+# def popover_html(label, content):
+#     return label + '<button type="button" class="btn btn-secondary" data-toggle="tooltip" data-placement="top" title="'+content+'">?</button>'
+    # ' <a tabindex="0" role="button" data-toggle="popover" data-html="true" \
+    #                         data-trigger="hover" data-placement="auto" data-content="' + content + '"> \
+    #                         <span class="glyphicon glyphicon-info-sign"></span></a>'
+
 class SubmissionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Submission
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
+        labels = tooltip_labels(model, fields)
+
+        # labels = {
+        #     #NOTE: This does "work" but the field I tested on doesn't actually have help text.
+        #     'high_performance': popover_html(m.Submission._meta.get_field('high_performance')),
+        # }
 
     # def __init__ (self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
@@ -697,7 +741,8 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
 class EditionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Edition
-        fields = ['_status']
+        fields = ['report','_status']
+        labels = tooltip_labels(model, fields)
 
 class EditionForm_Admin(EditionBaseForm):
     pass
@@ -747,7 +792,8 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
-        fields = ['_status']
+        fields = ['report','_status']
+        labels = tooltip_labels(model, fields)
 
 class CurationForm_Admin(CurationBaseForm):
     pass
@@ -800,7 +846,8 @@ ReadOnlyCurationSubmissionFormset = inlineformset_factory(
 class VerificationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Verification
-        fields = ['_status']
+        fields = ['code_executability','report','_status']
+        labels = tooltip_labels(model, fields)
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass
@@ -854,6 +901,7 @@ class VMetadataBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadata
         fields = ["operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+        labels = tooltip_labels(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataForm, self).__init__(*args, **kwargs)
@@ -912,6 +960,7 @@ class VMetadataPackageBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataPackage
         fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
+        labels = tooltip_labels(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataPackageForm, self).__init__(*args, **kwargs)
@@ -971,6 +1020,7 @@ class VMetadataSoftwareBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataSoftware
         fields = ["name","version", "code_repo_url"]
+        labels = tooltip_labels(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
@@ -1028,7 +1078,8 @@ ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
 class VMetadataBadgeBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataBadge
-        fields = ["name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+        fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+        labels = tooltip_labels(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataBadgeForm, self).__init__(*args, **kwargs)
@@ -1079,7 +1130,8 @@ ReadOnlyVMetadataBadgeVMetadataFormset = inlineformset_factory(
 class VMetadataAuditBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataAudit
-        fields = ["name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"]
+        fields = ["name","version","url","organization","verified_results","exceptions","exception_reason"]
+        labels = tooltip_labels(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataAuditForm, self).__init__(*args, **kwargs)

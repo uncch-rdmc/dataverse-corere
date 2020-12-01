@@ -43,7 +43,7 @@ def get_role_name_for_form(user, manuscript, session):
     if "active_role" in session and user.groups.filter(name=group_string).exists():
         return session["active_role"]
     else:
-        logger.info("User "+ user.username +" active_role "+ session["active_role"] +" is not available for them on manuscript " + str(manuscript.id) + ". This may be because they have different roles for different manuscripts.")
+        logger.info("User "+ user.username +" active_role is not available for them on manuscript " + str(manuscript.id) + ". This may be because they have different roles for different manuscripts.")
         if user.is_superuser:
             return "Admin"
         elif user.groups.filter(name="Curator"+group_base_string).exists():

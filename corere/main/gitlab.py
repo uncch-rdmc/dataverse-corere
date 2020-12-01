@@ -321,8 +321,7 @@ def gitlab_delete_all_users_besides_root():
             user.delete()   
             time.sleep(1)
     return len(users)
-
-
+    
 
 #TODO: Find a better way to clarify that some helpers I expect to be called outside and some not.
 #Some say its not best practice to have these helpers in here, but I want all the gitlab functions clustered...

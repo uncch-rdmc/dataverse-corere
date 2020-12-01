@@ -424,22 +424,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             if(self.v_metadata_audit_formset is not None):
                 self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
 
-        #Do I really want to initialize all the formsets? If so, bool(self.edition_formset) is an existence check, otherwise gotta do a bit more
-        #What is possibly better is to create a list of formsets and iterate through them for the checks...
-
-        print("BOOL")
-        # print(self.edition_formset is None)
-        # print(self.edition_formset is None or edition_formset.is_valid() )
-
-        # print(v_metadata_formset.is_valid())
-        # print(v_metadata_package_formset.is_valid())
-        # print(self.v_metadata_package_formset is None or v_metadata_package_formset.is_valid()) #BOOOOM
-        # print(self.v_metadata_software_formset.__dict__)
-        # print(self.v_metadata_badge_formset is None or v_metadata_badge_formset.is_valid()) #BOOM
-        # print(self.v_metadata_badge_formset.__dict__)
-        # print(self.v_metadata_audit_formset is None or v_metadata_audit_formset.is_valid()) #BOOOOOOOM
-        # print(self.v_metadata_software_formset.__dict__)
-
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
         if not self.read_only:

@@ -70,70 +70,6 @@ class User(AbstractUser):
 
 ####################################################
 
-VERIFICATION_NEW = "new"
-VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
-VERIFICATION_MINOR_ISSUES = "minor_issues"
-VERIFICATION_MAJOR_ISSUES = "major_issues"
-VERIFICATION_SUCCESS_W_MOD = "success_w_mod"
-VERIFICATION_SUCCESS = "success"
-
-VERIFICATION_RESULT_CHOICES = (
-    (VERIFICATION_NEW, 'New'),
-    (VERIFICATION_NOT_ATTEMPTED, 'Not Attempted'),
-    (VERIFICATION_MINOR_ISSUES, 'Minor Issues'),
-    (VERIFICATION_MAJOR_ISSUES, 'Major Issues'),
-    (VERIFICATION_SUCCESS_W_MOD, 'Success with Modification'),
-    (VERIFICATION_SUCCESS, 'Success'),
-)
-
-class Verification(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='verification status', help_text='Was the submission able to be verified')
-    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
-
-    class Meta:
-        default_permissions = ()
-
-    def save(self, *args, **kwargs):
-        try:
-            if(self.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION):
-                raise FieldError('A verification cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_VERIFICATION)
-        except Verification.submission.RelatedObjectDoesNotExist:
-            pass #this is caught in super
-        try:
-            self.manuscript #to see if not set
-        except Verification.manuscript.RelatedObjectDoesNotExist:
-            self.manuscript = self.submission.manuscript
-
-        # if(not self.manuscript):
-        #     self.manuscript = self.submission.manuscript
-        super(Verification, self).save(*args, **kwargs)
-
-    ##### django-fsm (workflow) related functions #####
-
-    def can_edit(self):
-        if(self.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION ):
-            return True
-        return False
-
-    #Does not actually change status, used just for permission checking
-    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
-    def edit_noop(self):
-        return self._status
-
-    #-----------------------
-
-    #Does not actually change status, used just for permission checking
-    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
-    def view_noop(self):
-        return self._status
-
-####################################################
-
 EDITION_NEW = 'new'
 EDITION_ISSUES = 'issues'
 EDITION_NO_ISSUES = 'no_issues'
@@ -146,6 +82,7 @@ EDITION_RESULT_CHOICES = (
 
 class Edition(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW, verbose_name='editor approval', help_text='Was the submission approved by the editor')
+    report = models.TextField(default="", blank=True, verbose_name='report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -206,6 +143,7 @@ CURATION_RESULT_CHOICES = (
 
 class Curation(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW, verbose_name='curation', help_text='Was the submission approved by the curator')
+    report = models.TextField(default="", blank=True, verbose_name='report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -249,6 +187,72 @@ class Curation(AbstractCreateUpdateModel):
 
 ####################################################
 
+VERIFICATION_NEW = "new"
+VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
+VERIFICATION_MINOR_ISSUES = "minor_issues"
+VERIFICATION_MAJOR_ISSUES = "major_issues"
+VERIFICATION_SUCCESS_W_MOD = "success_w_mod"
+VERIFICATION_SUCCESS = "success"
+
+VERIFICATION_RESULT_CHOICES = (
+    (VERIFICATION_NEW, 'New'),
+    (VERIFICATION_NOT_ATTEMPTED, 'Not Attempted'),
+    (VERIFICATION_MINOR_ISSUES, 'Minor Issues'),
+    (VERIFICATION_MAJOR_ISSUES, 'Major Issues'),
+    (VERIFICATION_SUCCESS_W_MOD, 'Success with Modification'),
+    (VERIFICATION_SUCCESS, 'Success'),
+)
+
+class Verification(AbstractCreateUpdateModel):
+    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='verification status', help_text='Was the submission able to be verified')
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
+    report = models.TextField(default="", blank=True, verbose_name='report')
+    code_executability = models.CharField(max_length=2000, default="", verbose_name='code executability')
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
+
+    class Meta:
+        default_permissions = ()
+
+    def save(self, *args, **kwargs):
+        try:
+            if(self.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION):
+                raise FieldError('A verification cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_VERIFICATION)
+        except Verification.submission.RelatedObjectDoesNotExist:
+            pass #this is caught in super
+        try:
+            self.manuscript #to see if not set
+        except Verification.manuscript.RelatedObjectDoesNotExist:
+            self.manuscript = self.submission.manuscript
+
+        # if(not self.manuscript):
+        #     self.manuscript = self.submission.manuscript
+        super(Verification, self).save(*args, **kwargs)
+
+    ##### django-fsm (workflow) related functions #####
+
+    def can_edit(self):
+        if(self.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION ):
+            return True
+        return False
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
+    def edit_noop(self):
+        return self._status
+
+    #-----------------------
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
+                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
+    def view_noop(self):
+        return self._status
+
+####################################################
+
 # Before we were just doing new/submitted as technically you can learn the status of the submission from its attached curation/verification.
 # But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
 
@@ -280,10 +284,10 @@ class Submission(AbstractCreateUpdateModel):
     version = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='If yes, are you permitted to share these data with Odum for verification only?')
+    high_performance = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission require a high-performance compute environment?')
+    contents_gis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission contain GIS data and mapping?')
+    contents_proprietary = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission contain restricted or proprietary data?')
+    contents_proprietary_sharing = models.BooleanField(default=False, blank=True, null=True, verbose_name='If yes, are you permitted to share these data with Odum for verification only?')
     
     class Meta:
         default_permissions = ()
@@ -595,17 +599,17 @@ MANUSCRIPT_SUBJECT_CHOICES = (
 )
 
 class Manuscript(AbstractCreateUpdateModel):
-    title = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
-    pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, verbose_name='qualitative analysis', help_text='Whether this manuscript needs qualitative analysis')
-    qdr_review = models.CharField(max_length=1024, blank=False, null=False, default="", verbose_name='QDR Review Info', help_text='Details about the review performed by QDR')
+    title = models.CharField(max_length=200, blank=True, null=True, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
+    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
+    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='qualitative analysis', help_text='Whether this manuscript needs qualitative analysis')
+    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
     contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='contact first name', help_text='First name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='contact last name', help_text='Last name of the publication contact that will be stored in Dataverse')
-    contact_email = models.EmailField(blank=True, verbose_name='contact email address', help_text='Email address of the publication contact that will be stored in Dataverse')
-    description = models.CharField(max_length=1024, blank=False, null=False, default="", verbose_name='description', help_text='Additional info about the manuscript')
-    subject = models.CharField(max_length=14, blank=False, null=False,  choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='subject') 
-    producer_first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='producer first name')
-    producer_last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='producer last name')
+    contact_email = models.EmailField(blank=True, null=True, verbose_name='contact email address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='description', help_text='Additional info about the manuscript')
+    subject = models.CharField(max_length=14, blank=True, null=True, choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='subject') 
+    producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='producer first name')
+    producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='producer last name')
     _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW, verbose_name='manuscript status', help_text='The overall status of the manuscript in the review process')
     gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
     gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
@@ -870,50 +874,49 @@ class Note(AbstractCreateUpdateModel):
 
 #TODO: Package and software seem extremely similar, maybe we don't need both
 class VerificationMetadataPackage(models.Model):
-    name = models.CharField(max_length=200, default="", verbose_name='name')
-    version = models.CharField(max_length=200, default="", verbose_name='version')
-    source_default_repo = models.BooleanField(default=False, verbose_name='default repository')
-    source_cran = models.BooleanField(default=False, verbose_name='CRAN')
-    source_author_website = models.BooleanField(default=False, verbose_name='author website')
-    source_dataverse = models.BooleanField(default=False, verbose_name='dataverse archive')
+    name = models.CharField(max_length=200, blank=True, default="", verbose_name='name')
+    version = models.CharField(max_length=200, blank=True, default="", verbose_name='version')
+    source_default_repo = models.BooleanField(default=False, blank=True, verbose_name='default repository')
+    source_cran = models.BooleanField(default=False, blank=True, verbose_name='CRAN')
+    source_author_website = models.BooleanField(default=False, blank=True, verbose_name='author website')
+    source_dataverse = models.BooleanField(default=False, blank=True, verbose_name='dataverse archive')
     source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='other')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_packages")
 
 class VerificationMetadataSoftware(models.Model):
-    name = models.CharField(max_length=200, default="", verbose_name='name')
-    version = models.CharField(max_length=200, default="", verbose_name='version')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
     code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='code repository url')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
 
 class VerificationMetadataBadge(models.Model):
-    name = models.CharField(max_length=200, default="", verbose_name='name')
-    type = models.CharField(max_length=200, default="", verbose_name='type')
-    version = models.CharField(max_length=200, default="", verbose_name='version')
-    definition_url = models.URLField(max_length=200, default="", verbose_name='definition url')
-    logo_url = models.URLField(max_length=200, default="", verbose_name='logo url')
-    issuing_org = models.CharField(max_length=200, default="", verbose_name='issuing organization')
-    issuing_date = models.DateField(verbose_name='issuing date')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
+    badge_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='type')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
+    definition_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='definition url')
+    logo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='logo url')
+    issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='issuing organization')
+    issuing_date = models.DateField(blank=True, null=True, verbose_name='issuing date')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
 
 class VerificationMetadataAudit(models.Model):
-    name = models.CharField(max_length=200, default="", verbose_name='name')
-    version = models.CharField(max_length=200, default="", verbose_name='version')
-    url = models.URLField(max_length=200, default="", verbose_name='url')
-    organization = models.CharField(max_length=200, default="", verbose_name='organization')
-    verified_results = models.CharField(max_length=200, default="", verbose_name='verified results')
-    code_executability = models.CharField(max_length=200, default="", verbose_name='code executability')
-    exceptions = models.CharField(max_length=200, default="", verbose_name='exceptions')
-    exception_reason = models.CharField(max_length=200, default="", verbose_name='exception reason')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
+    url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='url')
+    organization = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='organization')
+    verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='verified results')
+    exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='exceptions')
+    exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='exception reason')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
 
 class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", verbose_name='operating system')
-    machine_type = models.CharField(max_length=200, default="", verbose_name='machine type')
+    operating_system = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='operating system')
+    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='machine type')
     scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='scheduler module')
-    platform = models.CharField(max_length=200, default="", verbose_name='platform')
-    processor_reqs = models.CharField(max_length=200, default="", verbose_name='processor requirements')
-    host_url = models.URLField(max_length=200, default="", verbose_name='hosting institution url')
-    memory_reqs = models.CharField(max_length=200, default="", verbose_name='memory reqirements')
+    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='platform')
+    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='processor requirements')
+    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='hosting institution url')
+    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='memory reqirements')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
 
 ############### POST-SAVE ################
