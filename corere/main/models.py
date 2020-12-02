@@ -284,10 +284,10 @@ class Submission(AbstractCreateUpdateModel):
     version = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-    high_performance = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, blank=True, null=True, verbose_name='Does this submission contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, blank=True, null=True, verbose_name='If yes, are you permitted to share these data with Odum for verification only?')
+    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
+    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
+    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')
     
     class Meta:
         default_permissions = ()

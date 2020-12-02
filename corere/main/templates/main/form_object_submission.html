@@ -27,6 +27,40 @@
             formCssClass: 'v_metadata_audit_table',
             addText: 'add audit'
         });
+
+        var hp_checkbox = document.getElementById('id_high_performance');
+        hp_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+        }
+        });
+
+        var cp_checkbox = document.getElementById('id_contents_proprietary');
+        var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
+        if (!cp_checkbox.checked) {
+            ps_div.style.display = "none";
+        }
+        cp_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            ps_div.style.display = "block";
+        } else {
+            ps_div.style.display = "none";
+        }
+        });
+
+        var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
+        cps_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
+        }
+        });
+
+        //var ps_div = document.getElementById('id_contents_proprietary_sharing');
+        
+        //div_id_contents_proprietary_sharing
+        //id_contents_proprietary_sharing
+
+
     })
 </script>
 

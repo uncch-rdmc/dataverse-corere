@@ -164,7 +164,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         # print(self.instance.can_begin_return_problems())
 
         #We run this clean if the manuscript is progressed, or after being progressed it is being edited.
-        if("submit_progress_manuscript" in self.data.keys() or self.instance._status != "new"):
+        if("submit_progress_manuscript" in self.data.keys() or self.instance._status != m.MANUSCRIPT_NEW):
             description = self.cleaned_data.get('description')
             if(not description):
                 self.add_error('description', 'This field is required.')
@@ -188,7 +188,6 @@ class ManuscriptBaseForm(forms.ModelForm):
                 raise ValidationError(validation_errors)
 
             #also require a keyword, author, data source, producer(?)
-        pass
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
@@ -734,13 +733,14 @@ class SubmissionBaseForm(forms.ModelForm):
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
         labels = tooltip_labels(model, fields)
 
-        # labels = {
-        #     #NOTE: This does "work" but the field I tested on doesn't actually have help text.
-        #     'high_performance': popover_html(m.Submission._meta.get_field('high_performance')),
-        # }
-
-    # def __init__ (self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
+    #If edition/curation/verification set to "new", return error.
+    def clean(self):
+        if("submit_progress_edition" in self.data.keys() and self.data.get('edition_formset-0-_status','') == m.EDITION_NEW):
+            raise ValidationError('Submission editor approval must have a status other than ' + m.EDITION_NEW + '.')
+        if("submit_progress_curation" in self.data.keys() and self.data.get('curation_formset-0-_status','') == m.CURATION_NEW):
+            raise ValidationError('Submission curator approval must have a status other than ' + m.CURATION_NEW + '.')
+        if("submit_progress_verification" in self.data.keys() and self.data.get('verification_formset-0-_status','') == m.VERIFICATION_NEW):
+            raise ValidationError('Submission verifier approval must have a status other than ' + m.VERIFICATION_NEW + '.')
 
 class SubmissionForm_Admin(SubmissionBaseForm):
     pass
