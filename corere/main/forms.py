@@ -11,7 +11,7 @@ from . import constants as c
 from corere.main import models as m
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from corere.main.gitlab import helper_get_submission_branch_name
@@ -157,6 +157,38 @@ class ManuscriptBaseForm(forms.ModelForm):
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
             'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         labels = tooltip_labels(model, fields)
+
+    def clean(self):
+        # print(self.data)
+        # print(self.instance.__dict__)
+        # print(self.instance.can_begin_return_problems())
+
+        #We run this clean if the manuscript is progressed, or after being progressed it is being edited.
+        if("submit_progress_manuscript" in self.data.keys() or self.instance._status != "new"):
+            description = self.cleaned_data.get('description')
+            if(not description):
+                self.add_error('description', 'This field is required.')
+
+            subject = self.cleaned_data.get('subject')
+            if(not subject):
+                self.add_error('subject', 'This field is required.')
+
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
+                or self.data['author_formset-0-identifier_scheme'] == "" or self.data['author_formset-0-position'] == ""):
+                validation_errors.append(ValidationError("You must specify an author."))
+            if(self.data['data_source_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a data source."))
+            if(self.data['keyword_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a keyword."))    
+
+            validation_errors.extend(self.instance.can_begin_return_problems())
+
+            if validation_errors:
+                raise ValidationError(validation_errors)
+
+            #also require a keyword, author, data source, producer(?)
+        pass
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):

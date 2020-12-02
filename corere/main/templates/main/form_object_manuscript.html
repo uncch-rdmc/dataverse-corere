@@ -51,9 +51,13 @@
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
     {% endif %}
-
     {% if not read_only %}
     <input type="submit" name="submit" value="Save">
+        {% if role_name == "Author" or role_name == "Admin" %}
+            {% if m_status == "new" %}
+            <input type="submit" name="submit_progress_manuscript" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
+            {% endif %}
+        {% endif %}
     {% endif %}
     {% block extrabuttons %}
     {% endblock %}

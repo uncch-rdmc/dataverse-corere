@@ -599,7 +599,7 @@ MANUSCRIPT_SUBJECT_CHOICES = (
 )
 
 class Manuscript(AbstractCreateUpdateModel):
-    title = models.CharField(max_length=200, blank=True, null=True, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
+    title = models.CharField(max_length=200, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
     qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='qualitative analysis', help_text='Whether this manuscript needs qualitative analysis')
     qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
@@ -678,15 +678,21 @@ class Manuscript(AbstractCreateUpdateModel):
         return self._status == MANUSCRIPT_COMPLETED
             
     ##### django-fsm (workflow) related functions #####
-
+    
+    #Extra function defined so fsm errors can be passed to use when submitting a form.
     #Conditions: Authors needed, files uploaded [NOT DONE]
-    def can_begin(self):
+    def can_begin_return_problems(self):
+        problems = []
         # Are there any authors assigned to the manuscript?
         group_string = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id)
         count = User.objects.filter(groups__name=group_string).count()
         if(count < 1):
-            return False
-        return True
+            problems.append("Manuscript must have at least one author role assigned.")
+        return problems
+    
+    def can_begin(self):
+        problems = self.can_begin_return_problems()
+        return not problems
 
     @transition(field=_status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))

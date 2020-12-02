@@ -172,6 +172,8 @@ class GroupRequiredMixin(object):
 ############################################# MANUSCRIPT #############################################
 
 # Do not call directly
+# We pass m_status here to provide the "progess" option. We want this to show up even if something is missing (e.g. no files) so that we can tell the user.
+# ... but maybe this should be another case in the model
 class GenericManuscriptView(GenericCorereObjectView):
     object_friendly_name = 'manuscript'
     model = m.Manuscript
@@ -179,6 +181,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     author_formset = None
     data_source_formset = None
     keyword_formset = None 
+    role_name = None
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -188,11 +191,11 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.data_source_formset = f.ReadOnlyDataSourceFormSet
             self.keyword_formset = f.ReadOnlyKeywordFormSet
         else:
-            role_name = get_role_name_for_form(request.user, self.object, request.session)
-            self.form = f.ManuscriptForms[role_name]
-            self.author_formset = f.AuthorManuscriptFormsets[role_name]
-            self.data_source_formset = f.DataSourceManuscriptFormsets[role_name]
-            self.keyword_formset = f.KeywordManuscriptFormsets[role_name]
+            self.role_name = get_role_name_for_form(request.user, self.object, request.session)
+            self.form = f.ManuscriptForms[self.role_name]
+            self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
+            self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
+            self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
         return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -202,7 +205,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             root_object_title = self.object.manuscript.title
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'm_status':self.object._status, 'page_header': self.page_header, 'role_name': self.role_name, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -226,6 +229,14 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.author_formset.save()
             self.data_source_formset.save()
             self.keyword_formset.save()
+
+            if request.POST.get('submit_progress_manuscript'):
+                if not fsm_check_transition_perm(self.object.begin, request.user): 
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+                self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been submitted!'
+                self.object.begin()
+                self.object.save()
             
             messages.add_message(request, messages.SUCCESS, self.message)
             return redirect(self.redirect)
@@ -236,7 +247,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'm_status':self.object._status, 'page_header': self.page_header, 'role_name': self.role_name, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         context['author_formset'] = self.author_formset
