@@ -9,6 +9,11 @@
  * Licensed under the New BSD License
  * See: http://www.opensource.org/licenses/bsd-license.php
  */
+
+ // CORERE Note:
+ // We've modded various parts of this script so it'll work for Corere.
+ // I don't love it though, it feels hacky and I've had to hack more to add "normal" features, such as not deleting entries if a form is invalid.
+ // I think there is bugginess with where multiple variables are being defined at once. I think they scope global and don't take "var" from the first. Not sure tho.
 ;(function($) {
     $.fn.formset = function(opts)
     {
@@ -16,7 +21,7 @@
             clickCount = options.prefix + "clickcount"
             window[clickCount] = 0
             flatExtraClasses = options.extraClasses.join(' '),
-            totalForms = $('#id_' + options.prefix + '-TOTAL_FORMS'),
+            //totalForms = $('#id_' + options.prefix + '-TOTAL_FORMS'),
             maxForms = $('#id_' + options.prefix + '-MAX_NUM_FORMS'),
             minForms = $('#id_' + options.prefix + '-MIN_NUM_FORMS'),
             childElementSelector = 'input,select,textarea,label,div',
@@ -45,6 +50,9 @@
                 return maxForms.length == 0 ||   // For Django versions pre 1.2
                     (maxForms.val() == '' || (maxForms.val() - totalForms.val() > 0));
             };
+        //corere moved this outside so it actually scoped local... not sure why though!
+        //the other variables may still be broken, but may not matter for our system.
+        var totalForms = $('#id_' + options.prefix + '-TOTAL_FORMS') 
 
             /**
             * Indicates whether delete link(s) can be displayed - when total forms > min forms
@@ -170,13 +178,16 @@
                 // Otherwise, use the last form in the formset; this works much better if you've got
                 // extra (>= 1) forms (thnaks to justhamade for pointing this out):
                 //CORERE: Only hide header and first ("blank") entry if there are no errors returned from django
-                if($('.' + options.formCssClass + ':last').parent().parent().find('tbody')[0].querySelectorAll(".invalid-feedback").length == 0){
+
+                //CORERE TODO: This should check for invalid-feedback off root and 
+                //if($('.' + options.formCssClass + ':last').parent().parent().find('tbody')[0].querySelectorAll(".invalid-feedback").length == 0){
+                if(!$(".invalid-feedback")[0] && !$(".alert-danger")[0]){
                     if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').hide();
-                    //ODUM CORERE: Also hide the th for the formCssClass
+                    //ODUM CORERE: Also hide the th for the formCssClass as well as div class alert-danger (crude but should work)
                     if (options.hideLastAddForm && $('.' + options.formCssClass).length < 3 ) $('.' + options.formCssClass + ':last').parent().parent().find('th').hide();
                 }
                 template = $('.' + options.formCssClass + ':last').clone(true).removeAttr('id');
-                template.find('input:hidden[id $= "-DELETE"]').remove();
+                //corere delete remove disabled, doesn't work with ootb extra //template.find('input:hidden[id $= "-DELETE"]').remove();
                 // Clear all cloned fields, except those the user wants to keep (thanks to brunogola for the suggestion):
                 template.find(childElementSelector).not(options.keepFieldValues).each(function() {
                     var elem = $(this);

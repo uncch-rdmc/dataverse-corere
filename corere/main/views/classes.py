@@ -229,7 +229,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.author_formset.save()
             self.data_source_formset.save()
             self.keyword_formset.save()
-
+            
             if request.POST.get('submit_progress_manuscript'):
                 if not fsm_check_transition_perm(self.object.begin, request.user): 
                     logger.debug("PermissionDenied")

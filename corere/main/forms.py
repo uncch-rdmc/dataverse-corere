@@ -376,11 +376,14 @@ class AuthorForm_Verifier(AuthorBaseForm):
 class BaseAuthorManuscriptFormset(BaseInlineFormSet):
     def clean(self):
         position_list = []
-        for fdata in self.cleaned_data:
-            if('position' in fdata): #skip empty form
-                position_list.append(fdata['position'])
-        if(len(position_list) != 0 and ( sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1)):
-            raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
+        try:
+            for fdata in self.cleaned_data:
+                if('position' in fdata): #skip empty form
+                    position_list.append(fdata['position'])
+            if(len(position_list) != 0 and ( sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1)):
+                raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
+        except AttributeError:
+            pass #sometimes there is no cleaned data
 
 AuthorManuscriptFormsets = {}
 for role_str in list_of_roles:
