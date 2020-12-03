@@ -10,24 +10,25 @@
         $('#v_metadata_package_table tbody tr').formset({
             prefix: '{{ v_metadata_package_formset.prefix }}',
             formCssClass: 'v_metadata_package_table',
-            addText: 'add package'
+            addText: '{% if not read_only %}add package{% endif %}'
         });
         $('#v_metadata_software_table tbody tr').formset({
             prefix: '{{ v_metadata_software_formset.prefix }}',
             formCssClass: 'v_metadata_software_table',
-            addText: 'add software'
+            addText: '{% if not read_only %}add software{% endif %}'
         });
         $('#v_metadata_badge_table tbody tr').formset({
             prefix: '{{ v_metadata_badge_formset.prefix }}',
             formCssClass: 'v_metadata_badge_table',
-            addText: 'add badge'
+            addText: '{% if not read_only %}add badge{% endif %}'
         });
             $('#v_metadata_audit_table tbody tr').formset({
             prefix: '{{ v_metadata_audit_formset.prefix }}',
             formCssClass: 'v_metadata_audit_table',
-            addText: 'add audit'
+            addText: '{% if not read_only %}add audit{% endif %}'
         });
 
+        //checkbox conditionality and popups
         var hp_checkbox = document.getElementById('id_high_performance');
         hp_checkbox.addEventListener('change', function() {
         if (this.checked) {
@@ -54,6 +55,24 @@
             alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
         }
         });
+        
+        //inline N/A text when there are no entries (only happens during readonly)
+        if(!document.getElementById("id_v_metadata_formset-0-id")) {
+            na_span_vametadata.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_package_formset-0-id")) {
+            na_span_vametadata_package.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
+            na_span_vametadata_software.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_badge_formset-0-id")) {
+            na_span_vametadata_badge.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_audit_formset-0-id")) {
+            na_span_vametadata_audit.style.display = "block";
+        }
+
     })
 </script>
 
@@ -86,27 +105,34 @@
         <h6>Verification Metadata:</h6>
         {{ v_metadata_formset.non_form_errors }}
         {% crispy v_metadata_formset helper %}
+        <span id="na_span_vametadata" style="display:none"><p>N/A</p></span>
+        <hr>
     {% endif %}
 
     {% if v_metadata_package_formset %}
         <h6>Verification Metadata - Packages:</h6>
+        <span id="na_span_vametadata_package" style="display:none"><p>N/A</p></span>
         {{ v_metadata_package_formset.non_form_errors }}
         {% crispy v_metadata_package_formset v_metadata_package_inline_helper %}
     {% endif %}
 
     {% if v_metadata_software_formset %}
         <h6>Verification Metadata - Software:</h6>
+        <span id="na_span_vametadata_software" style="display:none"><p>N/A</p></span>
         {{ v_metadata_software_formset.non_form_errors }}
         {% crispy v_metadata_software_formset v_metadata_software_inline_helper %}
     {% endif %}
     
     {% if v_metadata_badge_formset %}
         <h6>Verification Metadata - Badges:</h6>
+        <span id="na_span_vametadata_badge" style="display:none"><p>N/A</p></span>
         {{ v_metadata_badge_formset.non_form_errors }}
         {% crispy v_metadata_badge_formset v_metadata_badge_inline_helper %}
     {% endif %}
+
     {% if v_metadata_audit_formset %}
         <h6>Verification Metadata - Audits:</h6>
+        <span id="na_span_vametadata_audit" style="display:none"><p>N/A</p></span>
         {{ v_metadata_audit_formset.non_form_errors }}
         {% crispy v_metadata_audit_formset v_metadata_audit_inline_helper %}
     {% endif %}

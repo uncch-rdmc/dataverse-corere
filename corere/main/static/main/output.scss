@@ -97,6 +97,7 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
     display: flex;
 }
 
+//hide required asterix
 .asteriskField { display: none; }
 
 [id^=hint_id]{ display: none; } //disable showing all hints, we show them via tooltips
@@ -104,6 +105,10 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
 
+//fixes issue with inline formset checkboxes not going into their cells
+td.custom-control {
+    display: table-cell;
+}
 
 /* Datatables OLD */
 
