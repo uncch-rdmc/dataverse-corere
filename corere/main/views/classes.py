@@ -25,7 +25,7 @@ class GenericCorereObjectView(View):
     form_dict = None
     model = None
     template = 'main/form_object_generic.html'
-    redirect = '/'
+    redirect = '..'
     read_only = False
     message = None
     http_method_names = ['get', 'post'] #Used by the base View class
@@ -264,6 +264,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     return_403 = True
     page_header = "Create New Manuscript"
     create = True
+    redirect = "/"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     template = 'main/manuscript_super_form.html'
