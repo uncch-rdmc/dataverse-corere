@@ -110,6 +110,27 @@ td.custom-control {
     display: table-cell;
 }
 
+.tooltip-icon {
+    color: #7386D5;
+    margin-left: 2px;
+    font-size: .9rem;
+}
+.tooltip-inner {
+    background-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, .tooltip.bs-tooltip-bottom .arrow::before {
+    border-bottom-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, .tooltip.bs-tooltip-top .arrow::before {
+    border-top-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, .tooltip.bs-tooltip-left .arrow::before {
+    border-left-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, .tooltip.bs-tooltip-right .arrow::before {
+    border-right-color: #7386D5;
+}
+
 /* Datatables OLD */
 
 // body {

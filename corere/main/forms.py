@@ -69,7 +69,9 @@ def tooltip_labels(model, field_strings):
 
         html = '<span >'+field.verbose_name+'</span>'
         if(field.help_text != ""):
-            html += '<button type="button" class="btn btn-secondary btn-sm" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'">?</button>'
+            html += '<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'"></span>'
+            #html += '<button type="button" class="btn btn-secondary btn-sm" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'">?</button>'
+
             #html += '<a tabindex="0" role="button" data-toggle="tooltip" data-placement="auto" data-content="' + field.help_text + '"> test <span class="glyphicon glyphicon-info-sign"></span></a>'
         fields_html[field.name] = html
     return fields_html
