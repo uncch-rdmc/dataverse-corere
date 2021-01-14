@@ -31,7 +31,7 @@
     $(document).ready(function() {
         console.log("Create sub outside")
         $.ajax({
-            url: "/manuscript/"+ manuscript_id +"/submission_table",
+            url: "/manuscript/"+ manuscript_id +"/submission_table/",
             cache: false,
             success: function (response) {
                 console.log("Create sub inside")
@@ -51,7 +51,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission";
+                                    window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
                                 },
                                 enabled: createSubButton
                             },
@@ -66,7 +66,7 @@
                                         text: 'Edit/Progress',
                                         name: 'editSubmission',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/submission/"+submission_id+"/edit";
+                                            window.location.href = "/submission/"+submission_id+"/edit/";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -77,7 +77,7 @@
                                         text: 'Edit Files',
                                         name: 'editSubmissionFiles',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/submission/"+submission_id+"/editfiles";
+                                            window.location.href = "/submission/"+submission_id+"/editfiles/";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -89,7 +89,7 @@
                                     text: 'View',
                                     name: 'viewSubmission',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/submission/"+submission_id+"/view";
+                                        window.location.href = "/submission/"+submission_id+"/view/";
                                     },
                                     init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -101,7 +101,7 @@
                                     name: 'viewSubmissionFiles',
                                     action: function ( e, dt, node, config ) {
 
-                                        window.location.href = "/submission/"+submission_id+"/viewfiles";
+                                        window.location.href = "/submission/"+submission_id+"/viewfiles/";
                                     },
                                     init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -115,7 +115,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/progress', {
+                                            fetch('/submission/'+submission_id+'/progress/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -135,7 +135,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/generatereport', {
+                                            fetch('/submission/'+submission_id+'/generatereport/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -155,7 +155,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/return', {
+                                            fetch('/submission/'+submission_id+'/return/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -177,7 +177,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
                                 name: 'createEdition',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createedition";
+                                    window.location.href = "/submission/"+submission_id+"/createedition/";
                                 },
                                 enabled: false
                             },
@@ -192,7 +192,7 @@
                                         text: 'Edit',
                                         name: 'editEdition',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/edition/"+edition_id+"/edit";
+                                            window.location.href = "/edition/"+edition_id+"/edit/";
                                         },
                                         enabled: false
                                     },
@@ -201,7 +201,7 @@
                                     text: 'View',
                                     name: 'viewEdition',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/edition/"+edition_id+"/view";
+                                        window.location.href = "/edition/"+edition_id+"/view/";
                                     },
                                     enabled: false
                                 },
@@ -212,7 +212,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/edition/'+edition_id+'/progress', {
+                                            fetch('/edition/'+edition_id+'/progress/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -232,7 +232,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
                                 name: 'createCuration',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createcuration";
+                                    window.location.href = "/submission/"+submission_id+"/createcuration/";
                                 },
                                 enabled: false
                             },
@@ -247,7 +247,7 @@
                                         text: 'Edit',
                                         name: 'editCuration',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/curation/"+curation_id+"/edit";
+                                            window.location.href = "/curation/"+curation_id+"/edit/";
                                         },
                                         enabled: false
                                     },
@@ -256,7 +256,7 @@
                                     text: 'View',
                                     name: 'viewCuration',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/curation/"+curation_id+"/view";
+                                        window.location.href = "/curation/"+curation_id+"/view/";
                                     },
                                     enabled: false
                                 },
@@ -267,7 +267,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/curation/'+curation_id+'/progress', {
+                                            fetch('/curation/'+curation_id+'/progress/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -288,7 +288,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Verification',
                                 name: 'createVerification',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createverification";
+                                    window.location.href = "/submission/"+submission_id+"/createverification/";
                                 },
                                 enabled: false
                             },
@@ -303,7 +303,7 @@
                                         text: 'Edit',
                                         name: 'editVerification',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/verification/"+verification_id+"/edit";
+                                            window.location.href = "/verification/"+verification_id+"/edit/";
                                         },
                                         enabled: false
                                     },
@@ -312,7 +312,7 @@
                                         text: 'View',
                                         name: 'viewVerification',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/verification/"+verification_id+"/view";
+                                            window.location.href = "/verification/"+verification_id+"/view/";
                                         },
                                         enabled: false
                                     },
@@ -323,7 +323,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/verification/'+verification_id+'/progress', {
+                                            fetch('/verification/'+verification_id+'/progress/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -351,7 +351,7 @@
                                         text: 'Edit',
                                         name: 'editManuscript',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/edit";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/edit/";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -362,7 +362,7 @@
                                         text: 'Edit Files',
                                         name: 'editManuscriptFiles',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles/";
                                         },
                                         init: function ( dt, node, config ) {
                                             node.css("display", "none");
@@ -374,7 +374,7 @@
                                     text: 'View',
                                     name: 'viewManuscript',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/view";
+                                        window.location.href = "/manuscript/"+manuscript_id+"/view/";
                                     },
                                     init: function ( dt, node, config ) {
                                         node.css("display", "none");
@@ -385,7 +385,7 @@
                                     text: 'View Files',
                                     name: 'viewManuscriptFiles',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/viewfiles";
+                                        window.location.href = "/manuscript/"+manuscript_id+"/viewfiles/";
                                     },
                                     init: function ( dt, node, config ) {
                                         node.css("display", "none");
@@ -399,7 +399,7 @@
                                         action: function ( e, dt, node, config ) {
                                             var headers = new Headers();
                                             headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/manuscript/'+manuscript_id+'/progress', {
+                                            fetch('/manuscript/'+manuscript_id+'/progress/', {
                                                 method: 'POST',
                                                 headers: headers, 
                                                 credentials: 'include'
@@ -416,7 +416,7 @@
                                     text: 'Launch Notebook',
                                     name: 'launchNotebook',
                                     action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/binder";
+                                        window.location.href = "/manuscript/"+manuscript_id+"/binder/";
                                     },
                                     enabled: true
                                 },
@@ -433,7 +433,7 @@
                                         text: 'Invite/Add Author',
                                         name: 'inviteassignauthor',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor/";
                                         },
                                         enabled: false
                                     },
@@ -443,7 +443,7 @@
                                         text: 'Add Editor',
                                         name: 'assigneditor',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigneditor";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assigneditor/";
                                         },
                                         enabled: false
                                     },
@@ -451,7 +451,7 @@
                                         text: 'Add Curator',
                                         name: 'assigncurator',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigncurator";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assigncurator/";
                                         },
                                         enabled: false
                                     },
@@ -459,7 +459,7 @@
                                         text: 'Add Verifier',
                                         name: 'assignverifier',
                                         action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assignverifier";
+                                            window.location.href = "/manuscript/"+manuscript_id+"/assignverifier/";
                                         },
                                         enabled: false
                                     },
