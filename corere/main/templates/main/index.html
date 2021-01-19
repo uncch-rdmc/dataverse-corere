@@ -55,12 +55,12 @@
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
                                 if(search_completed_vis_toggle == false) {
-                                    table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
+                                    table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
                                     search_completed_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 5 ).search( "" ).draw();
+                                    table.columns( 3 ).search( "" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
@@ -73,12 +73,12 @@
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
                                 if(search_curator_vis_toggle == false) {
-                                    table.columns( 10 ).search( "{{request.user.username}}" ).draw();
+                                    table.columns( 6 ).search( "{{request.user.username}}" ).draw();
                                     search_curator_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> All Curators' );
                                     
                                 } else {
-                                    table.columns( 10 ).search( "" ).draw();
+                                    table.columns( 6 ).search( "" ).draw();
                                     search_curator_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> All Curators' );
                                 }
@@ -102,6 +102,7 @@
                         last_row = cell.index().row;
                     }
                 });
+                table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load
                 var selected_row = 0
                 if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
                     selected_row = table.cell( { focused: true } ).index().row
@@ -111,11 +112,10 @@
                 table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
                 table.buttons().container().prependTo("#manuscript_buttons");
 
-                table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
-                {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user.is_superuser %} 
-                table.columns( 10 ).search( "{{request.user.username}}" ).draw();
-                {% else %}
-                table.columns( 10 ).search( "" ).draw();
+                table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
+                {% comment %} We check not editor so admin still sees all {% endcomment %}
+                {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
+                table.columns( 6 ).search( "{{request.user.username}}" ).draw();
                 {% endif %}
             }
         })

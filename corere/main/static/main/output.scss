@@ -97,10 +97,39 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
     display: flex;
 }
 
+//hide required asterix
+.asteriskField { display: none; }
+
+[id^=hint_id]{ display: none; } //disable showing all hints, we show them via tooltips
 
 //To resolve collection buttons without background not closing right: https://datatables.net/forums/discussion/30377/problem-with-collection-button-and-the-background-false-option-with-workaround
 .dt-button-background { background:transparent ! important; }
 
+//fixes issue with inline formset checkboxes not going into their cells
+td.custom-control {
+    display: table-cell;
+}
+
+.tooltip-icon {
+    color: #7386D5;
+    margin-left: 2px;
+    font-size: .9rem;
+}
+.tooltip-inner {
+    background-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, .tooltip.bs-tooltip-bottom .arrow::before {
+    border-bottom-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, .tooltip.bs-tooltip-top .arrow::before {
+    border-top-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, .tooltip.bs-tooltip-left .arrow::before {
+    border-left-color: #7386D5;
+}
+.tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, .tooltip.bs-tooltip-right .arrow::before {
+    border-right-color: #7386D5;
+}
 
 /* Datatables OLD */
 

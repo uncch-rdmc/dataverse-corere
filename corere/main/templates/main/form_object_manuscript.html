@@ -3,16 +3,62 @@
 {% load concat %}
 {% load crispy_forms_tags %}
 
+{% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
+{% load static %}
+<script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
+<script type="text/javascript">
+    $(function () {
+        {% if author_formset.extra != 0 %}
+        $('#author_table tbody tr').formset({
+            prefix: '{{ author_formset.prefix }}',
+            formCssClass: 'author_table',
+            addText: 'add author'
+        });
+        {% endif %}
+        {% if data_source_formset.extra != 0 %}
+        $('#data_source_table tbody tr').formset({
+            prefix: '{{ data_source_formset.prefix }}',
+            formCssClass: 'data_source_table',
+            addText: 'add data source'
+        });
+        {% endif %}
+        {% if keyword_formset.extra != 0 %}
+        $('#keyword_table tbody tr').formset({
+            prefix: '{{ keyword_formset.prefix }}',
+            formCssClass: 'keyword_table',
+            addText: 'add keyword'
+        });
+        {% endif %}
+    })
+</script>
+
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% crispy form helper %}
-    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
-        {% include "main/note_list.html" %}    
+    {% crispy form manuscript_helper %}
+    {% if author_formset %}
+        Authors:
+        {{ author_formset.non_form_errors }}
+        {% crispy author_formset author_inline_helper %}
     {% endif %}
-    {% comment %} {% if not read_only %} {% endcomment %}
+    {% if data_source_formset %}
+        Data Source:
+        {{ data_source_formset.non_form_errors }}
+        {% crispy data_source_formset data_source_inline_helper %}
+    {% endif %}
+    {% if keyword_formset %}
+        Keywords:
+        {{ keyword_formset.non_form_errors }}
+        {% crispy keyword_formset keyword_inline_helper %}
+    {% endif %}
+    {% if not read_only %}
     <input type="submit" name="submit" value="Save">
-    {% comment %} {% endif %} {% endcomment %}
+        {% if role_name == "Author" or role_name == "Admin" %}
+            {% if m_status == "new" %}
+            <input type="submit" name="submit_progress_manuscript" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
+            {% endif %}
+        {% endif %}
+    {% endif %}
     {% block extrabuttons %}
     {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">

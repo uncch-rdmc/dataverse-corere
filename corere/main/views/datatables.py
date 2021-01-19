@@ -86,7 +86,9 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = ['id','pub_id','title','doi','open_data','_status','created_at','updated_at']
+    columns = ['id','pub_id','title','_status','created_at','updated_at']
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+        columns.append('curators')
     return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
@@ -99,6 +101,11 @@ class ManuscriptJson(CorereBaseDatatableView):
         return helper_manuscript_columns(self.request.user)
 
     # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
+    def render_column(self, manuscript, column):
+        if column == 'curators':
+            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
+        else:
+            return super(ManuscriptJson, self).render_column(manuscript, column)
 
     def get_initial_queryset(self):
         return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
@@ -271,6 +278,6 @@ class SubmissionJson(CorereBaseDatatableView):
         # use parameters passed in GET request to filter (search) queryset
         search = self.request.GET.get('search[value]', None)
         if search:
-            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
+            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search))
         return qs
 

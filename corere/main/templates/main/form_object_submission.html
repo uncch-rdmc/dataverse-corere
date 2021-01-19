@@ -3,46 +3,143 @@
 {% load concat %}
 {% load crispy_forms_tags %}
 
-{% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
-{% comment %} 
 {% load static %}
-<script src="{% static 'main/jquery.formset.20201005.min.js' %}"></script>
+<script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
-    $(function() {
-        $('#generic_object_form tbody tr').formset();
+    $(function () {
+        $('#v_metadata_package_table tbody tr').formset({
+            prefix: '{{ v_metadata_package_formset.prefix }}',
+            formCssClass: 'v_metadata_package_table',
+            addText: '{% if not read_only %}add package{% endif %}'
+        });
+        $('#v_metadata_software_table tbody tr').formset({
+            prefix: '{{ v_metadata_software_formset.prefix }}',
+            formCssClass: 'v_metadata_software_table',
+            addText: '{% if not read_only %}add software{% endif %}'
+        });
+        $('#v_metadata_badge_table tbody tr').formset({
+            prefix: '{{ v_metadata_badge_formset.prefix }}',
+            formCssClass: 'v_metadata_badge_table',
+            addText: '{% if not read_only %}add badge{% endif %}'
+        });
+            $('#v_metadata_audit_table tbody tr').formset({
+            prefix: '{{ v_metadata_audit_formset.prefix }}',
+            formCssClass: 'v_metadata_audit_table',
+            addText: '{% if not read_only %}add audit{% endif %}'
+        });
+
+        //checkbox conditionality and popups
+        var hp_checkbox = document.getElementById('id_high_performance');
+        hp_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+        }
+        });
+
+        var cp_checkbox = document.getElementById('id_contents_proprietary');
+        var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
+        if (!cp_checkbox.checked) {
+            ps_div.style.display = "none";
+        }
+        cp_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            ps_div.style.display = "block";
+        } else {
+            ps_div.style.display = "none";
+        }
+        });
+
+        var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
+        cps_checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
+        }
+        });
+        
+        //inline N/A text when there are no entries (only happens during readonly)
+        if(!document.getElementById("id_v_metadata_formset-0-id")) {
+            na_span_vametadata.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_package_formset-0-id")) {
+            na_span_vametadata_package.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
+            na_span_vametadata_software.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_badge_formset-0-id")) {
+            na_span_vametadata_badge.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_audit_formset-0-id")) {
+            na_span_vametadata_audit.style.display = "block";
+        }
+
     })
-</script> {% endcomment %}
+</script>
 
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form helper %}
-
+    <hr>
     {% if edition_formset %}
-        Edition:
-        {% comment %}Not sure what these two lines even do {% endcomment %}
-        {{ edition_formset.management_form }}
+        <h6>Edition:</h6>
         {{ edition_formset.non_form_errors }}
         {% crispy edition_formset helper %}
+        <hr>
     {% endif %}
     {% if curation_formset %}
-        Curation:
-        {% comment %}Not sure what these two lines even do {% endcomment %}
-        {{ curation_formset.management_form }}
+        <h6>Curation:</h6>
         {{ curation_formset.non_form_errors }}
         {% crispy curation_formset helper %}
+        <hr>
     {% endif %}
     {% if verification_formset %}
-        Verification:
-        {% comment %}Not sure what these two lines even do {% endcomment %}
-        {{ verification_formset.management_form }}
+        <h6>Verification:</h6>
         {{ verification_formset.non_form_errors }}
         {% crispy verification_formset helper %}
+        <hr>
+    {% endif %}
+    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
+        {% include "main/note_list.html" %} 
+        <hr>   
+    {% endif %}
+    
+    {% if v_metadata_formset %}
+        <h6>Verification Metadata:</h6>
+        {{ v_metadata_formset.non_form_errors }}
+        {% crispy v_metadata_formset helper %}
+        <span id="na_span_vametadata" style="display:none"><p>N/A</p></span>
+        <hr>
     {% endif %}
 
-    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
-        {% include "main/note_list.html" %}    
+    {% if v_metadata_package_formset %}
+        <h6>Verification Metadata - Packages:</h6>
+        <span id="na_span_vametadata_package" style="display:none"><p>N/A</p></span>
+        {{ v_metadata_package_formset.non_form_errors }}
+        {% crispy v_metadata_package_formset v_metadata_package_inline_helper %}
     {% endif %}
+
+    {% if v_metadata_software_formset %}
+        <h6>Verification Metadata - Software:</h6>
+        <span id="na_span_vametadata_software" style="display:none"><p>N/A</p></span>
+        {{ v_metadata_software_formset.non_form_errors }}
+        {% crispy v_metadata_software_formset v_metadata_software_inline_helper %}
+    {% endif %}
+    
+    {% if v_metadata_badge_formset %}
+        <h6>Verification Metadata - Badges:</h6>
+        <span id="na_span_vametadata_badge" style="display:none"><p>N/A</p></span>
+        {{ v_metadata_badge_formset.non_form_errors }}
+        {% crispy v_metadata_badge_formset v_metadata_badge_inline_helper %}
+    {% endif %}
+
+    {% if v_metadata_audit_formset %}
+        <h6>Verification Metadata - Audits:</h6>
+        <span id="na_span_vametadata_audit" style="display:none"><p>N/A</p></span>
+        {{ v_metadata_audit_formset.non_form_errors }}
+        {% crispy v_metadata_audit_formset v_metadata_audit_inline_helper %}
+    {% endif %}
+
     {% comment %} {% if not read_only %} {% endcomment %}
     <input type="submit" name="submit" value="Save">
     {% comment %} {% endif %} {% endcomment %}
