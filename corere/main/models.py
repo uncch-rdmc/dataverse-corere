@@ -81,8 +81,8 @@ EDITION_RESULT_CHOICES = (
 )
 
 class Edition(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW, verbose_name='editor approval', help_text='Was the submission approved by the editor')
-    report = models.TextField(default="", blank=True, verbose_name='report')
+    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
+    report = models.TextField(default="", blank=True, verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -142,8 +142,8 @@ CURATION_RESULT_CHOICES = (
 )
 
 class Curation(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW, verbose_name='curation', help_text='Was the submission approved by the curator')
-    report = models.TextField(default="", blank=True, verbose_name='report')
+    _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
+    report = models.TextField(default="", blank=True, verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -204,10 +204,10 @@ VERIFICATION_RESULT_CHOICES = (
 )
 
 class Verification(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='verification status', help_text='Was the submission able to be verified')
+    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    report = models.TextField(default="", blank=True, verbose_name='report')
-    code_executability = models.CharField(max_length=2000, default="", verbose_name='code executability')
+    report = models.TextField(default="", blank=True, verbose_name='Report')
+    code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
 
@@ -534,19 +534,19 @@ AUTHOR_IDENTIFIER_SCHEME = (
 )
 
 class Author(models.Model):
-    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='first name')
-    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='last name')
-    identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=AUTHOR_IDENTIFIER_SCHEME, verbose_name='identifier scheme') 
-    identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='identifier')
-    position = models.IntegerField(verbose_name='position', help_text='Position/order of the author in the list of authors')
+    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
+    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
+    identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=AUTHOR_IDENTIFIER_SCHEME, verbose_name='Identifier Scheme') 
+    identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='Identifier')
+    position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
 
 class DataSource(models.Model):
-    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='data source')
+    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='Data Source')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_data_sources")
 
 class Keyword(models.Model):
-    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='keyword')
+    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='Keyword')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_keywords")
 
 #model states
@@ -599,18 +599,18 @@ MANUSCRIPT_SUBJECT_CHOICES = (
 )
 
 class Manuscript(AbstractCreateUpdateModel):
-    title = models.CharField(max_length=200, default="", verbose_name='manuscript title', help_text='Title of the manuscript')
+    title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='qualitative analysis', help_text='Whether this manuscript needs qualitative analysis')
+    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
     qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
-    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='contact first name', help_text='First name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='contact last name', help_text='Last name of the publication contact that will be stored in Dataverse')
-    contact_email = models.EmailField(blank=True, null=True, verbose_name='contact email address', help_text='Email address of the publication contact that will be stored in Dataverse')
-    description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='description', help_text='Additional info about the manuscript')
-    subject = models.CharField(max_length=14, blank=True, null=True, choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='subject') 
-    producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='producer first name')
-    producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='producer last name')
-    _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW, verbose_name='manuscript status', help_text='The overall status of the manuscript in the review process')
+    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
+    contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
+    subject = models.CharField(max_length=14, blank=True, null=True, choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='Subject') 
+    producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
+    producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
+    _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
     gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
     gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
@@ -823,7 +823,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="", blank=True, verbose_name='note text')
+    text = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 
@@ -880,49 +880,49 @@ class Note(AbstractCreateUpdateModel):
 
 #TODO: Package and software seem extremely similar, maybe we don't need both
 class VerificationMetadataPackage(models.Model):
-    name = models.CharField(max_length=200, blank=True, default="", verbose_name='name')
-    version = models.CharField(max_length=200, blank=True, default="", verbose_name='version')
-    source_default_repo = models.BooleanField(default=False, blank=True, verbose_name='default repository')
-    source_cran = models.BooleanField(default=False, blank=True, verbose_name='CRAN')
-    source_author_website = models.BooleanField(default=False, blank=True, verbose_name='author website')
-    source_dataverse = models.BooleanField(default=False, blank=True, verbose_name='dataverse archive')
-    source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='other')
+    name = models.CharField(max_length=200, blank=True, default="", verbose_name='Name')
+    version = models.CharField(max_length=200, blank=True, default="", verbose_name='Version')
+    source_default_repo = models.BooleanField(default=False, blank=True, verbose_name='Source - Default Repository')
+    source_cran = models.BooleanField(default=False, blank=True, verbose_name='Source - CRAN')
+    source_author_website = models.BooleanField(default=False, blank=True, verbose_name='Source - Author Website')
+    source_dataverse = models.BooleanField(default=False, blank=True, verbose_name='Source - Dataverse Archive')
+    source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Source - Other')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_packages")
 
 class VerificationMetadataSoftware(models.Model):
-    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
-    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
-    code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='code repository url')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+    code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
 
 class VerificationMetadataBadge(models.Model):
-    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
-    badge_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='type')
-    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
-    definition_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='definition url')
-    logo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='logo url')
-    issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='issuing organization')
-    issuing_date = models.DateField(blank=True, null=True, verbose_name='issuing date')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+    badge_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Type')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+    definition_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Definition URL')
+    logo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Logo URL')
+    issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Issuing Organization')
+    issuing_date = models.DateField(blank=True, null=True, verbose_name='Issuing Date')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
 
 class VerificationMetadataAudit(models.Model):
-    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='name')
-    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='version')
-    url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='url')
-    organization = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='organization')
-    verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='verified results')
-    exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='exceptions')
-    exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='exception reason')
+    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+    url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='URL')
+    organization = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Organization')
+    verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Verified Results')
+    exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
+    exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
 
 class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='operating system')
-    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='machine type')
-    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='scheduler module')
-    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='platform')
-    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='processor requirements')
-    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='hosting institution url')
-    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='memory reqirements')
+    operating_system = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Operating System')
+    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
+    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
+    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
+    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
+    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
+    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
 
 ############### POST-SAVE ################
