@@ -340,133 +340,8 @@
                         },
                                                 {% endcomment %}
 
-                        //MANUSCRIPT BUTTONS
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Actions',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/edit/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Edit Files',
-                                        name: 'editManuscriptFiles',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'View',
-                                    name: 'viewManuscript',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/view/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {
-                                    text: 'View Files',
-                                    name: 'viewManuscriptFiles',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/viewfiles/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Hand-off to Authors',
-                                        name: 'progressManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/manuscript/'+manuscript_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'Launch Notebook',
-                                    name: 'launchNotebook',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/binder/";
-                                    },
-                                    enabled: true
-                                },
-                            ]
-                        },
-                        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Members',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Invite/Add Author',
-                                        name: 'inviteassignauthor',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Add Editor',
-                                        name: 'assigneditor',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigneditor/";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Curator',
-                                        name: 'assigncurator',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigncurator/";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Verifier',
-                                        name: 'assignverifier',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assignverifier/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
-                        },
-                        {% endif %}
+                        
+                        
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -532,13 +407,49 @@
             }
             })
     });
+
+    
 </script>
 <div class="main_holder">
-<h5 class="my-3"> Manuscript Info </h5>
-    Title: {{manuscript_title}}</br>
-    Author: {{manuscript_authors}} </br>
-    Editor: {{manuscript_editors}} </br>
-    Status: {{manuscript_status}} </br>
+<h5> Manuscript: {{manuscript_title}} </h5>
+<div class="my-1 dt-buttons btn-group flex-wrap">    
+    {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
+    {% manuscript_has_transition_perm request.user manuscript_id 'edit_noop' as edit_flag %}
+    {% manuscript_has_transition_perm request.user manuscript_id 'view_noop' as view_flag %}
+    {% manuscript_has_transition_perm request.user manuscript_id 'begin' as begin_flag %}
+
+    {% if edit_flag %} 
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit</button>
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
+    {% elif view_flag %}
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
+    {% endif %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
+    {% if begin_flag %} 
+        {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button>
+    {% endif %}
+    {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
+        <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Members</button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">
+            {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
+                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a>
+            {% endif %}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a>
+                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a>
+                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+    <p class="my-2"> 
+        Status: {{manuscript_status}} <br>
+        Author: {{manuscript_authors}} <br>
+        Editor: {{manuscript_editors}}
+    </p>
 </div>
 
 <div class="main_holder" id="submission_table_holder">
