@@ -27,6 +27,19 @@
         }
         return [columns_config, button_index];
     } 
+    
+    function fixButtonGroupCurve() {
+        //{% comment %} needs as we make buttons invisible, otherwise groups end up with non-rounded edges {% endcomment %}
+        $('.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
+        $('.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
+            'border-top-left-radius': '3px',
+            'border-bottom-left-radius': '3px',
+        });
+        $('.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
+            'border-top-right-radius': '3px',
+            'border-bottom-right-radius': '3px',
+        });
+    }
 
     $(document).ready(function() {
         console.log("Create sub outside")
@@ -181,6 +194,7 @@
                         dt.button(avail_buttons[i]+':name').enable(true);
                         dt.button(avail_buttons[i]+':name').nodes().css("display", "block");
                     }
+                    fixButtonGroupCurve();
 
                     console.log('Table row selected');
                 } )
@@ -196,24 +210,26 @@
                         dt.button('viewSubmissionFiles:name').enable(false);
                         dt.button('viewSubmissionFiles:name').nodes().css("display", "none");
                         dt.button('progressSubmission:name').enable(false);
-
-                                                              
+                                
                     }
+                    fixButtonGroupCurve();
+
                     console.log('Table row deselected');
                 } ).row(':last').select();
                 sub_table_callback(table)
 
                 manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
                 for(var i in manuscript_avail_buttons) {
-                    console.log("var: " + i)
-                    console.log(table.button(manuscript_avail_buttons[i]+':name'))
+                    //console.log("var: " + i)
+                    //console.log(table.button(manuscript_avail_buttons[i]+':name'))
                     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
                 }
+
+                fixButtonGroupCurve();
             }
             })
     });
-
     
 </script>
 <div class="main_holder">
