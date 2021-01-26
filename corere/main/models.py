@@ -7,7 +7,7 @@ from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
 from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm, TransitionNotAllowed
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
@@ -251,7 +251,7 @@ class Submission(AbstractCreateUpdateModel):
 
     _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
-    version = models.IntegerField(verbose_name='Version number')
+    version_id = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
@@ -261,6 +261,7 @@ class Submission(AbstractCreateUpdateModel):
     
     class Meta:
         default_permissions = ()
+        unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
         first_save = False
@@ -279,7 +280,11 @@ class Submission(AbstractCreateUpdateModel):
             except ValueError:
                 gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
 
-            self.version = Submission.objects.filter(manuscript=self.manuscript).count() + 1
+            prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
+            if prev_max_version_id is None:
+                self.version_id = 1
+            else:
+                self.version_id = prev_max_version_id + 1
 
         super(Submission, self).save(*args, **kwargs)
         branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch

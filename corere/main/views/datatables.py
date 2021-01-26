@@ -121,7 +121,7 @@ class ManuscriptJson(CorereBaseDatatableView):
 
 
 def helper_submission_columns(user):
-    columns = [['id','ID'],['submission_status','Submission Status'],['edition_id', 'Edition ID'],['edition_status', 'Edition Status'],['curation_id','Curation ID'],['curation_status','Curation Status'],['verification_id','Verification ID'],['verification_status','Verification Status'],['buttons','Buttons']]
+    columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['edition_id', 'Edition ID'],['edition_status', 'Edition Status'],['curation_id','Curation ID'],['curation_status','Curation Status'],['verification_id','Verification ID'],['verification_status','Verification Status'],['buttons','Buttons']]
     
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
     return columns
@@ -134,8 +134,8 @@ class SubmissionJson(CorereBaseDatatableView):
         return helper_submission_columns(self.request.user)
 
     def render_column(self, submission, column):
-        print(column)
         user = self.request.user
+
         if column[0] == 'submission_status':
             if(has_transition_perm(submission.view_noop, user)):
                 return submission.get__status_display()
@@ -228,6 +228,8 @@ class SubmissionJson(CorereBaseDatatableView):
 
 
             return avail_buttons
+        elif column[0] == 'version_id': 
+            return '#{0}'.format(submission.version_id)
         else:
             return super(SubmissionJson, self).render_column(submission, column[0])
 

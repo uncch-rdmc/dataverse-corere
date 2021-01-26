@@ -19,7 +19,7 @@
             if(columns[c][0] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c][0] === 'edition_id' || columns[c][0] === 'curation_id' || columns[c][0] === 'verification_id' 
+            } else if(columns[c][0] === 'edition_id' || columns[c][0] === 'curation_id' || columns[c][0] === 'verification_id' || columns[c][0] === 'id'
                 || columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //MAD: why isn't this working? it is being called....
                 column_settings.visible = false;
             }
