@@ -27,19 +27,19 @@ class TestUrls(TestCase):
         local.user = self.user2 #needed for middleware that saves creator/updater. Note that this does play into perms.
         #Create needed objects. Maybe should be a fixture.
         self.manuscript = m.Manuscript()
-        self.manuscript._status = m.MANUSCRIPT_AWAITING_INITIAL
+        self.manuscript._status = m.Manuscript.Status.AWAITING_INITIAL
         self.manuscript.gitlab_manuscript_path = ""
         self.manuscript.save()
 
         local.user = None
-        # self.submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        # self.submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         # self.submission.save()
         # self.curation = m.Curation()
         # self.curation.submission = submission
         # self.curation.save()
         # self.verification = m.Verification()
         # self.verification.submission = submission
-        # self.submission._status = m.SUBMISSION_IN_PROGRESS_VERIFICATION
+        # self.submission._status = m.Submission.Status.IN_PROGRESS_VERIFICATION
         # self.submission.save()
         # self.verification.save()
 
@@ -296,9 +296,9 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         local.user = None #accessing pages sets local.user=AnonymousUser which blows up our save tracking (anon users will never be creating in real runs)
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
-        self.manuscript._status = m.MANUSCRIPT_PROCESSING
+        self.manuscript._status = m.Manuscript.Status.PROCESSING
         self.manuscript.save()
         sub_note = m.Note()
         sub_note.parent_submission = submission
@@ -327,7 +327,7 @@ class TestUrls(TestCase):
         ######### CURATION (besides create) #########
 
         local.user = None #accessing pages sets local.user=AnonymousUser which blows up our save tracking (anon users will never be creating in real runs)
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
         curation = m.Curation()
         curation.submission = submission
@@ -365,9 +365,9 @@ class TestUrls(TestCase):
         ######### VERIFICATION (besides create) #########
 
         local.user = None #accessing pages sets local.user=AnonymousUser which blows up our save tracking (anon users will never be creating in real runs)
-        curation._status = m.CURATION_NO_ISSUES
+        curation._status = m.Curation.Status.NO_ISSUES
         curation.save()
-        submission._status = m.SUBMISSION_IN_PROGRESS_VERIFICATION
+        submission._status = m.Submission.Status.IN_PROGRESS_VERIFICATION
         submission.save()
 
         resp = self.client.get(reverse("submission_createverification", kwargs={'submission_id':submission.id}))
@@ -452,9 +452,9 @@ class TestUrls(TestCase):
         resp = self.client.get(reverse("submission_editfiles", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
-        self.manuscript._status = m.MANUSCRIPT_PROCESSING
+        self.manuscript._status = m.Manuscript.Status.PROCESSING
         self.manuscript.save()
         sub_note = m.Note()
         sub_note.parent_submission = submission
@@ -490,7 +490,7 @@ class TestUrls(TestCase):
         ######### CURATION (besides create) #########
 
         local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
         curation = m.Curation()
         curation.submission = submission
@@ -536,9 +536,9 @@ class TestUrls(TestCase):
         ######### VERIFICATION (besides create) #########
 
         local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        curation._status = m.CURATION_NO_ISSUES
+        curation._status = m.Curation.Status.NO_ISSUES
         curation.save()
-        submission._status = m.SUBMISSION_IN_PROGRESS_VERIFICATION
+        submission._status = m.Submission.Status.IN_PROGRESS_VERIFICATION
         submission.save()
 
         resp = self.client.get(reverse("submission_createverification", kwargs={'submission_id':submission.id}))
@@ -645,9 +645,9 @@ class TestUrls(TestCase):
         self.assertEqual(resp.status_code, 404)
         #For this test we make the local user actually the note "author" so we can test edit/delete
         #local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
-        self.manuscript._status = m.MANUSCRIPT_PROCESSING
+        self.manuscript._status = m.Manuscript.Status.PROCESSING
         self.manuscript.save()
         sub_note = m.Note()
         sub_note.parent_submission = submission
@@ -685,7 +685,7 @@ class TestUrls(TestCase):
 
         #For this test we make the local user actually the note "author" so we can test edit/delete
         #local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        submission._status = m.SUBMISSION_IN_PROGRESS_CURATION
+        submission._status = m.Submission.Status.IN_PROGRESS_CURATION
         submission.save()
         curation = m.Curation()
         curation.submission = submission
@@ -731,9 +731,9 @@ class TestUrls(TestCase):
 
         #For this test we make the local user actually the note "author" so we can test edit/delete
         #local.user = None #used to set perms on note creation, we don't want an owner. Has to be right before to ensure local.user is None
-        curation._status = m.CURATION_NO_ISSUES
+        curation._status = m.Curation.Status.NO_ISSUES
         curation.save()
-        submission._status = m.SUBMISSION_IN_PROGRESS_VERIFICATION
+        submission._status = m.Submission.Status.IN_PROGRESS_VERIFICATION
         submission.save()
 
         resp = self.client.get(reverse("submission_createverification", kwargs={'submission_id':submission.id}))

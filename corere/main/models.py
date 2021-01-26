@@ -21,6 +21,7 @@ from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_subm
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
+from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -70,18 +71,13 @@ class User(AbstractUser):
 
 ####################################################
 
-EDITION_NEW = 'new'
-EDITION_ISSUES = 'issues'
-EDITION_NO_ISSUES = 'no_issues'
-
-EDITION_RESULT_CHOICES = (
-    (EDITION_NEW, 'New'),
-    (EDITION_ISSUES, 'Issues'),
-    (EDITION_NO_ISSUES, 'No Issues'),
-)
-
 class Edition(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=EDITION_RESULT_CHOICES, default=EDITION_NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
+    class Status(models.TextChoices):
+        NEW = 'new', _('New')
+        ISSUES = 'issues', _('Issues')
+        NO_ISSUES = 'no_issues', _('No Issues')
+
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
     report = models.TextField(default="", blank=True, verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
@@ -92,8 +88,8 @@ class Edition(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != SUBMISSION_IN_PROGRESS_EDITION):
-                raise FieldError('A edition cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_EDITION)
+            if(self.submission._status != Submission.Status.IN_PROGRESS_EDITION):
+                raise FieldError('A edition cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_EDITION)
         except Edition.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
         try:
@@ -105,14 +101,14 @@ class Edition(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == SUBMISSION_IN_PROGRESS_EDITION ):
+        if(self.submission._status == Submission.Status.IN_PROGRESS_EDITION ):
             return True
         return False
 
     #approve_manuscript_submissions
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE, instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -120,29 +116,22 @@ class Edition(AbstractCreateUpdateModel):
     
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_APPROVE,instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == Submission.Status.IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_APPROVE,instance.submission.manuscript))
+                                            or (instance.submission._status != Submission.Status.IN_PROGRESS_EDITION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
 ####################################################
 
-CURATION_NEW = 'new'
-CURATION_INCOM_MATERIALS = 'incom_materials'
-CURATION_MAJOR_ISSUES = 'major_issues'
-CURATION_MINOR_ISSUES = 'minor_issues'
-CURATION_NO_ISSUES = 'no_issues'
-
-CURATION_RESULT_CHOICES = (
-    (CURATION_NEW, 'New'),
-    (CURATION_INCOM_MATERIALS, 'Incomplete Materials'),
-    (CURATION_MAJOR_ISSUES, 'Major Issues'),
-    (CURATION_MINOR_ISSUES, 'Minor Issues'),
-    (CURATION_NO_ISSUES, 'No Issues'),
-)
-
 class Curation(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=CURATION_RESULT_CHOICES, default=CURATION_NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
+    class Status(models.TextChoices):
+        NEW = 'new', _('New')
+        INCOM_MATERIALS = 'incom_materials', _('Incomplete Materials')
+        MAJOR_ISSUES = 'major_issues', _('Major Issues')
+        MINOR_ISSUES = 'minor_issues', _('Minor Issues')
+        NO_ISSUES = 'no_issues', _('No Issues')
+
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", blank=True, verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
@@ -153,8 +142,8 @@ class Curation(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != SUBMISSION_IN_PROGRESS_CURATION):
-                raise FieldError('A curation cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_CURATION)
+            if(self.submission._status != Submission.Status.IN_PROGRESS_CURATION):
+                raise FieldError('A curation cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_CURATION)
         except Curation.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
         try:
@@ -166,13 +155,13 @@ class Curation(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == SUBMISSION_IN_PROGRESS_CURATION ):
+        if(self.submission._status == Submission.Status.IN_PROGRESS_CURATION ):
             return True
         return False
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -180,31 +169,23 @@ class Curation(AbstractCreateUpdateModel):
     
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_CURATE,instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == Submission.Status.IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_CURATE,instance.submission.manuscript))
+                                            or (instance.submission._status != Submission.Status.IN_PROGRESS_CURATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
 ####################################################
 
-VERIFICATION_NEW = "new"
-VERIFICATION_NOT_ATTEMPTED = "not_attempted" # The name of this is vague
-VERIFICATION_MINOR_ISSUES = "minor_issues"
-VERIFICATION_MAJOR_ISSUES = "major_issues"
-VERIFICATION_SUCCESS_W_MOD = "success_w_mod"
-VERIFICATION_SUCCESS = "success"
-
-VERIFICATION_RESULT_CHOICES = (
-    (VERIFICATION_NEW, 'New'),
-    (VERIFICATION_NOT_ATTEMPTED, 'Not Attempted'),
-    (VERIFICATION_MINOR_ISSUES, 'Minor Issues'),
-    (VERIFICATION_MAJOR_ISSUES, 'Major Issues'),
-    (VERIFICATION_SUCCESS_W_MOD, 'Success with Modification'),
-    (VERIFICATION_SUCCESS, 'Success'),
-)
-
 class Verification(AbstractCreateUpdateModel):
-    _status = FSMField(max_length=15, choices=VERIFICATION_RESULT_CHOICES, default=VERIFICATION_NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
+    class Status(models.TextChoices):
+        NEW = "new"
+        NOT_ATTEMPTED = "not_attempted" # The name of this is vague
+        MINOR_ISSUES = "minor_issues"
+        MAJOR_ISSUES = "major_issues"
+        SUCCESS_W_MOD = "success_w_mod"
+        SUCCESS = "success"
+
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
     report = models.TextField(default="", blank=True, verbose_name='Report')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
@@ -216,8 +197,8 @@ class Verification(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION):
-                raise FieldError('A verification cannot be added to a submission unless its status is: ' + SUBMISSION_IN_PROGRESS_VERIFICATION)
+            if(self.submission._status != Submission.Status.IN_PROGRESS_VERIFICATION):
+                raise FieldError('A verification cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_VERIFICATION)
         except Verification.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
         try:
@@ -232,13 +213,13 @@ class Verification(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION ):
+        if(self.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION ):
             return True
         return False
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -246,40 +227,29 @@ class Verification(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance.submission._status == SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
-                                            or (instance.submission._status != SUBMISSION_IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
+        permission=lambda instance, user: ((instance.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VERIFY,instance.submission.manuscript))
+                                            or (instance.submission._status != Submission.Status.IN_PROGRESS_VERIFICATION and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.submission.manuscript))) )
     def view_noop(self):
         return self._status
 
 ####################################################
 
-# Before we were just doing new/submitted as technically you can learn the status of the submission from its attached curation/verification.
-# But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
-
-SUBMISSION_NEW = 'new'
-SUBMISSION_IN_PROGRESS_EDITION = 'in_progress_edition'
-SUBMISSION_IN_PROGRESS_CURATION = 'in_progress_curation'
-SUBMISSION_IN_PROGRESS_VERIFICATION = 'in_progress_verification'
-SUBMISSION_REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
-SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approve'
-SUBMISSION_RETURNED = 'returned'
-
-SUBMISSION_RESULT_CHOICES = (
-    (SUBMISSION_NEW, 'New'),
-    (SUBMISSION_IN_PROGRESS_EDITION, 'In Progress - Edition'),
-    (SUBMISSION_IN_PROGRESS_CURATION, 'In Progress - Curation'),
-    (SUBMISSION_IN_PROGRESS_VERIFICATION, 'In Progress - Verification'),
-    (SUBMISSION_REVIEWED_AWAITING_REPORT, 'Reviewed - Awaiting Report'),
-    (SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, 'Reviewed - Report Awaiting Approval'),
-    (SUBMISSION_RETURNED, 'Returned'),
-)
-
 #TODO: We should probably have a "uniqueness" check on the object level for submissions incase two users click submit at the same time.
 #Our views do check transition permissions first so it'd have to be at the exact same time.
 #May also be needed for curation/verification, otherwise you may end up with one that is an orphan.
 class Submission(AbstractCreateUpdateModel):
-    #Submission does not have a status in itself, its state is inferred by status of curation/verification/manuscript
-    _status = FSMField(max_length=25, choices=SUBMISSION_RESULT_CHOICES, default=SUBMISSION_NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
+    # Before we were just doing new/submitted as technically you can learn the status of the submission from its attached curation/verification.
+    # But its much easier to find out if any submissions are in progress this way. Maybe we'll switch back to the single point of truth later.
+    class Status(models.TextChoices):
+        NEW = 'new'
+        IN_PROGRESS_EDITION = 'in_progress_edition'
+        IN_PROGRESS_CURATION = 'in_progress_curation'
+        IN_PROGRESS_VERIFICATION = 'in_progress_verification'
+        REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
+        REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approve'
+        RETURNED = 'returned'
+
+    _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
     version = models.IntegerField(verbose_name='Version number')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
@@ -297,9 +267,9 @@ class Submission(AbstractCreateUpdateModel):
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
             try:
-                if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=SUBMISSION_RETURNED).count() > 0):
+                if(Submission.objects.filter(manuscript=self.manuscript).exclude(_status=self.Status.RETURNED).count() > 0):
                     raise FieldError('A submission is already in progress for this manuscript')
-                if self.manuscript._status != MANUSCRIPT_AWAITING_INITIAL and self.manuscript._status != MANUSCRIPT_AWAITING_RESUBMISSION:
+                if self.manuscript._status != Manuscript.Status.AWAITING_INITIAL and self.manuscript._status != Manuscript.Status.AWAITING_RESUBMISSION:
                     raise FieldError('A submission cannot be created unless a manuscript status is set to await it')
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
@@ -319,8 +289,8 @@ class Submission(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=SUBMISSION_NEW, target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript))
+    @transition(field=_status, source=Status.NEW, target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -328,8 +298,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance._status == SUBMISSION_NEW and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript))
-                                            or (instance._status != SUBMISSION_NEW and user.has_any_perm(c.PERM_MANU_VIEW_M,instance.manuscript))) )
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+                                            or (instance._status != instance.Status.NEW and user.has_any_perm(c.PERM_MANU_VIEW_M, instance.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -338,8 +308,8 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit(self):
         return True
 
-    @transition(field=_status, source=SUBMISSION_NEW, target=SUBMISSION_IN_PROGRESS_EDITION, on_error=SUBMISSION_NEW, conditions=[can_submit],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance.manuscript)) #MAD: Used same perm as add, do we want that?
+    @transition(field=_status, source=Status.NEW, target=Status.IN_PROGRESS_EDITION, on_error=Status.NEW, conditions=[can_submit],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
             self.manuscript.review()
@@ -351,14 +321,14 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_edition(self):
-        if(self.manuscript._status != MANUSCRIPT_REVIEWING):   
+        if(self.manuscript._status != Manuscript.Status.REVIEWING):   
             return False
         if(Edition.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_add_edition],
+    @transition(field=_status, source=[Status.IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_add_edition],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript))
     #TODO: We should actually add the edition to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_edition_noop(self):
@@ -367,7 +337,7 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_curation(self):
-        if(self.manuscript._status != MANUSCRIPT_PROCESSING):   
+        if(self.manuscript._status != Manuscript.Status.PROCESSING):   
             return False
         if(Curation.objects.filter(submission=self).count() > 0): #Using a query because its ok if a new object exists but isn't saved
             return False
@@ -375,8 +345,8 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript))
+    @transition(field=_status, source=[Status.IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_add_curation],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript))
     #TODO: We should actually add the curation to the submission via a parameter instead of being a noop. Also do similar in other places
     def add_curation_noop(self):
         return self._status
@@ -384,10 +354,10 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
 
     def can_add_verification(self):
-        if(self.manuscript._status != MANUSCRIPT_PROCESSING):       
+        if(self.manuscript._status != Manuscript.Status.PROCESSING):       
             return False
         try:
-            if(self.submission_curation._status != CURATION_NO_ISSUES):
+            if(self.submission_curation._status != Curation.Status.NO_ISSUES):
                 #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
@@ -397,8 +367,8 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_add_verification],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY,instance.manuscript))
+    @transition(field=_status, source=[Status.IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_add_verification],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.manuscript))
     def add_verification_noop(self):
         return self._status
 
@@ -408,78 +378,83 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit_edition(self):
         #Note, the logic in here is decided whether you can even do a review, not whether its accepted
         try:
-            if(self.submission_edition._status == EDITION_NEW):
+            if(self.submission_edition._status == Edition.Status.NEW):
                 return False
         except Submission.submission_edition.RelatedObjectDoesNotExist:
             return False
         return True
 
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
+    @transition(field=_status, source=[Status.IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def submit_edition(self):
+        print("SUBMIT1")
         #TODO: Call manuscript.process
-        if(self.submission_edition._status == EDITION_NO_ISSUES):
+        if(self.submission_edition._status == Edition.Status.NO_ISSUES):
             self.manuscript.process()
             self.manuscript.save()
-            return SUBMISSION_IN_PROGRESS_CURATION
+            print("SUBMIT2")
+            print(self.Status.IN_PROGRESS_CURATION)
+            return self.Status.IN_PROGRESS_CURATION
         else:
-            self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+            self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
             self.manuscript.save()
-            return SUBMISSION_RETURNED
+            print("SUBMIT2b")
+            print(self.Status.IN_PROGRESS_CURATION)
+            return self.Status.RETURNED
 
     #-----------------------
 
     def can_review_curation(self):
         try:
-            if(self.submission_curation._status == CURATION_NEW):
+            if(self.submission_curation._status == Curation.Status.NEW):
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
         return True
 
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
-                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript)))
+    @transition(field=_status, source=[Status.IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
+                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def review_curation(self):
         try:
-            if(self.submission_curation._status == CURATION_NO_ISSUES):
-                return SUBMISSION_IN_PROGRESS_VERIFICATION
+            if(self.submission_curation._status == Curation.Status.NO_ISSUES):
+                return self.Status.IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
-            return SUBMISSION_IN_PROGRESS_CURATION
+            return self.Status.IN_PROGRESS_CURATION
         
-        # self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
         # self.manuscript.save()
-        return SUBMISSION_REVIEWED_AWAITING_REPORT
+        return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
 
     def can_review_verification(self):
         try:
-            if(self.submission_verification._status == VERIFICATION_NEW):
+            if(self.submission_verification._status == Verification.Status.NEW):
                 return False
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return False
         return True
 
-    @transition(field=_status, source=[SUBMISSION_IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
-                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_VERIFY,instance.manuscript)))
+    @transition(field=_status, source=[Status.IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
+                permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_VERIFY, instance.manuscript)))
     def review_verification(self):
         try:
-            if(self.submission_verification._status == VERIFICATION_SUCCESS): #just checking the object exists, crude
+            if(self.submission_verification._status == Verification.Status.SUCCESS): #just checking the object exists, crude
                 pass
-            #return SUBMISSION_REVIEWED_AWAITING_REPORT
+            #return Submission.Status.REVIEWED_AWAITING_REPORT
         except Submission.submission_verification.RelatedObjectDoesNotExist:
-            return SUBMISSION_IN_PROGRESS_VERIFICATION
-        # self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+            return self.Status.IN_PROGRESS_VERIFICATION
+        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
         # self.manuscript.save()
-        return SUBMISSION_REVIEWED_AWAITING_REPORT
+        return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
     
     def can_generate_report(self):
         return True
 
-    @transition(field=_status, source=SUBMISSION_REVIEWED_AWAITING_REPORT, target=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
-            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE,instance.manuscript)))
+    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
+            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def generate_report(self):
         pass
 
@@ -490,12 +465,12 @@ class Submission(AbstractCreateUpdateModel):
     def can_return_submission(self):
         return True
 
-    @transition(field=_status, source=SUBMISSION_REVIEWED_REPORT_AWAITING_APPROVAL, target=SUBMISSION_RETURNED, conditions=[can_return_submission],
-            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
+    @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_return_submission],
+            permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
     def return_submission(self):
-        if(self.submission_curation._status == CURATION_NO_ISSUES):
-            if(self.submission_verification._status == VERIFICATION_SUCCESS):
-                self.manuscript._status = MANUSCRIPT_COMPLETED
+        if(self.submission_curation._status == Curation.Status.NO_ISSUES):
+            if(self.submission_verification._status == Verification.Status.SUCCESS):
+                self.manuscript._status = Manuscript.Status.COMPLETED
                 ## We decided to leave completed manuscripts in the list and toggle their visibility
                 # Delete existing groups when done for clean-up and reporting
                 # Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
@@ -506,37 +481,26 @@ class Submission(AbstractCreateUpdateModel):
                 self.manuscript.save()
                 return
             
-        self.manuscript._status = MANUSCRIPT_AWAITING_RESUBMISSION
+        self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
         self.manuscript.save()
         return
 
 ####################################################
 
-#ORCID, ISNI, LCNA, VIAF, GND, DAI, ResearcherID, ScopusID
-ID_SCHEME_ORCID = 'ORCID' 
-ID_SCHEME_ISNI = 'ISNI'
-ID_SCHEME_LCNA = 'LCNA'
-ID_SCHEME_VIAF = 'VIAF'
-ID_SCHEME_GND = 'GND'
-ID_SCHEME_DAI = 'DAI'
-ID_SCHEME_REID = 'ResearcherID'
-ID_SCHEME_SCID = 'ScopusID'
-
-AUTHOR_IDENTIFIER_SCHEME = (
-    (ID_SCHEME_ORCID, 'ORCID'), 
-    (ID_SCHEME_ISNI, 'ISNI'),
-    (ID_SCHEME_LCNA, 'LCNA'),
-    (ID_SCHEME_VIAF, 'VIAF'),
-    (ID_SCHEME_GND, 'GND'),
-    (ID_SCHEME_DAI, 'DAI'),
-    (ID_SCHEME_REID, 'ResearcherID'),
-    (ID_SCHEME_SCID, 'ScopusID')
-)
-
 class Author(models.Model):
+    class IdScheme(models.TextChoices):
+        ORCID = 'ORCID', _('ORCID') 
+        ISNI = 'ISNI', _('ISNI')
+        LCNA = 'LCNA', _('LCNA')
+        VIAF = 'VIAF', _('VIAF')
+        GND = 'GND', _('GND')
+        DAI = 'DAI', _('DAI')
+        REID = 'ResearcherID', _('ResearcherID')
+        SCID = 'ScopusID', _('ScopusID')
+
     first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
-    identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=AUTHOR_IDENTIFIER_SCHEME, verbose_name='Identifier Scheme') 
+    identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=IdScheme.choices, verbose_name='Identifier Scheme') 
     identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='Identifier')
     position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
@@ -549,56 +513,33 @@ class Keyword(models.Model):
     text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='Keyword')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_keywords")
 
-#model states
-MANUSCRIPT_NEW = 'new' 
-MANUSCRIPT_AWAITING_INITIAL = 'awaiting_init'
-MANUSCRIPT_AWAITING_RESUBMISSION = 'awaiting_resub'
-MANUSCRIPT_REVIEWING = 'reviewing'
-MANUSCRIPT_PROCESSING = 'processing'
-MANUSCRIPT_COMPLETED = 'completed'
-
-MANUSCRIPT_STATUS_CHOICES = (
-    (MANUSCRIPT_NEW, 'New'),
-    (MANUSCRIPT_AWAITING_INITIAL, 'Awaiting Initial Submission'),
-    (MANUSCRIPT_AWAITING_RESUBMISSION, 'Awaiting Resubmission'),
-    (MANUSCRIPT_REVIEWING, 'Reviewing Submission'),
-    (MANUSCRIPT_PROCESSING, 'Processing Submission'),
-    (MANUSCRIPT_COMPLETED, 'Completed'),
-)
-
-SUBJECT_AGRICULTURAL = 'agricultural'
-SUBJECT_ARTS_AND_HUMANITIES = 'arts'
-SUBJECT_ASTRONOMY_ASTROPHYSICS = 'astronomy'
-SUBJECT_BUSINESS_MANAGEMENT = 'business'
-SUBJECT_CHEMISTRY = 'chemistry'
-SUBJECT_COMPUTER_INFORMATION = 'computer'
-SUBJECT_ENVIRONMENTAL = 'environmental'
-SUBJECT_ENGINEERING = 'engineering'
-SUBJECT_LAW = 'law'
-SUBJECT_MATHEMATICS = 'mathematics'
-SUBJECT_HEALTH = 'health'
-SUBJECT_PHYSICS = 'physics'
-SUBJECT_SOCIAL = 'social'
-SUBJECT_OTHER = 'other'
-
-MANUSCRIPT_SUBJECT_CHOICES = (
-    (SUBJECT_AGRICULTURAL, 'Agricultural Sciences'),
-    (SUBJECT_ARTS_AND_HUMANITIES, 'Arts and Humanities'),
-    (SUBJECT_ASTRONOMY_ASTROPHYSICS, 'Astronomy and Astrophysics'),
-    (SUBJECT_BUSINESS_MANAGEMENT, 'Business and Management'),
-    (SUBJECT_CHEMISTRY, 'Chemistry'),
-    (SUBJECT_COMPUTER_INFORMATION, 'Computer and Information Science'),
-    (SUBJECT_ENVIRONMENTAL, 'Earth and Environmental Sciences'),
-    (SUBJECT_ENGINEERING, 'Engineering'),
-    (SUBJECT_LAW, 'Law'),
-    (SUBJECT_MATHEMATICS, 'Mathematical Sciences'),
-    (SUBJECT_HEALTH, 'Medicine, Health and Life Sciences'),
-    (SUBJECT_PHYSICS, 'Physics'),
-    (SUBJECT_SOCIAL, 'Social Sciences'),
-    (SUBJECT_OTHER, 'Other')
-)
+####################################################
 
 class Manuscript(AbstractCreateUpdateModel):
+    class Status(models.TextChoices):
+        NEW = 'new', _('New')
+        AWAITING_INITIAL = 'awaiting_init', _('Awaiting Initial Submission')
+        AWAITING_RESUBMISSION = 'awaiting_resub', _('Awaiting Resubmission')
+        REVIEWING = 'reviewing', _('Reviewing Submission')
+        PROCESSING = 'processing', _('Processing Submission')
+        COMPLETED = 'completed', _('Completed')
+
+    class Subjects(models.TextChoices):
+        AGRICULTURAL = 'agricultural', _('Agricultural Sciences')
+        ARTS_AND_HUMANITIES = 'arts', _('Arts and Humanities')
+        ASTRONOMY_ASTROPHYSICS = 'astronomy', _('Astronomy and Astrophysics')
+        BUSINESS_MANAGEMENT = 'business', _('Business and Management')
+        CHEMISTRY = 'chemistry', _('Chemistry')
+        COMPUTER_INFORMATION = 'computer', _('Computer and Information Science')
+        ENVIRONMENTAL = 'environmental', _('Earth and Environmental Sciences')
+        ENGINEERING = 'engineering', _('Engineering')
+        LAW = 'law', _('Law')
+        MATHEMATICS = 'mathematics', _('Mathematical Sciences')
+        HEALTH = 'health', _('Medicine, Health and Life Sciences')
+        PHYSICS = 'physics', _('Physics')
+        SOCIAL = 'social', _('Social Sciences')
+        OTHER = 'other', _('Other')
+
     title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
     qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
@@ -607,19 +548,16 @@ class Manuscript(AbstractCreateUpdateModel):
     contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
-    subject = models.CharField(max_length=14, blank=True, null=True, choices=MANUSCRIPT_SUBJECT_CHOICES, verbose_name='Subject') 
+    subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
     producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
-    _status = FSMField(max_length=15, choices=MANUSCRIPT_STATUS_CHOICES, default=MANUSCRIPT_NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
     gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
     gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
     gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-
-    def __str__(self):
-        return '{0}: {1}'.format(self.id, self.title)
 
     class Meta:
         permissions = [
@@ -637,6 +575,9 @@ class Manuscript(AbstractCreateUpdateModel):
             (c.PERM_MANU_CURATE, 'Can curate manuscript/submission'),
             (c.PERM_MANU_VERIFY, 'Can verify manuscript/submission'),
         ]
+
+    def __str__(self):
+        return '{0}: {1}'.format(self.id, self.title)
 
     def save(self, *args, **kwargs):
         first_save = False
@@ -675,7 +616,7 @@ class Manuscript(AbstractCreateUpdateModel):
             gitlab_create_submissions_repo(self)
 
     def is_complete(self):
-        return self._status == MANUSCRIPT_COMPLETED
+        return self._status == Manuscript.Status.COMPLETED
             
     ##### django-fsm (workflow) related functions #####
     
@@ -694,8 +635,8 @@ class Manuscript(AbstractCreateUpdateModel):
         problems = self.can_begin_return_problems()
         return not problems
 
-    @transition(field=_status, source=MANUSCRIPT_NEW, target=MANUSCRIPT_AWAITING_INITIAL, conditions=[can_begin],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
+    @transition(field=_status, source=Status.NEW, target=Status.AWAITING_INITIAL, conditions=[can_begin],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M, instance))
     def begin(self):
         pass #Here add any additional actions related to the state change
 
@@ -705,14 +646,14 @@ class Manuscript(AbstractCreateUpdateModel):
         # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
         #try:
 
-        if (self.manuscript_submissions.filter(Q(_status=SUBMISSION_NEW)| Q(_status=SUBMISSION_IN_PROGRESS_EDITION)
-                                             | Q(_status=SUBMISSION_IN_PROGRESS_CURATION)| Q(_status=SUBMISSION_IN_PROGRESS_VERIFICATION)).count() != 0):
+        if (self.manuscript_submissions.filter(Q(_status=Submission.Status.NEW)| Q(_status=Submission.Status.IN_PROGRESS_EDITION)
+                                             | Q(_status=Submission.Status.IN_PROGRESS_CURATION)| Q(_status=Submission.Status.IN_PROGRESS_VERIFICATION)).count() != 0):
             return False
         return True
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_add_submission],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance))
+    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_add_submission],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance))
     def add_submission_noop(self):
         return self._status
 
@@ -720,13 +661,13 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Conditions: Submission with status of new
     def can_review(self):
-        if(self.manuscript_submissions.filter(_status=SUBMISSION_NEW).count() != 1):
+        if(self.manuscript_submissions.filter(_status=Submission.Status.NEW).count() != 1):
             return False
         return True
 
     # Perm: ability to create/edit a submission
-    @transition(field=_status, source=[MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=MANUSCRIPT_REVIEWING, conditions=[can_review],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION,instance))
+    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=Status.REVIEWING, conditions=[can_review],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance))
     def review(self):
         #update submission status here?
         pass #Here add any additional actions related to the state change
@@ -739,7 +680,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return True
 
     # Perm: ability to create/edit a submission
-    @transition(field=_status, source=[MANUSCRIPT_REVIEWING], target=MANUSCRIPT_PROCESSING, conditions=[can_process],
+    @transition(field=_status, source=[Status.REVIEWING], target=Status.PROCESSING, conditions=[can_process],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_APPROVE, instance))
     def process(self):
         #update submission status here?
@@ -748,7 +689,7 @@ class Manuscript(AbstractCreateUpdateModel):
     #-----------------------
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[MANUSCRIPT_NEW, MANUSCRIPT_AWAITING_INITIAL, MANUSCRIPT_AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
+    @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
     def edit_noop(self):
         return self._status
@@ -760,8 +701,8 @@ class Manuscript(AbstractCreateUpdateModel):
     #
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: (#(instance._status == MANUSCRIPT_NEW and user.has_any_perm(c.PERM_MANU_ADD_M,instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
-                                            (instance._status != MANUSCRIPT_NEW and user.has_any_perm(c.PERM_MANU_VIEW_M,instance))) )
+        permission=lambda instance, user: (#(instance._status == Status.NEW and user.has_any_perm(c.PERM_MANU_ADD_M,instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+                                            (instance._status != instance.Status.NEW and user.has_any_perm(c.PERM_MANU_VIEW_M, instance))) )
     def view_noop(self):
         return self._status
 
@@ -775,23 +716,18 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 ####################################################
 
-FILE_TAG_CODE = 'code'
-FILE_TAG_DATA = 'data'
-FILE_TAG_DOCUMENTATION = 'documentation'
-
-FILE_TAG_CHOICES = (
-    (FILE_TAG_CODE, 'code'),
-    (FILE_TAG_DATA, 'data'),
-    (FILE_TAG_DOCUMENTATION, 'documentation'),
-)
-
 class GitlabFile(AbstractCreateUpdateModel):
+    class FileTag(models.TextChoices):
+        CODE = 'code', _('code')
+        DATA = 'data', _('data')
+        DOCUMENTATION = 'documentation', _('documentation')
+
     gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64, verbose_name='SHA-256', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
     gitlab_path = models.CharField(max_length=4096, blank=True, null=True, verbose_name='file path', help_text='The path to the file')
     gitlab_date = models.DateTimeField(verbose_name='file creation date')
     gitlab_size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FILE_TAG_CHOICES, verbose_name='file type') 
+    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type') 
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)

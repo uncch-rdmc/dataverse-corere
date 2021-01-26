@@ -241,7 +241,7 @@
         {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
         {% if m_edit_flag %} 
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit</button>
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
             <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
         {% elif m_view_flag %}
             <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
@@ -250,7 +250,7 @@
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
         {% if m_begin_flag %} 
             {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button>
+            {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
         {% endif %}
         {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
             <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
