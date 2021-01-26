@@ -15,12 +15,12 @@
         var columns_config = [];
         var button_index;
         for (var c in columns) {
-            var column_settings = {name: columns[c]}
-            if(columns[c] === 'buttons') {
+            var column_settings = {name: columns[c][0], title: columns[c][1]}
+            if(columns[c][0] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c] === 'edition_id' || columns[c] === 'curation_id' || columns[c] === 'verification_id' 
-                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'editors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            } else if(columns[c][0] === 'edition_id' || columns[c][0] === 'curation_id' || columns[c][0] === 'verification_id' 
+                || columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //MAD: why isn't this working? it is being called....
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings

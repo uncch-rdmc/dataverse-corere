@@ -126,8 +126,8 @@
         var columns_config = [];
         var button_index;
         for (var c in columns) {
-            var column_settings = {name: columns[c]}
-            if( columns[c] === 'created_at' || columns[c] === 'updated_at' ) {
+            var column_settings = {name: columns[c][0], title:columns[c][1]}
+            if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings

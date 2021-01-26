@@ -71,7 +71,7 @@ def manuscript_overview(request, id=None):
             "manuscript_editors": manuscript_editors,
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
-            "manuscript_status": manuscript._status,
+            "manuscript_status": manuscript.get__status_display(),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
