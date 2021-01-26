@@ -269,8 +269,13 @@
 
     <p class="my-2"> 
         Status: {{manuscript_status}} <br>
-        Author: {{manuscript_authors}} <br>
-        Editor: {{manuscript_editors}}
+        Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
+        Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
+        {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+            <br> 
+            Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
+            Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+        {% endif %}
     </p>
 </div>
 
