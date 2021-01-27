@@ -1,5 +1,7 @@
 from django import template
 from django.contrib.auth.models import Group, Permission
+from django_fsm import has_transition_perm
+from corere.main.models import Manuscript, Submission
 
 register = template.Library()
 
@@ -14,3 +16,15 @@ def has_group(user, group_name):
 @register.filter(name='has_global_perm')
 def has_global_perm(user, perm_name):
     return user.has_perm(perm_name)
+
+#TODO: make generalized if we need this function for other objects (e.g. submission)
+@register.simple_tag
+def user_has_transition_perm(user, obj_type_name, obj_id, perm_func_name):
+    if(obj_type_name == 'manuscript'):
+        obj = Manuscript.objects.get(id=int(obj_id))
+    elif(obj_type_name == 'submission'):
+        obj = Submission.objects.get(id=int(obj_id))
+
+    perm_func = getattr(obj, perm_func_name)
+
+    return has_transition_perm(perm_func, user)

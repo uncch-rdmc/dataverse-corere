@@ -12,6 +12,7 @@ from django.utils.decorators import classonlymethod
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
 logger = logging.getLogger(__name__)
 
 #Shared across our various datatables
@@ -86,15 +87,18 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = ['id','pub_id','title','_status','created_at','updated_at']
+    columns = [['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns.append('curators')
-    return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
+        columns.append(['curators', "Curators"])
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+        #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
+        columns.append(['updated_at','Last Update Date'])
+    return columns
+    #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
-    model = m.Manuscript
     max_display_length = 500
 
     def get_columns(self):
@@ -102,13 +106,17 @@ class ManuscriptJson(CorereBaseDatatableView):
 
     # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
     def render_column(self, manuscript, column):
-        if column == 'curators':
-            return '{0}'.format([escape(user.username) for user in m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))])
+        if column[0] == 'curators':
+            return ", ".join(list(m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).values_list('username', flat=True)))
+        elif column[0] == 'created_at':
+            return '{0}'.format(manuscript.created_at.strftime("%Y/%m/%d")) #%H:%M:%S"
+        elif column[0] == 'updated_at':
+            return '{0}'.format(manuscript.updated_at.strftime("%Y/%m/%d"))
         else:
-            return super(ManuscriptJson, self).render_column(manuscript, column)
+            return super(ManuscriptJson, self).render_column(manuscript, column[0])
 
     def get_initial_queryset(self):
-        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
+        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=m.Manuscript).order_by('-id')
 
     #Note: this isn't tied to the search bar in the datatable, that happens solely browserside
     def filter_queryset(self, qs):
@@ -120,8 +128,13 @@ class ManuscriptJson(CorereBaseDatatableView):
 
 
 def helper_submission_columns(user):
-    columns = ['id','submission_status','edition_id','edition_status','curation_id','curation_status','verification_id','verification_status', 'buttons']
-    return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
+    columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['buttons','Buttons']]
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+        columns.append(['edition_status', 'Edition Status'])
+        columns.append(['curation_status','Curation Status'])
+        columns.append(['verification_status','Verification Status'])
+    #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
+    return columns
 
 class SubmissionJson(CorereBaseDatatableView):
     model = m.Submission
@@ -132,50 +145,36 @@ class SubmissionJson(CorereBaseDatatableView):
 
     def render_column(self, submission, column):
         user = self.request.user
-        if column == 'submission_status':
+
+        if column[0] == 'submission_status':
             if(has_transition_perm(submission.view_noop, user)):
-                return submission._status
+                return submission.get__status_display()
             else:
                 return ''
 
-        elif column == 'edition_id':
-            try:
-                return '{0}'.format(submission.submission_edition.id)
-            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
-                return ''
         elif column == 'edition_status':
             try:
                 if(has_transition_perm(submission.submission_edition.view_noop, user)):
-                    return '{0}'.format(submission.submission_edition._status)
+                    return '{0}'.format(submission.submission_edition.get__status_display())
             except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                 pass
             return ''
 
-        elif column == 'curation_id':
-            try:
-                return '{0}'.format(submission.submission_curation.id)
-            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
-                return ''
-        elif column == 'curation_status':
+        elif column[0] == 'curation_status':
             try:
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
-                    return '{0}'.format(submission.submission_curation._status)
+                    return '{0}'.format(submission.submission_curation.get__status_display())
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
             return ''
-        elif column == 'verification_id':
-            try:
-                return '{0}'.format(submission.submission_verification.id)
-            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
-                return ''
-        elif column == 'verification_status':
+        elif column[0] == 'verification_status':
             try:
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
-                    return '{0}'.format(submission.submission_verification._status)
+                    return '{0}'.format(submission.submission_verification.get__status_display())
             except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                 pass
             return ''
-        elif column == 'buttons': 
+        elif column[0] == 'buttons': 
             avail_buttons = []
 
 #TODO: Here we allow edit submission to be done at multiple phases
@@ -222,46 +221,16 @@ class SubmissionJson(CorereBaseDatatableView):
             if(has_transition_perm(submission.return_submission, user)):
                 avail_buttons.append('returnSubmission')
 
-            # if(has_transition_perm(submission.add_edition_noop, user)):
-            #     avail_buttons.append('createEdition')
-            # try:
-            #     if(has_transition_perm(submission.submission_edition.edit_noop, user)):
-            #         avail_buttons.append('editEdition')
-            #     elif(has_transition_perm(submission.submission_edition.view_noop, user)):
-            #         avail_buttons.append('viewEdition')
-            #         #DO. I don't know if submission needs a "process" option or if I need to change multiple checks here or something....
-            #     if(has_transition_perm(submission.submit_edition, user)): #TODO: same review check for edition and verification. Either make smarter or refactor the model
-            #         avail_buttons.append('progressEdition')
-            # except m.Submission.submission_edition.RelatedObjectDoesNotExist:
-            #     pass
-
-            # if(has_transition_perm(submission.add_curation_noop, user)):
-            #     avail_buttons.append('createCuration')
-            # try:
-            #     if(has_transition_perm(submission.submission_curation.edit_noop, user)):
-            #         avail_buttons.append('editCuration')
-            #     elif(has_transition_perm(submission.submission_curation.view_noop, user)):
-            #         avail_buttons.append('viewCuration')
-            #     if(has_transition_perm(submission.review_curation, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
-            #         avail_buttons.append('progressCuration')
-            # except m.Submission.submission_curation.RelatedObjectDoesNotExist:
-            #     pass
-
-            # if(has_transition_perm(submission.add_verification_noop, user)):
-            #     avail_buttons.append('createVerification')
-            # try:
-            #     if(has_transition_perm(submission.submission_verification.edit_noop, user)):
-            #         avail_buttons.append('editVerification')
-            #     elif(has_transition_perm(submission.submission_verification.view_noop, user)):
-            #         avail_buttons.append('viewVerification')  
-            #     if(has_transition_perm(submission.review_verification, user)): #TODO: same review check for curation and verification. Either make smarter or refactor the model
-            #         avail_buttons.append('progressVerification')
-            # except m.Submission.submission_verification.RelatedObjectDoesNotExist:
-            #     pass
 
             return avail_buttons
+        elif column[0] == 'version_id': 
+            latest_submission_version = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max'] #Probably inefficient here
+            if(submission.version_id == latest_submission_version):
+                return '#{0} (Current)'.format(submission.version_id)
+            else:
+                return '#{0}'.format(submission.version_id)
         else:
-            return super(SubmissionJson, self).render_column(submission, column)
+            return super(SubmissionJson, self).render_column(submission, column[0])
 
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['manuscript_id']
@@ -270,7 +239,7 @@ class SubmissionJson(CorereBaseDatatableView):
         except ObjectDoesNotExist:
             raise Http404()
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
-            return(m.Submission.objects.filter(manuscript=manuscript_id))
+            return(m.Submission.objects.filter(manuscript=manuscript_id).order_by('-version_id'))
         else:
             raise Http404()
 

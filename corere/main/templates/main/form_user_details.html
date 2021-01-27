@@ -2,7 +2,7 @@
 {% block content %}
 {% load crispy_forms_tags %}
 
-<h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
+<h5 class="my-3"> {{page_header}}{% if root_object_title is not None %}:{% endif %} {{root_object_title}} </h5>
 <form action="{{key|default_if_none:""}}" method="post">
     {% csrf_token %}
     <table>

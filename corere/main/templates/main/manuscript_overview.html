@@ -15,18 +15,30 @@
         var columns_config = [];
         var button_index;
         for (var c in columns) {
-            var column_settings = {name: columns[c]}
-            if(columns[c] === 'buttons') {
+            var column_settings = {name: columns[c][0], title: columns[c][1]}
+            if(columns[c][0] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c] === 'edition_id' || columns[c] === 'curation_id' || columns[c] === 'verification_id' 
-                || columns[c] === 'created_at' || columns[c] === 'updated_at' || columns[c] === 'authors' || columns[c] === 'editors' || columns[c] === 'curators' || columns[c] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            } else if(columns[c][0] === 'id' || columns[c][0] === 'created_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //Sometimes this doesn't work right, see issue #26 "Fix Datatable Visibility Bug"
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
         }
         return [columns_config, button_index];
     } 
+    
+    function fixButtonGroupCurve() {
+        //{% comment %} needs as we make buttons invisible, otherwise groups end up with non-rounded edges {% endcomment %}
+        $('.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
+        $('.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
+            'border-top-left-radius': '3px',
+            'border-bottom-left-radius': '3px',
+        });
+        $('.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
+            'border-top-right-radius': '3px',
+            'border-bottom-right-radius': '3px',
+        });
+    }
 
     $(document).ready(function() {
         console.log("Create sub outside")
@@ -56,430 +68,132 @@
                                 enabled: createSubButton
                             },
                         {% endif %}
+
                         {
-                            extend: 'collection',
-                            text: 'Submission Actions',
-                            fade: 0,
-                            buttons: [
-                                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR %}  {% endcomment %}
-                                    {
-                                        text: 'Edit/Progress',
-                                        name: 'editSubmission',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/submission/"+submission_id+"/edit/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Edit Files',
-                                        name: 'editSubmissionFiles',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/submission/"+submission_id+"/editfiles/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                {% comment %} {% endif %} {% endcomment %}
-                                {
-                                    text: 'View',
-                                    name: 'viewSubmission',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/submission/"+submission_id+"/view/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                    enabled: false
-                                },
-                                {
-                                    text: 'View Files',
-                                    name: 'viewSubmissionFiles',
-                                    action: function ( e, dt, node, config ) {
-
-                                        window.location.href = "/submission/"+submission_id+"/viewfiles/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                    enabled: false
-                                },
-                                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR %} 
-                                    {
-                                        text: 'Hand-off to Editors',
-                                        name: 'progressSubmission',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %} {% endcomment %}
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Generate Report',
-                                        name: 'generateReportForSubmission',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/generatereport/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Return Submission to Authors',
-                                        name: 'returnSubmission',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/submission/'+submission_id+'/return/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
-                        },
-
-                        {% comment %} 
-                        {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                            {
-                                text: '<i class="fas fa-plus"></i> &nbsp;Create Edition',
-                                name: 'createEdition',
-                                action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createedition/";
-                                },
-                                enabled: false
+                            text: 'Edit/Progress',
+                            name: 'editSubmission',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/edit/";
                             },
-                        {% endif %}
-                        {
-                            extend: 'collection',
-                            text: 'Edition Actions',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editEdition',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/edition/"+edition_id+"/edit/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'View',
-                                    name: 'viewEdition',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/edition/"+edition_id+"/view/";
-                                    },
-                                    enabled: false
-                                },
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Submit Review',
-                                        name: 'progressEdition',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/edition/'+edition_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
-                        },
-                        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                            {
-                                text: '<i class="fas fa-plus"></i> &nbsp;Create Curation',
-                                name: 'createCuration',
-                                action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createcuration/";
-                                },
-                                enabled: false
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
                             },
-                        {% endif %}
+                            enabled: false
+                        },
                         {
-                            extend: 'collection',
-                            text: 'Curation Actions',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editCuration',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/curation/"+curation_id+"/edit/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'View',
-                                    name: 'viewCuration',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/curation/"+curation_id+"/view/";
-                                    },
-                                    enabled: false
+                            text: 'Edit Files',
+                            name: 'editSubmissionFiles',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/editfiles/";
+                            },
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
+                        },
+                        {
+                            text: 'View',
+                            name: 'viewSubmission',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/view/";
+                            },
+                            init: function ( dt, node, config ) {
+                                    node.css("display", "none");
                                 },
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Submit Review',
-                                        name: 'progressCuration',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/curation/'+curation_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
+                            enabled: false
+                        },
+                        {
+                            text: 'View Files',
+                            name: 'viewSubmissionFiles',
+                            action: function ( e, dt, node, config ) {
+
+                                window.location.href = "/submission/"+submission_id+"/viewfiles/";
+                            },
+                            init: function ( dt, node, config ) {
+                                    node.css("display", "none");
+                                },
+                            enabled: false
                         },
 
-                        {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
-                            {
-                                text: '<i class="fas fa-plus"></i> &nbsp;Create Verification',
-                                name: 'createVerification',
-                                action: function ( e, dt, node, config ) {
-                                    window.location.href = "/submission/"+submission_id+"/createverification/";
-                                },
-                                enabled: false
+                        {
+                            text: 'Hand-off to Editors',
+                            name: 'progressSubmission',
+                            action: function ( e, dt, node, config ) {
+                                var headers = new Headers();
+                                headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                fetch('/submission/'+submission_id+'/progress/', {
+                                    method: 'POST',
+                                    headers: headers, 
+                                    credentials: 'include'
+                                }).then(response => {
+                                    if (response.redirected) {
+                                        window.location.href = response.url;
+                                    }
+                                })
                             },
-                        {% endif %}
-                        {
-                            extend: 'collection',
-                            text: 'Verification Actions',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editVerification',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/verification/"+verification_id+"/edit/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                    {
-                                        text: 'View',
-                                        name: 'viewVerification',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/verification/"+verification_id+"/view/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% if request.user|has_group:GROUP_ROLE_VERIFIER %} 
-                                    {
-                                        text: 'Submit Review',
-                                        name: 'progressVerification',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/verification/'+verification_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
                         },
-                                                {% endcomment %}
+                        {
+                            text: 'Generate Report',
+                            name: 'generateReportForSubmission',
+                            action: function ( e, dt, node, config ) {
+                                var headers = new Headers();
+                                headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                fetch('/submission/'+submission_id+'/generatereport/', {
+                                    method: 'POST',
+                                    headers: headers, 
+                                    credentials: 'include'
+                                }).then(response => {
+                                    if (response.redirected) {
+                                        window.location.href = response.url;
+                                    }
+                                })
+                            },
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
+                        },
+                        {
+                            text: 'Return Submission to Authors',
+                            name: 'returnSubmission',
+                            action: function ( e, dt, node, config ) {
+                                var headers = new Headers();
+                                headers.append('X-CSRFToken', '{{ csrf_token }}');
+                                fetch('/submission/'+submission_id+'/return/', {
+                                    method: 'POST',
+                                    headers: headers, 
+                                    credentials: 'include'
+                                }).then(response => {
+                                    if (response.redirected) {
+                                        window.location.href = response.url;
+                                    }
+                                })
+                            },
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
+                        },
 
-                        //MANUSCRIPT BUTTONS
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Actions',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_global_perm:ADD_MANUSCRIPT_PERM_STRING %} 
-                                    {
-                                        text: 'Edit',
-                                        name: 'editManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/edit/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Edit Files',
-                                        name: 'editManuscriptFiles',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/uploadfiles/";
-                                        },
-                                        init: function ( dt, node, config ) {
-                                            node.css("display", "none");
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'View',
-                                    name: 'viewManuscript',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/view/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {
-                                    text: 'View Files',
-                                    name: 'viewManuscriptFiles',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/viewfiles/";
-                                    },
-                                    init: function ( dt, node, config ) {
-                                        node.css("display", "none");
-                                    },
-                                    enabled: false
-                                },
-                                {% if request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Hand-off to Authors',
-                                        name: 'progressManuscript',
-                                        action: function ( e, dt, node, config ) {
-                                            var headers = new Headers();
-                                            headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                            fetch('/manuscript/'+manuscript_id+'/progress/', {
-                                                method: 'POST',
-                                                headers: headers, 
-                                                credentials: 'include'
-                                            }).then(response => {
-                                                if (response.redirected) {
-                                                    window.location.href = response.url;
-                                                }
-                                            })
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {
-                                    text: 'Launch Notebook',
-                                    name: 'launchNotebook',
-                                    action: function ( e, dt, node, config ) {
-                                        window.location.href = "/manuscript/"+manuscript_id+"/binder/";
-                                    },
-                                    enabled: true
-                                },
-                            ]
-                        },
-                        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
-                        {
-                            extend: 'collection',
-                            text: 'Manuscript Members',
-                            fade: 0,
-                            buttons: [
-                                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
-                                    {
-                                        text: 'Invite/Add Author',
-                                        name: 'inviteassignauthor',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/inviteassignauthor/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                                    {
-                                        text: 'Add Editor',
-                                        name: 'assigneditor',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigneditor/";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Curator',
-                                        name: 'assigncurator',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assigncurator/";
-                                        },
-                                        enabled: false
-                                    },
-                                    {
-                                        text: 'Add Verifier',
-                                        name: 'assignverifier',
-                                        action: function ( e, dt, node, config ) {
-                                            window.location.href = "/manuscript/"+manuscript_id+"/assignverifier/";
-                                        },
-                                        enabled: false
-                                    },
-                                {% endif %}
-                            ]
-                        },
-                        {% endif %}
+                        
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
-                    curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
-                    verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
+                    //edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
+                    //curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    //verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
                     avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
                         dt.button(avail_buttons[i]+':name').nodes().css("display", "block");
                     }
+                    fixButtonGroupCurve();
 
                     console.log('Table row selected');
                 } )
@@ -495,50 +209,75 @@
                         dt.button('viewSubmissionFiles:name').enable(false);
                         dt.button('viewSubmissionFiles:name').nodes().css("display", "none");
                         dt.button('progressSubmission:name').enable(false);
-
-                        dt.button('createEdition:name').enable(false);
-                        dt.button('editEdition:name').enable(false);
-                        dt.button('editEdition:name').nodes().css("display", "none");
-                        dt.button('viewEdition:name').enable(false);
-                        dt.button('viewEdition:name').nodes().css("display", "none");
-                        dt.button('progressEdition:name').enable(false);
-
-                        dt.button('createCuration:name').enable(false);
-                        dt.button('editCuration:name').enable(false);
-                        dt.button('editCuration:name').nodes().css("display", "none");
-                        dt.button('viewCuration:name').enable(false);
-                        dt.button('viewCuration:name').nodes().css("display", "none");
-                        dt.button('progressCuration:name').enable(false);
-
-                        dt.button('createVerification:name').enable(false);
-                        dt.button('editVerification:name').enable(false);            
-                        dt.button('editVerification:name').nodes().css("display", "none");                               
-                        dt.button('viewVerification:name').enable(false);
-                        dt.button('viewVerification:name').nodes().css("display", "none");
-                        dt.button('progressVerification:name').enable(false);
-                                                              
+                                
                     }
+                    fixButtonGroupCurve();
+
                     console.log('Table row deselected');
-                } ).row(':last').select();
+                } )
+                .row(':first').select()
+                .order.neutral().draw();
+                
                 sub_table_callback(table)
 
                 manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
                 for(var i in manuscript_avail_buttons) {
-                    console.log("var: " + i)
-                    console.log(table.button(manuscript_avail_buttons[i]+':name'))
                     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
                 }
+
+                fixButtonGroupCurve();
             }
             })
+            
     });
+    
 </script>
 <div class="main_holder">
-<h5 class="my-3"> Manuscript Info </h5>
-    Title: {{manuscript_title}}</br>
-    Author: {{manuscript_authors}} </br>
-    Editor: {{manuscript_editors}} </br>
-    Status: {{manuscript_status}} </br>
+    <h5> Manuscript: {{manuscript_title}} </h5>
+    <div class="my-1 dt-buttons btn-group flex-wrap">    
+        {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
+        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
+        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
+        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
+
+        {% if m_edit_flag %} 
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
+        {% elif m_view_flag %}
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
+        {% endif %}
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
+        {% if m_begin_flag %} 
+            {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
+            {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
+        {% endif %}
+        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
+            <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">
+                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
+                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a>
+                {% endif %}
+                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a>
+                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a>
+                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <p class="my-2"> 
+        <b>Status: {{manuscript_status}} </b><br>
+        Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
+        Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
+        {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+            <br> 
+            Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
+            Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+        {% endif %}
+    </p>
 </div>
 
 <div class="main_holder" id="submission_table_holder">

@@ -166,7 +166,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         # print(self.instance.can_begin_return_problems())
 
         #We run this clean if the manuscript is progressed, or after being progressed it is being edited.
-        if("submit_progress_manuscript" in self.data.keys() or self.instance._status != m.MANUSCRIPT_NEW):
+        if("submit_progress_manuscript" in self.data.keys() or self.instance._status != m.Manuscript.Status.NEW):
             description = self.cleaned_data.get('description')
             if(not description):
                 self.add_error('description', 'This field is required.')
@@ -740,12 +740,12 @@ class SubmissionBaseForm(forms.ModelForm):
 
     #If edition/curation/verification set to "new", return error.
     def clean(self):
-        if("submit_progress_edition" in self.data.keys() and self.data.get('edition_formset-0-_status','') == m.EDITION_NEW):
-            raise ValidationError('Submission editor approval must have a status other than ' + m.EDITION_NEW + '.')
-        if("submit_progress_curation" in self.data.keys() and self.data.get('curation_formset-0-_status','') == m.CURATION_NEW):
-            raise ValidationError('Submission curator approval must have a status other than ' + m.CURATION_NEW + '.')
-        if("submit_progress_verification" in self.data.keys() and self.data.get('verification_formset-0-_status','') == m.VERIFICATION_NEW):
-            raise ValidationError('Submission verifier approval must have a status other than ' + m.VERIFICATION_NEW + '.')
+        if("submit_progress_edition" in self.data.keys() and self.data.get('edition_formset-0-_status','') == m.Edition.Status.NEW):
+            raise ValidationError('Submission editor approval must have a status other than ' + m.Edition.Status.NEW + '.')
+        if("submit_progress_curation" in self.data.keys() and self.data.get('curation_formset-0-_status','') == m.Curation.Status.NEW):
+            raise ValidationError('Submission curator approval must have a status other than ' + m.Curation.Status.NEW + '.')
+        if("submit_progress_verification" in self.data.keys() and self.data.get('verification_formset-0-_status','') == m.Verification.Status.NEW):
+            raise ValidationError('Submission verifier approval must have a status other than ' + m.Verification.Status.NEW + '.')
 
 class SubmissionForm_Admin(SubmissionBaseForm):
     pass

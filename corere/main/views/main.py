@@ -59,15 +59,19 @@ def manuscript_overview(request, id=None):
 
     print(json.dumps(manuscript_avail_buttons))
 
-    manuscript_authors = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.all()
-    manuscript_editors = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)).user_set.all()
+    manuscript_authors = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
+    manuscript_editors = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
+    manuscript_curators = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
+    manuscript_verifiers = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
 
     args = {'user':     request.user, 
             "manuscript_id": id,
             "manuscript_title": manuscript.title,
-            "manuscript_authors": manuscript_authors[0].username if len(manuscript_authors) > 0 else "",
-            "manuscript_editors": manuscript_editors[0].username if len(manuscript_editors) > 0 else "",
-            "manuscript_status": manuscript._status,
+            "manuscript_authors": manuscript_authors,
+            "manuscript_editors": manuscript_editors,
+            "manuscript_curators": manuscript_curators,
+            "manuscript_verifiers": manuscript_verifiers,
+            "manuscript_status": manuscript.get__status_display(),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
