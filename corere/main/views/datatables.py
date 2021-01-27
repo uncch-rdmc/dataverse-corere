@@ -91,7 +91,6 @@ def helper_manuscript_columns(user):
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
         columns.append(['curators', "Curators"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
-        print("WHAT UP?")
         #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
         columns.append(['updated_at','Last Update Date'])
     return columns

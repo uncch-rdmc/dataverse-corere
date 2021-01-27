@@ -1,10 +1,10 @@
 {% extends "main/layout.html" %}
 {% block content %}
-    <h5 class="my-3"> {{page_header}} </h5>
+    <h5 class="my-3"> {{page_header}} z</h5>
     <ul class="list-group">
-    <li class="list-group-item"><a href="site_actions/inviteeditor">Invite Editor</a></li>
-    <li class="list-group-item"><a href="site_actions/invitecurator">Invite Curator</a></li>
-    <li class="list-group-item"><a href="site_actions/inviteverifier">Invite Verifier</a></li>
+    <li class="list-group-item"><a href="inviteeditor">Invite Editor</a></li>
+    <li class="list-group-item"><a href="invitecurator">Invite Curator</a></li>
+    <li class="list-group-item"><a href="inviteverifier">Invite Verifier</a></li>
     </ul>
     {% comment %} {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}

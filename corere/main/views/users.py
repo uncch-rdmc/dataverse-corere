@@ -280,10 +280,10 @@ def invite_user_not_author(request, role, role_text):
                 email = form.cleaned_data['email']
                 if(email):
                     new_user = helper_create_user_and_invite(request, email, role)
-                    messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+                    messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text.capitalize()))
             else:
                 logger.debug(form.errors) #TODO: DO MORE?
-        return render(request, 'main/form_user_details.html', {'form': form})
+        return render(request, 'main/form_user_details.html', {'form': form, 'page_header': "Invite {0}".format(role_text.capitalize())})
 
     else:
         raise Http404()

@@ -26,6 +26,7 @@ urlpatterns = [
     path('manuscript/<int:id>/binder/', main.open_binder, name="manuscript_binder"),
     path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
 
+    #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
     path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
