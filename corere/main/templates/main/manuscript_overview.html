@@ -19,8 +19,7 @@
             if(columns[c][0] === 'buttons') {
                 column_settings.visible = false;
                 button_index = c;
-            } else if(columns[c][0] === 'edition_id' || columns[c][0] === 'curation_id' || columns[c][0] === 'verification_id' || columns[c][0] === 'id'
-                || columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //MAD: why isn't this working? it is being called....
+            } else if(columns[c][0] === 'id' || columns[c][0] === 'created_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //Sometimes this doesn't work right, see issue #26 "Fix Datatable Visibility Bug"
                 column_settings.visible = false;
             }
             columns_config[c] = column_settings
@@ -186,9 +185,9 @@
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
-                    curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
-                    verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
+                    //edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
+                    //curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
+                    //verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
                     avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
@@ -215,13 +214,14 @@
                     fixButtonGroupCurve();
 
                     console.log('Table row deselected');
-                } ).row(':last').select();
+                } )
+                .row(':first').select()
+                .order.neutral().draw();
+                
                 sub_table_callback(table)
 
                 manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
                 for(var i in manuscript_avail_buttons) {
-                    //console.log("var: " + i)
-                    //console.log(table.button(manuscript_avail_buttons[i]+':name'))
                     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
                 }
@@ -229,6 +229,7 @@
                 fixButtonGroupCurve();
             }
             })
+            
     });
     
 </script>
@@ -268,7 +269,7 @@
     </div>
 
     <p class="my-2"> 
-        Status: {{manuscript_status}} <br>
+        <b>Status: {{manuscript_status}} </b><br>
         Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
         Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 

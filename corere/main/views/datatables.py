@@ -12,6 +12,7 @@ from django.utils.decorators import classonlymethod
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
 logger = logging.getLogger(__name__)
 
 #Shared across our various datatables
@@ -86,16 +87,19 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = [['id','ID'],['pub_id','Pub ID'],['title','Title'],['_status','Status'],['created_at','Create Date'],['updated_at','Last Update Date']]
+    columns = [['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
         columns.append(['curators', "Curators"])
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+        print("WHAT UP?")
+        #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
+        columns.append(['updated_at','Last Update Date'])
     return columns
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
 
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
-    model = m.Manuscript
     max_display_length = 500
 
     def get_columns(self):
@@ -105,11 +109,15 @@ class ManuscriptJson(CorereBaseDatatableView):
     def render_column(self, manuscript, column):
         if column[0] == 'curators':
             return ", ".join(list(m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).values_list('username', flat=True)))
+        elif column[0] == 'created_at':
+            return '{0}'.format(manuscript.created_at.strftime("%Y/%m/%d")) #%H:%M:%S"
+        elif column[0] == 'updated_at':
+            return '{0}'.format(manuscript.updated_at.strftime("%Y/%m/%d"))
         else:
             return super(ManuscriptJson, self).render_column(manuscript, column[0])
 
     def get_initial_queryset(self):
-        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=self.model)
+        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=m.Manuscript).order_by('-id')
 
     #Note: this isn't tied to the search bar in the datatable, that happens solely browserside
     def filter_queryset(self, qs):
@@ -121,8 +129,11 @@ class ManuscriptJson(CorereBaseDatatableView):
 
 
 def helper_submission_columns(user):
-    columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['edition_id', 'Edition ID'],['edition_status', 'Edition Status'],['curation_id','Curation ID'],['curation_status','Curation Status'],['verification_id','Verification ID'],['verification_status','Verification Status'],['buttons','Buttons']]
-    
+    columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['buttons','Buttons']]
+    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+        columns.append(['edition_status', 'Edition Status'])
+        columns.append(['curation_status','Curation Status'])
+        columns.append(['verification_status','Verification Status'])
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
     return columns
 
@@ -142,11 +153,6 @@ class SubmissionJson(CorereBaseDatatableView):
             else:
                 return ''
 
-        elif column[0] == 'edition_id':
-            try:
-                return '{0}'.format(submission.submission_edition.id)
-            except m.Submission.submission_edition.RelatedObjectDoesNotExist:
-                return ''
         elif column == 'edition_status':
             try:
                 if(has_transition_perm(submission.submission_edition.view_noop, user)):
@@ -155,11 +161,6 @@ class SubmissionJson(CorereBaseDatatableView):
                 pass
             return ''
 
-        elif column[0] == 'curation_id':
-            try:
-                return '{0}'.format(submission.submission_curation.id)
-            except m.Submission.submission_curation.RelatedObjectDoesNotExist:
-                return ''
         elif column[0] == 'curation_status':
             try:
                 if(has_transition_perm(submission.submission_curation.view_noop, user)):
@@ -167,11 +168,6 @@ class SubmissionJson(CorereBaseDatatableView):
             except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                 pass
             return ''
-        elif column[0] == 'verification_id':
-            try:
-                return '{0}'.format(submission.submission_verification.id)
-            except m.Submission.submission_verification.RelatedObjectDoesNotExist:
-                return ''
         elif column[0] == 'verification_status':
             try:
                 if(has_transition_perm(submission.submission_verification.view_noop, user)):
@@ -229,7 +225,11 @@ class SubmissionJson(CorereBaseDatatableView):
 
             return avail_buttons
         elif column[0] == 'version_id': 
-            return '#{0}'.format(submission.version_id)
+            latest_submission_version = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max'] #Probably inefficient here
+            if(submission.version_id == latest_submission_version):
+                return '#{0} (Current)'.format(submission.version_id)
+            else:
+                return '#{0}'.format(submission.version_id)
         else:
             return super(SubmissionJson, self).render_column(submission, column[0])
 
@@ -240,7 +240,7 @@ class SubmissionJson(CorereBaseDatatableView):
         except ObjectDoesNotExist:
             raise Http404()
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
-            return(m.Submission.objects.filter(manuscript=manuscript_id))
+            return(m.Submission.objects.filter(manuscript=manuscript_id).order_by('-version_id'))
         else:
             raise Http404()
 

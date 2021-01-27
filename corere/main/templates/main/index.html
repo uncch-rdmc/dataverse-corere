@@ -16,7 +16,7 @@
             cache: false,
             success: function (response) {
                 var [columns_config, button_index] = constructTable(response.data[0]);
-                var last_row;
+                var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
                 var select_timeout;
                 var table = $('#manuscript_table').DataTable({
                     lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
@@ -97,6 +97,7 @@
                     dt.button('workOnManuscript:name').enable(false);
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
+                    console.log(last_row)
                     if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
@@ -109,8 +110,10 @@
                 } else { //select cell if none selected, allows instant keyboard use
                     table.cell({ row: selected_row, column: 0 }).focus();
                 }
-                table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
+                //table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
+                table.row(':first').select(); //Select first row always
                 table.buttons().container().prependTo("#manuscript_buttons");
+                table.order.neutral().draw();
 
                 table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
@@ -128,7 +131,7 @@
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
-                column_settings.visible = false;
+                column_settings.visible = true;
             }
             columns_config[c] = column_settings
         }
