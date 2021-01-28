@@ -179,7 +179,6 @@
                             enabled: false
                         },
 
-                        
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -215,8 +214,8 @@
 
                     console.log('Table row deselected');
                 } )
-                .row(':first').select()
-                .order.neutral().draw();
+                .order.neutral().draw()
+                .row(':eq(0)', { page: 'current' }).select();
                 
                 sub_table_callback(table)
 
@@ -248,6 +247,7 @@
             <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
             <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
         {% endif %}
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
         {% if m_begin_flag %} 
             {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}

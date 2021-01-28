@@ -111,9 +111,9 @@
                     table.cell({ row: selected_row, column: 0 }).focus();
                 }
                 //table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
-                table.row(':first').select(); //Select first row always
                 table.buttons().container().prependTo("#manuscript_buttons");
                 table.order.neutral().draw();
+                table.row(':first').select(); //Select first row always
 
                 table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Reviewing Submission|Processing Submission", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}

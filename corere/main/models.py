@@ -261,6 +261,7 @@ class Submission(AbstractCreateUpdateModel):
     
     class Meta:
         default_permissions = ()
+        ordering = ['version_id']
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
@@ -552,6 +553,7 @@ class Manuscript(AbstractCreateUpdateModel):
     contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
     producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')

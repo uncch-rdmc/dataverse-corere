@@ -5,7 +5,7 @@ from corere.main.views import datatables, main, users, classes
 urlpatterns = [ 
     path('', main.index, name="index"),
     path('manuscript_table/', datatables.ManuscriptJson.as_view(), name="manuscript_table"),
-    path('manuscript/<int:id>/', main.manuscript_overview, name="manuscript_overview"),
+    path('manuscript/<int:id>/', main.manuscript_landing, name="manuscript_landing"),
     path('manuscript/<int:manuscript_id>/submission_table/', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit/', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
@@ -25,6 +25,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/deletefile/', main.delete_file, name="manuscript_deletefile"),
     path('manuscript/<int:id>/binder/', main.open_binder, name="manuscript_binder"),
     path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
+    path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
