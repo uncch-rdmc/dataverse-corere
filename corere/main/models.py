@@ -22,6 +22,7 @@ from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
+from guardian.shortcuts import get_objects_for_group, get_perms
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -291,6 +292,28 @@ class Submission(AbstractCreateUpdateModel):
         branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
         if first_save:
             gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
+
+    ##### Queries #####
+
+    #We check an author is public (for both functions) by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
+    def get_public_curator_notes(self):
+        public_notes = []
+        for note in Note.objects.filter(parent_submission=self):#self.notes:
+            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
+            if 'view_note' in note_perms:
+                if(note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+                    public_notes.append(note)
+        return public_notes
+
+    def get_public_verifier_notes(self):
+        public_notes = []
+        for note in Note.objects.filter(parent_submission=self):#self.notes:
+            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
+            if 'view_note' in note_perms:
+                #In normal use each user will have one role. But incase they have 2 (admin), we only show the notes in verifier if they aren't a curator as well.
+                if(note.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists() and not note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+                    public_notes.append(note)
+        return public_notes
 
     ##### django-fsm (workflow) related functions #####
 
@@ -725,9 +748,11 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 class GitlabFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
-        CODE = 'code', _('code')
-        DATA = 'data', _('data')
-        DOCUMENTATION = 'documentation', _('documentation')
+        CODE = 'code', _('Code')
+        DATA = 'data', _('Data')
+        DOC_OTHER = 'doc_other', _('Documentation - Other')
+        DOC_README = 'doc_readme', _('Documentation - Readme')
+        DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
 
     gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64, verbose_name='SHA-256', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -766,7 +791,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="", blank=True, verbose_name='Note Text')
+    text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 

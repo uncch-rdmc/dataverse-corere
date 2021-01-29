@@ -162,7 +162,7 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
     cur_sub_files = m.GitlabFile.objects.filter(parent_submission=submission)
     #These have been moved outside for efficiency, though I'm not sure its actually caching
     if(submission.version_id-1 > 0):
-        prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version_id-1)
+        prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version_id=submission.version_id-1)
         prev_sub_files = m.GitlabFile.objects.filter(parent_submission=prev_submission.id)
 
     for item in gl_repo_list:

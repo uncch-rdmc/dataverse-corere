@@ -41,7 +41,7 @@
     </tr>
     <tr>
         <td>Data Curation Notes</td>
-        <td><ul>{% for note in submission.notes.all %}<li>{{note.text}}</li>{% endfor %}</ul></td>
+        <td><ul>{% for note in submission.get_public_curator_notes %}<li>{{note.text}}</li>{% endfor %}</ul></td>
     </tr>
     {% endif %}
     {% if submission.submission_verification %}
@@ -51,7 +51,7 @@
     </tr>
     <tr>
         <td>Replication Notes</td>
-        <td><ul>{% for note in submission.notes.all %}<li>{{note.text}}</li>{% endfor %}</ul></td>
+        <td><ul>{% for note in submission.get_public_verifier_notes %}<li>{{note.text}}</li>{% endfor %}</ul></td>
     </tr>
     {% endif %}
 {% endfor %}
