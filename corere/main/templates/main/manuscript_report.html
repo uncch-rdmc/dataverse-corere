@@ -1,0 +1,65 @@
+{% extends "main/layout.html" %}
+{% load i18n %}
+{% comment %} {% load verbose_names %} {% endcomment %}
+{% block content %}
+<table class="table table-bordered" id="table_manuscript_info">
+    <tr>
+        <td style="width: 30%">Manuscript Number</td>
+        <td style="width: 70%">{{manuscript.pub_id}}</td>
+    </tr>
+    <tr>
+        <td>Article Title</td>
+        <td>{{manuscript.title}}</td>
+    </tr>
+    <tr>
+        <td>Corresponding Author</td>
+        <td>{{manuscript.contact_last_name}}{% if manuscript.contact_last_name %},{% endif %} {{manuscript.contact_first_name}}</td>
+    </tr>
+    <tr>
+        <td>Dataverse DOI</td>
+        <td>{{manuscript.dataverse_doi}}</td>
+    </tr>
+</table>
+
+<table class="table table-bordered" id="table_submissions_info">
+{% for submission in manuscript.manuscript_submissions.all %}
+    <tr>
+        <th colspan="2">Submission {{submission.version_id}}</th>
+    </tr>
+    <tr>
+        <td style="width: 30%">Editor Submission Date</td>
+        <td style="width: 70%">{{submission.submission_edition.created_at|date:"SHORT_DATE_FORMAT"}}</td>
+    </tr>
+    <tr>
+        <td>Verification Date</td>
+        <td>{% if submission.submission_verification %} {{submission.submission_verification.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_curation %} {{submission.submission_curation.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_edition %} {{submission.submission_edition.updated_at|date:"SHORT_DATE_FORMAT"}} {% endif %}</td>
+    </tr>
+    {% if submission.submission_curation %}{% comment %} this if is probably unneeded if we only show completed submissions that passed edition {% endcomment %}
+    <tr>
+        <td>Data Curation Result</td>
+        <td>{{submission.submission_curation.get__status_display}}</td>
+    </tr>
+    <tr>
+        <td>Data Curation Notes</td>
+        <td><ul>{% for note in submission.get_public_curator_notes %}<li>{{note.text}}</li>{% endfor %}</ul></td>
+    </tr>
+    {% endif %}
+    {% if submission.submission_verification %}
+    <tr>
+        <td>Replication Result</td>
+        <td>{{submission.submission_verification.get__status_display}}</td>
+    </tr>
+    <tr>
+        <td>Replication Notes</td>
+        <td><ul>{% for note in submission.get_public_verifier_notes %}<li>{{note.text}}</li>{% endfor %}</ul></td>
+    </tr>
+    {% endif %}
+{% endfor %}
+</table>
+
+<table class="table table-bordered" id="table_citation_info">
+{% comment %} we don't even store anything related to citation {% endcomment %}
+</table>
+
+{% endblock %}
+{% comment %} {{submission.get__status_display}} {% endcomment %}

@@ -157,12 +157,12 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
         return
     #TODO: switch this to use helper_get_submission_branch_name and fix its calls to use version
 
-    cur_branch = "submission_" + str(submission.version)
+    cur_branch = "submission_" + str(submission.version_id)
     gl_repo_list = gitlab_repo_get_file_folder_list(repo_id, cur_branch)
     cur_sub_files = m.GitlabFile.objects.filter(parent_submission=submission)
     #These have been moved outside for efficiency, though I'm not sure its actually caching
-    if(submission.version-1 > 0):
-        prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version=submission.version-1)
+    if(submission.version_id-1 > 0):
+        prev_submission = m.Submission.objects.get(manuscript=submission.manuscript, version_id=submission.version_id-1)
         prev_sub_files = m.GitlabFile.objects.filter(parent_submission=prev_submission.id)
 
     for item in gl_repo_list:
@@ -203,7 +203,7 @@ def helper_populate_gitlab_files_submission(repo_id, submission):
             cur_file.gitlab_date = commit.authored_date
             cur_file.gitlab_blob_id = item['id']
 
-        if(submission.version-1 > 0):
+        if(submission.version_id-1 > 0):
             try:
                 prev_file = prev_sub_files.get(gitlab_path=item['path'])
                 cur_file.tag = prev_file.tag

@@ -32,7 +32,7 @@ def index(request):
         return render(request, "main/login.html")
 
 @login_required
-def manuscript_overview(request, id=None):
+def manuscript_landing(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     manuscript_avail_buttons = []
     if(has_transition_perm(manuscript.edit_noop, request.user)):
@@ -81,7 +81,7 @@ def manuscript_overview(request, id=None):
             'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower
             }
-    return render(request, "main/manuscript_overview.html", args)
+    return render(request, "main/manuscript_landing.html", args)
 
 @login_required
 def open_binder(request, id=None):

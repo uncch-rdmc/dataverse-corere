@@ -339,6 +339,13 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.id))
 
+class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+    template = 'main/manuscript_report.html'
+    def get(self, request, *args, **kwargs):
+        #This should ensure the user has read access
+        #What data do we need to pull? Just the manuscript? Eh probably gotta do more lifting here
+        return render(request, self.template, {'manuscript': self.object})
+
 ############################################# SUBMISSION #############################################
 
 # Do not call directly. Used for the main submission form

@@ -22,6 +22,7 @@ from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
+from guardian.shortcuts import get_objects_for_group, get_perms
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -261,6 +262,7 @@ class Submission(AbstractCreateUpdateModel):
     
     class Meta:
         default_permissions = ()
+        ordering = ['version_id']
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
@@ -290,6 +292,28 @@ class Submission(AbstractCreateUpdateModel):
         branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
         if first_save:
             gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
+
+    ##### Queries #####
+
+    #We check an author is public (for both functions) by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
+    def get_public_curator_notes(self):
+        public_notes = []
+        for note in Note.objects.filter(parent_submission=self):#self.notes:
+            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
+            if 'view_note' in note_perms:
+                if(note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+                    public_notes.append(note)
+        return public_notes
+
+    def get_public_verifier_notes(self):
+        public_notes = []
+        for note in Note.objects.filter(parent_submission=self):#self.notes:
+            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
+            if 'view_note' in note_perms:
+                #In normal use each user will have one role. But incase they have 2 (admin), we only show the notes in verifier if they aren't a curator as well.
+                if(note.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists() and not note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+                    public_notes.append(note)
+        return public_notes
 
     ##### django-fsm (workflow) related functions #####
 
@@ -552,6 +576,7 @@ class Manuscript(AbstractCreateUpdateModel):
     contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
     producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
@@ -723,9 +748,11 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 class GitlabFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
-        CODE = 'code', _('code')
-        DATA = 'data', _('data')
-        DOCUMENTATION = 'documentation', _('documentation')
+        CODE = 'code', _('Code')
+        DATA = 'data', _('Data')
+        DOC_OTHER = 'doc_other', _('Documentation - Other')
+        DOC_README = 'doc_readme', _('Documentation - Readme')
+        DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
 
     gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
     gitlab_sha256 = models.CharField(max_length=64, verbose_name='SHA-256', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -764,7 +791,7 @@ class GitlabFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
-    text = models.TextField(default="", blank=True, verbose_name='Note Text')
+    text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
 
