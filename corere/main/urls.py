@@ -9,6 +9,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/submission_table/', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit/', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
+    path('manuscript/<int:id>/uploadfilesold/', classes.ManuscriptUploadFilesViewOld.as_view(), name="manuscript_uploadfiles"),
     path('manuscript/<int:id>/uploadfiles/', classes.ManuscriptUploadFilesView.as_view(), name="manuscript_uploadfiles"),
     path('manuscript/<int:id>/fileslist/', classes.ManuscriptFilesListAjaxView.as_view(),name="manuscript_fileslist"),
     path('manuscript/<int:id>/view/', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
@@ -49,4 +50,6 @@ urlpatterns = [
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
     path('switch_role/', main.switch_role, name="switch_role"),
+
+    path('test_local_git', main.test_local_git, name="test_local_git"),
 ]

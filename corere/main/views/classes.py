@@ -278,7 +278,25 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     http_method_names = ['get']
     read_only = True
 
+#PREVIOUS UPLOAD FILES CLASS FROM WHEN WE USED GITLAB. DELETE EVENTUALLY
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS), we just leverage the existing form infrastructure for perm checks etc
+class ManuscriptUploadFilesViewOld(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
+    form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
+    template = 'main/not_form_upload_files_old.html'
+    transition_method_name = 'edit_noop'
+    page_header = "Upload Files for Manuscript"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
+            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+
+#MOVE THESE
+import git
+from django.conf import settings
+
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
@@ -291,6 +309,29 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
             'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+
+    #TODO: Should we making sure these files are safe?
+    def post(self, request, *args, **kwargs):
+        print(request.FILES.get('file').__dict__)
+        file = request.FILES.get('file')
+        print(settings.GIT_ROOT+"/test-project/" + file.name)
+        with open(settings.GIT_ROOT+"/test-project/" + file.name, 'wb+') as destination:
+            print("IN")
+            for chunk in file.chunks():
+                destination.write(chunk)
+
+        print("DONE")
+
+
+        # args = {'user':     request.user}
+        repo = git.Repo.init(settings.GIT_ROOT+"/test-project", mkdir=True)
+        #repo.index.add(request.FILES.get('file'))
+        #repo.git.checkout('HEAD', b="my_new_branch")
+        #repo.git.add(
+        print("TEST")
+        print(repo.git.status())
+        #return render(request, "main/test_local_git.html", args)
+        #print(request.__dict__)
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS), we just leverage the existing form infrastructure for perm checks etc
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...

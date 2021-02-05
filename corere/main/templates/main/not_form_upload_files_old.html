@@ -3,10 +3,10 @@
 File Access: {{root_object_title}}
 <br>
 {% if not read_only %}
-{% include "main/file_upload.html" %}
+{% include "main/file_upload_old.html" %}
 {% endif %}
 <input type=button value="Back" onClick="javascript:history.go(-1);">
-{% include "main/file_list_old.html" %}
+{% comment %} {% include "main/file_list_old.html" %} {% endcomment %}
 <script>
     function delete_and_refresh(delete_url, id, obj_type){
         var headers = new Headers();

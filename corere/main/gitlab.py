@@ -3,6 +3,8 @@ from corere.main import models as m #TODO: Switch to GitlabFile
 from django.conf import settings
 logger = logging.getLogger(__name__)  
 
+#TODO: I should be referencing settings here, not environ directly!
+
 #https://docs.gitlab.com/ee/api/users.html#user-creation
 def gitlab_create_user(django_user, is_admin=False):
     if(hasattr(settings, 'DISABLE_GIT') and settings.DISABLE_GIT):

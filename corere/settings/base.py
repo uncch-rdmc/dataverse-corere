@@ -15,6 +15,10 @@ SITE_ID = 1
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 
+GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
+
+#TODO: Delete if we switch to local git. Also delete from env. Not sure about RECIPIENTS.
+#P.S.: What are we using MEDIA_ROOT in env.sh for?
 #CUSTOM CORERE
 GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
 GIT_LAB_URL = os.environ["GIT_LAB_URL"]
