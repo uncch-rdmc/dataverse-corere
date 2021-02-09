@@ -279,6 +279,7 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
+
             try:
                 gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
             except ValueError:
@@ -290,10 +291,12 @@ class Submission(AbstractCreateUpdateModel):
             else:
                 self.version_id = prev_max_version_id + 1
 
+
         super(Submission, self).save(*args, **kwargs)
-        branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
+        #branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
         if first_save:
-            gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
+            pass #TODO: We probably need to do this with git
+            #gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
 
     ##### Queries #####
 
@@ -418,19 +421,15 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def submit_edition(self):
-        print("SUBMIT1")
         #TODO: Call manuscript.process
         if(self.submission_edition._status == Edition.Status.NO_ISSUES):
             self.manuscript.process()
             self.manuscript.save()
-            print("SUBMIT2")
-            print(self.Status.IN_PROGRESS_CURATION)
             return self.Status.IN_PROGRESS_CURATION
         else:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
             self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
             self.manuscript.save()
-            print("SUBMIT2b")
-            print(self.Status.IN_PROGRESS_CURATION)
             return self.Status.RETURNED
 
     #-----------------------
@@ -452,8 +451,7 @@ class Submission(AbstractCreateUpdateModel):
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
         
-        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
-        # self.manuscript.save()
+        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -472,11 +470,10 @@ class Submission(AbstractCreateUpdateModel):
         try:
             if(self.submission_verification._status == Verification.Status.SUCCESS): #just checking the object exists, crude
                 pass
-            #return Submission.Status.REVIEWED_AWAITING_REPORT
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_VERIFICATION
-        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
-        # self.manuscript.save()
+        
+        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -645,7 +642,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
-            g.create_manuscript_repo(self)
+            g.create_repo(self)
             #gitlab_create_manuscript_repo(self)
             #gitlab_create_submissions_repo(self)
 

@@ -49,7 +49,7 @@ def invite_assign_author(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
-                gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
+                #gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 #Admin gave Author access to Matthew for manuscript bug5
@@ -240,7 +240,7 @@ def account_user_details(request):
     if request.method == 'POST':
         if form.is_valid():
             user = form.save()
-            gitlab_update_user(user)
+            #gitlab_update_user(user)
             messages.add_message(request, messages.SUCCESS, "User info has been updated!")
             return redirect('/')
         else:
@@ -297,14 +297,15 @@ def helper_create_user_and_invite(request, email, role):
     new_user.email = email
     
     #Username can't be set to email as gitlab does not support those characters.
-    new_user.username = get_random_string(64).lower() #required field, we enter jibberish for now
+    #BUT we don't care anymore now that there is no gitlab!
+    new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
     new_user.invited_by=request.user
     new_user.set_unusable_password()
     new_user.save()
 
     role.user_set.add(new_user)
-    gitlab_create_user(new_user)
+    #gitlab_create_user(new_user)
 
     #TODO: Think about doing this after everything else, incase something bombs
     invite.send_invitation(request)

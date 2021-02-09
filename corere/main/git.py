@@ -1,16 +1,19 @@
 import git
 from django.conf import settings
 
-def create_manuscript_repo(manuscript):
+def create_repo(manuscript):
     repo = git.Repo.init(get_repo_path(manuscript), mkdir=True)
     repo.index.commit("initial commit")
+
+def create_submission_branch(submission):
+    repo = git.Repo(get_repo_path(submission.manuscript))
+    repo.create_head('Submission_' + str(submission.version_id))
 
 #TODO: How do we even get files from previous releases? Something like: https://stackoverflow.com/questions/7856416/
 def get_repo_files(manuscript):
     repo = git.Repo(get_repo_path(manuscript))
     return helper_list_paths(repo.head.commit.tree, get_repo_path(manuscript), repo_name=get_repo_name(manuscript))
 
-#TODO: Support submission?
 def store_file(manuscript, file):
     path = get_repo_path(manuscript)
     repo = git.Repo(path)
