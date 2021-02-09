@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
-from .. import constants as c
+from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django_fsm import has_transition_perm, TransitionNotAllowed
@@ -11,8 +11,11 @@ from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
+from corere.main import git as g
+#TODO: REMOVE THIS GITLAB IMPORT
 from corere.main.gitlab import gitlab_repo_get_file_folder_list, helper_get_submission_branch_name, helper_populate_gitlab_files_submission, _helper_generate_gitlab_project_name
 logger = logging.getLogger(__name__)  
+from django.http import HttpResponse
 #from guardian.decorators import permission_required_or_404
 
 ########################################## GENERIC + MIXINS ##########################################
@@ -88,22 +91,38 @@ class GenericCorereObjectView(View):
             'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
 
         return render(request, self.template, context)
-    
+
+#TODO REAL: replace this with git functionality    
 #TODO: this needs to be dynamically getting its repo based upon manuscript/submissions
 class GitlabFilesMixin(object):
     def dispatch(self, request, *args, **kwargs): 
+        # if(isinstance(self.object, m.Manuscript)):
+        #     self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.gitlab_manuscript_id, 'master')
+        #     self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
+        # elif(isinstance(self.object, m.Submission)):
+        #     self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
+        #     self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
+        # else:
+        #     logger.error("Attempted to load Gitlab file for an object which does not have gitlab files")
+        #     #TODO: this should better error that the object provided doesn't have gitlab files
+        #     raise Http404()
+        
+        return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
+
+class GitFilesMixin(object):
+    def dispatch(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.gitlab_manuscript_id, 'master')
+            self.repo_dict_list = g.get_repo_files(self.object)
             self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
         elif(isinstance(self.object, m.Submission)):
-            self.repo_dict_list = gitlab_repo_get_file_folder_list(self.object.manuscript.gitlab_submissions_id, helper_get_submission_branch_name(self.object.manuscript))
+            self.repo_dict_list = self.repo_dict_list = g.get_repo_files(g.get_repo_id(self.object.manuscript))
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
         else:
             logger.error("Attempted to load Gitlab file for an object which does not have gitlab files")
             #TODO: this should better error that the object provided doesn't have gitlab files
             raise Http404()
-        
-        return super(GitlabFilesMixin, self).dispatch(request, *args, **kwargs)
+
+        return super(GitFilesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -297,7 +316,7 @@ class ManuscriptUploadFilesViewOld(LoginRequiredMixin, GetOrGenerateObjectMixin,
 import git
 from django.conf import settings
 
-class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
+class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
@@ -306,32 +325,18 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
-            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
-            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header})
+
+            #TODO: ADD THESE FOR GIT
+            #'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
+            #'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
-        print(request.FILES.get('file').__dict__)
         file = request.FILES.get('file')
-        print(settings.GIT_ROOT+"/test-project/" + file.name)
-        with open(settings.GIT_ROOT+"/test-project/" + file.name, 'wb+') as destination:
-            print("IN")
-            for chunk in file.chunks():
-                destination.write(chunk)
+        g.store_file(self.object, file)
+        return HttpResponse(status=200)
 
-        print("DONE")
-
-
-        # args = {'user':     request.user}
-        repo = git.Repo.init(settings.GIT_ROOT+"/test-project", mkdir=True)
-        #repo.index.add(request.FILES.get('file'))
-        #repo.git.checkout('HEAD', b="my_new_branch")
-        #repo.git.add(
-        print("TEST")
-        print(repo.git.status())
-        #return render(request, "main/test_local_git.html", args)
-        #print(request.__dict__)
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS), we just leverage the existing form infrastructure for perm checks etc
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
@@ -350,11 +355,13 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
             'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
             'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
 
-class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericManuscriptView):
+class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
+        print({'read_only': self.read_only, 'page_header': self.page_header,
+            'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
         return render(request, self.template, {'read_only': self.read_only, 'page_header': self.page_header,
             'git_id': self.object.gitlab_manuscript_id, 'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 

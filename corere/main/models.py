@@ -1,6 +1,6 @@
 import logging
 import uuid
-from . import constants as c
+# from . import constants as c
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
@@ -17,12 +17,14 @@ from guardian.shortcuts import get_users_with_perms, assign_perm
 from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 from corere.main import constants as c
+from corere.main import git as g
 from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo, gitlab_create_submission_branch, helper_get_submission_branch_name
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
+from autoslug import AutoSlugField
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -588,6 +590,7 @@ class Manuscript(AbstractCreateUpdateModel):
     gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    slug = AutoSlugField(populate_from='title')
 
     class Meta:
         permissions = [
@@ -642,8 +645,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
-            gitlab_create_manuscript_repo(self)
-            gitlab_create_submissions_repo(self)
+            g.create_manuscript_repo(self)
+            #gitlab_create_manuscript_repo(self)
+            #gitlab_create_submissions_repo(self)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED

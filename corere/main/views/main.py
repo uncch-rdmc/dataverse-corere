@@ -155,14 +155,3 @@ def switch_role(request):
         else:
             logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_full_string +")")
     return redirect(request.GET.get('next', ''))
-
-import git
-from django.conf import settings
-
-@login_required()
-def test_local_git(request):
-    args = {'user':     request.user, 
-        }
-    repo = git.Repo.init(settings.GIT_ROOT+"/test-project", mkdir=True)
-    print(repo.git.status())
-    return render(request, "main/test_local_git.html", args)

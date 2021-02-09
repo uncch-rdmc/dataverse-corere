@@ -1,6 +1,20 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
-<form class="dropzone" action="." method="post" enctype="multipart/form-data">
+<form class="dropzone" action="." method="post" enctype="multipart/form-data" id="dropform">
     {% csrf_token %}
 </form>
+<script type="text/javascript">
+    obj_type = "{{obj_type}}"
+    obj_id = {{ obj_id }}
+    Dropzone.options.dropform = {
+        init: function () {
+            this.on('success', function() {
+                var args = Array.prototype.slice.call(arguments);          
+                $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
+                //this.processQueue(); //call the next file
+            });
+        }
+    };
+
+</script>
