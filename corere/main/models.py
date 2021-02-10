@@ -642,7 +642,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
-            g.create_repo(self)
+            g.create_manuscript_repo(self)
+            g.create_submission_repo(self)
             #gitlab_create_manuscript_repo(self)
             #gitlab_create_submissions_repo(self)
 

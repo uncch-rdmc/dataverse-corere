@@ -112,10 +112,10 @@ class GitlabFilesMixin(object):
 class GitFilesMixin(object):
     def dispatch(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            self.repo_dict_list = g.get_repo_files(self.object)
+            self.repo_dict_list = g.get_manuscript_files(self.object)
             self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
         elif(isinstance(self.object, m.Submission)):
-            self.repo_dict_list = self.repo_dict_list = g.get_repo_files(g.get_repo_id(self.object.manuscript))
+            self.repo_dict_list = g.get_submission_files(self.object.manuscript)
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
         else:
             logger.error("Attempted to load Gitlab file for an object which does not have gitlab files")
@@ -334,7 +334,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
-        g.store_file(self.object, file)
+        g.store_manuscript_file(self.object, file)
         return HttpResponse(status=200)
 
 
@@ -739,7 +739,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #TODO: Do we need the gitlab mixin? probably?
 #TODO: Do we need all the parameters being passed? Especially for read?
 #TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
+class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files_notes.html'
     helper=f.GitlabFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
@@ -786,7 +786,7 @@ class SubmissionReadFilesView(GenericSubmissionFilesView):
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
 #TODO: See if this can be done cleaner
-class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
+class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
@@ -800,12 +800,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
-            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header})
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript)#,
+            #'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
+            #'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header
+            })
+
+    #TODO: Should we making sure these files are safe?
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')
+        g.store_submission_file(self.object.manuscript, file)
+        return HttpResponse(status=200)
+
 
 #Used for ajax refreshing in EditFiles
-class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitlabFilesMixin, GenericCorereObjectView):
+class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
     parent_reference_name = 'manuscript'
@@ -818,6 +826,7 @@ class SubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
         return render(request, self.template, {'read_only': self.read_only, 
             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
+
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
