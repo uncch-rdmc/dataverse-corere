@@ -9,7 +9,6 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/submission_table/', datatables.SubmissionJson.as_view(), name="submission_table"),
     path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit/', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
-    path('manuscript/<int:id>/uploadfilesold/', classes.ManuscriptUploadFilesViewOld.as_view(), name="manuscript_uploadfiles"),
     path('manuscript/<int:id>/uploadfiles/', classes.ManuscriptUploadFilesView.as_view(), name="manuscript_uploadfiles"),
     path('manuscript/<int:id>/fileslist/', classes.ManuscriptFilesListAjaxView.as_view(),name="manuscript_fileslist"),
     path('manuscript/<int:id>/view/', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
@@ -30,11 +29,11 @@ urlpatterns = [
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
-    path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
+    # path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path('submission/<int:id>/fileslist/', classes.SubmissionFilesListAjaxView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view/', classes.SubmissionReadView.as_view(), name="submission_read"),
-    path('submission/<int:id>/viewfiles/', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
+    # path('submission/<int:id>/viewfiles/', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
     path('submission/<int:submission_id>/deletefile/', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles/', main.delete_all_submission_files, name="submission_deleteallfiles"),
     path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),

@@ -1,5 +1,6 @@
 import git, os
 from django.conf import settings
+from django.http import Http404
 
 #What actually makes something a "helper" here?
 
@@ -27,8 +28,11 @@ def _get_files(manuscript, path, repo_name):
     print("Path: " + path)
     print("Repo Name: " + repo_name)
     print("============================")
-    repo = git.Repo(path)
-    return helper_list_paths(repo.head.commit.tree, path, path)
+    try:
+        repo = git.Repo(path)
+        return helper_list_paths(repo.head.commit.tree, path, path)
+    except git.exc.NoSuchPathError:
+        raise Http404()
 
 
 def store_manuscript_file(manuscript, file, subdir):

@@ -9,7 +9,6 @@ import django.utils.timezone
 import django_fsm
 import simple_history.models
 import uuid, os, sys
-from corere.main.gitlab import gitlab_create_user
 
 
 class Migration(migrations.Migration):
@@ -19,28 +18,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ('auth', '0011_update_proxy_permissions'),
     ]
-
-    #When we upgrade to Django 3.0, we can remove this and use noinput admin command
-    #https://docs.djangoproject.com/en/3.0/ref/django-admin/#createsuperuser
-    def generate_superuser(apps, schema_editor):
-        if('test' not in sys.argv): #TODO: this is maybe not the cleanest way to detect a test, reprocussions are low though
-            from django.contrib.auth import get_user_model
-
-            User = get_user_model()
-
-            DJANGO_SU_NAME = os.environ.get('DJANGO_SUPERUSER_USERNAME')
-            DJANGO_SU_EMAIL = os.environ.get('DJANGO_SUPERUSER_EMAIL')
-            DJANGO_SU_PASSWORD = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
-
-            superuser = User.objects.create_superuser(
-                username=DJANGO_SU_NAME,
-                email=DJANGO_SU_EMAIL,
-                password=DJANGO_SU_PASSWORD)
-
-            #TODO: Pass in gitlab id here?
-
-            superuser.save()
-            gitlab_create_user(superuser, is_admin=True)
 
     operations = [
         migrations.CreateModel(
@@ -438,5 +415,5 @@ class Migration(migrations.Migration):
             model_name='gitlabfile',
             index=models.Index(fields=['gitlab_path', 'parent_submission'], name='main_gitlab_gitlab__c5f97e_idx'),
         ),
-        migrations.RunPython(generate_superuser),
+
     ]

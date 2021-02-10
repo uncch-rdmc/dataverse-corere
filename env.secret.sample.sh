@@ -16,7 +16,7 @@ export POSTGRES_PASSWORD=
 export EMAIL_HOST_USER=
 export EMAIL_HOST_PASSWORD=
 
-#Do not set username to admin, will conflict with gitlab
+#After installation/change, call manage.py createsuperuser --noinput to enable superuser
 export DJANGO_SUPERUSER_USERNAME=
 export DJANGO_SUPERUSER_EMAIL=
 export DJANGO_SUPERUSER_PASSWORD=

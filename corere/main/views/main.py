@@ -9,7 +9,6 @@ from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
 from django.contrib.auth.decorators import login_required
-from corere.main.gitlab import gitlab_delete_file, gitlab_submission_delete_all_files
 from corere.main.binderhub import binder_build_load 
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group

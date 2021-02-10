@@ -12,7 +12,6 @@ from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
-from corere.main.gitlab import gitlab_create_user, gitlab_add_user_to_repo, gitlab_update_user
 from notifications.signals import notify
 from django.http import Http404
 from corere.main.templatetags.auth_extras import has_group
