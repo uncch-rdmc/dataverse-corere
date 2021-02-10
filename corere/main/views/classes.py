@@ -334,7 +334,9 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
-        g.store_manuscript_file(self.object, file)
+        fullPath = request.POST.get('fullPath','')
+        path = fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank
+        g.store_manuscript_file(self.object, file, path)
         return HttpResponse(status=200)
 
 
@@ -808,7 +810,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
-        g.store_submission_file(self.object.manuscript, file)
+        fullPath = request.POST.get('fullPath','')
+        path = fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank
+        g.store_submission_file(self.object.manuscript, file, path)
         return HttpResponse(status=200)
 
 

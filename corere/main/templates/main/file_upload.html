@@ -14,6 +14,13 @@
                 $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
                 //this.processQueue(); //call the next file
             });
+            this.on("sending", function(file, xhr, data) {
+                // if file is actually a folder
+                if(file.fullPath){
+                    data.append("fullPath", file.fullPath);
+                }
+            });
+
         }
     };
 
