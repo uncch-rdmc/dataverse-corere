@@ -28,7 +28,7 @@ def _get_files(manuscript, path, repo_name):
     print("Repo Name: " + repo_name)
     print("============================")
     repo = git.Repo(path)
-    return helper_list_paths(repo.head.commit.tree, path, path, repo_name=repo_name)
+    return helper_list_paths(repo.head.commit.tree, path, path)
 
 
 def store_manuscript_file(manuscript, file, subdir):
@@ -68,25 +68,13 @@ def create_submission_branch(submission):
     repo = git.Repo(get_submission_repo_path(submission.manuscript))
     repo.create_head(helper_get_submission_branch_name(submission))
 
-
-#repo_name is required if relative
-#DO WE EVER CALL THIS WITHOUT RELATIVE? IF NOT, WE SHOULD SIMPLIFY!
-def helper_list_paths(root_tree, repo_path, rel_path, repo_name='', relative=True):
-    print("ROOT TREE NAME: " + root_tree.name)
-    print("REPO NAME: " + repo_name)
-    print("repo_path: " + repo_path)
-    print("rel_path: " + rel_path)
+# When initially called, repo_path and rel_path should be the same.
+def helper_list_paths(root_tree, repo_path, rel_path):
     for blob in root_tree.blobs:
-        if(relative):
-            print("BLOBEND REL FULL PATH: " + rel_path)
-            print("BLOBEND REL: " + rel_path.rsplit(repo_name + "/")[1] + blob.name)
-            #yield path.split(repo_name + "/", 1)[1] + blob.name
-            yield rel_path.split(repo_path, 1)[1] + '/' + blob.name
-        else:
-            print("BLOBEND: " + rel_path + blob.name)
-            yield rel_path + blob.name
+        #Split off the system path from the return. Also the leading slash.
+        yield (rel_path.split(repo_path, 1)[1] + '/' + blob.name)[1:]
     for tree in root_tree.trees:
-        yield from helper_list_paths(tree, repo_path, rel_path + '/' + tree.name)
+        yield from (helper_list_paths(tree, repo_path, rel_path + '/' + tree.name)) #recursive
 
 def helper_get_submission_branch_name(submission):
     return 'Submission_' + str(submission.version_id)
