@@ -1,4 +1,4 @@
-import git, os
+import git, os, hashlib
 from django.conf import settings
 from django.http import Http404
 
@@ -24,34 +24,40 @@ def get_submission_files(manuscript):
     return _get_files(manuscript, get_submission_repo_path(manuscript), get_submission_repo_name(manuscript))
 
 def _get_files(manuscript, path, repo_name):
-    print("Manuscript: " + str(manuscript))
-    print("Path: " + path)
-    print("Repo Name: " + repo_name)
-    print("============================")
+    # print("Manuscript: " + str(manuscript))
+    # print("Path: " + path)
+    # print("Repo Name: " + repo_name)
+    # print("============================")
     try:
         repo = git.Repo(path)
         return helper_list_paths(repo.head.commit.tree, path, path)
     except git.exc.NoSuchPathError:
         raise Http404()
 
-
+#returns md5 of file
 def store_manuscript_file(manuscript, file, subdir):
     repo_path = get_manuscript_repo_path(manuscript)
-    _store_file(repo_path, subdir, file)
+    return _store_file(repo_path, subdir, file)
 
+#returns md5 of file
 def store_submission_file(manuscript, file, subdir):
     repo_path = get_submission_repo_path(manuscript)
-    _store_file(repo_path, subdir, file)
+    return _store_file(repo_path, subdir, file)
 
+#returns md5 of file
 def _store_file(repo_path, subdir, file):
     repo = git.Repo(repo_path)
     full_path = repo_path + subdir
     os.makedirs(full_path, exist_ok=True)
+    hash_md5 = hashlib.md5()
     with open(full_path + file.name, 'wb+') as destination:
-        for chunk in file.chunks():
+        for chunk in file.chunks(): #use chunk_size=4096 if md5 doesn't work right
             destination.write(chunk)
+            hash_md5.update(chunk)
     repo.index.add(full_path + file.name)
     repo.index.commit("store file: " + full_path + file.name)
+    return hash_md5.hexdigest()
+
 
 
 #Use slug to get repo id

@@ -785,8 +785,17 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         file = request.FILES.get('file')
         fullPath = request.POST.get('fullPath','')
         path = fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-        g.store_submission_file(self.object.manuscript, file, path)
-        # TODO: create file object here
+        md5 = g.store_submission_file(self.object.manuscript, file, path)
+
+        git_file = m.GitFile()
+        #git_file.git_hash = '' #we don't store this currently
+        git_file.md5 = md5
+        git_file.name = file.name
+        git_file.path = path
+        git_file.size = 0
+        git_file.parent_submission = self.object
+        git_file.save(force_insert=True)
+
         return HttpResponse(status=200)
 
 

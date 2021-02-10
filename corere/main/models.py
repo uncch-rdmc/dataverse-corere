@@ -743,20 +743,25 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 ####################################################
 
+# Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
 # Even thought is code supports parent manuscript, it is not used
 class GitFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
+        UNSET = '-', _('-')
         CODE = 'code', _('Code')
         DATA = 'data', _('Data')
         DOC_OTHER = 'doc_other', _('Documentation - Other')
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
 
-    sha1 = models.CharField(max_length=40, verbose_name='SHA-1', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
-    path = models.CharField(max_length=4096, blank=True, null=True, verbose_name='file path', help_text='The path to the file in the repo')
-    date = models.DateTimeField(verbose_name='file creation date')
+    #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
+    md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
+    #We store name and path separately for ease of access and use in dropdowns
+    path = models.CharField(max_length=4096, verbose_name='file path', help_text='The path to the file in the repo')
+    name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
+    date = models.DateTimeField(auto_now_add=True, verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type') 
+    tag = models.CharField(max_length=14, choices=FileTag.choices, default=FileTag.UNSET, verbose_name='file type') 
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
