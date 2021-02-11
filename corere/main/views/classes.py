@@ -709,52 +709,56 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
 
-#TODO: Do we need the gitlab mixin? probably?
-#TODO: Do we need all the parameters being passed? Especially for read?
-#TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-# class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
-#     template = 'main/form_edit_files_notes.html'
-#     helper=f.GitFileFormSetHelper()
-#     page_header = "Edit File Metadata for Submission"
-#     parent_reference_name = 'manuscript'
-#     parent_id_name = "manuscript_id"
-#     parent_model = m.Manuscript
-#     object_friendly_name = 'submission'
-#     model = m.Submission
+# TODO: Do we need the gitlab mixin? probably?
+# TODO: Do we need all the parameters being passed? Especially for read?
+# TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
+class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+    template = 'main/form_edit_files_notes.html'
+    helper=f.GitFileFormSetHelper()
+    page_header = "Edit File Metadata for Submission"
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
 
-#     def get(self, request, *args, **kwargs):
-#         helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
-#         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
-#         formset = self.form
+    def get(self, request, *args, **kwargs):
+        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
+        #TODO: Can we just refer to form for everything and delete a bunch of stuff?
+        formset = self.form
         
-#         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-#             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-#             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
+            'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+            #'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 
+            'children_formset':formset, 'page_header': self.page_header})
 
-#     #Originally copied from GenericCorereObjectView
-#     def post(self, request, *args, **kwargs):
-#         formset = self.form
-#         if formset.is_valid():
-#             formset.save() #Note: this is what saves a newly created model instance
-#             messages.add_message(request, messages.SUCCESS, self.message)
-#             return redirect(self.redirect)
-#         else:
-#             logger.debug(formset.errors)
+    #Originally copied from GenericCorereObjectView
+    def post(self, request, *args, **kwargs):
+        formset = self.form
+        if formset.is_valid():
+            formset.save() #Note: this is what saves a newly created model instance
+            messages.add_message(request, messages.SUCCESS, self.message)
+            return redirect(self.redirect)
+        else:
+            logger.debug(formset.errors)
 
-#         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-#             'git_id': self.object.manuscript.gitlab_submissions_id, 'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":helper_get_submission_branch_name(self.object.manuscript),
-#             'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
+            'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+            # 'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],
+            'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
-# class SubmissionEditFilesView(GenericSubmissionFilesView):
-#     transition_method_name = 'edit_noop'
-#     form = f.GitFileNoteFormSet
+class SubmissionEditFilesView(GenericSubmissionFilesView):
+    transition_method_name = 'edit_noop'
+    form = f.GitFileNoteFormSet
 
-# class SubmissionReadFilesView(GenericSubmissionFilesView):
-#     transition_method_name = 'view_noop'
-#     form = f.GitlabReadOnlyFileNoteFormSet
-#     read_only = True
+class SubmissionReadFilesView(GenericSubmissionFilesView):
+    transition_method_name = 'view_noop'
+    form = f.GitlabReadOnlyFileNoteFormSet
+    read_only = True
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
@@ -783,16 +787,17 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
-        fullPath = request.POST.get('fullPath','')
-        path = fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+        fullRelPath = request.POST.get('fullPath','')
+        path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
         md5 = g.store_submission_file(self.object.manuscript, file, path)
 
+        #Create new GitFile for uploaded submission file
         git_file = m.GitFile()
         #git_file.git_hash = '' #we don't store this currently
         git_file.md5 = md5
         git_file.name = file.name
         git_file.path = path
-        git_file.size = 0
+        git_file.size = file.size
         git_file.parent_submission = self.object
         git_file.save(force_insert=True)
 

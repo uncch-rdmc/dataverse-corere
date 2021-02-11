@@ -49,7 +49,7 @@ class GenericInlineFormSetHelper(FormHelper):
         self.form_id = form_id
         # self.layout = Layout(
 
-        #     Field('gitlab_path', th_class="w-50"),
+        #     Field('path', th_class="w-50"),
         #     Field('tag'),
         #     Field('description'),
         # )
@@ -604,113 +604,115 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
                     form.nested.save(commit=commit)
         return result
 
-# NoteGitFileFormset = inlineformset_factory(
-#     m.GitFile, 
-#     m.Note, 
-#     extra=1,
-#     form=NoteForm,
-#     formset=BaseNoteFormSet,
-#     fields=("creator","text"),
-#     widgets={
-#         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-#     )
+NoteGitFileFormset = inlineformset_factory(
+    m.GitFile, 
+    m.Note, 
+    extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator","text"),
+    widgets={
+        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
+    )
 
-# class GitFileForm(forms.ModelForm):
-#     class Meta:
-#         model = m.GitFile
-#         fields = ['gitlab_path']
+class GitFileForm(forms.ModelForm):
+    class Meta:
+        model = m.GitFile
+        fields = ['path']
 
-#     def __init__ (self, *args, **kwargs):
-#         super(GitFileForm, self).__init__(*args, **kwargs)
-#         self.fields['gitlab_path'].widget.object_instance = self.instance
-#         self.fields['gitlab_path'].disabled = True
-#         self.fields['gitlab_sha256'].disabled = True
-#         self.fields['gitlab_size'].disabled = True
-#         self.fields['gitlab_date'].disabled = True
+    def __init__ (self, *args, **kwargs):
+        super(GitFileForm, self).__init__(*args, **kwargs)
+        self.fields['name'].widget.object_instance = self.instance
+        self.fields['name'].disabled = True
+        self.fields['path'].disabled = True
+        self.fields['md5'].disabled = True
+        self.fields['size'].disabled = True
+        # self.fields['date'].disabled = True
 
-# class GitlabReadOnlyFileForm(forms.ModelForm):
-#     class Meta:
-#         model = m.GitFile
-#         fields = ['gitlab_path']
+class GitlabReadOnlyFileForm(forms.ModelForm):
+    class Meta:
+        model = m.GitFile
+        fields = ['path']
 
-#     def __init__ (self, *args, **kwargs):
-#         super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
-#         self.fields['gitlab_path'].widget.object_instance = self.instance
-#         self.fields['gitlab_path'].disabled = True
-#         self.fields['gitlab_sha256'].disabled = True
-#         self.fields['gitlab_size'].disabled = True
-#         self.fields['gitlab_date'].disabled = True
-#         # All fields read only
-#         self.fields['tag'].disabled = True
-#         self.fields['description'].disabled = True
+    def __init__ (self, *args, **kwargs):
+        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
+        self.fields['name'].widget.object_instance = self.instance
+        self.fields['name'].disabled = True
+        self.fields['path'].disabled = True
+        self.fields['md5'].disabled = True
+        self.fields['size'].disabled = True
+        # self.fields['date'].disabled = True
+        # All fields read only
+        self.fields['tag'].disabled = True
+        self.fields['description'].disabled = True
 
-# class DownloadGitlabWidget(forms.widgets.TextInput):
-#     template_name = 'main/widget_download.html'
+class DownloadGitlabWidget(forms.widgets.TextInput):
+    template_name = 'main/widget_download.html'
 
-#     def get_context(self, name, value, attrs):
-#         try:
-#             #TODO: If root changes in our env variables this will break
-#             #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
-#             self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
-#                 + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
-#         except AttributeError as e:
-#             self.download_url = ""
-#         return {
-#             'widget': {
-#                 'name': name,
-#                 'is_hidden': self.is_hidden,
-#                 'required': self.is_required,
-#                 'value': self.format_value(value),
-#                 'attrs': self.build_attrs(self.attrs, attrs),
-#                 'template_name': self.template_name,
-#                 'download_url': self.download_url 
-#             },
-#         }
+    def get_context(self, name, value, attrs):
+        try:
+            #TODO: If root changes in our env variables this will break
+            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
+            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
+                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
+        except AttributeError as e:
+            self.download_url = ""
+        return {
+            'widget': {
+                'name': name,
+                'is_hidden': self.is_hidden,
+                'required': self.is_required,
+                'value': self.format_value(value),
+                'attrs': self.build_attrs(self.attrs, attrs),
+                'template_name': self.template_name,
+                'download_url': self.download_url 
+            },
+        }
 
 #Needed for another level of nesting
-# class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
-#     nested_formset = NoteGitFileFormset
+class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
+    nested_formset = NoteGitFileFormset
 
-# GitFileNoteFormSet = inlineformset_factory(
-#     m.Submission,
-#     m.GitFile,
-#     form=GitFileForm,
-#     formset=NestedSubFileNoteFormSet,
-#     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
-#     extra=0,
-#     can_delete=False,
-#     widgets={
-#         'gitlab_path': DownloadGitlabWidget(),
-#         'description': Textarea(attrs={'rows':1}) }
-# )
+GitFileNoteFormSet = inlineformset_factory(
+    m.Submission,
+    m.GitFile,
+    form=GitFileForm,
+    formset=NestedSubFileNoteFormSet,
+    fields=('name','path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
+    extra=0,
+    can_delete=False,
+    widgets={
+        'name': DownloadGitlabWidget(),
+        'description': Textarea(attrs={'rows':1}) }
+)
 
-# GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
-#     m.Submission,
-#     m.GitFile,
-#     form=GitlabReadOnlyFileForm,
-#     formset=NestedSubFileNoteFormSet,
-#     fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
-#     extra=0,
-#     can_delete=False,
-#     widgets={
-#         'gitlab_path': DownloadGitlabWidget(),
-#         'description': Textarea(attrs={'rows':1})}
-# )
+GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
+    m.Submission,
+    m.GitFile,
+    form=GitlabReadOnlyFileForm,
+    formset=NestedSubFileNoteFormSet,
+    fields=('path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
+    extra=0,
+    can_delete=False,
+    widgets={
+        'path': DownloadGitlabWidget(),
+        'description': Textarea(attrs={'rows':1})}
+)
 
-# class GitFileFormSetHelper(FormHelper):
-#      def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.form_method = 'post'
-#         self.form_class = 'form-inline'
-#         self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
-#         self.form_tag = False
-#         self.layout = Layout(
+class GitFileFormSetHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_method = 'post'
+        self.form_class = 'form-inline'
+        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        self.form_tag = False
+        self.layout = Layout(
 
-#             Field('gitlab_path', th_class="w-50"),
-#             Field('tag'),
-#             Field('description'),
-#         )
-#         self.render_required_fields = True
+            Field('path', th_class="w-50"),
+            Field('tag'),
+            Field('description'),
+        )
+        self.render_required_fields = True
 
 ############# Submission/Edition/Curation/Verification Views Forms #############
 
@@ -1290,12 +1292,12 @@ ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
 # class GitFileForm(forms.ModelForm):
 #     class Meta:
 #         model = m.GitFile
-#         fields = ['gitlab_path']
+#         fields = ['path']
 
 #     def __init__ (self, *args, **kwargs):
 #         super(GitFileForm, self).__init__(*args, **kwargs)
-#         self.fields['gitlab_path'].widget.object_instance = self.instance
-#         self.fields['gitlab_path'].disabled = True
-#         self.fields['gitlab_sha256'].disabled = True
-#         self.fields['gitlab_size'].disabled = True
-#         self.fields['gitlab_date'].disabled = True
+#         self.fields['path'].widget.object_instance = self.instance
+#         self.fields['path'].disabled = True
+#         self.fields['md5'].disabled = True
+#         self.fields['size'].disabled = True
+#         self.fields['date'].disabled = True

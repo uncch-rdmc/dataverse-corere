@@ -750,9 +750,9 @@ class GitFile(AbstractCreateUpdateModel):
         UNSET = '-', _('-')
         CODE = 'code', _('Code')
         DATA = 'data', _('Data')
-        DOC_OTHER = 'doc_other', _('Documentation - Other')
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
+        DOC_OTHER = 'doc_other', _('Documentation - Other')
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )

@@ -39,8 +39,8 @@
                     {% for field in formset.forms.0 %}
                         {% if field.label and not field.is_hidden %}
                             <th for="{{ field.auto_id }}" class="col-form-label {% if field.field.required %}requiredField{% endif %}
-                            {% if field.label|safe == 'Gitlab path'%}w-25{% endif %}
-                            {% if field.label|safe == 'Description'%}w-25{% endif %}
+                            {% if field.label|safe == 'File name'%}w-25{% endif %}
+                            {% if field.label|safe == 'File description'%}w-25{% endif %}
                             ">
                                 {{ field.label|safe }}{% if field.field.required and not field|is_checkbox %}<span class="asteriskField">*</span>{% endif %}
                             </th>

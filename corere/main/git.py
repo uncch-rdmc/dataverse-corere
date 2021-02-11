@@ -50,6 +50,7 @@ def _store_file(repo_path, subdir, file):
     full_path = repo_path + subdir
     os.makedirs(full_path, exist_ok=True)
     hash_md5 = hashlib.md5()
+    print(file.__dict__)
     with open(full_path + file.name, 'wb+') as destination:
         for chunk in file.chunks(): #use chunk_size=4096 if md5 doesn't work right
             destination.write(chunk)
@@ -81,8 +82,8 @@ def create_submission_branch(submission):
 # When initially called, repo_path and rel_path should be the same.
 def helper_list_paths(root_tree, repo_path, rel_path):
     for blob in root_tree.blobs:
-        #Split off the system path from the return. Also the leading slash.
-        yield (rel_path.split(repo_path, 1)[1] + '/' + blob.name)[1:]
+        #Split off the system path from the return. 
+        yield (rel_path.split(repo_path, 1)[1] + '/' + blob.name)#[1:] #commented code would remove leading slash
     for tree in root_tree.trees:
         yield from (helper_list_paths(tree, repo_path, rel_path + '/' + tree.name)) #recursive
 
