@@ -95,11 +95,14 @@ class GenericCorereObjectView(View):
 class GitFilesMixin(object):
     def dispatch(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            self.repo_dict_list = g.get_manuscript_files(self.object)
-            self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile?file_path="
+            self.repo_dict_list = g.get_manuscript_files_list(self.object)
+            self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile/?file_path="
+            self.file_download_url = "/manuscript/"+str(self.object.id)+"/downloadfile/?file_path="
         elif(isinstance(self.object, m.Submission)):
-            self.repo_dict_list = g.get_submission_files(self.object.manuscript)
-            self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile?file_path="
+            self.repo_dict_list = g.get_submission_files_list(self.object.manuscript)
+            self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile/?file_path="
+            self.file_download_url = "/submission/"+str(self.object.id)+"/downloadfile/?file_path="
+            print(self.file_download_url)
         else:
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
@@ -292,12 +295,9 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             # 'git_id': self.object.gitlab_manuscript_id, 
-            'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header})
-
-            #TODO: ADD THESE FOR GIT
-            #'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
-            #'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+            'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+            })
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
@@ -331,11 +331,11 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        print({'read_only': self.read_only, 'page_header': self.page_header,
-            # 'git_id': self.object.gitlab_manuscript_id, 
-            'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+        # print({'read_only': self.read_only, 'page_header': self.page_header,
+        #     # 'git_id': self.object.gitlab_manuscript_id, 
+        #     'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
         return render(request, self.template, {'read_only': self.read_only, 'page_header': self.page_header,
-            # 'git_id': self.object.gitlab_manuscript_id, 
+            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -778,10 +778,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
+            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object)#,
-            #'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.manuscript.gitlab_submissions_path + "/-/raw/" + helper_get_submission_branch_name(self.object.manuscript) + "/", 
-            #'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"], 'page_header': self.page_header
             })
 
     #TODO: Should we making sure these files are safe?
@@ -817,7 +815,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
             # 'git_id': self.object.manuscript.gitlab_submissions_id, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
+            'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
 
 

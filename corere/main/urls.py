@@ -23,6 +23,7 @@ urlpatterns = [
     path('manuscript/<int:id>/unassignverifier/<int:user_id>/', users.unassign_verifier, name="manuscript_unassignverifier"),
     path('manuscript/<int:manuscript_id>/createsubmission/', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:manuscript_id>/deletefile/', main.delete_file, name="manuscript_deletefile"),
+    path('manuscript/<int:manuscript_id>/downloadfile/', main.download_file, name="manuscript_downloadfile"),
     path('manuscript/<int:id>/binder/', main.open_binder, name="manuscript_binder"),
     path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
@@ -36,9 +37,12 @@ urlpatterns = [
     # path('submission/<int:id>/viewfiles/', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
     path('submission/<int:submission_id>/deletefile/', main.delete_file, name="submission_deletefile"),
     path('submission/<int:submission_id>/deleteallfiles/', main.delete_all_submission_files, name="submission_deleteallfiles"),
+    path('submission/<int:submission_id>/downloadfile/', main.download_file, name="submission_downloadfile"),
     path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
+    #path('submission/<int:id>/downloadall
+
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
