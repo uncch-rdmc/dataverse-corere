@@ -726,7 +726,6 @@ class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
-        
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
@@ -757,7 +756,7 @@ class SubmissionEditFilesView(GenericSubmissionFilesView):
 
 class SubmissionReadFilesView(GenericSubmissionFilesView):
     transition_method_name = 'view_noop'
-    form = f.GitlabReadOnlyFileNoteFormSet
+    form = f.GitFileReadOnlyFileNoteFormSet
     read_only = True
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)

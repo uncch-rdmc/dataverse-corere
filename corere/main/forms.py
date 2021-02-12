@@ -629,13 +629,13 @@ class GitFileForm(forms.ModelForm):
         self.fields['size'].disabled = True
         # self.fields['date'].disabled = True
 
-class GitlabReadOnlyFileForm(forms.ModelForm):
+class GitFileReadOnlyFileForm(forms.ModelForm):
     class Meta:
         model = m.GitFile
         fields = ['path']
 
     def __init__ (self, *args, **kwargs):
-        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
+        super(GitFileReadOnlyFileForm, self).__init__(*args, **kwargs)
         self.fields['name'].widget.object_instance = self.instance
         self.fields['name'].disabled = True
         self.fields['path'].disabled = True
@@ -646,16 +646,14 @@ class GitlabReadOnlyFileForm(forms.ModelForm):
         self.fields['tag'].disabled = True
         self.fields['description'].disabled = True
 
-class DownloadGitlabWidget(forms.widgets.TextInput):
+class DownloadGitFileWidget(forms.widgets.TextInput):
     template_name = 'main/widget_download.html'
 
     def get_context(self, name, value, attrs):
         try:
-            #TODO: If root changes in our env variables this will break
-            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
-            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
-                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
+            self.download_url = "/submission/"+str(self.object_instance.parent_submission.id)+"/downloadfile/?file_path="+self.object_instance.path + self.object_instance.name
         except AttributeError as e:
+            logger.error("error adding download url to editfiles widget: " + str(e))
             self.download_url = ""
         return {
             'widget': {
@@ -682,20 +680,20 @@ GitFileNoteFormSet = inlineformset_factory(
     extra=0,
     can_delete=False,
     widgets={
-        'name': DownloadGitlabWidget(),
+        'name': DownloadGitFileWidget(),
         'description': Textarea(attrs={'rows':1}) }
 )
 
-GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
+GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
-    form=GitlabReadOnlyFileForm,
+    form=GitFileReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
-    fields=('path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
+    fields=('name','path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
     extra=0,
     can_delete=False,
     widgets={
-        'path': DownloadGitlabWidget(),
+        'name': DownloadGitFileWidget(),
         'description': Textarea(attrs={'rows':1})}
 )
 
