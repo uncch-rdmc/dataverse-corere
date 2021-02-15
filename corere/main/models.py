@@ -277,7 +277,6 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
-
             # try:
             #     gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
             # except ValueError:
@@ -290,6 +289,13 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = prev_max_version_id + 1
 
         super(Submission, self).save(*args, **kwargs)
+        if(self.version_id > 1):
+            prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
+            for gfile in prev_submission.submission_files.all():
+                new_gfile = gfile
+                new_gfile.parent_submission = self
+                new_gfile.id = None
+                new_gfile.save()
 
     ##### Queries #####
 
@@ -765,8 +771,8 @@ class GitFile(AbstractCreateUpdateModel):
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
-    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
-    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_manuscript')
+    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='submission_files')
+    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='manuscript_files')
 
     class Meta:
         indexes = [
