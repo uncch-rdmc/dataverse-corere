@@ -1,4 +1,4 @@
-import git, os, hashlib, logging, io
+import git, os, hashlib, logging, io, tempfile
 from django.conf import settings
 from django.http import Http404, HttpResponse
 from corere.main import models as m
@@ -92,10 +92,10 @@ def download_submission_file(submission, file_path):
     #We have to check whether our submission is the latest submission. If its latest, use master, otherwise use branch name
     max_version_id = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max']
     if(submission.version_id == max_version_id):
-        branch = 'master'
+        branch_name = 'master'
     else:
-        branch = helper_get_submission_branch_name(submission)
-    return _download_file(repo_path, file_path, branch)
+        branch_name = helper_get_submission_branch_name(submission)
+    return _download_file(repo_path, file_path, branch_name)
 
 def _download_file(repo_path, file_path, branch_name):
     repo = git.Repo(repo_path)
@@ -108,6 +108,30 @@ def _download_file(repo_path, file_path, branch_name):
         response = HttpResponse(f.read(), content_type=file.mime_type)
         response['Content-Disposition'] = 'attachment; filename="'+ file.name +'"'
         return response
+
+def download_all_submission_files(submission):
+    max_version_id = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max']
+    if(submission.version_id == max_version_id):
+        branch_name = 'master'
+    else:
+        branch_name = helper_get_submission_branch_name(submission)
+
+    repo_path = get_submission_repo_path(submission.manuscript)
+    repo = git.Repo(repo_path)
+
+    tempf = tempfile.TemporaryFile()
+    repo.archive(tempf, treeish=branch_name)
+    tempf.seek(0) #you have to return to the start of the temporaryfile after writing to it
+
+    #print(str(os.fstat(tempf.fileno()).st_size))
+
+    
+    
+    response = HttpResponse(tempf.read(), content_type='application/zip')#temp.mime_type)
+    response['Content-Disposition'] = 'attachment; filename="'+submission.manuscript.slug + '_-_submission_' + str(submission.version_id) + '.zip"'
+    return response
+
+
 
 #Use slug to get repo id
 def get_manuscript_repo_name(manuscript):

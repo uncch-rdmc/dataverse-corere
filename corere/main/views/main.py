@@ -156,6 +156,12 @@ def download_file(request, manuscript_id=None, submission_id=None):
             obj = get_object_or_404(m.Submission, id=submission_id)
             return g.download_submission_file(obj, file_path)
 
+@login_required
+def download_all(request, submission_id):
+    if request.method == 'GET':
+        submission = get_object_or_404(m.Submission, id=submission_id)
+        return g.download_all_submission_files(submission)
+
 @login_required()
 def site_actions(request):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
