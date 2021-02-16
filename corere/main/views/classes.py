@@ -786,8 +786,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         file = request.FILES.get('file')
         fullRelPath = request.POST.get('fullPath','')
         path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+        if m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
+            return HttpResponse('File already exists', status=409)
         md5 = g.store_submission_file(self.object.manuscript, file, path)
-
         #Create new GitFile for uploaded submission file
         git_file = m.GitFile()
         #git_file.git_hash = '' #we don't store this currently

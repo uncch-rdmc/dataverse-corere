@@ -51,24 +51,16 @@ def store_submission_file(manuscript, file, subdir):
 def _store_file(repo_path, subdir, file):
     repo = git.Repo(repo_path)
     full_path = repo_path + subdir
+
     os.makedirs(full_path, exist_ok=True)
     hash_md5 = hashlib.md5()
     with open(full_path + file.name, 'wb+') as destination:
-        for chunk in file.chunks(): #use chunk_size=4096 if md5 doesn't work right
+        for chunk in file.chunks():
             destination.write(chunk)
             hash_md5.update(chunk)
     repo.index.add(full_path + file.name)
     repo.index.commit("store file: " + full_path + file.name)
     return hash_md5.hexdigest()
-
-# def delete_all_submission_files(manuscript):
-#     repo_path = get_submission_repo_path(manuscript)
-#     #print(repo_path)
-#     #print(os.listdir(repo_path))
-#     for b in os.listdir(repo_path):
-#         if(not b == '.git'):
-#             shutil.rmtree(repo_path + b)
-#             #print(b)
 
 def delete_submission_file(manuscript, file_path):
     repo_path = get_submission_repo_path(manuscript)

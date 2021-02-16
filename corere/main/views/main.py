@@ -133,7 +133,6 @@ def delete_file(request, manuscript_id=None, submission_id=None):
 @login_required
 def delete_all_submission_files(request, submission_id):
     if request.method == 'POST': #TODO: CHANGE TO POST
-        print("DELETE ALL")
         submission = get_object_or_404(m.Submission, id=submission_id)
 
         if(not has_transition_perm(submission.edit_noop, request.user)):
