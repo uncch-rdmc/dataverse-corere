@@ -118,17 +118,38 @@ def delete_file(request, manuscript_id=None, submission_id=None):
             obj_type = "submission"
             obj = get_object_or_404(m.Submission, id=submission_id) # do we need this or could we have just passed the id?
             g.delete_submission_file(obj.manuscript, file_path)
-            GitFile.objects.get(parent_submission=obj, path=file_path).delete()
+
+            #TODO: This needs to check if the gitfile exists before deleting it? Not sure if we can still end up in that state
+            folder_path, file_name = file_path.rsplit('/',1)
+            folder_path = folder_path + '/'
+
+            try:
+                m.GitFile.objects.get(parent_submission=obj, path=folder_path, name=file_name).delete()
+            except m.GitFile.DoesNotExist:
+                logger.warning("While deleting file " + file_path + " on submission " + str(submission_id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
         return HttpResponse(status=200)
 
 @login_required
 def delete_all_submission_files(request, submission_id):
-    if request.method == 'POST':
+    if request.method == 'POST': #TODO: CHANGE TO POST
+        print("DELETE ALL")
         submission = get_object_or_404(m.Submission, id=submission_id)
+
         if(not has_transition_perm(submission.edit_noop, request.user)):
             logger.warning("User id:{0} attempted to delete all gitlab files on manuscript id:{1} which is either not editable at this point, or they have no permission to".format(request.user.id, submission_id))
             raise Http404()
-        gitlab_submission_delete_all_files(submission)
+
+        for b in g.get_submission_files_list(submission.manuscript):
+            g.delete_submission_file(submission.manuscript, b)
+
+            folder_path, file_name = b.rsplit('/',1)
+            folder_path = folder_path + '/'
+
+            try:
+                m.GitFile.objects.get(parent_submission=submission, path=folder_path, name=file_name).delete()
+            except m.GitFile.DoesNotExist:
+                logger.warning("While deleting file " + b + " using delete all on submission " + str(submission_id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
 
         return HttpResponse(status=200)
 

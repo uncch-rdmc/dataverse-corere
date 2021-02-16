@@ -775,9 +775,11 @@ class GitFile(AbstractCreateUpdateModel):
     parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='manuscript_files')
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['path', 'name', 'parent_submission'], name='GitFile submission and path')
+        ]
         indexes = [
-            # models.Index(fields=['gitlab_blob_id', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
-            models.Index(fields=['path', 'parent_submission']), #one index for the combination of the two fields
+            models.Index(fields=['path', 'name', 'parent_submission']),
         ]
 
     @property

@@ -16,18 +16,18 @@ File Access: {{root_object_title}}
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            $("#filesWithHeader").load("/"+obj_type+"/"+id+"/fileslist")
+            $("#filesWithHeader").load("/"+obj_type+"/"+id+"/fileslist/")
         })
     }
     function delete_all_and_refresh(id){
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch("/submission/"+id+"/deleteallfiles", {
+        fetch("/submission/"+id+"/deleteallfiles/", {
             method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            $("#filesWithHeader").load("/submission/"+id+"/fileslist")
+            $("#filesWithHeader").load("/submission/"+id+"/fileslist/")
         })
     }
 </script>

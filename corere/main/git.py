@@ -1,4 +1,4 @@
-import git, os, hashlib, logging, io, tempfile
+import git, os, hashlib, logging, io, tempfile, shutil
 from django.conf import settings
 from django.http import Http404, HttpResponse
 from corere.main import models as m
@@ -61,32 +61,48 @@ def _store_file(repo_path, subdir, file):
     repo.index.commit("store file: " + full_path + file.name)
     return hash_md5.hexdigest()
 
-def delete_manuscript_file(manuscript, file_path):
-    repo_path = get_manuscript_repo_path(manuscript)
-    _delete_file(repo_path, repo_path + file_path)
+# def delete_all_submission_files(manuscript):
+#     repo_path = get_submission_repo_path(manuscript)
+#     #print(repo_path)
+#     #print(os.listdir(repo_path))
+#     for b in os.listdir(repo_path):
+#         if(not b == '.git'):
+#             shutil.rmtree(repo_path + b)
+#             #print(b)
 
 def delete_submission_file(manuscript, file_path):
     repo_path = get_submission_repo_path(manuscript)
-    _delete_file(repo_path, repo_path + file_path)
+    if(not file_path == '/.git'):
+        _delete_file(repo_path, repo_path + file_path)
+
+def delete_manuscript_file(manuscript, file_path):
+    repo_path = get_manuscript_repo_path(manuscript)
+    if(not file_path == '/.git'):
+        _delete_file(repo_path, repo_path + file_path)
 
 #delete file from filesystem, create commit for file
 def _delete_file(repo_path, file_full_path):
     repo = git.Repo(repo_path)
     if os.path.exists(file_full_path):
         os.remove(file_full_path)
+        file_full_folder = file_full_path.rsplit('/', 1)[0]
+        print(file_full_folder)
+        try:
+            os.removedirs(file_full_folder) #deletes empty folders recursively. Will never delete repo_path as there is a git folder
+        except OSError:
+            pass #If file_full_folder has other files, removedirs will error and fail, as expected
     else:
         logger.error("Attempted to delete file where path did not exist. Path provided: " + file_full_path)
         raise Http404()
+
     repo.index.remove(file_full_path)
     repo.index.commit("delete file: " + file_full_path)
-
 
 def download_manuscript_file(manuscript, file_path):
     repo_path = get_manuscript_repo_path(manuscript)
     return _download_file(repo_path, file_path, 'master')
 
 def download_submission_file(submission, file_path):
-    print("DOWNLOAD SUB")
     repo_path = get_submission_repo_path(submission.manuscript)
 
     #We have to check whether our submission is the latest submission. If its latest, use master, otherwise use branch name
