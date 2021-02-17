@@ -11,8 +11,6 @@ DEBUG = False
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 ALLOWED_HOSTS = ['*'] #Should find a better kube solution
 
-DISABLE_GIT = False
-
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 #These settings are based upon gmail, switch to your prefered smtp service

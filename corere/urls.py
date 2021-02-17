@@ -28,7 +28,6 @@ handler500 = 'corere.main.views.errors.handler500'
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('corere.main.urls')),
-    path('prototype/', include('corere.main.prototype_urls')),
     url(r'^auth/', include('rest_framework_social_oauth2.urls')), #Social OAuth2
     url(r'^invitations/', include('invitations.urls', namespace='invitations')),
     #url('^inbox/notifications/', RedirectView.as_view(url='/notifications')), #redirect notifications library url from their generic to our custom

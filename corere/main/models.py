@@ -277,11 +277,6 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
-            # try:
-            #     gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
-            # except ValueError:
-            #     gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
-
             prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
             if prev_max_version_id is None:
                 self.version_id = 1
@@ -580,12 +575,7 @@ class Manuscript(AbstractCreateUpdateModel):
     producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-    
-    # gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
-    # gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
-    # gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
-    # gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
-    
+     
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     slug = AutoSlugField(populate_from='title')
@@ -645,8 +635,6 @@ class Manuscript(AbstractCreateUpdateModel):
 
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
-            #gitlab_create_manuscript_repo(self)
-            #gitlab_create_submissions_repo(self)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED

@@ -290,7 +290,6 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            # 'git_id': self.object.gitlab_manuscript_id, 
             'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
             })
@@ -326,7 +325,6 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
         
         return HttpResponse(status=200)
 
-#No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS), we just leverage the existing form infrastructure for perm checks etc
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
@@ -338,20 +336,15 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            # 'git_id': self.object.gitlab_manuscript_id, 
             'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
-            'download_url_p1': os.environ["GIT_LAB_URL"] + "/root/" + self.object.gitlab_manuscript_path + "/-/raw/" + 'master' + "/", 
-            'download_url_p2': "?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]})
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header
+            })
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        # print({'read_only': self.read_only, 'page_header': self.page_header,
-        #     # 'git_id': self.object.gitlab_manuscript_id, 
-        #     'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
         return render(request, self.template, {'read_only': self.read_only, 'page_header': self.page_header,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'root_object_title': self.object.title, 'repo_dict_list': self.repo_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
@@ -727,7 +720,6 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
 
-# TODO: Do we need the gitlab mixin? probably?
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -741,14 +733,11 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
     model = m.Submission
 
     def get(self, request, *args, **kwargs):
-        #helper_populate_gitlab_files_submission( self.object.manuscript.gitlab_submissions_id, self.object)
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            #'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],'parent':self.object, 
             'children_formset':formset, 'page_header': self.page_header})
 
     #Originally copied from GenericCorereObjectView
@@ -762,10 +751,8 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
             logger.debug(formset.errors)
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            # 'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],
             'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
 class SubmissionEditFilesView(GenericSubmissionFilesListView):
@@ -777,9 +764,7 @@ class SubmissionReadFilesView(GenericSubmissionFilesListView):
     form = f.GitFileReadOnlyFileNoteFormSet
     read_only = True
 
-#No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS)
 #We just leverage the existing form infrastructure for perm checks etc
-#TODO: See if this can be done cleaner
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
@@ -793,7 +778,6 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object)#,
@@ -899,7 +883,6 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
-            # 'git_id': self.object.manuscript.gitlab_submissions_id, 
             'root_object_title': self.object.manuscript.title, 'repo_dict_list': self.repo_dict_list, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
 
