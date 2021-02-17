@@ -282,10 +282,6 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     http_method_names = ['get']
     read_only = True
 
-#MOVE THESE
-import git
-from django.conf import settings
-
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
@@ -307,6 +303,28 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         g.store_manuscript_file(self.object, file, path)
         return HttpResponse(status=200)
 
+class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get']
+    transition_method_name = 'edit_noop'
+
+    def get(self, request, *args, **kwargs):
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+
+        return g.download_manuscript_file(self.object, file_path)
+
+class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['post']
+    transition_method_name = 'edit_noop'
+
+    def post(self, request, *args, **kwargs):
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+        g.delete_manuscript_file(self.object, file_path)
+        
+        return HttpResponse(status=200)
 
 #No actual editing is done in the form (files are uploaded/deleted directly with GitLab va JS), we just leverage the existing form infrastructure for perm checks etc
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
@@ -712,7 +730,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 # TODO: Do we need the gitlab mixin? probably?
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files_notes.html'
     helper=f.GitFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
@@ -750,11 +768,11 @@ class GenericSubmissionFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
             # 'gitlab_user_token':os.environ["GIT_PRIVATE_ADMIN_TOKEN"],
             'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
-class SubmissionEditFilesView(GenericSubmissionFilesView):
+class SubmissionEditFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'edit_noop'
     form = f.GitFileNoteFormSet
 
-class SubmissionReadFilesView(GenericSubmissionFilesView):
+class SubmissionReadFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'view_noop'
     form = f.GitFileReadOnlyFileNoteFormSet
     read_only = True
@@ -798,6 +816,73 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         git_file.size = file.size
         git_file.parent_submission = self.object
         git_file.save(force_insert=True)
+
+        return HttpResponse(status=200)
+
+class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ['get']
+    transition_method_name = 'view_noop'
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+
+    def get(self, request, *args, **kwargs):
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+
+        return g.download_submission_file(self.object, file_path)
+
+class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ['get']
+    transition_method_name = 'view_noop'
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+
+    def get(self, request, *args, **kwargs):
+        return g.download_all_submission_files(self.object)
+
+
+class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ['post']
+    transition_method_name = 'edit_noop'
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+
+    def post(self, request, *args, **kwargs):
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+        g.delete_submission_file(self.object.manuscript, file_path)
+
+        folder_path, file_name = file_path.rsplit('/',1)
+        folder_path = folder_path + '/'
+        try:
+            m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
+        except m.GitFile.DoesNotExist:
+            logger.warning("While deleting file " + file_path + " on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
+        return HttpResponse(status=200)
+
+class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ['post']
+    transition_method_name = 'edit_noop'
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+
+    def post(self, request, *args, **kwargs):
+        for b in g.get_submission_files_list(self.object.manuscript):
+            g.delete_submission_file(self.object.manuscript, b)
+
+            folder_path, file_name = b.rsplit('/',1)
+            folder_path = folder_path + '/'
+            try:
+                m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
+            except m.GitFile.DoesNotExist:
+                logger.warning("While deleting file " + b + " using delete all on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
 
         return HttpResponse(status=200)
 
