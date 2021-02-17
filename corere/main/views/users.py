@@ -41,14 +41,12 @@ def invite_assign_author(request, id=None):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 new_user = helper_create_user_and_invite(request, email, author_role)
                 messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
-                # gitlab_add_user_to_repo(new_user, manuscript.gitlab_manuscript_id) #done below
                 users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
-                #gitlab_add_user_to_repo(u, manuscript.gitlab_manuscript_id)
                 messages.add_message(request, messages.INFO, 'You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 logger.info('You have given {0} author access to manuscript {1}!'.format(u.email, manuscript.title))
                 #Admin gave Author access to Matthew for manuscript bug5
@@ -239,7 +237,6 @@ def account_user_details(request):
     if request.method == 'POST':
         if form.is_valid():
             user = form.save()
-            #gitlab_update_user(user)
             messages.add_message(request, messages.SUCCESS, "User info has been updated!")
             return redirect('/')
         else:
@@ -295,8 +292,6 @@ def helper_create_user_and_invite(request, email, role):
     new_user = User()
     new_user.email = email
     
-    #Username can't be set to email as gitlab does not support those characters.
-    #BUT we don't care anymore now that there is no gitlab!
     new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
     new_user.invited_by=request.user
@@ -304,7 +299,6 @@ def helper_create_user_and_invite(request, email, role):
     new_user.save()
 
     role.user_set.add(new_user)
-    #gitlab_create_user(new_user)
 
     #TODO: Think about doing this after everything else, incase something bombs
     invite.send_invitation(request)
