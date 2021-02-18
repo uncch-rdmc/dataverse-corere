@@ -2,7 +2,7 @@ import logging, os, copy, sys
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
 from django.contrib.postgres.fields import ArrayField
-#from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitlabFile
+#from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitFile
 #from invitations.models import Invitation
 from guardian.shortcuts import get_perms
 from invitations.utils import get_invitation_model
@@ -14,7 +14,6 @@ from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
-from corere.main.gitlab import helper_get_submission_branch_name
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ class GenericInlineFormSetHelper(FormHelper):
         self.form_id = form_id
         # self.layout = Layout(
 
-        #     Field('gitlab_path', th_class="w-50"),
+        #     Field('path', th_class="w-50"),
         #     Field('tag'),
         #     Field('description'),
         # )
@@ -108,7 +107,7 @@ class EditUserForm(forms.ModelForm):
 class UserInviteForm(forms.Form):
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
-#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+#No actual editing is done in this form, just uploads
 #We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesForm(ReadOnlyFormMixin, forms.ModelForm):
     class Meta:
@@ -118,7 +117,8 @@ class SubmissionUploadFilesForm(ReadOnlyFormMixin, forms.ModelForm):
 
 ############# Manuscript Views Forms #############
 #-------------
-#No actual editing is done in this form (files are uploaded/deleted directly with GitLab va JS)
+
+#No actual editing is done in this form, just uploads
 #We just leverage the existing form infrastructure for perm checks etc
 class ManuscriptFilesForm(ReadOnlyFormMixin, forms.ModelForm):
     class Meta:
@@ -572,7 +572,7 @@ NoteVerificationFormset = inlineformset_factory(
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
-############# GitlabFile (File Metadata) Views Forms #############
+############# GitFile (File Metadata) Views Forms #############
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
 class BaseFileNestingFormSet(BaseInlineFormSet):
@@ -604,8 +604,8 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
                     form.nested.save(commit=commit)
         return result
 
-NoteGitlabFileFormset = inlineformset_factory(
-    m.GitlabFile, 
+NoteGitFileFormset = inlineformset_factory(
+    m.GitFile, 
     m.Note, 
     extra=1,
     form=NoteForm,
@@ -615,45 +615,45 @@ NoteGitlabFileFormset = inlineformset_factory(
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
-class GitlabFileForm(forms.ModelForm):
+class GitFileForm(forms.ModelForm):
     class Meta:
-        model = m.GitlabFile
-        fields = ['gitlab_path']
+        model = m.GitFile
+        fields = ['path']
 
     def __init__ (self, *args, **kwargs):
-        super(GitlabFileForm, self).__init__(*args, **kwargs)
-        self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].disabled = True
-        self.fields['gitlab_sha256'].disabled = True
-        self.fields['gitlab_size'].disabled = True
-        self.fields['gitlab_date'].disabled = True
+        super(GitFileForm, self).__init__(*args, **kwargs)
+        self.fields['name'].widget.object_instance = self.instance
+        self.fields['name'].disabled = True
+        self.fields['path'].disabled = True
+        self.fields['md5'].disabled = True
+        self.fields['size'].disabled = True
+        self.fields['date'].disabled = True
 
-class GitlabReadOnlyFileForm(forms.ModelForm):
+class GitFileReadOnlyFileForm(forms.ModelForm):
     class Meta:
-        model = m.GitlabFile
-        fields = ['gitlab_path']
+        model = m.GitFile
+        fields = ['path']
 
     def __init__ (self, *args, **kwargs):
-        super(GitlabReadOnlyFileForm, self).__init__(*args, **kwargs)
-        self.fields['gitlab_path'].widget.object_instance = self.instance
-        self.fields['gitlab_path'].disabled = True
-        self.fields['gitlab_sha256'].disabled = True
-        self.fields['gitlab_size'].disabled = True
-        self.fields['gitlab_date'].disabled = True
+        super(GitFileReadOnlyFileForm, self).__init__(*args, **kwargs)
+        self.fields['name'].widget.object_instance = self.instance
+        self.fields['name'].disabled = True
+        self.fields['path'].disabled = True
+        self.fields['md5'].disabled = True
+        self.fields['size'].disabled = True
+        self.fields['date'].disabled = True
         # All fields read only
         self.fields['tag'].disabled = True
         self.fields['description'].disabled = True
 
-class DownloadGitlabWidget(forms.widgets.TextInput):
+class DownloadGitFileWidget(forms.widgets.TextInput):
     template_name = 'main/widget_download.html'
 
     def get_context(self, name, value, attrs):
         try:
-            #TODO: If root changes in our env variables this will break
-            #TODO: When adding the user tokens, fill them in via javascript as user is a pita to get here
-            self.download_url = os.environ["GIT_LAB_URL"] + "/root/" + self.object_instance.parent_submission.manuscript.gitlab_submissions_path \
-                + "/-/raw/" + helper_get_submission_branch_name(self.object_instance.parent_submission.manuscript) + "/" + self.object_instance.gitlab_path+"?inline=false"+"&private_token="+os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
+            self.download_url = "/submission/"+str(self.object_instance.parent_submission.id)+"/downloadfile/?file_path="+self.object_instance.path + self.object_instance.name
         except AttributeError as e:
+            logger.error("error adding download url to editfiles widget: " + str(e))
             self.download_url = ""
         return {
             'widget': {
@@ -669,35 +669,35 @@ class DownloadGitlabWidget(forms.widgets.TextInput):
 
 #Needed for another level of nesting
 class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
-    nested_formset = NoteGitlabFileFormset
+    nested_formset = NoteGitFileFormset
 
-GitlabFileNoteFormSet = inlineformset_factory(
+GitFileNoteFormSet = inlineformset_factory(
     m.Submission,
-    m.GitlabFile,
-    form=GitlabFileForm,
+    m.GitFile,
+    form=GitFileForm,
     formset=NestedSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'), #'fakefield'),
+    fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
     widgets={
-        'gitlab_path': DownloadGitlabWidget(),
+        'name': DownloadGitFileWidget(),
         'description': Textarea(attrs={'rows':1}) }
 )
 
-GitlabReadOnlyFileNoteFormSet = inlineformset_factory(
+GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
     m.Submission,
-    m.GitlabFile,
-    form=GitlabReadOnlyFileForm,
+    m.GitFile,
+    form=GitFileReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
-    fields=('gitlab_path','tag','description','gitlab_sha256','gitlab_size','gitlab_date'),
+    fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
     widgets={
-        'gitlab_path': DownloadGitlabWidget(),
+        'name': DownloadGitFileWidget(),
         'description': Textarea(attrs={'rows':1})}
 )
 
-class GitlabFileFormSetHelper(FormHelper):
+class GitFileFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
@@ -706,7 +706,7 @@ class GitlabFileFormSetHelper(FormHelper):
         self.form_tag = False
         self.layout = Layout(
 
-            Field('gitlab_path', th_class="w-50"),
+            Field('path', th_class="w-50"),
             Field('tag'),
             Field('description'),
         )
@@ -715,10 +715,6 @@ class GitlabFileFormSetHelper(FormHelper):
 ############# Submission/Edition/Curation/Verification Views Forms #############
 
 #------------- Base Submission -------------
-
-#TESTTEST
-
-
 
 # def popover_html(field):
 #     html = field.verbose_name
@@ -1291,15 +1287,15 @@ ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
     # )
 
 
-# class GitlabFileForm(forms.ModelForm):
+# class GitFileForm(forms.ModelForm):
 #     class Meta:
-#         model = m.GitlabFile
-#         fields = ['gitlab_path']
+#         model = m.GitFile
+#         fields = ['path']
 
 #     def __init__ (self, *args, **kwargs):
-#         super(GitlabFileForm, self).__init__(*args, **kwargs)
-#         self.fields['gitlab_path'].widget.object_instance = self.instance
-#         self.fields['gitlab_path'].disabled = True
-#         self.fields['gitlab_sha256'].disabled = True
-#         self.fields['gitlab_size'].disabled = True
-#         self.fields['gitlab_date'].disabled = True
+#         super(GitFileForm, self).__init__(*args, **kwargs)
+#         self.fields['path'].widget.object_instance = self.instance
+#         self.fields['path'].disabled = True
+#         self.fields['md5'].disabled = True
+#         self.fields['size'].disabled = True
+#         self.fields['date'].disabled = True

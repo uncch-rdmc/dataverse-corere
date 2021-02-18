@@ -25,7 +25,7 @@ from django.core.management import call_command
 class BaseTestWithFixture(TestCase):
     #Our many contants to make referncing our various cases easier
     #(Technically most "nouser" manuscripts actually have admin as an author)
-    #Also note that even though we have files, delete does not actually delete a GitlabFile, it calls GitLab. So its kinda pointless to have these cases
+    #Also note that even though we have files, delete does not actually delete a GitFile, it calls GitLab. So its kinda pointless to have these cases
     #Loading the submission page checks gitlab every time and deletes files if needed.
 
     #NOTE: Because editions were added later, the sub/cur/ver connected to them have less coverage.
@@ -248,7 +248,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         ### Author cannot delete from manuscript. Note these tests call gitlab (which mocked) and don't error if a specific file is missing
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
 
 
     def test_AuthorAccess_ManuscriptAssign(self):
@@ -458,7 +458,7 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
@@ -742,7 +742,7 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
 
 
     def test_CuratorAccess_ManuscriptAssign(self):
@@ -943,7 +943,7 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
@@ -1219,7 +1219,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 302)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
 
 
     def test_EditorAccess_ManuscriptAssign(self):
@@ -1420,7 +1420,7 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
@@ -1694,7 +1694,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_CUR1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("manuscript_deletefile", kwargs={'manuscript_id':self.M_NEW_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
 
 
     def test_VerifierAccess_ManuscriptAssign(self):
@@ -1895,7 +1895,7 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404)
-        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitlabFiles actually on here, but delete just passes through to gitlab
+        # can't test with mock #self.assertEqual(cl.post(reverse("submission_deletefile", kwargs={'submission_id':self.S_B4_ED1_ALLUSER })+"?file_path=hsis-merge-external-tool.json").status_code, 404) #there are no GitFiles actually on here, but delete just passes through to gitlab
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_ALLUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_DUR_SUB1_NOUSER_F })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_deleteallfiles", kwargs={'submission_id':self.S_B4_SUB2_ALLUSER })).status_code, 404)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from corere.main.models import Submission, Edition, Curation, Verification, Manuscript, User, Note \
+from corere.main.models import Submission, Edition, Curation, Verification, Manuscript, User, Note, GitFile \
     ,  HistoricalSubmission, HistoricalEdition, HistoricalCuration, HistoricalVerification, HistoricalManuscript, HistoricalUser, HistoricalNote
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
@@ -48,6 +48,7 @@ admin.site.register(Edition, GuardedModelAdminCustom)
 admin.site.register(Curation, GuardedModelAdminCustom)
 admin.site.register(Verification, GuardedModelAdminCustom)
 admin.site.register(Note, GuardedModelAdminCustom)
+admin.site.register(GitFile, GuardedModelAdminCustom)
 
 #admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

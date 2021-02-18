@@ -1,7 +1,8 @@
 import logging
 import uuid
-from . import constants as c
+# from . import constants as c
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
@@ -17,12 +18,13 @@ from guardian.shortcuts import get_users_with_perms, assign_perm
 from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 from corere.main import constants as c
-from corere.main.gitlab import gitlab_create_manuscript_repo, gitlab_create_submissions_repo, gitlab_create_submission_branch, helper_get_submission_branch_name
+from corere.main import git as g
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
+from autoslug import AutoSlugField
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -61,7 +63,6 @@ class User(AbstractUser):
 
     invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
-    gitlab_id = models.IntegerField(blank=True, null=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     # Django Guardian has_perm does not check whether the user has a global perm.
@@ -277,11 +278,6 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
-            try:
-                gitlab_ref_branch = helper_get_submission_branch_name(self.manuscript) #we get the previous branch before saving
-            except ValueError:
-                gitlab_ref_branch = 'master' #when there are no submissions, we base off master (empty)
-
             prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
             if prev_max_version_id is None:
                 self.version_id = 1
@@ -289,9 +285,13 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = prev_max_version_id + 1
 
         super(Submission, self).save(*args, **kwargs)
-        branch = helper_get_submission_branch_name(self.manuscript) #we call the same function after save as now the name should point to what we want for the new branch
-        if first_save:
-            gitlab_create_submission_branch(self.manuscript, self.manuscript.gitlab_submissions_id, branch, gitlab_ref_branch)
+        if(self.version_id > 1):
+            prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
+            for gfile in prev_submission.submission_files.all():
+                new_gfile = gfile
+                new_gfile.parent_submission = self
+                new_gfile.id = None
+                new_gfile.save()
 
     ##### Queries #####
 
@@ -416,19 +416,15 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def submit_edition(self):
-        print("SUBMIT1")
         #TODO: Call manuscript.process
         if(self.submission_edition._status == Edition.Status.NO_ISSUES):
             self.manuscript.process()
             self.manuscript.save()
-            print("SUBMIT2")
-            print(self.Status.IN_PROGRESS_CURATION)
             return self.Status.IN_PROGRESS_CURATION
         else:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
             self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
             self.manuscript.save()
-            print("SUBMIT2b")
-            print(self.Status.IN_PROGRESS_CURATION)
             return self.Status.RETURNED
 
     #-----------------------
@@ -450,8 +446,7 @@ class Submission(AbstractCreateUpdateModel):
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
         
-        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
-        # self.manuscript.save()
+        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -470,11 +465,10 @@ class Submission(AbstractCreateUpdateModel):
         try:
             if(self.submission_verification._status == Verification.Status.SUCCESS): #just checking the object exists, crude
                 pass
-            #return Submission.Status.REVIEWED_AWAITING_REPORT
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_VERIFICATION
-        # self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
-        # self.manuscript.save()
+        
+        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -582,12 +576,10 @@ class Manuscript(AbstractCreateUpdateModel):
     producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-    gitlab_submissions_id = models.IntegerField(blank=True, null=True) #Storing the repo for submission files (all submissions)
-    gitlab_submissions_path = models.CharField(max_length=255, blank=True, null=True) #Binderhub needs path, not id. 255 is a gitlab requirement
-    gitlab_manuscript_id = models.IntegerField(blank=True, null=True) #Storing the repo for manuscript files
-    gitlab_manuscript_path = models.CharField(max_length=255, blank=True, null=True) #Not sure we'll ever use this as we only added it for binderhub, but tracking it for completeness
+     
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
+    slug = AutoSlugField(populate_from='title')
 
     class Meta:
         permissions = [
@@ -642,8 +634,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
 
-            gitlab_create_manuscript_repo(self)
-            gitlab_create_submissions_repo(self)
+            g.create_manuscript_repo(self)
+            g.create_submission_repo(self)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
@@ -746,30 +738,37 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 ####################################################
 
-class GitlabFile(AbstractCreateUpdateModel):
+# Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
+# Even thought is code supports parent manuscript, it is not used
+class GitFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
+        UNSET = '-', _('-')
         CODE = 'code', _('Code')
         DATA = 'data', _('Data')
-        DOC_OTHER = 'doc_other', _('Documentation - Other')
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
+        DOC_OTHER = 'doc_other', _('Documentation - Other')
 
-    gitlab_blob_id = models.CharField(max_length=40) # SHA-1 hash of a blob or subtree with its associated mode, type, and filename. 
-    gitlab_sha256 = models.CharField(max_length=64, verbose_name='SHA-256', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
-    gitlab_path = models.CharField(max_length=4096, blank=True, null=True, verbose_name='file path', help_text='The path to the file')
-    gitlab_date = models.DateTimeField(verbose_name='file creation date')
-    gitlab_size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type') 
+    #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
+    md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
+    #We store name and path separately for ease of access and use in dropdowns
+    path = models.CharField(max_length=4096, verbose_name='file path', help_text='The path of the folders holding the file, not including the filename')
+    name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
+    date = models.DateTimeField(verbose_name='file creation date')
+    size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
+    tag = models.CharField(max_length=14, choices=FileTag.choices, default=FileTag.UNSET, verbose_name='file type') 
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
-    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='file_submission')
-    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='file_manuscript')
+    parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='submission_files')
+    parent_manuscript = models.ForeignKey(Manuscript, null=True, blank=True, on_delete=models.CASCADE, related_name='manuscript_files')
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['path', 'name', 'parent_submission'], name='GitFile submission and path')
+        ]
         indexes = [
-            models.Index(fields=['gitlab_blob_id', 'parent_submission']), #one index for the combination of the two fields #TODO: May be unneeded
-            models.Index(fields=['gitlab_path', 'parent_submission']), #one index for the combination of the two fields
+            models.Index(fields=['path', 'name', 'parent_submission']),
         ]
 
     @property
@@ -778,7 +777,7 @@ class GitlabFile(AbstractCreateUpdateModel):
             return self.parent_submission
         if self.parent_manuscript_id is not None:
             return self.parent_submission
-        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
+        raise AssertionError("Neither 'parent_submission' or 'parent_manuscript' is set")
 
     def save(self, *args, **kwargs):
         parents = 0
@@ -787,7 +786,10 @@ class GitlabFile(AbstractCreateUpdateModel):
         if(parents > 1):
             raise AssertionError("Multiple parents set")
 
-        super(GitlabFile, self).save(*args, **kwargs)
+        if not self.id:
+            self.date = timezone.now()
+
+        super(GitFile, self).save(*args, **kwargs)
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
@@ -799,7 +801,7 @@ class Note(AbstractCreateUpdateModel):
     parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_file = models.ForeignKey(GitlabFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    parent_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, on_delete=models.CASCADE)
