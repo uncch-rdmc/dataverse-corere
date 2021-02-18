@@ -21,7 +21,6 @@ def _create_repo(manuscript, path):
 def get_manuscript_files_list(manuscript):
     return _get_files_list(manuscript, get_manuscript_repo_path(manuscript), get_manuscript_repo_name(manuscript))
 
-#TODO: How do we even get files from previous releases? Something like: https://stackoverflow.com/questions/7856416/
 def get_submission_files_list(manuscript):
     return _get_files_list(manuscript, get_submission_repo_path(manuscript), get_submission_repo_name(manuscript))
 
@@ -75,16 +74,20 @@ def delete_manuscript_file(manuscript, file_path):
 #delete file from filesystem, create commit for file
 def _delete_file(repo_path, file_full_path):
     repo = git.Repo(repo_path)
-    if os.path.exists(file_full_path):
-        os.remove(file_full_path)
-        file_full_folder = file_full_path.rsplit('/', 1)[0]
-        print(file_full_folder)
-        try:
-            os.removedirs(file_full_folder) #deletes empty folders recursively. Will never delete repo_path as there is a git folder
-        except OSError:
-            pass #If file_full_folder has other files, removedirs will error and fail, as expected
+    if(repo_path in os.path.realpath(file_full_path)):
+        if os.path.exists(file_full_path):
+            os.remove(file_full_path)
+            file_full_folder = file_full_path.rsplit('/', 1)[0]
+            print(file_full_folder)
+            try:
+                os.removedirs(file_full_folder) #deletes empty folders recursively. Will never delete repo_path as there is a git folder
+            except OSError:
+                pass #If file_full_folder has other files, removedirs will error and fail, as expected
+        else:
+            logger.error("Attempted to delete file where path did not exist. Path provided: " + file_full_path)
+            raise Http404()
     else:
-        logger.error("Attempted to delete file where path did not exist. Path provided: " + file_full_path)
+        logger.error("Attempted to delete file above the repo path. Possibly a hack attempt. Path: " + file_full_path)
         raise Http404()
 
     repo.index.remove(file_full_path)
@@ -131,17 +134,11 @@ def download_all_submission_files(submission):
     repo.archive(tempf, treeish=branch_name)
     tempf.seek(0) #you have to return to the start of the temporaryfile after writing to it
 
-    #print(str(os.fstat(tempf.fileno()).st_size))
-
-    
-    
     response = HttpResponse(tempf.read(), content_type='application/zip')#temp.mime_type)
     response['Content-Disposition'] = 'attachment; filename="'+submission.manuscript.slug + '_-_submission_' + str(submission.version_id) + '.zip"'
     return response
 
 
-
-#Use slug to get repo id
 def get_manuscript_repo_name(manuscript):
     return str(manuscript.id) + "_-_manuscript_-_" + manuscript.slug
 

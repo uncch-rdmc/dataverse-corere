@@ -2,6 +2,7 @@ import logging
 import uuid
 # from . import constants as c
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
@@ -577,7 +578,7 @@ class Manuscript(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
      
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='title')
 
     class Meta:
@@ -751,9 +752,9 @@ class GitFile(AbstractCreateUpdateModel):
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
     #We store name and path separately for ease of access and use in dropdowns
-    path = models.CharField(max_length=4096, verbose_name='file path', help_text='The path to the file in the repo')
+    path = models.CharField(max_length=4096, verbose_name='file path', help_text='The path of the folders holding the file, not including the filename')
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
-    date = models.DateTimeField(auto_now_add=True, verbose_name='file creation date')
+    date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
     tag = models.CharField(max_length=14, choices=FileTag.choices, default=FileTag.UNSET, verbose_name='file type') 
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
@@ -784,6 +785,9 @@ class GitFile(AbstractCreateUpdateModel):
         parents += (self.parent_manuscript_id is not None)
         if(parents > 1):
             raise AssertionError("Multiple parents set")
+
+        if not self.id:
+            self.date = timezone.now()
 
         super(GitFile, self).save(*args, **kwargs)
 

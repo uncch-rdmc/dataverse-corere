@@ -627,7 +627,7 @@ class GitFileForm(forms.ModelForm):
         self.fields['path'].disabled = True
         self.fields['md5'].disabled = True
         self.fields['size'].disabled = True
-        # self.fields['date'].disabled = True
+        self.fields['date'].disabled = True
 
 class GitFileReadOnlyFileForm(forms.ModelForm):
     class Meta:
@@ -641,7 +641,7 @@ class GitFileReadOnlyFileForm(forms.ModelForm):
         self.fields['path'].disabled = True
         self.fields['md5'].disabled = True
         self.fields['size'].disabled = True
-        # self.fields['date'].disabled = True
+        self.fields['date'].disabled = True
         # All fields read only
         self.fields['tag'].disabled = True
         self.fields['description'].disabled = True
@@ -676,7 +676,7 @@ GitFileNoteFormSet = inlineformset_factory(
     m.GitFile,
     form=GitFileForm,
     formset=NestedSubFileNoteFormSet,
-    fields=('name','path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
+    fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
     widgets={
@@ -689,7 +689,7 @@ GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
     m.GitFile,
     form=GitFileReadOnlyFileForm,
     formset=NestedSubFileNoteFormSet,
-    fields=('name','path','tag','description','md5','size'),#,'date'), #TODO: REENABLE AS READONLY
+    fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
     widgets={
