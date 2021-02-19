@@ -618,7 +618,7 @@ NoteGitFileFormset = inlineformset_factory(
 class GitFileForm(forms.ModelForm):
     class Meta:
         model = m.GitFile
-        fields = ['path']
+        fields = ['name','path','tag','description','md5','size','date']
 
     def __init__ (self, *args, **kwargs):
         super(GitFileForm, self).__init__(*args, **kwargs)
@@ -632,7 +632,7 @@ class GitFileForm(forms.ModelForm):
 class GitFileReadOnlyFileForm(forms.ModelForm):
     class Meta:
         model = m.GitFile
-        fields = ['path']
+        fields = ['name','path','tag','description','md5','size','date']
 
     def __init__ (self, *args, **kwargs):
         super(GitFileReadOnlyFileForm, self).__init__(*args, **kwargs)
@@ -675,7 +675,7 @@ GitFileNoteFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileForm,
-    formset=NestedSubFileNoteFormSet,
+    #formset=NestedSubFileNoteFormSet, #Adds file notes
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
@@ -688,7 +688,7 @@ GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileReadOnlyFileForm,
-    formset=NestedSubFileNoteFormSet,
+    #formset=NestedSubFileNoteFormSet, #Adds file notes
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
@@ -702,7 +702,8 @@ class GitFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html' #Adds file notes
+        self.template = 'bootstrap4/table_inline_formset.html'
         self.form_tag = False
         self.layout = Layout(
 
