@@ -741,13 +741,14 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 # Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
 # Even thought is code supports parent manuscript, it is not used
 class GitFile(AbstractCreateUpdateModel):
+    #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
-        UNSET = '-', _('-')
         CODE = 'code', _('Code')
         DATA = 'data', _('Data')
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
         DOC_OTHER = 'doc_other', _('Documentation - Other')
+        UNSET = '-', _('-')
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -802,10 +803,15 @@ class Note(AbstractCreateUpdateModel):
     parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
     parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
+    #parent_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, on_delete=models.CASCADE)
+
+    #Instead of being parents, these refer to which file or category of the submission a note refers to.
+    #The idea is that we want to show all these notes on the submission page, but then give the ability to specify what part of the submission they are related to
+    ref_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='ref_notes')
+    ref_file_type = models.CharField(max_length=14, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
 
     @property
     def parent(self):
@@ -817,9 +823,9 @@ class Note(AbstractCreateUpdateModel):
             return self.parent_curation
         if self.parent_verification_id is not None:
             return self.parent_verification
-        if self.parent_file_id is not None:
-            return self.parent_file
-        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
+        # if self.parent_file_id is not None:
+        #     return self.parent_file
+        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation' or 'parent_verification' is set")
     
     def save(self, *args, **kwargs):
         parents = 0
@@ -827,9 +833,18 @@ class Note(AbstractCreateUpdateModel):
         parents += (self.parent_edition_id is not None)
         parents += (self.parent_curation_id is not None)
         parents += (self.parent_verification_id is not None)
-        parents += (self.parent_file_id is not None)
+        # parents += (self.parent_file_id is not None)
         if(parents > 1):
             raise AssertionError("Multiple parents set")
+
+        print(self.text)
+        refs = 0
+        refs += (self.ref_file is not None)
+        print(self.ref_file)
+        refs += (self.ref_file_type is not '')
+        print(self.ref_file_type)
+        if(refs > 1):
+            raise AssertionError("Multiple References set")
 
         first_save = False
         if not self.pk:
@@ -837,8 +852,8 @@ class Note(AbstractCreateUpdateModel):
             if(self.manuscript_id is None):
                 if self.parent_submission_id is not None:
                     self.manuscript = self.parent_submission.manuscript
-                elif self.parent_file_id is not None:
-                    self.manuscript = self.parent_file.parent_submission.manuscript
+                # elif self.parent_file_id is not None:
+                #     self.manuscript = self.parent_file.parent_submission.manuscript
                 else:
                     self.manuscript = self.parent.submission.manuscript
         super(Note, self).save(*args, **kwargs)

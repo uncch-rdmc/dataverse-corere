@@ -415,13 +415,15 @@ ReadOnlyAuthorFormSet = inlineformset_factory(
 class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
-        fields = ['text','scope','creator','note_replied_to']
+        fields = ['text','scope','creator','note_replied_to','note_reference']
         labels = tooltip_labels(model, fields)
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
 
     scope = forms.ChoiceField(widget=forms.RadioSelect,
                                         choices=SCOPE_OPTIONS, required=False)
+
+    note_reference = forms.CharField(label='File/Category', widget=forms.Select()) #TODO: This should actually be populated during the init
 
     def __init__ (self, *args, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
@@ -430,10 +432,12 @@ class NoteForm(forms.ModelForm):
 
         user = CrequestMiddleware.get_request().user
         path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
+        submission = None
         try:
             path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
             if(path_obj_name == "submission"):
-                manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
+                submission = m.Submission.objects.get(id=path_obj_id)
+                manuscript = submission.manuscript
             elif(path_obj_name == "edition"):
                 manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
             elif(path_obj_name == "curation"):
@@ -467,10 +471,26 @@ class NoteForm(forms.ModelForm):
 
         self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
-            
             if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+
+        #Initialize note_reference
+        note_ref_choices = m.GitFile.FileTag.choices
+        files = []
+        if submission:
+            files = submission.submission_files.all().order_by('path','name')
+        for file in files:
+            note_ref_choices = note_ref_choices + [( file.path+file.name, file.name)]
+        self.fields['note_reference'].widget.choices = note_ref_choices
+
+        #Populate the existing values for note_reference
+        if(self.instance.ref_file_type in m.GitFile.FileTag.values):
+            self.fields['note_reference'].initial = self.instance.ref_file_type
+        elif(self.instance.ref_file and self.instance.ref_file.path + self.instance.ref_file.name in dict(note_ref_choices)):
+            self.fields['note_reference'].initial = self.instance.ref_file.path + self.instance.ref_file.name
+        else:
+            self.fields['note_reference'].initial = m.GitFile.FileTag.UNSET
 
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
@@ -496,6 +516,24 @@ class NoteForm(forms.ModelForm):
                     #At this point we've saved already, maybe we shouldn't?
                     logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
                     raise Http404()
+        if('note_reference' in self.changed_data):
+            #TODO: If we open up notes to other types again, we need to check if submission is set here
+            files = self.instance.parent_submission.submission_files.all()
+            file_full_paths = []
+            for file in files:
+                file_full_paths = file_full_paths + [file.path+file.name]
+
+            if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
+                self.instance.ref_file_type = self.cleaned_data['note_reference']
+                self.instance.ref_file = None
+                self.instance.save()
+
+            elif(self.cleaned_data['note_reference'] in file_full_paths):
+                file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
+                file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
+                self.instance.ref_file = file
+                self.instance.ref_file_type = ''
+                self.instance.save()
 
 class BaseNoteFormSet(BaseInlineFormSet):
     #only allow deleting of user-owned notes. we also disable the checkbox via JS
@@ -604,6 +642,7 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
                     form.nested.save(commit=commit)
         return result
 
+#TODO: Delete eventually, only used for file notes
 NoteGitFileFormset = inlineformset_factory(
     m.GitFile, 
     m.Note, 
@@ -667,6 +706,7 @@ class DownloadGitFileWidget(forms.widgets.TextInput):
             },
         }
 
+#TODO: Delete eventually, only used for file notes
 #Needed for another level of nesting
 class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
     nested_formset = NoteGitFileFormset
