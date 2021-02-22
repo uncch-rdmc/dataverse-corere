@@ -267,6 +267,7 @@ class Submission(AbstractCreateUpdateModel):
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
+        prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
         first_save = False
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
@@ -278,7 +279,6 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
-            prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
             if prev_max_version_id is None:
                 self.version_id = 1
             else:
@@ -298,21 +298,18 @@ class Submission(AbstractCreateUpdateModel):
     #We check an author is public (for both functions) by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
     def get_public_curator_notes(self):
         public_notes = []
-        for note in Note.objects.filter(parent_submission=self):#self.notes:
+        for note in Note.objects.filter(parent_submission=self, ref_cycle=Note.RefCycle.CURATION):#self.notes:
             note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
             if 'view_note' in note_perms:
-                if(note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-                    public_notes.append(note)
+                public_notes.append(note)
         return public_notes
 
     def get_public_verifier_notes(self):
         public_notes = []
-        for note in Note.objects.filter(parent_submission=self):#self.notes:
+        for note in Note.objects.filter(parent_submission=self, ref_cycle=Note.RefCycle.VERIFICATION):#self.notes:
             note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
             if 'view_note' in note_perms:
-                #In normal use each user will have one role. But incase they have 2 (admin), we only show the notes in verifier if they aren't a curator as well.
-                if(note.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists() and not note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-                    public_notes.append(note)
+                public_notes.append(note)
         return public_notes
 
     ##### django-fsm (workflow) related functions #####
@@ -794,6 +791,12 @@ class GitFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
+    class RefCycle(models.TextChoices):
+        SUBMISSION = 'submission', _('Submission')
+        EDITION = 'edition', _('Edition')
+        CURATION = 'curation', _('Curation')
+        VERIFICATION = 'verification', _('Verification')
+
     text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
@@ -812,6 +815,10 @@ class Note(AbstractCreateUpdateModel):
     #The idea is that we want to show all these notes on the submission page, but then give the ability to specify what part of the submission they are related to
     ref_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='ref_notes')
     ref_file_type = models.CharField(max_length=14, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
+    
+    #Instead of having notes attached to edition/curation/verification, we have all notes on submission but track when during the process the note was made.
+    #We could have inferred this from the author, but that really stinks for testing as an admin (who can have multiple roles)
+    ref_cycle = models.CharField(max_length=12, choices=RefCycle.choices) 
 
     @property
     def parent(self):
@@ -856,6 +863,18 @@ class Note(AbstractCreateUpdateModel):
                 #     self.manuscript = self.parent_file.parent_submission.manuscript
                 else:
                     self.manuscript = self.parent.submission.manuscript
+
+                #set note ref cycle
+                if self.parent_submission_id is not None:
+                    if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
+                        self.ref_cycle = self.RefCycle.SUBMISSION
+                    elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
+                        self.ref_cycle = self.RefCycle.EDITION
+                    elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
+                        self.ref_cycle = self.RefCycle.CURATION
+                    else:
+                        self.ref_cycle = self.RefCycle.VERIFICATION
+
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
