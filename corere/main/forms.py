@@ -476,7 +476,8 @@ class NoteForm(forms.ModelForm):
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
         #Initialize note_reference
-        note_ref_choices = m.GitFile.FileTag.choices
+        note_ref_choices = [('---','---')]
+        note_ref_choices = note_ref_choices + m.GitFile.FileTag.choices
         files = []
         if submission:
             files = submission.submission_files.all().order_by('path','name')
@@ -490,7 +491,7 @@ class NoteForm(forms.ModelForm):
         elif(self.instance.ref_file and self.instance.ref_file.path + self.instance.ref_file.name in dict(note_ref_choices)):
             self.fields['note_reference'].initial = self.instance.ref_file.path + self.instance.ref_file.name
         else:
-            self.fields['note_reference'].initial = m.GitFile.FileTag.UNSET
+            self.fields['note_reference'].initial = '---'
 
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
@@ -817,6 +818,8 @@ class EditionBaseForm(forms.ModelForm):
         model = m.Edition
         fields = ['report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class EditionForm_Admin(EditionBaseForm):
     pass
@@ -868,6 +871,8 @@ class CurationBaseForm(forms.ModelForm):
         model = m.Curation
         fields = ['report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class CurationForm_Admin(CurationBaseForm):
     pass
@@ -922,6 +927,8 @@ class VerificationBaseForm(forms.ModelForm):
         model = m.Verification
         fields = ['code_executability','report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass

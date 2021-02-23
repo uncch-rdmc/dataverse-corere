@@ -295,22 +295,54 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### Queries #####
 
-    #We check an author is public (for both functions) by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
-    def get_public_curator_notes(self):
+    #TODO return the notes in this order:
+    # - general notes
+    # - notes related to a category
+    # - notes related to tags
+    
+    #TODO: I think I actually need to write more queries for each sub-type,instead of appending and all that junk
+
+
+    def get_public_curator_notes_general(self):
+        return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_general(self):
+        return self._get_public_general_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def get_public_curator_notes_category(self):
+        return self._get_public_category_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_category(self):
+        return self._get_public_category_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def get_public_curator_notes_file(self):
+        return self._get_public_file_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_file(self):
+        return self._get_public_file_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def _get_public_general_notes_by_refcycle(self, refcycle):
+        queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file=None, ref_file_type='').order_by('-created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    def _get_public_category_notes_by_refcycle(self, refcycle):
+        queryset = Note.objects.filter(~Q(ref_file_type=''), parent_submission=self, ref_cycle=refcycle).order_by('-created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    def _get_public_file_notes_by_refcycle(self, refcycle):
+        #queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file_type='').order_by('-created_at')
+        queryset = Note.objects.filter(~Q(ref_file=None), parent_submission=self, ref_cycle=refcycle).order_by('-created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    #We check an author is public by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
+    def _get_public_notes_by_ref_cycle(self, queryset):
         public_notes = []
-        for note in Note.objects.filter(parent_submission=self, ref_cycle=Note.RefCycle.CURATION):#self.notes:
+        for note in queryset:
             note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
             if 'view_note' in note_perms:
                 public_notes.append(note)
         return public_notes
 
-    def get_public_verifier_notes(self):
-        public_notes = []
-        for note in Note.objects.filter(parent_submission=self, ref_cycle=Note.RefCycle.VERIFICATION):#self.notes:
-            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
-            if 'view_note' in note_perms:
-                public_notes.append(note)
-        return public_notes
 
     ##### django-fsm (workflow) related functions #####
 
@@ -745,7 +777,7 @@ class GitFile(AbstractCreateUpdateModel):
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
         DOC_OTHER = 'doc_other', _('Documentation - Other')
-        UNSET = '-', _('-')
+        #UNSET = '-', _('-')
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -754,7 +786,7 @@ class GitFile(AbstractCreateUpdateModel):
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
     date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FileTag.choices, default=FileTag.UNSET, verbose_name='file type') 
+    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type')
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
@@ -865,7 +897,18 @@ class Note(AbstractCreateUpdateModel):
                     self.manuscript = self.parent.submission.manuscript
 
                 #set note ref cycle
+        #TODO:  This logic is busted because the object may not exist at the time of note saving, if they add the notes on the first pass.
+        #       We probably have to check statuses if we keep going down this route
+        #       ...
+        #       This somewhat surprises me though because I'd expect the note forms to save last, and by that time the other objects are populated?
+        #       ...
+        #       This is happening when a note is created but there is no content on the ed/cur/ver to trigger the new objecte creation
                 if self.parent_submission_id is not None:
+                    print(hasattr(self.parent_submission, 'submission_curation'))
+                    obj = Submission.objects.get(id=self.parent_submission_id)
+                    print(hasattr(obj, 'submission_curation'))
+
+
                     if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
                         self.ref_cycle = self.RefCycle.SUBMISSION
                     elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
