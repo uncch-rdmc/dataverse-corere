@@ -80,7 +80,7 @@ class Edition(AbstractCreateUpdateModel):
         NO_ISSUES = 'no_issues', _('No Issues')
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -134,7 +134,7 @@ class Curation(AbstractCreateUpdateModel):
         NO_ISSUES = 'no_issues', _('No Issues')
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -189,7 +189,7 @@ class Verification(AbstractCreateUpdateModel):
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
@@ -322,16 +322,16 @@ class Submission(AbstractCreateUpdateModel):
         return self._get_public_file_notes_by_refcycle(Note.RefCycle.VERIFICATION)
 
     def _get_public_general_notes_by_refcycle(self, refcycle):
-        queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file=None, ref_file_type='').order_by('-created_at')
+        queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file=None, ref_file_type='').order_by('created_at')
         return self._get_public_notes_by_ref_cycle(queryset)
 
     def _get_public_category_notes_by_refcycle(self, refcycle):
-        queryset = Note.objects.filter(~Q(ref_file_type=''), parent_submission=self, ref_cycle=refcycle).order_by('-created_at')
+        queryset = Note.objects.filter(~Q(ref_file_type=''), parent_submission=self, ref_cycle=refcycle).order_by('ref_file_type', 'created_at')
         return self._get_public_notes_by_ref_cycle(queryset)
 
     def _get_public_file_notes_by_refcycle(self, refcycle):
         #queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file_type='').order_by('-created_at')
-        queryset = Note.objects.filter(~Q(ref_file=None), parent_submission=self, ref_cycle=refcycle).order_by('-created_at')
+        queryset = Note.objects.filter(~Q(ref_file=None), parent_submission=self, ref_cycle=refcycle).order_by('ref_file__name','created_at')
         return self._get_public_notes_by_ref_cycle(queryset)
 
     #We check an author is public by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.

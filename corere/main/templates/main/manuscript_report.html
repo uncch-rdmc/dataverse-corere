@@ -1,6 +1,7 @@
 {% extends "main/layout.html" %}
 {% load i18n %}
 {% comment %} {% load verbose_names %} {% endcomment %}
+{% load alias %}
 {% block content %}
 <table class="table table-bordered" id="table_manuscript_info">
     <tr>
@@ -41,25 +42,85 @@
     </tr>
     <tr>
         <td>Data Curation Notes</td>
-        <td><ul>
-            {% for note in submission.get_public_curator_notes_general %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-            {% for note in submission.get_public_curator_notes_category %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-            {% for note in submission.get_public_curator_notes_file %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-        </ul></td>
+        {% with general_notes=submission.get_public_curator_notes_general category_notes=submission.get_public_curator_notes_category file_notes=submission.get_public_curator_notes_file%}     
+        <td>
+            General:
+            <ul>
+                <li>{{submission.submission_curation.report}}</li>
+                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+            </ul>
+            {% comment %} Category notes listed by category {% endcomment %}
+            {% alias "" as previous_note_category %}
+            {% for note in category_notes %}
+                {% if note.ref_file_type != previous_note_category %}
+                    {% if previous_note_category != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.get_ref_file_type_display}}:<ul>
+                    {% alias note.ref_file_type as previous_note_category %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+
+            {% comment %} File notes listed by file {% endcomment %}
+            {% alias "" as previous_note_file %}
+            {% for note in file_notes %}
+                {% if note.ref_file.name != previous_note_file %}
+                    {% if previous_note_file != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.ref_file.name}}:<ul>
+                    {% alias note.ref_file.name as previous_note_file %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+        </td>
+        {% endwith %}
     </tr>
     {% endif %}
     {% if submission.submission_verification %}
     <tr>
-        <td>Replication Result</td>
+        <td>Data Verification Result</td>
         <td>{{submission.submission_verification.get__status_display}}</td>
     </tr>
     <tr>
-        <td>Replication Notes</td>
-        <td><ul>
-            {% for note in submission.get_public_verifier_notes_general %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-            {% for note in submission.get_public_verifier_notes_category %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-            {% for note in submission.get_public_verifier_notes_file %}<li>{{note.id}} - {{note.text}}</li>{% endfor %}
-        </ul></td>
+        <td>Data Verification Notes</td>
+        {% with general_notes=submission.get_public_verifier_notes_general category_notes=submission.get_public_verifier_notes_category file_notes=submission.get_public_verifier_notes_file%}     
+        <td>
+            General:
+            <ul>
+                <li>{{submission.submission_verification.report}}</li>
+                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+            </ul>
+            Code Executability:
+            <ul><li>{{submission.submission_verification.code_executability}}</li></ul>
+            {% comment %} Category notes listed by category {% endcomment %}
+            {% alias "" as previous_note_category %}
+            {% for note in category_notes %}
+                {% if note.ref_file_type != previous_note_category %}
+                    {% if previous_note_category != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.get_ref_file_type_display}}:<ul>
+                    {% alias note.ref_file_type as previous_note_category %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+
+            {% comment %} File notes listed by file {% endcomment %}
+            {% alias "" as previous_note_file %}
+            {% for note in file_notes %}
+                {% if note.ref_file.name != previous_note_file %}
+                    {% if previous_note_file != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.ref_file.name}}:<ul>
+                    {% alias note.ref_file.name as previous_note_file %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+        </td>
+        {% endwith %}
     </tr>
     {% endif %}
 {% endfor %}
