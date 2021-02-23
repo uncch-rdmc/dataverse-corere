@@ -285,7 +285,7 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = prev_max_version_id + 1
 
         super(Submission, self).save(*args, **kwargs)
-        if(self.version_id > 1):
+        if(first_save and self.version_id > 1):
             prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
             for gfile in prev_submission.submission_files.all():
                 new_gfile = gfile
