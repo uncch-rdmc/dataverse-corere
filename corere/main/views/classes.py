@@ -8,9 +8,11 @@ from corere.main import forms as f #TODO: bad practice and I don't use them all
 from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from guardian.core import ObjectPermissionChecker
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form
+from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
@@ -406,7 +408,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset") #TODO: This was set to `= formset`, maybe can delete that variable now?
+            checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by('path','name')
+
+            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset", 
+                form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files}) #TODO: This was set to `= formset`, maybe can delete that variable now?
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):
@@ -445,7 +455,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         root_object_title = self.object.manuscript.title
 
         if(self.note_formset):
-            self.note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset")
+            checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by('path','name')
+
+            self.note_formset = self.note_formset(request.POST, instance=self.object, prefix="note_formset", 
+                form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files}) #TODO: This was set to `= formset`, maybe can delete that variable now?
         if(self.edition_formset):
             self.edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if(self.curation_formset):
@@ -757,11 +775,11 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
 
 class SubmissionEditFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'edit_noop'
-    form = f.GitFileNoteFormSet
+    form = f.GitFileFormSet
 
 class SubmissionReadFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'view_noop'
-    form = f.GitFileReadOnlyFileNoteFormSet
+    form = f.GitFileReadOnlyFileFormSet
     read_only = True
 
 #We just leverage the existing form infrastructure for perm checks etc

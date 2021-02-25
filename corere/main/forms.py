@@ -415,7 +415,7 @@ ReadOnlyAuthorFormSet = inlineformset_factory(
 class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
-        fields = ['text','scope','creator','note_replied_to']
+        fields = ['text','scope','creator','note_replied_to','note_reference']
         labels = tooltip_labels(model, fields)
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
@@ -423,54 +423,57 @@ class NoteForm(forms.ModelForm):
     scope = forms.ChoiceField(widget=forms.RadioSelect,
                                         choices=SCOPE_OPTIONS, required=False)
 
-    def __init__ (self, *args, **kwargs):
+    note_reference = forms.CharField(label='File/Category', widget=forms.Select()) #TODO: This should actually be populated during the init
+
+    #Checker is for passing prefeteched django-guardian permissions
+    #https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
+    #Other args are also passed in for performance improvements across all the notes
+    def __init__ (self, *args, checkers, manuscript, submission, sub_files, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
         user = CrequestMiddleware.get_request().user
         path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
-        try:
-            path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
-            if(path_obj_name == "submission"):
-                manuscript = m.Submission.objects.get(id=path_obj_id).manuscript
-            elif(path_obj_name == "edition"):
-                manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "curation"):
-                manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "verification"):
-                manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
-            else:
-                raise TypeError("Object name parsed from url string for note form does not match our lookup")
-        except KeyError: #during creation, id we want is different
-            try: #creating a sub on a manuscript
-                manuscript = m.Manuscript.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['manuscript_id'])
-            except KeyError: #creating a edition/curation/verification on a submission
-                try:
-                    manuscript = m.Submission.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['submission_id']).manuscript
-                except KeyError:
-                    raise TypeError("Object name parsed from url string for note form does not match our lookup, during create")
 
         if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
             self.fields.pop('scope')
         else:       
             #Populate scope field depending on existing roles
-            existing_roles = []
-            for role in c.get_roles():
-                role_perms = get_perms(Group.objects.get(name=role), self.instance)
-                if(c.PERM_NOTE_VIEW_N in role_perms):
-                    existing_roles.append(role)
-            if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
+            role_count = 0
+            for checker in checkers:
+                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
+                    role_count += 1
+            if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
                 self.fields['scope'].initial = 'public'
             else:
                 self.fields['scope'].initial = 'private'
 
         self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
-            
-            if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            if(self.instance.creator != user): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+
+        #Initialize note_reference
+        #Note: I tried moving this to classes.py to not repeat it, but it didn't get faster. So leaving it here.
+        note_ref_choices = [('---','---')]
+        note_ref_choices = note_ref_choices + m.GitFile.FileTag.choices
+        files = []
+        if submission:
+            files = sub_files
+        for file in files:
+            note_ref_choices = note_ref_choices + [( file.path+file.name, file.name)]
+            
+        self.fields['note_reference'].widget.choices = note_ref_choices
+
+        #Populate the existing values for note_reference
+        if(self.instance.ref_file_type in m.GitFile.FileTag.values):
+            self.fields['note_reference'].initial = self.instance.ref_file_type
+        elif(self.instance.ref_file and self.instance.ref_file.path + self.instance.ref_file.name in dict(note_ref_choices)):
+            self.fields['note_reference'].initial = self.instance.ref_file.path + self.instance.ref_file.name
+        else:
+            self.fields['note_reference'].initial = '---'
 
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
@@ -496,6 +499,23 @@ class NoteForm(forms.ModelForm):
                     #At this point we've saved already, maybe we shouldn't?
                     logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
                     raise Http404()
+        if('note_reference' in self.changed_data):
+            #TODO: If we open up notes to other types again, we need to check if submission is set here
+            files = self.instance.parent_submission.submission_files.all()
+            file_full_paths = []
+            for file in files:
+                file_full_paths = file_full_paths + [file.path+file.name]
+            self.instance.ref_file_type = ''
+            self.instance.ref_file = None
+
+            if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
+                self.instance.ref_file_type = self.cleaned_data['note_reference']
+            elif(self.cleaned_data['note_reference'] in file_full_paths):
+                file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
+                file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
+                self.instance.ref_file = file
+
+            self.instance.save()
 
 class BaseNoteFormSet(BaseInlineFormSet):
     #only allow deleting of user-owned notes. we also disable the checkbox via JS
@@ -538,40 +558,6 @@ NoteSubmissionFormset = inlineformset_factory(
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
-NoteEditionFormset = inlineformset_factory(
-    m.Edition, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteCurationFormset = inlineformset_factory(
-    m.Curation, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        # 'creator': CreatorChoiceField(),
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteVerificationFormset = inlineformset_factory(
-    m.Verification, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
 ############# GitFile (File Metadata) Views Forms #############
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
@@ -604,21 +590,10 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
                     form.nested.save(commit=commit)
         return result
 
-NoteGitFileFormset = inlineformset_factory(
-    m.GitFile, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
 class GitFileForm(forms.ModelForm):
     class Meta:
         model = m.GitFile
-        fields = ['path']
+        fields = ['name','path','tag','description','md5','size','date']
 
     def __init__ (self, *args, **kwargs):
         super(GitFileForm, self).__init__(*args, **kwargs)
@@ -632,7 +607,7 @@ class GitFileForm(forms.ModelForm):
 class GitFileReadOnlyFileForm(forms.ModelForm):
     class Meta:
         model = m.GitFile
-        fields = ['path']
+        fields = ['name','path','tag','description','md5','size','date']
 
     def __init__ (self, *args, **kwargs):
         super(GitFileReadOnlyFileForm, self).__init__(*args, **kwargs)
@@ -667,15 +642,10 @@ class DownloadGitFileWidget(forms.widgets.TextInput):
             },
         }
 
-#Needed for another level of nesting
-class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
-    nested_formset = NoteGitFileFormset
-
-GitFileNoteFormSet = inlineformset_factory(
+GitFileFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileForm,
-    formset=NestedSubFileNoteFormSet,
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
@@ -684,11 +654,10 @@ GitFileNoteFormSet = inlineformset_factory(
         'description': Textarea(attrs={'rows':1}) }
 )
 
-GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
+GitFileReadOnlyFileFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileReadOnlyFileForm,
-    formset=NestedSubFileNoteFormSet,
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
@@ -702,7 +671,8 @@ class GitFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html'
+        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html' #Adds file notes
+        self.template = 'bootstrap4/table_inline_formset.html'
         self.form_tag = False
         self.layout = Layout(
 
@@ -776,6 +746,8 @@ class EditionBaseForm(forms.ModelForm):
         model = m.Edition
         fields = ['report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class EditionForm_Admin(EditionBaseForm):
     pass
@@ -827,6 +799,8 @@ class CurationBaseForm(forms.ModelForm):
         model = m.Curation
         fields = ['report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class CurationForm_Admin(CurationBaseForm):
     pass
@@ -881,6 +855,8 @@ class VerificationBaseForm(forms.ModelForm):
         model = m.Verification
         fields = ['code_executability','report','_status']
         labels = tooltip_labels(model, fields)
+    def has_changed(self, *args, **kwargs):
+        return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass

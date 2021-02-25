@@ -80,7 +80,7 @@ class Edition(AbstractCreateUpdateModel):
         NO_ISSUES = 'no_issues', _('No Issues')
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -134,7 +134,7 @@ class Curation(AbstractCreateUpdateModel):
         NO_ISSUES = 'no_issues', _('No Issues')
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -189,7 +189,7 @@ class Verification(AbstractCreateUpdateModel):
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    report = models.TextField(default="", blank=True, verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Report')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
@@ -267,6 +267,7 @@ class Submission(AbstractCreateUpdateModel):
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
+        prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
         first_save = False
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
@@ -278,14 +279,13 @@ class Submission(AbstractCreateUpdateModel):
             except Submission.manuscript.RelatedObjectDoesNotExist:
                 pass #this is caught in super
 
-            prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
             if prev_max_version_id is None:
                 self.version_id = 1
             else:
                 self.version_id = prev_max_version_id + 1
 
         super(Submission, self).save(*args, **kwargs)
-        if(self.version_id > 1):
+        if(first_save and self.version_id > 1):
             prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
             for gfile in prev_submission.submission_files.all():
                 new_gfile = gfile
@@ -295,25 +295,54 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### Queries #####
 
-    #We check an author is public (for both functions) by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
-    def get_public_curator_notes(self):
+    #TODO return the notes in this order:
+    # - general notes
+    # - notes related to a category
+    # - notes related to tags
+    
+    #TODO: I think I actually need to write more queries for each sub-type,instead of appending and all that junk
+
+
+    def get_public_curator_notes_general(self):
+        return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_general(self):
+        return self._get_public_general_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def get_public_curator_notes_category(self):
+        return self._get_public_category_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_category(self):
+        return self._get_public_category_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def get_public_curator_notes_file(self):
+        return self._get_public_file_notes_by_refcycle(Note.RefCycle.CURATION)
+
+    def get_public_verifier_notes_file(self):
+        return self._get_public_file_notes_by_refcycle(Note.RefCycle.VERIFICATION)
+
+    def _get_public_general_notes_by_refcycle(self, refcycle):
+        queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file=None, ref_file_type='').order_by('created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    def _get_public_category_notes_by_refcycle(self, refcycle):
+        queryset = Note.objects.filter(~Q(ref_file_type=''), parent_submission=self, ref_cycle=refcycle).order_by('ref_file_type', 'created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    def _get_public_file_notes_by_refcycle(self, refcycle):
+        #queryset = Note.objects.filter(parent_submission=self, ref_cycle=refcycle, ref_file_type='').order_by('-created_at')
+        queryset = Note.objects.filter(~Q(ref_file=None), parent_submission=self, ref_cycle=refcycle).order_by('ref_file__name','created_at')
+        return self._get_public_notes_by_ref_cycle(queryset)
+
+    #We check an author is public by checking if the author group can view. This is based on the assumption that we always assign editor the same view permissions as author.
+    def _get_public_notes_by_ref_cycle(self, queryset):
         public_notes = []
-        for note in Note.objects.filter(parent_submission=self):#self.notes:
+        for note in queryset:
             note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
             if 'view_note' in note_perms:
-                if(note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-                    public_notes.append(note)
+                public_notes.append(note)
         return public_notes
 
-    def get_public_verifier_notes(self):
-        public_notes = []
-        for note in Note.objects.filter(parent_submission=self):#self.notes:
-            note_perms = get_perms(Group.objects.get(name=c.GROUP_ROLE_AUTHOR), note)
-            if 'view_note' in note_perms:
-                #In normal use each user will have one role. But incase they have 2 (admin), we only show the notes in verifier if they aren't a curator as well.
-                if(note.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists() and not note.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-                    public_notes.append(note)
-        return public_notes
 
     ##### django-fsm (workflow) related functions #####
 
@@ -741,13 +770,14 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 # Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
 # Even thought is code supports parent manuscript, it is not used
 class GitFile(AbstractCreateUpdateModel):
+    #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
-        UNSET = '-', _('-')
         CODE = 'code', _('Code')
         DATA = 'data', _('Data')
         DOC_README = 'doc_readme', _('Documentation - Readme')
         DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
         DOC_OTHER = 'doc_other', _('Documentation - Other')
+        #UNSET = '-', _('-')
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -756,7 +786,7 @@ class GitFile(AbstractCreateUpdateModel):
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
     date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FileTag.choices, default=FileTag.UNSET, verbose_name='file type') 
+    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type')
     description = models.CharField(max_length=1024, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
@@ -793,53 +823,50 @@ class GitFile(AbstractCreateUpdateModel):
 
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
+    class RefCycle(models.TextChoices):
+        SUBMISSION = 'submission', _('Submission')
+        EDITION = 'edition', _('Edition')
+        CURATION = 'curation', _('Curation')
+        VERIFICATION = 'verification', _('Verification')
+
     text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
-
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, on_delete=models.CASCADE)
 
-    @property
-    def parent(self):
-        if self.parent_submission_id is not None:
-            return self.parent_submission
-        if self.parent_edition_id is not None:
-            return self.parent_edition
-        if self.parent_curation_id is not None:
-            return self.parent_curation
-        if self.parent_verification_id is not None:
-            return self.parent_verification
-        if self.parent_file_id is not None:
-            return self.parent_file
-        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation', 'parent_verification' or 'parent_file' is set")
+    #Instead of being parents, these refer to which file or category of the submission a note refers to.
+    #The idea is that we want to show all these notes on the submission page, but then give the ability to specify what part of the submission they are related to
+    ref_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='ref_notes')
+    ref_file_type = models.CharField(max_length=14, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
+    
+    #Instead of having notes attached to edition/curation/verification, we have all notes on submission but track when during the process the note was made.
+    #We could have inferred this from the author, but that really stinks for testing as an admin (who can have multiple roles)
+    ref_cycle = models.CharField(max_length=12, choices=RefCycle.choices) 
     
     def save(self, *args, **kwargs):
-        parents = 0
-        parents += (self.parent_submission_id is not None)
-        parents += (self.parent_edition_id is not None)
-        parents += (self.parent_curation_id is not None)
-        parents += (self.parent_verification_id is not None)
-        parents += (self.parent_file_id is not None)
-        if(parents > 1):
-            raise AssertionError("Multiple parents set")
+        refs = 0
+        refs += (self.ref_file is not None)
+        refs += (self.ref_file_type is not '')
+        if(refs > 1):
+            raise AssertionError("Multiple References set")
 
         first_save = False
         if not self.pk:
             first_save = True
-            if(self.manuscript_id is None):
-                if self.parent_submission_id is not None:
-                    self.manuscript = self.parent_submission.manuscript
-                elif self.parent_file_id is not None:
-                    self.manuscript = self.parent_file.parent_submission.manuscript
-                else:
-                    self.manuscript = self.parent.submission.manuscript
+            self.manuscript = self.parent_submission.manuscript
+
+            if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
+                self.ref_cycle = self.RefCycle.SUBMISSION
+            elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
+                self.ref_cycle = self.RefCycle.EDITION
+            elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
+                self.ref_cycle = self.RefCycle.CURATION
+            else:
+                self.ref_cycle = self.RefCycle.VERIFICATION
+
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
