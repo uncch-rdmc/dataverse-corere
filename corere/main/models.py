@@ -832,13 +832,7 @@ class Note(AbstractCreateUpdateModel):
     text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
-
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    #TODO: Eventually delete all these other parent options if we end up never using them.
-    parent_edition = models.ForeignKey(Edition, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_curation = models.ForeignKey(Curation, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    parent_verification = models.ForeignKey(Verification, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
-    #parent_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
 
     #note this is not a "parent" relationship like above
     manuscript = models.ForeignKey(Manuscript, on_delete=models.CASCADE)
@@ -851,72 +845,27 @@ class Note(AbstractCreateUpdateModel):
     #Instead of having notes attached to edition/curation/verification, we have all notes on submission but track when during the process the note was made.
     #We could have inferred this from the author, but that really stinks for testing as an admin (who can have multiple roles)
     ref_cycle = models.CharField(max_length=12, choices=RefCycle.choices) 
-
-    @property
-    def parent(self):
-        if self.parent_submission_id is not None:
-            return self.parent_submission
-        if self.parent_edition_id is not None:
-            return self.parent_edition
-        if self.parent_curation_id is not None:
-            return self.parent_curation
-        if self.parent_verification_id is not None:
-            return self.parent_verification
-        # if self.parent_file_id is not None:
-        #     return self.parent_file
-        raise AssertionError("Neither 'parent_submission', 'parent_edition', 'parent_curation' or 'parent_verification' is set")
     
     def save(self, *args, **kwargs):
-        parents = 0
-        parents += (self.parent_submission_id is not None)
-        parents += (self.parent_edition_id is not None)
-        parents += (self.parent_curation_id is not None)
-        parents += (self.parent_verification_id is not None)
-        # parents += (self.parent_file_id is not None)
-        if(parents > 1):
-            raise AssertionError("Multiple parents set")
-
-        print(self.text)
         refs = 0
         refs += (self.ref_file is not None)
-        print(self.ref_file)
         refs += (self.ref_file_type is not '')
-        print(self.ref_file_type)
         if(refs > 1):
             raise AssertionError("Multiple References set")
 
         first_save = False
         if not self.pk:
             first_save = True
-            if(self.manuscript_id is None):
-                if self.parent_submission_id is not None:
-                    self.manuscript = self.parent_submission.manuscript
-                # elif self.parent_file_id is not None:
-                #     self.manuscript = self.parent_file.parent_submission.manuscript
-                else:
-                    self.manuscript = self.parent.submission.manuscript
+            self.manuscript = self.parent_submission.manuscript
 
-                #set note ref cycle
-        #TODO:  This logic is busted because the object may not exist at the time of note saving, if they add the notes on the first pass.
-        #       We probably have to check statuses if we keep going down this route
-        #       ...
-        #       This somewhat surprises me though because I'd expect the note forms to save last, and by that time the other objects are populated?
-        #       ...
-        #       This is happening when a note is created but there is no content on the ed/cur/ver to trigger the new objecte creation
-                if self.parent_submission_id is not None:
-                    print(hasattr(self.parent_submission, 'submission_curation'))
-                    obj = Submission.objects.get(id=self.parent_submission_id)
-                    print(hasattr(obj, 'submission_curation'))
-
-
-                    if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
-                        self.ref_cycle = self.RefCycle.SUBMISSION
-                    elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
-                        self.ref_cycle = self.RefCycle.EDITION
-                    elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
-                        self.ref_cycle = self.RefCycle.CURATION
-                    else:
-                        self.ref_cycle = self.RefCycle.VERIFICATION
+            if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
+                self.ref_cycle = self.RefCycle.SUBMISSION
+            elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
+                self.ref_cycle = self.RefCycle.EDITION
+            elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
+                self.ref_cycle = self.RefCycle.CURATION
+            else:
+                self.ref_cycle = self.RefCycle.VERIFICATION
 
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant

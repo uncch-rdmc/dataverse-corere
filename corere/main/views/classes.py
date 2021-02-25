@@ -775,11 +775,11 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
 
 class SubmissionEditFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'edit_noop'
-    form = f.GitFileNoteFormSet
+    form = f.GitFileFormSet
 
 class SubmissionReadFilesView(GenericSubmissionFilesListView):
     transition_method_name = 'view_noop'
-    form = f.GitFileReadOnlyFileNoteFormSet
+    form = f.GitFileReadOnlyFileFormSet
     read_only = True
 
 #We just leverage the existing form infrastructure for perm checks etc

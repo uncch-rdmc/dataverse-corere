@@ -435,47 +435,12 @@ class NoteForm(forms.ModelForm):
 
         user = CrequestMiddleware.get_request().user
         path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
-        submission = None
-        try:
-            path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
-            if(path_obj_name == "submission"):
-                pass
-                # submission = self.instance.parent_submission
-                # if not submission:
-                #     print("NOT")
-                #     submission = m.Submission.objects.get(id=path_obj_id)
-                # print("NOTE FORM INIT1c time: ", time.time() - start_time)
-                # manuscript = submission.manuscript
-                # print("NOTE FORM INIT1d time: ", time.time() - start_time)
-            elif(path_obj_name == "edition"):
-                manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "curation"):
-                manuscript = m.Curation.objects.get(id=path_obj_id).submission.manuscript
-            elif(path_obj_name == "verification"):
-                manuscript = m.Verification.objects.get(id=path_obj_id).submission.manuscript
-            else:
-                raise TypeError("Object name parsed from url string for note form does not match our lookup")
-        except KeyError: #during creation, id we want is different
-            try: #creating a sub on a manuscript
-                manuscript = m.Manuscript.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['manuscript_id'])
-            except KeyError: #creating a edition/curation/verification on a submission
-                try:
-                    manuscript = m.Submission.objects.get(id=CrequestMiddleware.get_request().resolver_match.kwargs['submission_id']).manuscript
-                except KeyError:
-                    raise TypeError("Object name parsed from url string for note form does not match our lookup, during create")
 
         if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
             self.fields.pop('scope')
         else:       
             #Populate scope field depending on existing roles
             role_count = 0
-            # for role in c.get_roles():
-            #     if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
-            #         print("NOTE INIT ROLES")
-            #         existing_roles.append(role)
-                # role_perms = get_perms(Group.objects.get(name=role), self.instance)
-                # if(c.PERM_NOTE_VIEW_N in role_perms):
-                #     existing_roles.append(role)
             for checker in checkers:
                 if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
                     role_count += 1
@@ -486,7 +451,6 @@ class NoteForm(forms.ModelForm):
 
         self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
-            #if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #Disabled, more obtuse
             if(self.instance.creator != user): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
@@ -497,7 +461,7 @@ class NoteForm(forms.ModelForm):
         note_ref_choices = note_ref_choices + m.GitFile.FileTag.choices
         files = []
         if submission:
-            files = sub_files#submission.submission_files.all().order_by('path','name')
+            files = sub_files
         for file in files:
             note_ref_choices = note_ref_choices + [( file.path+file.name, file.name)]
             
@@ -541,18 +505,17 @@ class NoteForm(forms.ModelForm):
             file_full_paths = []
             for file in files:
                 file_full_paths = file_full_paths + [file.path+file.name]
+            self.instance.ref_file_type = ''
+            self.instance.ref_file = None
 
             if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
                 self.instance.ref_file_type = self.cleaned_data['note_reference']
-                self.instance.ref_file = None
-                self.instance.save()
-
             elif(self.cleaned_data['note_reference'] in file_full_paths):
                 file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
                 file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
                 self.instance.ref_file = file
-                self.instance.ref_file_type = ''
-                self.instance.save()
+
+            self.instance.save()
 
 class BaseNoteFormSet(BaseInlineFormSet):
     #only allow deleting of user-owned notes. we also disable the checkbox via JS
@@ -595,40 +558,6 @@ NoteSubmissionFormset = inlineformset_factory(
         'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
     )
 
-NoteEditionFormset = inlineformset_factory(
-    m.Edition, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteCurationFormset = inlineformset_factory(
-    m.Curation, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        # 'creator': CreatorChoiceField(),
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
-NoteVerificationFormset = inlineformset_factory(
-    m.Verification, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
-
 ############# GitFile (File Metadata) Views Forms #############
 
 #TODO: Making this generic may have been pointless, not sure if its needed?
@@ -660,18 +589,6 @@ class BaseFileNestingFormSet(BaseInlineFormSet):
                 if not self._should_delete_form(form):
                     form.nested.save(commit=commit)
         return result
-
-#TODO: Delete eventually, only used for file notes
-NoteGitFileFormset = inlineformset_factory(
-    m.GitFile, 
-    m.Note, 
-    extra=1,
-    form=NoteForm,
-    formset=BaseNoteFormSet,
-    fields=("creator","text"),
-    widgets={
-        'text': Textarea(attrs={'rows':1, 'placeholder':'Write your new note...'}) }
-    )
 
 class GitFileForm(forms.ModelForm):
     class Meta:
@@ -725,16 +642,10 @@ class DownloadGitFileWidget(forms.widgets.TextInput):
             },
         }
 
-#TODO: Delete eventually, only used for file notes
-#Needed for another level of nesting
-class NestedSubFileNoteFormSet(BaseFileNestingFormSet):
-    nested_formset = NoteGitFileFormset
-
-GitFileNoteFormSet = inlineformset_factory(
+GitFileFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileForm,
-    #formset=NestedSubFileNoteFormSet, #Adds file notes
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
@@ -743,11 +654,10 @@ GitFileNoteFormSet = inlineformset_factory(
         'description': Textarea(attrs={'rows':1}) }
 )
 
-GitFileReadOnlyFileNoteFormSet = inlineformset_factory(
+GitFileReadOnlyFileFormSet = inlineformset_factory(
     m.Submission,
     m.GitFile,
     form=GitFileReadOnlyFileForm,
-    #formset=NestedSubFileNoteFormSet, #Adds file notes
     fields=('name','path','tag','description','md5','size','date'),
     extra=0,
     can_delete=False,
