@@ -8,6 +8,7 @@ from corere.main import forms as f #TODO: bad practice and I don't use them all
 from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from guardian.core import ObjectPermissionChecker
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
 from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form
@@ -406,7 +407,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset") #TODO: This was set to `= formset`, maybe can delete that variable now?
+            checker = ObjectPermissionChecker(request.user)
+            notes = m.Note.objects.all() #TODO: probalby shouldn't fetch ALL notes
+            checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by('path','name')
+
+            context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset", 
+                form_kwargs={'checker': checker, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files}) #TODO: This was set to `= formset`, maybe can delete that variable now?
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):

@@ -425,7 +425,11 @@ class NoteForm(forms.ModelForm):
 
     note_reference = forms.CharField(label='File/Category', widget=forms.Select()) #TODO: This should actually be populated during the init
 
-    def __init__ (self, *args, **kwargs):
+    #Checker is for passing prefeteched django-guardian permissions
+    #https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
+    #Other args are also passed in for performance improvements across all the notes
+    def __init__ (self, *args, checker, manuscript, submission, sub_files, **kwargs):
+        start_time = time.time()
         super(NoteForm, self).__init__(*args, **kwargs)
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
@@ -436,8 +440,14 @@ class NoteForm(forms.ModelForm):
         try:
             path_obj_id = CrequestMiddleware.get_request().resolver_match.kwargs['id']
             if(path_obj_name == "submission"):
-                submission = m.Submission.objects.get(id=path_obj_id)
-                manuscript = submission.manuscript
+                pass
+                # submission = self.instance.parent_submission
+                # if not submission:
+                #     print("NOT")
+                #     submission = m.Submission.objects.get(id=path_obj_id)
+                # print("NOTE FORM INIT1c time: ", time.time() - start_time)
+                # manuscript = submission.manuscript
+                # print("NOTE FORM INIT1d time: ", time.time() - start_time)
             elif(path_obj_name == "edition"):
                 manuscript = m.Edition.objects.get(id=path_obj_id).submission.manuscript
             elif(path_obj_name == "curation"):
@@ -461,9 +471,11 @@ class NoteForm(forms.ModelForm):
             #Populate scope field depending on existing roles
             existing_roles = []
             for role in c.get_roles():
-                role_perms = get_perms(Group.objects.get(name=role), self.instance)
-                if(c.PERM_NOTE_VIEW_N in role_perms):
+                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
                     existing_roles.append(role)
+                # role_perms = get_perms(Group.objects.get(name=role), self.instance)
+                # if(c.PERM_NOTE_VIEW_N in role_perms):
+                #     existing_roles.append(role)
             if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
                 self.fields['scope'].initial = 'public'
             else:
@@ -471,18 +483,21 @@ class NoteForm(forms.ModelForm):
 
         self.fields['creator'].disabled = True
         if(self.instance.id): #if based off existing note
-            if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            #if(not m.Note.objects.filter(id=self.instance.id, creator=user).exists()): #Disabled, more obtuse
+            if(self.instance.creator != user): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
         #Initialize note_reference
+        #Note: I tried moving this to classes.py to not repeat it, but it didn't get faster. So leaving it here.
         note_ref_choices = [('---','---')]
         note_ref_choices = note_ref_choices + m.GitFile.FileTag.choices
         files = []
         if submission:
-            files = submission.submission_files.all().order_by('path','name')
+            files = sub_files#submission.submission_files.all().order_by('path','name')
         for file in files:
             note_ref_choices = note_ref_choices + [( file.path+file.name, file.name)]
+            
         self.fields['note_reference'].widget.choices = note_ref_choices
 
         #Populate the existing values for note_reference
