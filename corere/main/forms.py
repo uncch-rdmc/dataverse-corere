@@ -428,8 +428,7 @@ class NoteForm(forms.ModelForm):
     #Checker is for passing prefeteched django-guardian permissions
     #https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
     #Other args are also passed in for performance improvements across all the notes
-    def __init__ (self, *args, checker, manuscript, submission, sub_files, **kwargs):
-        start_time = time.time()
+    def __init__ (self, *args, checkers, manuscript, submission, sub_files, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
@@ -469,14 +468,18 @@ class NoteForm(forms.ModelForm):
             self.fields.pop('scope')
         else:       
             #Populate scope field depending on existing roles
-            existing_roles = []
-            for role in c.get_roles():
-                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
-                    existing_roles.append(role)
+            role_count = 0
+            # for role in c.get_roles():
+            #     if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
+            #         print("NOTE INIT ROLES")
+            #         existing_roles.append(role)
                 # role_perms = get_perms(Group.objects.get(name=role), self.instance)
                 # if(c.PERM_NOTE_VIEW_N in role_perms):
                 #     existing_roles.append(role)
-            if(len(existing_roles) == len(c.get_roles())): #pretty crude check, if all roles then its public
+            for checker in checkers:
+                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
+                    role_count += 1
+            if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
                 self.fields['scope'].initial = 'public'
             else:
                 self.fields['scope'].initial = 'private'
