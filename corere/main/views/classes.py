@@ -273,7 +273,7 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     redirect = "/"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    template = 'main/manuscript_super_form.html'
+    template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
     page_header = "Edit Manuscript"
 

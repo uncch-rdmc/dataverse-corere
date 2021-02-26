@@ -852,7 +852,7 @@ class Note(AbstractCreateUpdateModel):
         refs += (self.ref_file_type is not '')
         if(refs > 1):
             raise AssertionError("Multiple References set")
-
+            
         first_save = False
         if not self.pk:
             first_save = True

@@ -13,8 +13,7 @@
     {% comment %} {% if not read_only %} {% endcomment %}
     <input type="submit" name="submit" value="Save">
     {% comment %} {% endif %} {% endcomment %}
-    {% block extrabuttons %}
-    {% endblock %}
+
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
 {% if obj_type != 'manuscript' %}

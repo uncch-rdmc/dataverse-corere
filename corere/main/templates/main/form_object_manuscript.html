@@ -52,6 +52,7 @@
         {% crispy keyword_formset keyword_inline_helper %}
     {% endif %}
     {% if not read_only %}
+
     <input type="submit" name="submit" value="Save">
         {% if role_name == "Author" or role_name == "Admin" %}
             {% if m_status == "new" %}
@@ -59,8 +60,6 @@
             {% endif %}
         {% endif %}
     {% endif %}
-    {% block extrabuttons %}
-    {% endblock %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
 {% if obj_type != 'manuscript' %}
