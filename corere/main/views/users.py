@@ -15,6 +15,7 @@ from django.conf import settings
 from notifications.signals import notify
 from django.http import Http404
 from corere.main.templatetags.auth_extras import has_group
+from corere.main.utils import fsm_check_transition_perm
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -71,22 +72,31 @@ def add_author(request, id=None):
             email = form.cleaned_data['email']
             author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
             try:
-                user = m.User.get(email=email)
-                author_role.user_set.add(new_user)
+                user = User.objects.get(email=email)
+                author_role.user_set.add(user)
                 #assign role
-            except DoesNotExist:
+            except User.DoesNotExist:
                 user = helper_create_user_and_invite(request, email, author_role)
 
             manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
             manu_author_group.user_set.add(user)
 
-            messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
+            #messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
+  
+            if not fsm_check_transition_perm(manuscript.begin, request.user): 
+                logger.debug("PermissionDenied")
+                raise Http404()
+            messages.add_message(request, messages.INFO, 'Your manuscript: ' + manuscript.title + ' has been submitted!')
+            manuscript.begin()
+            manuscript.save()
+
+            return redirect('/manuscript/'+str(manuscript.id))
 
         else:
             logger.debug(form.errors) #TODO: DO MORE?
 
     return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'page_header': "Assign Author to Verify this Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Author', 'page_header': "Assign Author to Verify this Manuscript"})
 
 
 @login_required

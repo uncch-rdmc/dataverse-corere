@@ -156,6 +156,7 @@ def create_submission_branch(submission):
     repo = git.Repo(get_submission_repo_path(submission.manuscript))
     repo.create_head(helper_get_submission_branch_name(submission))
 
+#TODO: This actually returns a generator, we should probably name it differently or switch it to a list
 # When initially called, repo_path and rel_path should be the same.
 def helper_list_paths(root_tree, repo_path, rel_path):
     for blob in root_tree.blobs:

@@ -4,11 +4,23 @@
 <form class="dropzone" action="." method="post" enctype="multipart/form-data" id="dropform">
     {% csrf_token %}
 </form>
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if not read_only %}
+        {% if m_status == "new" %}
+            <input type=button value="Back" onclick="location.href='../edit/'">
+            <input type="submit" name="submit_continue" value="Continue">
+        {% else %}
+            <input type=button value="Home" onClick="location.href='/'">
+        {% endif %}
+    {% endif %}
+</form>
 <script type="text/javascript">
     obj_type = "{{obj_type}}"
     obj_id = {{ obj_id }}
     Dropzone.options.dropform = {
         parallelUploads: 1,
+        url: '../uploader/',
         init: function () {
             this.on('success', function(file) {
                 var args = Array.prototype.slice.call(arguments);          
@@ -21,7 +33,6 @@
                     data.append("fullPath", file.fullPath);
                 }
             });
-
         }
     };
 

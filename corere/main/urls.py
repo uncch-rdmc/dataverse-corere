@@ -10,6 +10,7 @@ urlpatterns = [
     path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit/', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
     path('manuscript/<int:id>/uploadfiles/', classes.ManuscriptUploadFilesView.as_view(), name="manuscript_uploadfiles"),
+    path('manuscript/<int:id>/uploader/', classes.ManuscriptUploaderView.as_view(), name="manuscript_uploader"),
     path('manuscript/<int:id>/fileslist/', classes.ManuscriptFilesListAjaxView.as_view(),name="manuscript_fileslist"),
     path('manuscript/<int:id>/view/', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
     path('manuscript/<int:id>/viewfiles/', classes.ManuscriptReadFilesView.as_view(), name="manuscript_readfiles"),

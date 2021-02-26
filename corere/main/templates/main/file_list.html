@@ -6,14 +6,15 @@
     {% endif %}
     
     <div id="filesHeaderDiv" 
-        {% if not repo_dict_list %}
+        {% if not repo_dict_gen %}
             style="visibility:hidden;"
         {% endif %} > 
+        </br>
         Files: 
     </div>
 
     <table id="filestable">
-        {% for path in repo_dict_list %}
+        {% for path in repo_dict_gen %}
         <tr>
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
             {% if not read_only %}

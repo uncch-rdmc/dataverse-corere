@@ -1,11 +1,14 @@
 {% extends "main/layout.html" %}
 {% block content %}
-File Access: {{root_object_title}}
-<br>
+
+{% if m_status == "new" %}
+<p>Please upload your manuscript files (manuscript and appendix):</p>
+{% else %}
+<p>File Access: {{root_object_title}}</p>
+{% endif %}
 {% if not read_only %}
 {% include "main/file_upload.html" %}
 {% endif %}
-<input type=button value="Back" onClick="javascript:history.go(-1);">
 {% include "main/file_list.html" %}
 <script>
     function delete_and_refresh(delete_url, id, obj_type){
