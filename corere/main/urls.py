@@ -14,6 +14,7 @@ urlpatterns = [
     path('manuscript/<int:id>/view/', classes.ManuscriptReadView.as_view(), name="manuscript_read"),
     path('manuscript/<int:id>/viewfiles/', classes.ManuscriptReadFilesView.as_view(), name="manuscript_readfiles"),
     path('manuscript/<int:id>/inviteassignauthor/', users.invite_assign_author, name="manuscript_inviteassignauthor"),
+    path('manuscript/<int:id>/addauthor/', users.add_author, name="manuscript_addauthor"),
     path('manuscript/<int:id>/unassignauthor/<int:user_id>/', users.unassign_author, name="manuscript_unassignauthor"),
     path('manuscript/<int:id>/assigneditor/', users.assign_editor, name="manuscript_assigneditor"),
     path('manuscript/<int:id>/unassigneditor/<int:user_id>/', users.unassign_editor, name="manuscript_unassigneditor"),

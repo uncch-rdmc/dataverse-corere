@@ -236,16 +236,22 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.data_source_formset.save()
             self.keyword_formset.save()
             
-            if request.POST.get('submit_progress_manuscript'):
-                if not fsm_check_transition_perm(self.object.begin, request.user): 
-                    logger.debug("PermissionDenied")
-                    raise Http404()
-                self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been submitted!'
-                self.object.begin()
-                self.object.save()
+#TODO: This logic should be moved to where we actually trigger progress
+            # if request.POST.get('submit_progress_manuscript'):
+            #     if not fsm_check_transition_perm(self.object.begin, request.user): 
+            #         logger.debug("PermissionDenied")
+            #         raise Http404()
+            #     self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been submitted!'
+            #     self.object.begin()
+            #     self.object.save()
             
-            messages.add_message(request, messages.SUCCESS, self.message)
-            return redirect(self.redirect)
+            
+            if request.POST.get('submit_continue'):
+                messages.add_message(request, messages.SUCCESS, self.message)
+                #return redirect('manuscript_addauthor', id=self.object.id)
+                return redirect('manuscript_uploadfiles', id=self.object.id)
+            else:
+                return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)      
             logger.debug(self.author_formset.errors)

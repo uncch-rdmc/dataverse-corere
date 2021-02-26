@@ -77,6 +77,12 @@ def tooltip_labels(model, field_strings):
 
 #-------------------------
 
+
+#For editors adding authors during manuscript creation
+class AuthorAddForm(forms.Form):
+    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
+    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
+
 class CustomSelect2UserWidget(forms.SelectMultiple):
     class Media:
         js = ('main/select2_table.js',)
@@ -84,9 +90,10 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
     def render(self, name, value, attrs=None, renderer=None):
         return super().render(name, value, attrs, renderer)
 
+#For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
     # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
-    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
     users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
 class EditorAddForm(forms.Form):

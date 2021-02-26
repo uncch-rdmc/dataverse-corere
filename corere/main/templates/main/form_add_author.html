@@ -1,0 +1,40 @@
+{% extends "main/layout.html" %}
+{% block content %}
+{% load groups_contain_count %}
+{% load crispy_forms_tags %}
+{% comment %} {{ form.media.css }} {% endcomment %}
+
+{% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
+<script type="text/javascript">
+    {% autoescape off %}
+    user_table_map=new Map({{ select_table_info }});
+    {% endautoescape %}
+    function unassign(manuscriptid, rolename, userid) {
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch('/manuscript/'+manuscriptid+'/unassign'+rolename+'/'+userid, {
+            method: 'POST',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        })
+    }
+</script>
+<h5 class="my-3"> {{page_header}}: {{root_object_title}}</h5>
+Please enter the email address of the Author who you want to submit the manuscript data in CoReRe. They will be assigned to the manuscript (and invited to CoReRE if they are not already a user).
+</br></br>
+<form action="" method="post">
+    {% csrf_token %}
+    <table>
+        {{form|crispy}}
+    </table>
+    <input type="submit" name="submit" value="Submit">
+    <input type=button value="Back" onClick="javascript:history.go(-1);">
+</form>
+
+{{ form.media.js }}
+
+{% endblock content %}

@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorAddForm, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -35,7 +35,7 @@ def invite_assign_author(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
-            users = list(form.cleaned_data['users_to_add'])
+            users = list(form.cleaned_data['users_to_add']) 
 
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
@@ -56,7 +56,38 @@ def invite_assign_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_header': "Invite and Assign Author to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_header': "Assign Author to Verify this Manuscript"})
+
+@login_required
+@permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+def add_author(request, id=None):
+    group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
+    form = AuthorAddForm(request.POST or None)
+    manuscript = Manuscript.objects.get(pk=id)
+    if(manuscript.is_complete()):
+        raise Http404()
+    if request.method == 'POST':
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
+            try:
+                user = m.User.get(email=email)
+                author_role.user_set.add(new_user)
+                #assign role
+            except DoesNotExist:
+                user = helper_create_user_and_invite(request, email, author_role)
+
+            manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
+            manu_author_group.user_set.add(user)
+
+            messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an Author!'.format(email))
+
+        else:
+            logger.debug(form.errors) #TODO: DO MORE?
+
+    return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'page_header': "Assign Author to Verify this Manuscript"})
+
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
