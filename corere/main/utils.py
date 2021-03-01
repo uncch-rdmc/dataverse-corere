@@ -1,6 +1,7 @@
 import logging
 logger = logging.getLogger(__name__)  
 from django.http import Http404
+from django.contrib.auth.models import Group
 #from corere.main.models import Manuscript, User
 
 # For use by the python-social-auth library pipeline.
@@ -58,3 +59,13 @@ def get_role_name_for_form(user, manuscript, session):
             logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
             raise Http404()
     
+
+def get_pretty_user_list_by_group(group):
+    userset = Group.objects.get(name=group).user_set.all()
+    user_list_pretty = []
+    for user in userset:
+        if(not user.first_name and not user.last_name):
+            user_list_pretty += [user.email]
+        else:
+            user_list_pretty += [user.first_name + ' ' + user.last_name + ' (' +user.email +')']
+    return user_list_pretty
