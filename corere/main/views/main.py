@@ -58,20 +58,18 @@ def manuscript_landing(request, id=None):
     if(has_transition_perm(manuscript.add_submission_noop, request.user)):
         manuscript_avail_buttons.append('createSubmission')
 
-    print(json.dumps(manuscript_avail_buttons))
-
-    # manuscript_authors = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
-    # manuscript_editors = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
-    # manuscript_curators = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
-    # manuscript_verifiers = list(Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id)).user_set.values_list('username', flat=True))
-
     manuscript_authors = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
     manuscript_editors = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
     manuscript_curators = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
     manuscript_verifiers = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
 
+    first_submission = True
+    if(manuscript.manuscript_submissions.count() > 0):
+        first_submission = False
+
     args = {'user':     request.user, 
             "manuscript_id": id,
+            "first_submission": first_submission,
             "manuscript_title": manuscript.title,
             "manuscript_authors": manuscript_authors,
             "manuscript_editors": manuscript_editors,

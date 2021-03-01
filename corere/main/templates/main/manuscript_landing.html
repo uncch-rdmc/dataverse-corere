@@ -63,7 +63,11 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
+                                    {% if first_submission %}
+                                        window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
+                                    {% else %}
+                                        window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
+                                    {% endif %}
                                 },
                                 enabled: createSubButton
                             },

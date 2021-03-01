@@ -9,13 +9,19 @@
     {% csrf_token %}
     {{ children_formset.non_form_errors }}
     {% crispy children_formset helper %}
-
-    <input type="submit" name="submit" value="Save">
-    {% if not read_only %}
-        <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = '../uploadfiles/';">
+    {% if s_status == "new" %}
+        <input type=button value="Back" onclick="location.href='../uploadfiles/'">
+        <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+        <input type="submit" name="submit" value="Save" onClick="confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');">
+    {% else %}
+        <input type=button value="Back" onclick="location.href='..'">
+        <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+        <input type="submit" name="submit" value="Save">
     {% endif %}
-    <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
-    <input type="button" value="Back" onClick="javascript:history.go(-1);">
+    {% comment %} {% if not read_only %}
+        <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = '../uploadfiles/';">
+    {% endif %} {% endcomment %}
+    
 </form>
 
 <script>

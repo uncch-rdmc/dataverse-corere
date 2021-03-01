@@ -56,6 +56,9 @@
         {% if create %}
             <input type=button value="Home" onClick="location.href='/';">
             <input type="submit" name="submit_continue" value="Create and Continue">
+        {% elif from_submission %}
+            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/';}">
+            <input type="submit" name="submit_continue_submission" value="Save and Continue">
         {% elif m_status == "new" %}
             <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/';}">
             <input type="submit" name="submit_continue" value="Save and Continue">
