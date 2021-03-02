@@ -776,7 +776,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files.html'
     helper=f.GitFileFormSetHelper()
     page_header = "Edit File Metadata for Submission"
@@ -799,8 +799,9 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
         formset = self.form
         if formset.is_valid():
             formset.save() #Note: this is what saves a newly created model instance
-
-            if self.object._status == "new":
+            if request.POST.get('back_save'):
+                return redirect('submission_uploadfiles', id=self.object.id)
+            elif self.object._status == "new":
                 if not fsm_check_transition_perm(self.object.submit, request.user): 
                     logger.debug("PermissionDenied")
                     raise Http404()
@@ -819,11 +820,11 @@ class GenericSubmissionFilesListView(LoginRequiredMixin, GetOrGenerateObjectMixi
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
             'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
 
-class SubmissionEditFilesView(GenericSubmissionFilesListView):
+class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
     form = f.GitFileFormSet
 
-class SubmissionReadFilesView(GenericSubmissionFilesListView):
+class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'view_noop'
     form = f.GitFileReadOnlyFileFormSet
     read_only = True
