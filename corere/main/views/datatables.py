@@ -177,32 +177,32 @@ class SubmissionJson(CorereBaseDatatableView):
         elif column[0] == 'buttons': 
             avail_buttons = []
 
-#TODO: Here we allow edit submission to be done at multiple phases
+            #Here we allow edit submission to be done at multiple phases
             if(has_transition_perm(submission.edit_noop, user)
                or has_transition_perm(submission.add_edition_noop, user)
                or has_transition_perm(submission.add_curation_noop, user)
                or has_transition_perm(submission.add_verification_noop, user) ):
                 avail_buttons.append('editSubmission')
-                avail_buttons.append('editSubmissionFiles')
+                #avail_buttons.append('editSubmissionFiles')
             else:
                 try:
                     if(has_transition_perm(submission.submission_edition.edit_noop, user)):
                         avail_buttons.append('editSubmission')
-                        avail_buttons.append('editSubmissionFiles')
+                        #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_curation.edit_noop, user)):
                         avail_buttons.append('editSubmission')
-                        avail_buttons.append('editSubmissionFiles')
+                        #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_verification.edit_noop, user)):
                         avail_buttons.append('editSubmission')
-                        avail_buttons.append('editSubmissionFiles')
+                        #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
 
@@ -213,14 +213,12 @@ class SubmissionJson(CorereBaseDatatableView):
                     avail_buttons.append('viewSubmissionFiles')
 #TODO: Probably delete this after we move everything to submission
 
-
-            if(has_transition_perm(submission.submit, user)):
-                avail_buttons.append('progressSubmission')
+            # if(has_transition_perm(submission.submit, user)):
+            #     avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.generate_report, user)):
                 avail_buttons.append('generateReportForSubmission')
             if(has_transition_perm(submission.return_submission, user)):
                 avail_buttons.append('returnSubmission')
-
 
             return avail_buttons
         elif column[0] == 'version_id': 

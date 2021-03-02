@@ -296,14 +296,6 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### Queries #####
 
-    #TODO return the notes in this order:
-    # - general notes
-    # - notes related to a category
-    # - notes related to tags
-    
-    #TODO: I think I actually need to write more queries for each sub-type,instead of appending and all that junk
-
-
     def get_public_curator_notes_general(self):
         return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
 
@@ -673,7 +665,8 @@ class Manuscript(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
     
     #Extra function defined so fsm errors can be passed to use when submitting a form.
-    #Conditions: Authors needed, files uploaded [NOT DONE]
+    #Conditions: Authors needed, files uploaded [NOT ADDED YET]
+    #Note: Right now we enforce the files through a UI check as part of the flow. We don't check it again at the end when begin is called.
     def can_begin_return_problems(self):
         problems = []
         # Are there any authors assigned to the manuscript?
