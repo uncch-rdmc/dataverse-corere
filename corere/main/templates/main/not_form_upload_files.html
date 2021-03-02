@@ -4,7 +4,7 @@
 {% if m_status == "new" %}
 <p>Please upload your manuscript files (manuscript and appendix):</p>
 {% else %}
-<p>File Access: {{root_object_title}}</p>
+<h5>File Access: {{root_object_title}}</h5>
 {% endif %}
 {% if not read_only %}
 {% include "main/file_upload.html" %}
