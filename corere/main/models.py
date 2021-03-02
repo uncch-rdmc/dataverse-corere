@@ -64,6 +64,7 @@ class User(AbstractUser):
     invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+    email = models.EmailField(unique=True, blank=False)
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
@@ -294,14 +295,6 @@ class Submission(AbstractCreateUpdateModel):
                 new_gfile.save()
 
     ##### Queries #####
-
-    #TODO return the notes in this order:
-    # - general notes
-    # - notes related to a category
-    # - notes related to tags
-    
-    #TODO: I think I actually need to write more queries for each sub-type,instead of appending and all that junk
-
 
     def get_public_curator_notes_general(self):
         return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
@@ -672,7 +665,8 @@ class Manuscript(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
     
     #Extra function defined so fsm errors can be passed to use when submitting a form.
-    #Conditions: Authors needed, files uploaded [NOT DONE]
+    #Conditions: Authors needed, files uploaded [NOT ADDED YET]
+    #Note: Right now we enforce the files through a UI check as part of the flow. We don't check it again at the end when begin is called.
     def can_begin_return_problems(self):
         problems = []
         # Are there any authors assigned to the manuscript?
@@ -852,7 +846,7 @@ class Note(AbstractCreateUpdateModel):
         refs += (self.ref_file_type is not '')
         if(refs > 1):
             raise AssertionError("Multiple References set")
-
+            
         first_save = False
         if not self.pk:
             first_save = True

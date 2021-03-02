@@ -51,17 +51,23 @@
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
     {% endif %}
+
     {% if not read_only %}
-    <input type="submit" name="submit" value="Save">
-        {% if role_name == "Author" or role_name == "Admin" %}
-            {% if m_status == "new" %}
-            <input type="submit" name="submit_progress_manuscript" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
-            {% endif %}
+        {% if create %}
+            <input type=button value="Home" onClick="location.href='/';">
+            <input type="submit" name="submit_continue" value="Create and Continue">
+        {% elif from_submission %}
+            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/';}">
+            <input type="submit" name="submit_continue_submission" value="Save and Continue">
+        {% elif m_status == "new" %}
+            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/';}">
+            <input type="submit" name="submit_continue" value="Save and Continue">
+        {% else %}
+            <input type=button value="Home" onClick="location.href='/';">
+            <input type="submit" name="submit" value="Save">
         {% endif %}
     {% endif %}
-    {% block extrabuttons %}
-    {% endblock %}
-    <input type=button value="Back" onClick="javascript:history.go(-1);">
+
 </form>
 {% if obj_type != 'manuscript' %}
 <script>

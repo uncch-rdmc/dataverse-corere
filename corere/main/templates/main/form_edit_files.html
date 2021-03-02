@@ -5,18 +5,28 @@
 {% load always_escape %}
 
 <h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
+
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ children_formset.non_form_errors }}
     {% crispy children_formset helper %}
-
-    <input type="submit" name="submit" value="Save">
-    {% if not read_only %}
-        <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = '../uploadfiles/';">
+    {% if s_status == "new" %}
+        <input type="submit" name="back_save" value="Back">
+        <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+        {% if not read_only %}
+        <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');">
+        {% endif %}
+    {% else %}
+        <input type=button value="Home" onclick="location.href='/manuscript/{{parent_id}}/'">
+        <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+        {% if not read_only %}
+        <input type="submit" name="submit" value="Save">
+        {% endif %}
     {% endif %}
-    <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
-    {% block extrabuttons %}{% endblock %}
-    <input type="button" value="Back" onClick="javascript:history.go(-1);">
+    {% comment %} {% if not read_only %}
+        <input type="button" name="upload" value="Upload/Delete Files" onClick="window.location.href = '../uploadfiles/';">
+    {% endif %} {% endcomment %}
+    
 </form>
 
 <script>

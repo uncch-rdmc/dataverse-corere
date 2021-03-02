@@ -63,7 +63,11 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
+                                    {% if first_submission %}
+                                        window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
+                                    {% else %}
+                                        window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
+                                    {% endif %}
                                 },
                                 enabled: createSubButton
                             },
@@ -184,6 +188,7 @@
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
                     submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+                    submission_status = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
                     //edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
                     //curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
                     //verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
@@ -191,6 +196,10 @@
                     for(var i in avail_buttons) {
                         dt.button(avail_buttons[i]+':name').enable(true);
                         dt.button(avail_buttons[i]+':name').nodes().css("display", "block");
+                    }
+                    if(submission_status == "New") {
+                        dt.button('viewSubmissionFiles:name').enable(false);
+                        dt.button('viewSubmissionFiles:name').nodes().css("display", "none");
                     }
                     fixButtonGroupCurve();
 
@@ -249,10 +258,10 @@
         {% endif %}
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
-        {% if m_begin_flag %} 
+        {% comment %} {% if m_begin_flag %}  {% endcomment %}
             {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
             {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
-        {% endif %}
+        {% comment %} {% endif %} {% endcomment %}
         {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
             <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
             <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">

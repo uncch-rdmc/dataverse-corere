@@ -1,28 +1,41 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/basic.min.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
-<form class="dropzone" action="." method="post" enctype="multipart/form-data" id="dropform">
-    {% csrf_token %}
-</form>
-<script type="text/javascript">
-    obj_type = "{{obj_type}}"
-    obj_id = {{ obj_id }}
-    Dropzone.options.dropform = {
-        parallelUploads: 1,
-        init: function () {
-            this.on('success', function(file) {
-                var args = Array.prototype.slice.call(arguments);          
-                $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
-                this.removeFile(file);
-            });
-            this.on("sending", function(file, xhr, data) {
-                // if file is actually a folder
-                if(file.fullPath){
-                    data.append("fullPath", file.fullPath);
-                }
-            });
+{% if not read_only %}
+    <form class="dropzone" action="." method="post" enctype="multipart/form-data" id="dropform">
+        {% csrf_token %}
+    </form>
+    <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        {% if m_status == "new" or s_status == "new" %}
+            <input type=button value="Back" onclick="location.href='../edit/'">
+            <input type="submit" name="submit_continue" value="Continue">
+        {% else %}
+            <input type=button value="Home" onClick="location.href='/'">
+        {% endif %}
+        
+    </form>
+    <script type="text/javascript">
+        obj_type = "{{obj_type}}"
+        obj_id = {{ obj_id }}
+        Dropzone.options.dropform = {
+            parallelUploads: 1,
+            url: '../uploader/',
+            init: function () {
+                this.on('success', function(file) {
+                    var args = Array.prototype.slice.call(arguments);          
+                    $("#filesWithHeader").load("/"+obj_type+"/"+obj_id+"/fileslist")
+                    this.removeFile(file);
+                });
+                this.on("sending", function(file, xhr, data) {
+                    // if file is actually a folder
+                    if(file.fullPath){
+                        data.append("fullPath", file.fullPath);
+                    }
+                });
+            }
+        };
 
-        }
-    };
-
-</script>
+    </script>
+{% endif %}
