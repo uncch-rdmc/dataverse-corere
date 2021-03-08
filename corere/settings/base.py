@@ -17,15 +17,6 @@ INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
-#TODO: Delete if we switch to local git. Also delete from env. Not sure about RECIPIENTS.
-#P.S.: What are we using MEDIA_ROOT in env.sh for?
-#CUSTOM CORERE
-GIT_CONFIG_URL = os.environ["GIT_CONFIG_URL"]
-GIT_LAB_URL = os.environ["GIT_LAB_URL"]
-GIT_API_VERSION = os.environ["GIT_API_VERSION"]
-GIT_PRIVATE_ADMIN_TOKEN = os.environ["GIT_PRIVATE_ADMIN_TOKEN"]
-RECIPIENTS = os.environ["RECIPIENTS"]
-
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
