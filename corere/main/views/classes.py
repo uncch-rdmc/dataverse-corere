@@ -639,7 +639,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
     #TODO: Move this to the top, after (probably) deleting add_formsets
     def dispatch(self, request, *args, **kwargs):
-        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session)
+        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
 
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
