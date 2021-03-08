@@ -189,6 +189,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     keyword_formset = None 
     role_name = None
     from_submission = False
+    create = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -198,7 +199,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.data_source_formset = f.ReadOnlyDataSourceFormSet
             self.keyword_formset = f.ReadOnlyKeywordFormSet
         else:
-            self.role_name = get_role_name_for_form(request.user, self.object, request.session)
+            self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
             self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
             self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
@@ -217,7 +218,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, "First, please fill out the additional info regarding your Manuscript.")
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'role_name': self.role_name, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), #'role_name': self.role_name, 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -258,7 +259,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'role_name': self.role_name, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
+            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
             'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
 
         context['author_formset'] = self.author_formset

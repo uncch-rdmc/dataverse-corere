@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(__name__)  
+from corere.main import constants as c
 from django.http import Http404
 from django.contrib.auth.models import Group
 #from corere.main.models import Manuscript, User
@@ -37,7 +38,17 @@ def fsm_check_transition_perm(bound_method, user):
 
 # If the user has the session role for the manuscript, return it
 # Otherwise, return a role they do have based on a set order
-def get_role_name_for_form(user, manuscript, session):
+# Note: This is a bit overloaded with the create logic.
+def get_role_name_for_form(user, manuscript, session, create):
+    if create:
+        if user.is_superuser:
+            return "Admin"
+        if user.groups.filter(name=c.GROUP_ROLE_EDITOR).exists():
+            return "Editor"
+        else:
+            logger.error("User "+user.username+" requested role name to create a manuscript, when they do not have the group.")
+            raise Http404()
+
     group_base_string = " Manuscript " + str(manuscript.id)
     group_string = session.get("active_role","") + group_base_string
 
