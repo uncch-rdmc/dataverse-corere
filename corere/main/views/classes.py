@@ -428,7 +428,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     curation_formset = None
     verification_formset = None
     v_metadata_formset = None
-    v_metadata_package_formset = None
     v_metadata_software_formset = None
     v_metadata_badge_formset = None
     v_metadata_audit_formset = None
@@ -437,7 +436,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         root_object_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -458,8 +457,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.v_metadata_formset is not None):
             context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
         try:
-            if(self.v_metadata_package_formset is not None):
-                context['v_metadata_package_formset'] = self.v_metadata_package_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
                 context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
@@ -467,8 +464,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             if(self.v_metadata_audit_formset is not None):
                 context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
         except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_package_formset is not None):
-                context['v_metadata_package_formset'] = self.v_metadata_package_formset(prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
                 context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
@@ -507,8 +502,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         #TODO: not sure if we need to do this ID logic in the post    
         try:
-            if(self.v_metadata_package_formset is not None):
-                self.v_metadata_package_formset = self.v_metadata_package_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
                 self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
@@ -516,8 +509,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             if(self.v_metadata_audit_formset is not None):
                 self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
         except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_package_formset is not None):
-                self.v_metadata_package_formset = self.v_metadata_package_formset(request.POST, prefix="v_metadata_package_formset")
             if(self.v_metadata_software_formset is not None):
                 self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
@@ -530,7 +521,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if not self.read_only:
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
                 and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
-                and (self.v_metadata_package_formset is None or self.v_metadata_package_formset.is_valid()) and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
+                and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
                 and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
                 self.form.save() #Note: this is what saves a newly created model instance
@@ -542,8 +533,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.verification_formset.save()
                 if(self.v_metadata_formset):
                     self.v_metadata_formset.save()
-                if(self.v_metadata_package_formset):
-                    self.v_metadata_package_formset.save()
                 if(self.v_metadata_software_formset):
                     self.v_metadata_software_formset.save()
                 if(self.v_metadata_badge_formset):
@@ -597,8 +586,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.verification_formset.errors)
                 if(self.v_metadata_formset):
                     logger.debug(self.v_metadata_formset.errors)
-                if(self.v_metadata_package_formset):
-                    logger.debug(self.v_metadata_package_formset.errors)
                 if(self.v_metadata_software_formset):
                     logger.debug(self.v_metadata_software_formset.errors)
                 if(self.v_metadata_badge_formset):
@@ -611,7 +598,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_package_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_package'), 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset
@@ -623,8 +610,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['verification_formset'] = self.verification_formset
         if(self.v_metadata_formset is not None):
             context['v_metadata_formset'] = self.v_metadata_formset
-        if(self.v_metadata_package_formset is not None):
-            context['v_metadata_package_formset'] = self.v_metadata_package_formset
         if(self.v_metadata_software_formset is not None):
             context['v_metadata_software_formset'] = self.v_metadata_software_formset
         if(self.v_metadata_badge_formset is not None):
@@ -677,13 +662,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
         except (m.Submission.DoesNotExist, KeyError):
             pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_package_formset = f.ReadOnlyVMetadataPackageVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
 
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
@@ -709,7 +687,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         #TODO: Figure out how we should do perms for these
         #self.v_metadata_formset = f.VMetadataSubmissionFormset
-        #self.v_metadata_package_formset = f.VMetadataPackageVMetadataFormset
         #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
         #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
         #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset

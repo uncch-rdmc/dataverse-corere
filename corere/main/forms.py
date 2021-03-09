@@ -933,9 +933,9 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 class VMetadataBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadata
-        fields = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+        fields = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
         #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
-        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
         labels = label_gen(model, fields, always_required)
 
     def clean(self):
@@ -1012,66 +1012,6 @@ ReadOnlyVMetadataSubmissionFormset = inlineformset_factory(
 #     extra=1,
 #     form=VMetadataForm,
 #     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-#     can_delete = True,
-# )
-
-#------------ Verification Metadata - Package -------------
-
-class VMetadataPackageBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataPackage
-        fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
-        labels = label_gen(model, fields)
-
-    # def __init__ (self, *args, **kwargs):
-    #     super(VMetadataPackageForm, self).__init__(*args, **kwargs)
-
-class VMetadataPackageForm_Admin(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Author(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Editor(ReadOnlyFormMixin, VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Curator(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Verifier(VMetadataPackageBaseForm):
-    pass
-
-VMetadataPackageVMetadataFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataPackageVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
-            m.VerificationMetadataPackage,  
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataPackageForm_"+role_str),
-            can_delete = True,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
-
-class ReadOnlyVMetadataPackageForm(ReadOnlyFormMixin, VMetadataPackageBaseForm):
-    pass
-
-ReadOnlyVMetadataPackageVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataPackage,  
-    extra=0,
-    form=ReadOnlyVMetadataPackageForm,
-    can_delete = False,
-)
-
-
-# VMetadataPackageVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataPackage,  
-#     extra=1,
-#     form=VMetadataPackageForm,
-#     fields=("name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"),
 #     can_delete = True,
 # )
 

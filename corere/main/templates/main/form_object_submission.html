@@ -7,11 +7,6 @@
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
     $(function () {
-        $('#v_metadata_package_table tbody tr').formset({
-            prefix: '{{ v_metadata_package_formset.prefix }}',
-            formCssClass: 'v_metadata_package_table',
-            addText: '{% if not read_only %}add package{% endif %}'
-        });
         $('#v_metadata_software_table tbody tr').formset({
             prefix: '{{ v_metadata_software_formset.prefix }}',
             formCssClass: 'v_metadata_software_table',
@@ -97,9 +92,6 @@
         if(!document.getElementById("id_v_metadata_formset-0-id")) {
             na_span_vametadata.style.display = "block";
         }
-        if(!document.getElementById("id_v_metadata_package_formset-0-id")) {
-            na_span_vametadata_package.style.display = "block";
-        }
         if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
             na_span_vametadata_software.style.display = "block";
         }
@@ -147,13 +139,6 @@
         {% crispy v_metadata_formset helper %}
         <span id="na_span_vametadata" style="display:none"><p>N/A</p></span>
         <hr>
-    {% endif %}
-
-    {% if v_metadata_package_formset %}
-        <h6>Verification Metadata - Packages:</h6>
-        <span id="na_span_vametadata_package" style="display:none"><p>N/A</p></span>
-        {{ v_metadata_package_formset.non_form_errors }}
-        {% crispy v_metadata_package_formset v_metadata_package_inline_helper %}
     {% endif %}
 
     {% if v_metadata_software_formset %}

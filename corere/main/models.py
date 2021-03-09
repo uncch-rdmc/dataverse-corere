@@ -869,17 +869,6 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
-#TODO: Package and software seem extremely similar, maybe we don't need both
-class VerificationMetadataPackage(models.Model):
-    name = models.CharField(max_length=200, blank=True, default="", verbose_name='Name')
-    version = models.CharField(max_length=200, blank=True, default="", verbose_name='Version')
-    source_default_repo = models.BooleanField(default=False, blank=True, verbose_name='Source - Default Repository')
-    source_cran = models.BooleanField(default=False, blank=True, verbose_name='Source - CRAN')
-    source_author_website = models.BooleanField(default=False, blank=True, verbose_name='Source - Author Website')
-    source_dataverse = models.BooleanField(default=False, blank=True, verbose_name='Source - Dataverse Archive')
-    source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Source - Other')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_packages")
-
 class VerificationMetadataSoftware(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
@@ -914,6 +903,7 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
     host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Packages Info', help_text='Please provide the list of your packages and their versions.')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
 
 ############### POST-SAVE ################
