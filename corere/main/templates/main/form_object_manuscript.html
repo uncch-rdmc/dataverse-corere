@@ -1,6 +1,7 @@
 {% extends "main/layout.html" %}
 {% block content %}
 {% load concat %}
+{% load auth_extras %}
 {% load crispy_forms_tags %}
 
 {% comment %} Disabled ajax add/remove formset entry code. Library seemed to flakey, maybe we'll use it later. {% endcomment %}
@@ -36,20 +37,24 @@
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form manuscript_helper %}
+    <hr>
     {% if author_formset %}
-        Authors:
+        Authors{% if request.user|has_group:"Role Author" %}*{% endif %}
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
+        <hr>
     {% endif %}
     {% if data_source_formset %}
-        Data Source:
+        Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
+        <hr>
     {% endif %}
     {% if keyword_formset %}
-        Keywords:
+        Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
+        <hr>
     {% endif %}
 
     {% if not read_only %}

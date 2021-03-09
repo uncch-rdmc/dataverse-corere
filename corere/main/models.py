@@ -547,7 +547,7 @@ class Author(models.Model):
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
     identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=IdScheme.choices, verbose_name='Identifier Scheme') 
     identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='Identifier')
-    position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
+    # position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
 
 class DataSource(models.Model):
@@ -590,13 +590,13 @@ class Manuscript(AbstractCreateUpdateModel):
     qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
     qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
     contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact Last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
-    producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
-    producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
+    # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
+    # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
      
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
@@ -883,7 +883,7 @@ class VerificationMetadataPackage(models.Model):
 class VerificationMetadataSoftware(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
-    code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
+    #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
 
 class VerificationMetadataBadge(models.Model):
@@ -907,7 +907,7 @@ class VerificationMetadataAudit(models.Model):
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
 
 class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Operating System')
+    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
     machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
     scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
     platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
