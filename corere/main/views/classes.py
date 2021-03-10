@@ -18,6 +18,7 @@ from django.views import View
 from corere.main import git as g
 logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
+from django.db.models import Max
 #from guardian.decorators import permission_required_or_404
 
 ########################################## GENERIC + MIXINS ##########################################
@@ -423,6 +424,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     model = m.Submission
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
+    prev_sub_vmetadata = None
 
     edition_formset = None
     curation_formset = None
@@ -432,12 +434,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     v_metadata_badge_formset = None
     v_metadata_audit_formset = None
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):     
         root_object_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
-        
+
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
                 ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
@@ -455,7 +457,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
         if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+            #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
+            #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
+            #      But I don't want to do this until things are more stable and I have tests working again.
+            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
         try:
             if(self.v_metadata_software_formset is not None):
                 context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
@@ -622,10 +627,35 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         return render(request, self.template, context)
 
+    #Custom method, called via dispatch. Copies over submission and its verification metadatas
+    #This does not copy over GitFiles, those are done later in the flow
+    def copy_previous_submission_contents(self, manuscript, version_id):
+        print("COPY PREV SUB")
+        prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
+        #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
+
+        self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
+        prev_sub.pk = None
+        prev_sub.id = None #Do I need to do both?
+        self.object = prev_sub
+
+        #print(prev_sub_vmetadata.__dict__)
+        #prev_sub_vmetadata.pk = None
+        #prev_sub_vmetadata.id = None
+        #self.object.submission_vmetadata = prev_sub_vmetadata
+
+        #Copy all verification metadatas
+
+
     #TODO: Move this to the top, after (probably) deleting add_formsets
     def dispatch(self, request, *args, **kwargs):
-        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+        #If new submission with previous submission existing, copy over data from the previous submission
+        if(request.method == 'GET' and not self.object.id):
+            prev_max_sub_version_id = m.Submission.objects.filter(manuscript=self.object.manuscript).aggregate(Max('version_id'))['version_id__max']
+            if prev_max_sub_version_id:
+                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
 
+        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
                 self.form = f.SubmissionForms[role_name]

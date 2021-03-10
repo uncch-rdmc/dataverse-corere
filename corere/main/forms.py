@@ -938,8 +938,23 @@ class VMetadataBaseForm(forms.ModelForm):
         always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
         labels = label_gen(model, fields, always_required)
 
+    #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
+    #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
+    #      But I don't want to do this until things are more stable and I have tests working again.
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+        if(previous_vmetadata):
+            self.fields['operating_system'].initial = previous_vmetadata.operating_system
+            self.fields['machine_type'].initial = previous_vmetadata.machine_type
+            self.fields['scheduler'].initial = previous_vmetadata.scheduler
+            self.fields['platform'].initial = previous_vmetadata.platform
+            self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
+            self.fields['host_url'].initial = previous_vmetadata.host_url
+            self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
+            self.fields['packages_info'].initial = previous_vmetadata.packages_info
+
+
     def clean(self):
-        print("HELLO")
         #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
         if("high_performance" in self.data.keys()):
             machine_type = self.cleaned_data.get('machine_type')

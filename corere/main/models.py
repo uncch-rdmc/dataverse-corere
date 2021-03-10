@@ -874,6 +874,7 @@ class VerificationMetadataSoftware(models.Model):
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
     #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -884,6 +885,7 @@ class VerificationMetadataBadge(models.Model):
     issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Issuing Organization')
     issuing_date = models.DateField(blank=True, null=True, verbose_name='Issuing Date')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataAudit(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -894,6 +896,7 @@ class VerificationMetadataAudit(models.Model):
     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadata(AbstractCreateUpdateModel):
     operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
@@ -905,6 +908,7 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
     packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Packages Info', help_text='Please provide the list of your packages and their versions.')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 ############### POST-SAVE ################
 
@@ -915,6 +919,10 @@ class VerificationMetadata(AbstractCreateUpdateModel):
 @receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
 @receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
+@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
+@receiver(post_save, sender=VerificationMetadataBadge, dispatch_uid="add_history_info_vmetadata_badge")
+@receiver(post_save, sender=VerificationMetadataAudit, dispatch_uid="add_history_info_vmetadata_audit")
+@receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
 def add_history_info(sender, instance, **kwargs):
     try:
         new_record, old_record = instance.history.order_by('-history_date')[:2]
