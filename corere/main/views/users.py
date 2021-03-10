@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Corere emails the user telling them to sign-up. This has a one-time 
 
 # TODO: We should probably make permissions part of our constants as well
+#Called after manuscript creation flow
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def invite_assign_author(request, id=None):
@@ -59,6 +60,7 @@ def invite_assign_author(request, id=None):
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
         'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_header': "Assign Author to Verify this Manuscript"})
 
+#Called during initial manuscript creation
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def add_author(request, id=None):

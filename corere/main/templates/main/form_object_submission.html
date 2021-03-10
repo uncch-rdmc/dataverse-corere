@@ -23,6 +23,16 @@
             addText: '{% if not read_only %}add audit{% endif %}'
         });
 
+        //inline N/A text when there are no entries (only happens during readonly)
+        if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
+            na_span_vametadata_software.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_badge_formset-0-id") && document.getElementById("na_span_vametadata_badge")) {
+            na_span_vametadata_badge.style.display = "block";
+        }
+        if(!document.getElementById("id_v_metadata_audit_formset-0-id") && document.getElementById("na_span_vametadata_audit")) {
+            na_span_vametadata_audit.style.display = "block";
+        }
 
         //checkbox conditionality and popups
         var hp_checkbox = document.getElementById('id_high_performance');
@@ -33,8 +43,11 @@
         var v_hu_div = document.getElementById('div_id_v_metadata_formset-0-host_url');
         var v_mr_div = document.getElementById('div_id_v_metadata_formset-0-memory_reqs');
         var v_ms_h = document.getElementById('title-v_metadata_software');
+        var v_ms_sp = document.getElementById('na_span_vametadata_software');
         var v_ms_tbl = document.getElementById('v_metadata_software_table');
+        var v_ms_tbl_ad = document.getElementsByClassName('v_metadata_software_table-add')[0];
         
+
         if (!hp_checkbox.checked) {
             v_mt_div.style.display = "none";
             v_s_div.style.display = "none";
@@ -43,7 +56,9 @@
             v_hu_div.style.display = "none";
             v_mr_div.style.display = "none";
             v_ms_h.style.display = "none";
+            v_ms_sp.style.display = "none";
             v_ms_tbl.style.display = "none";
+            v_ms_tbl_ad.style.display = "none";
         }
         hp_checkbox.addEventListener('change', function() {
             if (this.checked) {
@@ -55,7 +70,9 @@
                 v_hu_div.style.display = "block";
                 v_mr_div.style.display = "block";
                 v_ms_h.style.display = "block";
+                v_ms_sp.style.display = "";
                 v_ms_tbl.style.display = "";
+                v_ms_tbl_ad.style.display = "";
             } else {
                 v_mt_div.style.display = "none";
                 v_s_div.style.display = "none";
@@ -64,7 +81,9 @@
                 v_hu_div.style.display = "none";
                 v_mr_div.style.display = "none";
                 v_ms_h.style.display = "none";
+                v_ms_sp.style.display = "none";
                 v_ms_tbl.style.display = "none";
+                v_ms_tbl_ad.style.display = "none";
             } 
         });
 
@@ -87,20 +106,6 @@
                 alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
             }
         });
-        
-        //inline N/A text when there are no entries (only happens during readonly)
-        if(!document.getElementById("id_v_metadata_formset-0-id")) {
-            na_span_vametadata.style.display = "block";
-        }
-        if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
-            na_span_vametadata_software.style.display = "block";
-        }
-        if(!document.getElementById("id_v_metadata_badge_formset-0-id")) {
-            na_span_vametadata_badge.style.display = "block";
-        }
-        if(!document.getElementById("id_v_metadata_audit_formset-0-id")) {
-            na_span_vametadata_audit.style.display = "block";
-        }
 
     })
 </script>
@@ -137,8 +142,6 @@
         <h6>Verification Metadata:</h6>
         {{ v_metadata_formset.non_form_errors }}
         {% crispy v_metadata_formset helper %}
-        <span id="na_span_vametadata" style="display:none"><p>N/A</p></span>
-        <hr>
     {% endif %}
 
     {% if v_metadata_software_formset %}

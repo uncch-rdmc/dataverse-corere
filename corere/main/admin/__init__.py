@@ -1,7 +1,5 @@
 from django.contrib import admin
 from corere.main import models as m
-# from corere.main.models import Submission, Edition, Curation, Verification, Manuscript, User, Note, GitFile \
-#     ,  HistoricalSubmission, HistoricalEdition, HistoricalCuration, HistoricalVerification, HistoricalManuscript, HistoricalUser, HistoricalNote
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin

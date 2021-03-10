@@ -695,11 +695,9 @@ class GitFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html' #Adds file notes
-        self.template = 'bootstrap4/table_inline_formset.html'
+        self.template = 'main/crispy_templates/table_inline_formset_custom_gitfile.html'
         self.form_tag = False
         self.layout = Layout(
-
             Field('path', th_class="w-50"),
             Field('tag'),
             Field('description'),
@@ -952,7 +950,6 @@ class VMetadataBaseForm(forms.ModelForm):
             self.fields['host_url'].initial = previous_vmetadata.host_url
             self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
             self.fields['packages_info'].initial = previous_vmetadata.packages_info
-
 
     def clean(self):
         #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.

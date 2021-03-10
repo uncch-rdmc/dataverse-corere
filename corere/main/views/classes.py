@@ -196,15 +196,17 @@ class GenericManuscriptView(GenericCorereObjectView):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
-            self.author_formset = f.ReadOnlyAuthorFormSet
-            self.data_source_formset = f.ReadOnlyDataSourceFormSet
-            self.keyword_formset = f.ReadOnlyKeywordFormSet
+            if self.request.user.is_superuser or not self.create:
+                self.author_formset = f.ReadOnlyAuthorFormSet
+                self.data_source_formset = f.ReadOnlyDataSourceFormSet
+                self.keyword_formset = f.ReadOnlyKeywordFormSet
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
-            self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
-            self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
-            self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
+            if self.request.user.is_superuser or not self.create:
+                self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
+                self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
+                self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
 
         return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
@@ -219,30 +221,38 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, "First, please fill out the additional info regarding your Manuscript.")
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), #'role_name': self.role_name, 
-            'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
+            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
 
-        context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
-        context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
-        context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
+        if self.request.user.is_superuser or not self.create:
+            context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
+            context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
+            context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
+            context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
+            context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
+            context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
-        self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
-        self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
+        if self.request.user.is_superuser or not self.create:
+            self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
+            self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
+            self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
 
         if(isinstance(self.object, m.Manuscript)):
             root_object_title = self.object.title
         else:
             root_object_title = self.object.manuscript.title
 
-        if not self.read_only and self.form.is_valid() and self.author_formset.is_valid() and self.data_source_formset.is_valid() and self.keyword_formset.is_valid():
+        if not self.read_only and self.form.is_valid() \
+            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
             self.form.save()
-            self.author_formset.save()
-            self.data_source_formset.save()
-            self.keyword_formset.save()
+            if(self.author_formset):
+                self.author_formset.save()
+            if(self.data_source_formset):
+                self.data_source_formset.save()
+            if(self.keyword_formset):
+                self.keyword_formset.save()
 
             if request.POST.get('submit_continue'):
                 messages.add_message(request, messages.SUCCESS, self.message)
@@ -260,12 +270,15 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), 
-            'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'), 'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'), 'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword') }
+            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
 
-        context['author_formset'] = self.author_formset
-        context['data_source_formset'] = self.data_source_formset
-        context['keyword_formset'] = self.keyword_formset
+        if self.request.user.is_superuser or not self.create:
+            context['author_formset'] = self.author_formset
+            context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
+            context['data_source_formset'] = self.data_source_formset
+            context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
+            context['keyword_formset'] = self.keyword_formset
+            context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
 
         return render(request, self.template, context)
            
@@ -457,9 +470,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
         if(self.v_metadata_formset is not None):
-            #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
-            #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
-            #      But I don't want to do this until things are more stable and I have tests working again.
             context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
         try:
             if(self.v_metadata_software_formset is not None):
@@ -700,19 +710,26 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
         except (m.Submission.DoesNotExist, KeyError):
             pass
+
+        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
         try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
+            elif(self.read_only and (role_name is "Curator" or role_name is "Admin")): #This is hacky, should be a "transition" perm on the object
+                #TODO: For some reason this (and audit) aren't actually showing up. They look to have contents and I don't think the javascript is hiding them...
                 self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
         except (m.Submission.DoesNotExist, KeyError):
             pass
+        except (m.Curation.DoesNotExist, KeyError):
+            pass
         try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
+            elif(self.read_only and (role_name is "Curator" or role_name is "Admin")): #This is hacky, should be a "transition" perm on the object
                 self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
         except (m.Submission.DoesNotExist, KeyError):
+            pass
+        except (m.Curation.DoesNotExist, KeyError):
             pass
 
         #TODO: Figure out how we should do perms for these
@@ -720,8 +737,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
         #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
         #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
-
-
 
 
         return super().dispatch(request, *args, **kwargs)

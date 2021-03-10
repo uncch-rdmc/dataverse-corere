@@ -635,13 +635,13 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
-            #assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_APPROVE, group_manuscript_editor, self)
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_author, self) 
-            assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
+            #assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
             assign_perm(c.PERM_MANU_ADD_SUBMISSION, group_manuscript_author, self) 
 
             group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
