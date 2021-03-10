@@ -547,7 +547,7 @@ class Author(models.Model):
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
     identifier_scheme = models.CharField(max_length=14, blank=True, null=True,  choices=IdScheme.choices, verbose_name='Identifier Scheme') 
     identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name='Identifier')
-    position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
+    # position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
 
 class DataSource(models.Model):
@@ -590,13 +590,13 @@ class Manuscript(AbstractCreateUpdateModel):
     qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
     qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
     contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact Last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
-    producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
-    producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
+    # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
+    # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
      
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
@@ -639,9 +639,9 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm(c.PERM_MANU_APPROVE, group_manuscript_editor, self)
 
             group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
-            #assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
+            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_author, self) 
-            assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
+            #assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
             assign_perm(c.PERM_MANU_ADD_SUBMISSION, group_manuscript_author, self) 
 
             group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
@@ -869,22 +869,12 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
-#TODO: Package and software seem extremely similar, maybe we don't need both
-class VerificationMetadataPackage(models.Model):
-    name = models.CharField(max_length=200, blank=True, default="", verbose_name='Name')
-    version = models.CharField(max_length=200, blank=True, default="", verbose_name='Version')
-    source_default_repo = models.BooleanField(default=False, blank=True, verbose_name='Source - Default Repository')
-    source_cran = models.BooleanField(default=False, blank=True, verbose_name='Source - CRAN')
-    source_author_website = models.BooleanField(default=False, blank=True, verbose_name='Source - Author Website')
-    source_dataverse = models.BooleanField(default=False, blank=True, verbose_name='Source - Dataverse Archive')
-    source_other = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Source - Other')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_packages")
-
 class VerificationMetadataSoftware(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
-    code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
+    #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -895,6 +885,7 @@ class VerificationMetadataBadge(models.Model):
     issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Issuing Organization')
     issuing_date = models.DateField(blank=True, null=True, verbose_name='Issuing Date')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataAudit(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -905,16 +896,19 @@ class VerificationMetadataAudit(models.Model):
     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Operating System')
+    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
     machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
     scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
     platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
     processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
     host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Packages Info', help_text='Please provide the list of your packages and their versions.')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 ############### POST-SAVE ################
 
@@ -925,6 +919,10 @@ class VerificationMetadata(AbstractCreateUpdateModel):
 @receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
 @receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
+@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
+@receiver(post_save, sender=VerificationMetadataBadge, dispatch_uid="add_history_info_vmetadata_badge")
+@receiver(post_save, sender=VerificationMetadataAudit, dispatch_uid="add_history_info_vmetadata_audit")
+@receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
 def add_history_info(sender, instance, **kwargs):
     try:
         new_record, old_record = instance.history.order_by('-history_date')[:2]

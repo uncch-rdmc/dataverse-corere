@@ -1,6 +1,5 @@
 from django.contrib import admin
-from corere.main.models import Submission, Edition, Curation, Verification, Manuscript, User, Note, GitFile \
-    ,  HistoricalSubmission, HistoricalEdition, HistoricalCuration, HistoricalVerification, HistoricalManuscript, HistoricalUser, HistoricalNote
+from corere.main import models as m
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin
@@ -42,24 +41,32 @@ class HistoryAdmin(admin.ModelAdmin):
         # return the result
         return template_response
 
-admin.site.register(Manuscript, GuardedModelAdminCustom)
-admin.site.register(Submission, GuardedModelAdminCustom)
-admin.site.register(Edition, GuardedModelAdminCustom)
-admin.site.register(Curation, GuardedModelAdminCustom)
-admin.site.register(Verification, GuardedModelAdminCustom)
-admin.site.register(Note, GuardedModelAdminCustom)
-admin.site.register(GitFile, GuardedModelAdminCustom)
+admin.site.register(m.Manuscript, GuardedModelAdminCustom)
+admin.site.register(m.Submission, GuardedModelAdminCustom)
+admin.site.register(m.Edition, GuardedModelAdminCustom)
+admin.site.register(m.Curation, GuardedModelAdminCustom)
+admin.site.register(m.Verification, GuardedModelAdminCustom)
+admin.site.register(m.Note, GuardedModelAdminCustom)
+admin.site.register(m.GitFile, GuardedModelAdminCustom)
+admin.site.register(m.VerificationMetadata, GuardedModelAdminCustom)
+admin.site.register(m.VerificationMetadataSoftware, GuardedModelAdminCustom)
+admin.site.register(m.VerificationMetadataBadge, GuardedModelAdminCustom)
+admin.site.register(m.VerificationMetadataAudit, GuardedModelAdminCustom)
 
 #admin.site.unregister(User)
-admin.site.register(User, UserAdmin)
+admin.site.register(m.User, UserAdmin)
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
 
-admin.site.register(HistoricalManuscript, HistoryAdmin)
-admin.site.register(HistoricalSubmission, HistoryAdmin)
-admin.site.register(HistoricalEdition, HistoryAdmin)
-admin.site.register(HistoricalCuration, HistoryAdmin)
-admin.site.register(HistoricalVerification, HistoryAdmin)
-admin.site.register(HistoricalUser, HistoryAdmin)
-admin.site.register(HistoricalNote, HistoryAdmin)
+admin.site.register(m.HistoricalManuscript, HistoryAdmin)
+admin.site.register(m.HistoricalSubmission, HistoryAdmin)
+admin.site.register(m.HistoricalEdition, HistoryAdmin)
+admin.site.register(m.HistoricalCuration, HistoryAdmin)
+admin.site.register(m.HistoricalVerification, HistoryAdmin)
+admin.site.register(m.HistoricalUser, HistoryAdmin)
+admin.site.register(m.HistoricalNote, HistoryAdmin)
+admin.site.register(m.HistoricalVerificationMetadata, HistoryAdmin)
+admin.site.register(m.HistoricalVerificationMetadataSoftware, HistoryAdmin)
+admin.site.register(m.HistoricalVerificationMetadataBadge, HistoryAdmin)
+admin.site.register(m.HistoricalVerificationMetadataAudit, HistoryAdmin)

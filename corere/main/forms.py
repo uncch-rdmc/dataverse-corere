@@ -57,8 +57,12 @@ class GenericInlineFormSetHelper(FormHelper):
 
 list_of_roles = ["Admin","Author","Editor","Curator","Verifier"]
 
-#Helper that adds all help text as a popover.
-def tooltip_labels(model, field_strings):
+# Helper that adds all help text as a popover.
+# This also adds stars for required fields. We can't rely on the normal required functionality because we require fields depending on user-role/object-phase
+# NOTE: My use of marking required with this is flawed. Right now we are enforcing requirements on a per-phase basis, while we are showing requirements on a per-role basis.
+#       This works fine for our needs, but will likely scale poorly if we ever need to get more nuanced.
+#       Also worth noting that for formsets off the main form, we set the required "*" in the template.
+def label_gen(model, field_strings, required=[]):
     fields_html = {}
     for field_string in field_strings:
         try:
@@ -67,6 +71,8 @@ def tooltip_labels(model, field_strings):
             continue #if custom field we skip it
 
         html = '<span >'+field.verbose_name+'</span>'
+        if(field_string in required):
+            html += "* "
         if(field.help_text != ""):
             html += '<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'"></span>'
             #html += '<button type="button" class="btn btn-secondary btn-sm" data-toggle="tooltip" data-placement="auto" title="'+field.help_text+'">?</button>'
@@ -146,11 +152,6 @@ class ManuscriptFormHelper(FormHelper):
                 css_class='row',
             ),
             Div(
-                Div('producer_first_name',css_class='col-md-6',),
-                Div('producer_last_name',css_class='col-md-6',),
-                css_class='row',
-            ),
-            Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
                 Div('contact_email',css_class='col-md-6',),
@@ -162,15 +163,15 @@ class ManuscriptFormHelper(FormHelper):
 
 class ManuscriptBaseForm(forms.ModelForm):
     class Meta:
+        abstract = True
         model = m.Manuscript
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
-            'description','subject','producer_first_name','producer_last_name']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
-        labels = tooltip_labels(model, fields)
+            'description','subject']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+        always_required = ['title'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
+        labels = label_gen(model, fields, always_required)
 
     def clean(self):
-        # print(self.data)
-        # print(self.instance.__dict__)
-        # print(self.instance.can_begin_return_problems())
+        # print(self.Meta.role_required)
 
         #We run this clean if the manuscript is progressed, or after being progressed it is being edited.
         if("submit_progress_manuscript" in self.data.keys() or self.instance._status != m.Manuscript.Status.NEW):
@@ -182,9 +183,22 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(not subject):
                 self.add_error('subject', 'This field is required.')
 
+            contact_first_name = self.cleaned_data.get('contact_first_name')
+            if(not contact_first_name):
+                self.add_error('contact_first_name', 'This field is required.')
+
+            contact_last_name = self.cleaned_data.get('contact_last_name')
+            if(not contact_last_name):
+                self.add_error('contact_last_name', 'This field is required.')
+
+            contact_email = self.cleaned_data.get('contact_email')
+            if(not contact_email):
+                self.add_error('contact_email', 'This field is required.')
+
             validation_errors = [] #we store all the "generic" errors and raise them at once
             if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-                or self.data['author_formset-0-identifier_scheme'] == "" or self.data['author_formset-0-position'] == ""):
+                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+                ):
                 validation_errors.append(ValidationError("You must specify an author."))
             if(self.data['data_source_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a data source."))
@@ -206,12 +220,17 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
     pass
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
+    class Meta(ManuscriptBaseForm.Meta):
+        role_required = ['title','description','subject','contact_first_name','contact_last_name','contact_email']
+        labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
+
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['qdr_review'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
+
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['description'].disabled = True
@@ -219,15 +238,15 @@ class ManuscriptForm_Editor(ManuscriptBaseForm):
         self.fields['contact_first_name'].disabled = True
         self.fields['contact_last_name'].disabled = True
         self.fields['contact_email'].disabled = True
-        self.fields['producer_first_name'].disabled = True
-        self.fields['producer_last_name'].disabled = True
 
 class ManuscriptForm_Curator(ManuscriptBaseForm):
+
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
 
 class ManuscriptForm_Verifier(ManuscriptBaseForm):
+
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
@@ -239,8 +258,6 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['contact_email'].disabled = True
         self.fields['description'].disabled = True
         self.fields['subject'].disabled = True
-        self.fields['producer_first_name'].disabled = True
-        self.fields['producer_last_name'].disabled = True
 
 ManuscriptForms = {
     "Admin": ManuscriptForm_Admin,
@@ -255,7 +272,7 @@ class DataSourceBaseForm(forms.ModelForm):
     class Meta:
         model = m.DataSource
         fields = ["text"]
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
 class DataSourceForm_Admin(DataSourceBaseForm):
     pass
@@ -304,7 +321,7 @@ class KeywordBaseForm(forms.ModelForm):
     class Meta:
         model = m.Keyword
         fields = ["text"]
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
 class KeywordForm_Admin(KeywordBaseForm):
     pass
@@ -352,8 +369,8 @@ ReadOnlyKeywordFormSet = inlineformset_factory(
 class AuthorBaseForm(forms.ModelForm):
     class Meta:
         model = m.Author
-        fields = ["first_name","last_name","identifier_scheme", "identifier", "position"]
-        labels = tooltip_labels(model, fields)
+        fields = ["first_name","last_name","identifier_scheme", "identifier"]
+        labels = label_gen(model, fields)
 
 class AuthorForm_Admin(AuthorBaseForm):
     pass
@@ -368,7 +385,6 @@ class AuthorForm_Editor(AuthorBaseForm):
         self.fields["last_name"].disabled = True
         self.fields["identifier_scheme"].disabled = True
         self.fields["identifier"].disabled = True
-        self.fields["position"].disabled = True
 
 class AuthorForm_Curator(AuthorBaseForm):
     pass
@@ -380,19 +396,20 @@ class AuthorForm_Verifier(AuthorBaseForm):
         self.fields["last_name"].disabled = True
         self.fields["identifier_scheme"].disabled = True
         self.fields["identifier"].disabled = True
-        self.fields["position"].disabled = True
+        #self.fields["position"].disabled = True
 
 class BaseAuthorManuscriptFormset(BaseInlineFormSet):
-    def clean(self):
-        position_list = []
-        try:
-            for fdata in self.cleaned_data:
-                if('position' in fdata): #skip empty form
-                    position_list.append(fdata['position'])
-            if(len(position_list) != 0 and ( sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1)):
-                raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
-        except AttributeError:
-            pass #sometimes there is no cleaned data
+    pass
+    # def clean(self):
+    #     position_list = []
+    #     try:
+    #         for fdata in self.cleaned_data:
+    #             if('position' in fdata): #skip empty form
+    #                 position_list.append(fdata['position'])
+    #         if(len(position_list) != 0 and ( sorted(position_list) != list(range(min(position_list), max(position_list)+1)) or min(position_list) != 1)):
+    #             raise forms.ValidationError("Positions must be consecutive whole numbers and start with 1 (e.g. [1, 2, 3, 4, 5], [3, 1, 2, 4], etc)", "error")
+    #     except AttributeError:
+    #         pass #sometimes there is no cleaned data
 
 AuthorManuscriptFormsets = {}
 for role_str in list_of_roles:
@@ -423,7 +440,7 @@ class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
         fields = ['text','scope','creator','note_replied_to','note_reference']
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
     SCOPE_OPTIONS = (('public','Public'),('private','Private'))
 
@@ -678,11 +695,9 @@ class GitFileFormSetHelper(FormHelper):
         super().__init__(*args, **kwargs)
         self.form_method = 'post'
         self.form_class = 'form-inline'
-        #self.template = 'main/crispy_templates/bootstrap4_table_inline_formset_custom_notes.html' #Adds file notes
-        self.template = 'bootstrap4/table_inline_formset.html'
+        self.template = 'main/crispy_templates/table_inline_formset_custom_gitfile.html'
         self.form_tag = False
         self.layout = Layout(
-
             Field('path', th_class="w-50"),
             Field('tag'),
             Field('description'),
@@ -709,7 +724,7 @@ class SubmissionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Submission
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
     #If edition/curation/verification set to "new", return error.
     def clean(self):
@@ -752,7 +767,7 @@ class EditionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Edition
         fields = ['report','_status']
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
@@ -805,7 +820,7 @@ class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
         fields = ['report','_status']
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
@@ -861,7 +876,7 @@ class VerificationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Verification
         fields = ['code_executability','report','_status']
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
 
@@ -916,11 +931,53 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 class VMetadataBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadata
-        fields = ["operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
-        labels = tooltip_labels(model, fields)
+        fields = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
+        #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
+        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
+        labels = label_gen(model, fields, always_required)
 
-    # def __init__ (self, *args, **kwargs):
-    #     super(VMetadataForm, self).__init__(*args, **kwargs)
+    #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
+    #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
+    #      But I don't want to do this until things are more stable and I have tests working again.
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+        if(previous_vmetadata):
+            self.fields['operating_system'].initial = previous_vmetadata.operating_system
+            self.fields['machine_type'].initial = previous_vmetadata.machine_type
+            self.fields['scheduler'].initial = previous_vmetadata.scheduler
+            self.fields['platform'].initial = previous_vmetadata.platform
+            self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
+            self.fields['host_url'].initial = previous_vmetadata.host_url
+            self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
+            self.fields['packages_info'].initial = previous_vmetadata.packages_info
+
+    def clean(self):
+        #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
+        if("high_performance" in self.data.keys()):
+            machine_type = self.cleaned_data.get('machine_type')
+            if(not machine_type):
+                self.add_error('machine_type', 'This field is required.')
+
+            scheduler = self.cleaned_data.get('scheduler')
+            if(not scheduler):
+                self.add_error('scheduler', 'This field is required.')
+
+            platform = self.cleaned_data.get('platform')
+            if(not platform):
+                self.add_error('platform', 'This field is required.')
+
+            processor_reqs = self.cleaned_data.get('processor_reqs')
+            if(not processor_reqs):
+                self.add_error('processor_reqs', 'This field is required.')
+
+            host_url = self.cleaned_data.get('host_url')
+            if(not host_url):
+                self.add_error('host_url', 'This field is required.')
+
+            memory_reqs = self.cleaned_data.get('memory_reqs')
+            if(not memory_reqs):
+                self.add_error('memory_reqs', 'This field is required.')
+
 
 class VMetadataForm_Admin(VMetadataBaseForm):
     pass
@@ -970,73 +1027,13 @@ ReadOnlyVMetadataSubmissionFormset = inlineformset_factory(
 #     can_delete = True,
 # )
 
-#------------ Verification Metadata - Package -------------
-
-class VMetadataPackageBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataPackage
-        fields = ["name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"]
-        labels = tooltip_labels(model, fields)
-
-    # def __init__ (self, *args, **kwargs):
-    #     super(VMetadataPackageForm, self).__init__(*args, **kwargs)
-
-class VMetadataPackageForm_Admin(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Author(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Editor(ReadOnlyFormMixin, VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Curator(VMetadataPackageBaseForm):
-    pass
-
-class VMetadataPackageForm_Verifier(VMetadataPackageBaseForm):
-    pass
-
-VMetadataPackageVMetadataFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataPackageVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
-            m.VerificationMetadataPackage,  
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataPackageForm_"+role_str),
-            can_delete = True,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
-
-class ReadOnlyVMetadataPackageForm(ReadOnlyFormMixin, VMetadataPackageBaseForm):
-    pass
-
-ReadOnlyVMetadataPackageVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataPackage,  
-    extra=0,
-    form=ReadOnlyVMetadataPackageForm,
-    can_delete = False,
-)
-
-
-# VMetadataPackageVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataPackage,  
-#     extra=1,
-#     form=VMetadataPackageForm,
-#     fields=("name","version", "source_default_repo", "source_cran", "source_author_website", "source_dataverse", "source_other"),
-#     can_delete = True,
-# )
-
 #------------ Verification Metadata - Software -------------
 
 class VMetadataSoftwareBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataSoftware
-        fields = ["name","version", "code_repo_url"]
-        labels = tooltip_labels(model, fields)
+        fields = ["name","version"]
+        labels = label_gen(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
@@ -1095,7 +1092,7 @@ class VMetadataBadgeBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataBadge
         fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataBadgeForm, self).__init__(*args, **kwargs)
@@ -1147,7 +1144,7 @@ class VMetadataAuditBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataAudit
         fields = ["name","version","url","organization","verified_results","exceptions","exception_reason"]
-        labels = tooltip_labels(model, fields)
+        labels = label_gen(model, fields)
 
     # def __init__ (self, *args, **kwargs):
     #     super(VMetadataAuditForm, self).__init__(*args, **kwargs)
