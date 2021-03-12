@@ -5,6 +5,7 @@
 ## Description:
 The main goal of the project is to make these verification tools cost-effective and easily accessible, so journals may implement and enforce more rigorous data policies. This will oblige researchers to in turn adopt more transparent practices and promote reproducible research of the highest quality and integrity throughout the scientific community. 
 
+#### Note: This project is undergoing architectural changes, the information in this document is likely to be out of date.
 
 ## Table of Contents:
 
