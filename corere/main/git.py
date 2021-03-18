@@ -101,7 +101,7 @@ def download_submission_file(submission, file_path):
     repo_path = get_submission_repo_path(submission.manuscript)
 
     #We have to check whether our submission is the latest submission. If its latest, use master, otherwise use branch name
-    max_version_id = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max']
+    max_version_id = submission.manuscript.get_max_submission_version_id()
     if(submission.version_id == max_version_id):
         branch_name = 'master'
     else:
@@ -121,7 +121,7 @@ def _download_file(repo_path, file_path, branch_name):
         return response
 
 def download_all_submission_files(submission):
-    max_version_id = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max']
+    max_version_id = submission.manuscript.get_max_submission_version_id()
     if(submission.version_id == max_version_id):
         branch_name = 'master'
     else:

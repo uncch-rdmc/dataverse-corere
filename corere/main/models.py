@@ -762,13 +762,16 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
 class ContainerInfo(models.Model):
-    image_id = models.CharField(max_length=64, blank=True, null=True)
+    image_name = models.CharField(max_length=128, blank=True, null=True)
     image_token = models.CharField(max_length=64, blank=True, null=True) #maybe could be set to 48
     container_id = models.CharField(max_length=64, blank=True, null=True)
     container_ip = models.CharField(max_length=24, blank=True, null=True)
     container_port = models.CharField(max_length=5, blank=True, null=True)
     submission_version = models.IntegerField()
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+
+    def container_address(self):
+        return "http://" + self.container_ip + ":" + self.container_port + "?token=" + self.image_token
 
 
 ####################################################
