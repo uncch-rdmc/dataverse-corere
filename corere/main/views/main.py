@@ -4,6 +4,7 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
+from corere.main import docker as d
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
 from corere.main.utils import get_pretty_user_list_by_group
@@ -89,13 +90,17 @@ def manuscript_landing(request, id=None):
 
 @login_required
 def open_binder(request, id=None):
+    #d.hello_list()
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
-        logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
-        raise Http404()
+    d.build_repo2docker_image(manuscript)
+    
+    # manuscript = get_object_or_404(m.Manuscript, id=id)
+    # if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+    #     logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
+    #     raise Http404()
 
-    binder_url = binder_build_load(manuscript)
-    return redirect(binder_url)
+    # binder_url = binder_build_load(manuscript)
+    # return redirect(binder_url)
 
 @login_required()
 def site_actions(request):

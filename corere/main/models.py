@@ -268,7 +268,7 @@ class Submission(AbstractCreateUpdateModel):
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
-        prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
+        prev_max_version_id = self.manuscript.get_max_submission_version_id()
         first_save = False
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
@@ -661,6 +661,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
+
+    def get_max_submission_version_id(self):
+        return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
             
     ##### django-fsm (workflow) related functions #####
     
@@ -757,6 +760,15 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+
+class ContainerInfo(models.Model):
+    image_id = models.CharField(max_length=64, blank=True, null=True)
+    image_token = models.CharField(max_length=64, blank=True, null=True) #maybe could be set to 48
+    container_id = models.CharField(max_length=64, blank=True, null=True)
+    container_ip = models.CharField(max_length=24, blank=True, null=True)
+    container_port = models.CharField(max_length=5, blank=True, null=True)
+    submission_version = models.IntegerField()
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
 
 
 ####################################################

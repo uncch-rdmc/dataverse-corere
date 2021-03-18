@@ -222,7 +222,7 @@ class SubmissionJson(CorereBaseDatatableView):
 
             return avail_buttons
         elif column[0] == 'version_id': 
-            latest_submission_version = m.Submission.objects.filter(manuscript=submission.manuscript).aggregate(Max('version_id'))['version_id__max'] #Probably inefficient here
+            latest_submission_version = submission.manuscript.get_max_submission_version_id() #Probably inefficient here
             if(submission.version_id == latest_submission_version):
                 return '#{0} (Current)'.format(submission.version_id)
             else:

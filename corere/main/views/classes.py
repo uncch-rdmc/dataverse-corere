@@ -661,7 +661,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def dispatch(self, request, *args, **kwargs):
         #If new submission with previous submission existing, copy over data from the previous submission
         if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = m.Submission.objects.filter(manuscript=self.object.manuscript).aggregate(Max('version_id'))['version_id__max']
+            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
             if prev_max_sub_version_id:
                 self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
 
