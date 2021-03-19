@@ -763,15 +763,14 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 class ContainerInfo(models.Model):
     image_name = models.CharField(max_length=128, blank=True, null=True)
-    image_token = models.CharField(max_length=64, blank=True, null=True) #maybe could be set to 48
     container_id = models.CharField(max_length=64, blank=True, null=True)
     container_ip = models.CharField(max_length=24, blank=True, null=True)
-    container_port = models.CharField(max_length=5, blank=True, null=True)
+    container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
     submission_version = models.IntegerField()
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
 
     def container_address(self):
-        return "http://" + self.container_ip + ":" + self.container_port + "?token=" + self.image_token
+        return "http://" + self.container_ip + ":" + str(self.container_port) #I don't understand why python decides my charfield is an int?
 
 
 ####################################################

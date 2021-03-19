@@ -1,4 +1,4 @@
-import docker, logging, subprocess
+import docker, logging, subprocess, random
 from django.conf import settings
 from corere.main import git as g
 from corere.main import models as m
@@ -33,16 +33,23 @@ def build_repo2docker_image(manuscript):
     #print(result.stderr)
 
 def start_repo2docker_container(manuscript):
+    while True:
+        container_port = random.randint(50000, 59999)
+        if not m.ContainerInfo.objects.filter(container_port=container_port).exists():
+            break
+
+    container_ip = "0.0.0.0"
     client = docker.from_env()
     container_info = manuscript.manuscript_containerinfo
     print(container_info.image_name)
-    run_string = "jupyter notebook --ip 0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''"
-    container = client.containers.run(container_info.image_name, run_string, ports={'8888/tcp': 54421},detach=True)
-    # while True: 
-    #     print(container.logs())
-    #I still need port/ip/token
+    run_string = "jupyter notebook --ip " + container_ip + " --NotebookApp.token='' --NotebookApp.password=''"
+    container = client.containers.run(container_info.image_name, run_string, ports={'8888/tcp': container_port},detach=True)
 
-    return ""#container_info.container_address()
+    container_info.container_port = container_port
+    container_info.container_ip = container_ip
+    container_info.save()
+
+    return container_info.container_address()
 
 #Run Command
 # docker run -p 54321:8888 12c7e0b2e62f jupyter notebook --ip 0.0.0.0 --NotebookApp.custom_display_url=http://0.0.0.0:54321
@@ -57,4 +64,4 @@ def start_repo2docker_container(manuscript):
 # - Delete Image
 
 #Thoughts:
-# - How am I keeping port unique? Is there an auto option???
+# - how will I actually do port/ip in production???
