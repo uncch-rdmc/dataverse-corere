@@ -30,7 +30,9 @@ def build_repo2docker_image(manuscript):
     container_info.manuscript = manuscript
     container_info.save()
 
-    #print(result.stderr)
+    #TODO: better logging, make sure there is nothing compromising in the logs
+    print(result.stderr)
+    print(result.stdout)
 
 def start_repo2docker_container(manuscript):
     while True:
@@ -42,7 +44,10 @@ def start_repo2docker_container(manuscript):
     client = docker.from_env()
     container_info = manuscript.manuscript_containerinfo
     print(container_info.image_name)
-    run_string = "jupyter notebook --ip " + container_ip + " --NotebookApp.token='' --NotebookApp.password=''"
+    run_string = "jupyter notebook --ip " + container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
+    #TODO: Set the "*" to be more specific
+    run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""
+
     container = client.containers.run(container_info.image_name, run_string, ports={'8888/tcp': container_port},detach=True)
 
     container_info.container_port = container_port

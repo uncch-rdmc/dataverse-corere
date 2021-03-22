@@ -126,3 +126,8 @@ def switch_role(request):
         else:
             logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_full_string +")")
     return redirect(request.GET.get('next', ''))
+
+@login_required
+def test_iframe(request):
+    args = {}
+    return render(request, "main/test_iframe.html", args)
