@@ -20,7 +20,7 @@ django-guardian==2.3.0
 git+git://github.com/OdumInstitute/django-invitations.git
 django-libsass==0.8
 django-notifications-hq==1.6.0
-django-oauth-toolkit==1.4.0
+django-oauth-toolkit==1.5.0
 django-rest-framework-social-oauth2==1.1.0
 django-simple-history==2.12.0
 djangorestframework==3.12.2
