@@ -92,7 +92,8 @@ def manuscript_landing(request, id=None):
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     d.build_repo2docker_image(manuscript)
-    return redirect(d.start_repo2docker_container(manuscript))
+    old_path = d.start_repo2docker_container(manuscript)
+    return redirect(d.start_oauthproxy_container(manuscript))
     
     # manuscript = get_object_or_404(m.Manuscript, id=id)
     # if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):

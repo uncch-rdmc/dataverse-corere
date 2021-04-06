@@ -762,15 +762,18 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
 class ContainerInfo(models.Model):
-    image_name = models.CharField(max_length=128, blank=True, null=True)
-    container_id = models.CharField(max_length=64, blank=True, null=True)
-    container_ip = models.CharField(max_length=24, blank=True, null=True)
-    container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
+    repo_image_name = models.CharField(max_length=128, blank=True, null=True)
+    repo_container_id = models.CharField(max_length=64, blank=True, null=True)
+    repo_container_ip = models.CharField(max_length=24, blank=True, null=True)
+    repo_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
+    proxy_container_id = models.CharField(max_length=64, blank=True, null=True)
+    proxy_container_ip = models.CharField(max_length=24, blank=True, null=True)
+    proxy_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
     submission_version = models.IntegerField()
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
 
-    def container_address(self):
-        return "http://" + self.container_ip + ":" + str(self.container_port) #I don't understand why python decides my charfield is an int?
+    def container_public_address(self):
+        return "http://" + self.proxy_container_ip + ":" + str(self.proxy_container_port) #I don't understand why python decides my charfield is an int?
 
 
 ####################################################

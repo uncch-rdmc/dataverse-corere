@@ -21,7 +21,7 @@
         </a>
 
           <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
-            {% register_notify_callbacks callbacks='fill_notification_badge' %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
+            {% comment %} {% register_notify_callbacks callbacks='fill_notification_badge' %} {% endcomment %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
             <a class="dropdown-item" href="/notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
             <a class="dropdown-item" href="/account_user_details">Edit User Info</a>
             {% if request.user|has_group:"Role Curator" %} 
