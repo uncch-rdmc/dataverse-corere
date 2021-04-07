@@ -38,7 +38,7 @@ def build_repo2docker_image(manuscript):
 
 def start_repo2docker_container(manuscript):
     while True:
-        container_port = random.randint(50000, 59999)
+        container_port = random.randint(50000, 50019)
         if not m.ContainerInfo.objects.filter(Q(repo_container_port=container_port) | Q(proxy_container_port=container_port)).exists():
             break
 
@@ -64,32 +64,37 @@ def start_oauthproxy_container(manuscript):
     #TODO: Delete existing proxy. I should also do the same thing for start_repo2docker_container
 
     while True:
-        container_port = random.randint(50000, 59999)
+        container_port = random.randint(50020, 50039)
         if not m.ContainerInfo.objects.filter(Q(repo_container_port=container_port) | Q(proxy_container_port=container_port)).exists():
             break
 
     run_string = ""
 
-    container_ip = "0.0.0.0"
+    container_ip = "localhost"
     client = docker.from_env()
     container_info = manuscript.manuscript_containerinfo
-    print(container_info.repo_container_ip)
-    print(container_info.repo_container_port)
 
     container_info.proxy_container_port = container_port
     container_info.proxy_container_ip = container_ip
     container_info.save()
 
-    print(container_info.container_public_address())
-
     #TODO: Should actually use a config file and just do the "changing" parameters like this
     #TODO: Replace 0.0.0.0s with correct variables. Also probably other things
     #"'" +container_info.proxy_container_ip+":"+str(container_info.proxy_container_port)+ "'" + " " \
+
+    repo_container_ip = container_info.repo_container_ip
+    if(repo_container_ip == "0.0.0.0"):
+        repo_container_ip = "localhost"
+    #For some reason, globus does not like a url that ends in a port for the redirect url, hence why we point to "/tree". May be user error on my end.
+
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
-            + "--redirect-url=" + "'http://"+container_info.repo_container_ip+":"+str(container_info.repo_container_port) + "' " \
+            + "--redirect-url=" + "'http://"+repo_container_ip+":"+str(container_info.repo_container_port) + "/tree' " \
             + "--upstream=" + "'http://0.0.0.0:54329/'" + " " \
             + "--email-domain=" + "'*'" + " " \
+            + "--provider=" + "'oidc'" + " " \
+            + "--provider-display-name=" + "'Globus'" + " " \
+            + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
             + "--client-id=" + "'54171f39-1251-40b7-ab06-78a43c267650'" + " " \
             + "--client-secret=" + "'ya9okC55lOXmAp3LqZ2biJcWhu6k2MbAQnImJstHqB0='" + " " \
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
@@ -102,7 +107,6 @@ def start_oauthproxy_container(manuscript):
     
     print("OAUTH PROXY COMMAND: " + command)
 
-
     #for some reason after my changes yesterday running is now broken?
     container = client.containers.run(settings.DOCKER_OAUTH_PROXY_IMAGE, command, ports={'4180/tcp': container_port}, detach=True)
     
@@ -112,7 +116,7 @@ def start_oauthproxy_container(manuscript):
 
     #TODO: bad bad bad delete
     import time
-    time.sleep(5)
+    time.sleep(2)
     print(container.logs()) #I'll need to find a way to stream these logs into a django log
 
 
