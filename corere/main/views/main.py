@@ -92,6 +92,7 @@ def manuscript_landing(request, id=None):
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     d.build_repo2docker_image(manuscript)
+    d.start_network(manuscript)
     old_path = d.start_repo2docker_container(manuscript)
     return redirect(d.start_oauthproxy_container(manuscript))
     
