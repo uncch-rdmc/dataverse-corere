@@ -37,12 +37,19 @@ def build_repo2docker_image(manuscript):
     #print(result.stdout)
 
 def start_network(manuscript):
+    while True: #get an unused subnet.
+        network_part_2 = random.randint(0, 255)
+        network_sub = "172." + str(network_part_2) + ".0"
+        if not m.ContainerInfo.objects.filter(network_ip_substring=network_sub).exists():
+            break
+
     client = docker.from_env()
     container_info = manuscript.manuscript_containerinfo
+    container_info.network_ip_substring = network_sub
 
     ipam_pool = docker.types.IPAMPool(
-        subnet='172.20.0.0/16',
-        gateway='172.20.0.1'
+        subnet=network_sub + '.0/16',
+        gateway=network_sub + '.1'
     )
     ipam_config = docker.types.IPAMConfig(
         pool_configs=[ipam_pool]
@@ -69,7 +76,7 @@ def start_repo2docker_container(manuscript):
     #container = client.containers.run(container_info.repo_image_name, run_string, detach=True)
 
     notebook_network = client.networks.get(container_info.container_network_name())
-    notebook_network.connect(container, ipv4_address="172.20.0.2")#, aliases=[container.name])
+    notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".2")#, aliases=[container.name])
 
     container_info.repo_container_port = container_port
     container_info.repo_container_ip = container_ip
@@ -115,7 +122,7 @@ def start_oauthproxy_container(manuscript, recreate=False):
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_ip+":"+str(container_port) + "/oauth2/callback' " \
-            + "--upstream=" + "'http://172.20.0.2:8888" + "/' " \
+            + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
             + "--email-domain=" + "'*'" + " " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
@@ -154,7 +161,7 @@ def start_oauthproxy_container(manuscript, recreate=False):
     print(container.logs()) #I'll need to find a way to stream these logs into a django log
 
     notebook_network = client.networks.get(container_info.container_network_name())
-    notebook_network.connect(container, ipv4_address="172.20.0.3")#, aliases=[container.name])
+    notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".3")#, aliases=[container.name])
 
     return container_info.container_public_address()
     
