@@ -91,18 +91,13 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    d.build_repo2docker_image(manuscript)
-    d.start_network(manuscript)
-    old_path = d.start_repo2docker_container(manuscript)
-    return redirect(d.start_oauthproxy_container(manuscript))
-    
-    # manuscript = get_object_or_404(m.Manuscript, id=id)
-    # if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
-    #     logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
-    #     raise Http404()
-
-    # binder_url = binder_build_load(manuscript)
-    # return redirect(binder_url)
+    if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)):
+        print("RECREATE DOCKERS IN OPEN BINDER")
+        d.build_repo2docker_image(manuscript)
+        d.start_network(manuscript)
+        old_path = d.start_repo2docker_container(manuscript)
+        d.start_oauthproxy_container(manuscript)
+    return redirect(manuscript.manuscript_containerinfo.container_public_address())
 
 @login_required()
 def site_actions(request):
