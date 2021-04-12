@@ -1,7 +1,8 @@
-import docker, logging, subprocess, random
+import docker, logging, subprocess, random, io, os
 from django.conf import settings
 from corere.main import git as g
 from corere.main import models as m
+from corere.main import constants as c
 from django.db.models import Q
 logger = logging.getLogger(__name__)
 
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
 #TODO: NEEDS TO be dynamic?
+#TODO: Needs to correctly delete old image
     try:
         manuscript.manuscript_containerinfo.delete() #for now we just delete it each time
         #TODO: Delete oauth2 proxy as well
@@ -18,7 +20,7 @@ def build_repo2docker_image(manuscript):
 
     path = g.get_submission_repo_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
-    image_name = (str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG  
+    image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG  
     #jupyter-repo2docker  --no-run --image-name "test-version1:corere-jupyter" "../../../corere-git/10_-_manuscript_-_test10"
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
     result = subprocess.run([run_string], shell=True, capture_output=True)
@@ -39,6 +41,61 @@ def delete_repo2docker_image(manuscript, remove_container_info=True):
     if(remove_container_info):
         container_info.repo_image_name = ""
         container_info.save()
+
+def build_oauthproxy_image(manuscript):
+    container_info = manuscript.manuscript_containerinfo
+    client = docker.from_env()    
+    print(client.info())
+
+    #TODO: I need to write a file with the list of emails allowed to access the container to the filesystem where docker can use it to build
+    email_file_path = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/authenticated_emails.txt"
+    os.makedirs(os.path.dirname(email_file_path), exist_ok=True) #make folder for build context
+    email_file = open(email_file_path, 'w')
+
+    #Get the list of emails allowed to access the notebook
+    #For now I think I'm just going to get a list of users in the 4 role groups
+    user_email_list = m.User.objects.filter(  Q(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+                        #| Q(is_superuser=True) #This seems to return the same use like a ton of times
+    ).values('email')
+
+    for ue in user_email_list:
+        print(ue.get("email"))
+        email_file.write(ue.get("email")+"\n")
+
+    email_file.close()
+
+    docker_build_folder = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/"
+    dockerfile_path = docker_build_folder + "dockerfile"
+    docker_string = "FROM " + settings.DOCKER_OAUTH_PROXY_BASE_IMAGE + "\n" \
+                  + "COPY authenticated_emails.txt /opt/bitnami/oauth2-proxy/authenticated_emails.txt"
+    with open(dockerfile_path, 'w') as f:
+        f.write(docker_string)
+
+    #run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
+    run_string = "docker build . -t " + container_info.proxy_image_name()
+    result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
+
+    print(result)
+
+    # dockerfile = io.BytesIO(bytes(docker_string.encode()))
+    # #this fails right now because the file I am using has to be in my docker folder
+    # client.images.build(fileobj=dockerfile) #custom_context=True
+
+    #print("HEY HEY YA")
+
+    #It looks like we may have to create a tar.gz with the dockerfile and our emails: https://github.com/docker/docker-py/issues/974
+    #Or maybe I can change the docker root dir to something that actually exists? https://unix.stackexchange.com/questions/452368/change-docker-root-dir-on-red-hat-linux
+    #Or maybe there is some command I can do to get the file I want into docker? https://stackoverflow.com/questions/37789984/how-to-copy-folders-to-docker-image-from-dockerfile
+    #I could also just run the build command directly on the filesystem, not through the api, and provide the context https://www.cloudbees.com/blog/3-different-ways-to-provide-docker-build-context/
+    #I'm leaning towards using subprocess.run and just running inside a folder in tmp
+
+    #dockerfile.close()
+
+def delete_oauth2proxy_image(manuscript, remove_container_info=True):
+    pass
 
 def start_repo2docker_container(manuscript):
     container_info = manuscript.manuscript_containerinfo
@@ -101,11 +158,14 @@ def start_oauthproxy_container(manuscript):
     run_string = ""
     client = docker.from_env()
 
+    emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
+
+    #            + "--whitelist-domain=" + "'" + container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "'" + " " \
+    #            + "--email-domain=" + "'*'" + " " \
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
             + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
-            + "--email-domain=" + "'*'" + " " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
@@ -117,7 +177,7 @@ def start_oauthproxy_container(manuscript):
             + "--cookie-expire=" + "'5s'" + " " \
             + "--cookie-refresh=" + "'0s'" + " " \
             + "--cookie-httponly=" + "'true'" + " " \
-            + "--whitelist-domain=" + "'" + container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "'" + " " \
+            + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
 
     if(settings.DEBUG):
         command += "--cookie-secure=" + "'false'" + " "
@@ -125,14 +185,15 @@ def start_oauthproxy_container(manuscript):
         command += "--cookie-secure=" + "'true'" + " "
     print("OAUTH PROXY COMMAND: " + command)
 
-    container = client.containers.run(settings.DOCKER_OAUTH_PROXY_IMAGE, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
+
+    container = client.containers.run(container_info.proxy_image_name(), command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
 
     container_info.proxy_container_id = container.id
     container_info.save()
 
-    # Janky log access code
+    # #Janky log access code
     # import time
-    # time.sleep(2)
+    # time.sleep(5)
     # print(container.logs()) #Should find a better way to stream these logs. Though you can get to them via docker.
 
     notebook_network = client.networks.get(container_info.container_network_name())

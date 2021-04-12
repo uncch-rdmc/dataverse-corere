@@ -1,6 +1,7 @@
 import logging
 import uuid
 # from . import constants as c
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group
@@ -763,6 +764,7 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
 
 class ContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
+    proxy_image_name = models.CharField(max_length=128, blank=True, null=True)
     repo_container_id = models.CharField(max_length=64, blank=True, null=True)
     repo_container_ip = models.CharField(max_length=24, blank=True, null=True)
     # repo_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
@@ -779,6 +781,9 @@ class ContainerInfo(models.Model):
 
     def container_network_name(self):
         return "notebook-" + str(self.manuscript.id)
+
+    def proxy_image_name(self):
+        return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
 
 ####################################################
 
