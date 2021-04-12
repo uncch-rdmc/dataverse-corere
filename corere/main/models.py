@@ -783,8 +783,8 @@ class ContainerInfo(models.Model):
     def container_network_name(self):
         return "notebook-" + str(self.manuscript.id)
 
-    def proxy_image_name(self):
-        return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
+    # def proxy_image_name(self):
+    #     return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
 
 ####################################################
 
@@ -964,9 +964,11 @@ def add_history_info(sender, instance, **kwargs):
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
     if action == 'post_remove' or action == 'post_add':
         #This splits up the group name for checking to see whether its a group we should act upon
-        #It would be better to have names formalized someday.
-        [ _, assigned_obj, m_id ] = instance.name.split()
-        if(assigned_obj == "Manuscript"):
-            logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
-            manuscript = Manuscript.objects.get(id=m_id)
-            d.update_oauthproxy_container_authenticated_emails(manuscript)
+        #It would be better to have names formalized someday
+        split_name = instance.name.split()
+        if(len(split_name) == 3):
+            [ _, assigned_obj, m_id ] = split_name
+            if(assigned_obj == "Manuscript"):
+                logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+                manuscript = Manuscript.objects.get(id=m_id)
+                d.update_oauthproxy_container_authenticated_emails(manuscript)

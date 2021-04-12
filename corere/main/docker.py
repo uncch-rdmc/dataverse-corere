@@ -39,7 +39,7 @@ def build_repo2docker_image(manuscript):
 
 def delete_repo2docker_image(manuscript, remove_container_info=True):
     client = docker.from_env()
-    client.images.remove(image=manuscript.manuscript_containerinfo.repo_image_name, force=true)
+    client.images.remove(image=manuscript.manuscript_containerinfo.repo_image_name, force=True)
     if(remove_container_info):
         container_info.repo_image_name = ""
         container_info.save()
@@ -82,7 +82,9 @@ def build_oauthproxy_image(manuscript):
         f.write(docker_string)
 
     #run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
-    run_string = "docker build . -t " + container_info.proxy_image_name()
+    container_info.proxy_image_name = ("oauthproxy-" + str(manuscript.id) + "-" + manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
+    container_info.save()
+    run_string = "docker build . -t " + container_info.proxy_image_name
     result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
 
     logger.debug("build_oauthproxy_image result:" + str(result))
@@ -102,7 +104,11 @@ def build_oauthproxy_image(manuscript):
     #dockerfile.close()
 
 def delete_oauth2proxy_image(manuscript, remove_container_info=True):
-    pass
+    client = docker.from_env()
+    client.images.remove(image=manuscript.manuscript_containerinfo.proxy_image_name, force=True)
+    if(remove_container_info):
+        container_info.proxy_image_name = ""
+        container_info.save()
 
 def start_repo2docker_container(manuscript):
     container_info = manuscript.manuscript_containerinfo
@@ -192,7 +198,7 @@ def start_oauthproxy_container(manuscript):
         command += "--cookie-secure=" + "'true'" + " "
     print("OAUTH PROXY COMMAND: " + command)
 
-    container = client.containers.run(container_info.proxy_image_name(), command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
+    container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
 
     container_info.proxy_container_id = container.id
     container_info.save()
@@ -267,6 +273,23 @@ def delete_network(manuscript, remove_container_info=True):
         container_info.network_id = ""
         container_info.save()
 
+def delete_manuscript_docker_stack(manuscript, remove_container_info=False):
+    #Note we don't use these methods "remove_container_info" because we just blast away the whole thing at the end
+    try:
+        stop_delete_oauthproxy_container(manuscript, remove_container_info=False)
+        stop_delete_repo2docker_container(manuscript, remove_container_info=False)
+        delete_network(manuscript, remove_container_info=False)
+        delete_repo2docker_image(manuscript, remove_container_info=False)
+        delete_oauth2proxy_image(manuscript, remove_container_info=False)
+
+        if remove_container_info:
+            manuscript.manuscript_containerinfo.delete()
+            return("Manuscript stack and ContainerInfo deleted")
+            
+        return("Manuscript stack deleted")
+
+    except m.ContainerInfo.DoesNotExist:
+        return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
 #What are the steps:
 # - Build Image
 # - Run image as a container
