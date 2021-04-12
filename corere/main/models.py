@@ -12,7 +12,7 @@ from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm, 
 from django.db.models import Q, Max
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from django.db.models.signals import post_delete
 from guardian.shortcuts import get_users_with_perms, assign_perm
@@ -20,6 +20,7 @@ from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 from corere.main import constants as c
 from corere.main import git as g
+from corere.main import docker as d
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
@@ -957,3 +958,15 @@ def add_history_info(sender, instance, **kwargs):
         new_record.save()
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
+
+#See: https://stackoverflow.com/questions/7899127/
+@receiver(signal=m2m_changed, sender=User.groups.through)
+def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
+    if action == 'post_remove' or action == 'post_add':
+        #This splits up the group name for checking to see whether its a group we should act upon
+        #It would be better to have names formalized someday.
+        [ _, assigned_obj, m_id ] = instance.name.split()
+        if(assigned_obj == "Manuscript"):
+            logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+            manuscript = Manuscript.objects.get(id=m_id)
+            d.update_oauthproxy_container_authenticated_emails(manuscript)

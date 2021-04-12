@@ -25,6 +25,8 @@ def build_repo2docker_image(manuscript):
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
     result = subprocess.run([run_string], shell=True, capture_output=True)
     
+    logger.debug("build_repo2docker_image result:" + str(result))
+
     container_info = m.ContainerInfo()
     container_info.repo_image_name = image_name
     container_info.submission_version = sub_version
@@ -42,10 +44,9 @@ def delete_repo2docker_image(manuscript, remove_container_info=True):
         container_info.repo_image_name = ""
         container_info.save()
 
-def build_oauthproxy_image(manuscript):
+def _write_oauthproxy_email_list_to_working_directory(manuscript):
     container_info = manuscript.manuscript_containerinfo
     client = docker.from_env()    
-    print(client.info())
 
     #TODO: I need to write a file with the list of emails allowed to access the container to the filesystem where docker can use it to build
     email_file_path = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/authenticated_emails.txt"
@@ -67,6 +68,12 @@ def build_oauthproxy_image(manuscript):
 
     email_file.close()
 
+def build_oauthproxy_image(manuscript):
+    container_info = manuscript.manuscript_containerinfo
+    client = docker.from_env()    
+
+    _write_oauthproxy_email_list_to_working_directory(manuscript)
+
     docker_build_folder = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/"
     dockerfile_path = docker_build_folder + "dockerfile"
     docker_string = "FROM " + settings.DOCKER_OAUTH_PROXY_BASE_IMAGE + "\n" \
@@ -78,7 +85,7 @@ def build_oauthproxy_image(manuscript):
     run_string = "docker build . -t " + container_info.proxy_image_name()
     result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
 
-    print(result)
+    logger.debug("build_oauthproxy_image result:" + str(result))
 
     # dockerfile = io.BytesIO(bytes(docker_string.encode()))
     # #this fails right now because the file I am using has to be in my docker folder
@@ -185,7 +192,6 @@ def start_oauthproxy_container(manuscript):
         command += "--cookie-secure=" + "'true'" + " "
     print("OAUTH PROXY COMMAND: " + command)
 
-
     container = client.containers.run(container_info.proxy_image_name(), command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
 
     container_info.proxy_container_id = container.id
@@ -201,6 +207,19 @@ def start_oauthproxy_container(manuscript):
 
     return container_info.container_public_address()
     
+def update_oauthproxy_container_authenticated_emails(manuscript):
+    #What should we do if there is no container yet? Error or just do nothing?
+    container_info = manuscript.manuscript_containerinfo
+    _write_oauthproxy_email_list_to_working_directory(manuscript)
+
+    docker_build_folder = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/"
+
+    run_string = "docker cp authenticated_emails.txt " + container_info.proxy_container_id +":/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
+    result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
+
+    logger.debug("update_oauthproxy_container_authenticated_emails result:" + str(result))
+
+
 def stop_delete_oauthproxy_container(manuscript, remove_container_info=True):
     stop_delete_container(manuscript.manuscript_containerinfo.proxy_container_id)
     if(remove_container_info):
