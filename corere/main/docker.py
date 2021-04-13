@@ -34,12 +34,9 @@ def build_repo2docker_image(manuscript):
     container_info.manuscript = manuscript
     container_info.save()
 
-def delete_repo2docker_image(manuscript, remove_container_info=True):
+def delete_repo2docker_image(manuscript):
     client = docker.from_env()
     client.images.remove(image=manuscript.manuscript_containerinfo.repo_image_name, force=True)
-    if(remove_container_info):
-        container_info.repo_image_name = ""
-        container_info.save()
 
 def _write_oauthproxy_email_list_to_working_directory(manuscript):
     container_info = manuscript.manuscript_containerinfo
@@ -100,22 +97,14 @@ def build_oauthproxy_image(manuscript):
 
     #dockerfile.close()
 
-def delete_oauth2proxy_image(manuscript, remove_container_info=True):
+def delete_oauth2proxy_image(manuscript):
     client = docker.from_env()
     client.images.remove(image=manuscript.manuscript_containerinfo.proxy_image_name, force=True)
-    if(remove_container_info):
-        container_info.proxy_image_name = ""
-        container_info.save()
 
 def start_repo2docker_container(manuscript):
     container_info = manuscript.manuscript_containerinfo
     print("start_repo2docker_container")
     print(container_info.__dict__)
-
-# #TODO: Probably shouldn't do this, we handle it elsewhere? I could also delete the ID in a different place...
-#     if(container_info.repo_container_id):
-#         stop_delete_repo2docker_container(manuscript, remove_container_info=False)
-#         container_info.repo_container_id = ""
 
     # if(!container_info.container_port): #we reuse existing port/ip on recreation
     #     while True:
@@ -139,13 +128,8 @@ def start_repo2docker_container(manuscript):
     container_info.repo_container_id = container.id
     container_info.save()
 
-#TODO: implement all the remove_container_infos
-def stop_delete_repo2docker_container(manuscript, remove_container_info=True):
+def stop_delete_repo2docker_container(manuscript):
     stop_delete_container(manuscript.manuscript_containerinfo.repo_container_id)
-    if(remove_container_info):
-        container_info.repo_container_id = ""
-        container_info.repo_container_ip = ""
-        container_info.save()
 
 
 # TODO: There are 3 cases where I'd run start:
@@ -157,11 +141,6 @@ def stop_delete_repo2docker_container(manuscript, remove_container_info=True):
 # I should probably check back with the previous notebook create code for the right way to do this. Also think more if the logic should really be in here?
 def start_oauthproxy_container(manuscript): 
     container_info = manuscript.manuscript_containerinfo
-
-# #TODO: Probably shouldn't do this, we handle it elsewhere. I could also delete the ID in a different place...
-#     if(container_info.proxy_container_id):
-#         stop_delete_oauthproxy_container(manuscript, remove_container_info=False)
-#         container_info.proxy_container_id = ""
 
     #If the info previously exists for the 
     if(not container_info.proxy_container_port):
@@ -230,13 +209,8 @@ def update_oauthproxy_container_authenticated_emails(manuscript):
     logger.debug("update_oauthproxy_container_authenticated_emails result:" + str(result))
 
 
-def stop_delete_oauthproxy_container(manuscript, remove_container_info=True):
+def stop_delete_oauthproxy_container(manuscript):
     stop_delete_container(manuscript.manuscript_containerinfo.proxy_container_id)
-    if(remove_container_info):
-        container_info.proxy_container_id = ""
-        container_info.proxy_container_ip = ""
-        container_info.proxy_container_port = ""
-        container_info.save()
 
 def stop_delete_container(container_id):
     client = docker.from_env()
@@ -268,29 +242,21 @@ def start_network(manuscript):
     container_info.network_id = network.id
     container_info.save()
 
-def delete_network(manuscript, remove_container_info=True):
+def delete_network(manuscript):
     client = docker.from_env()
     network = client.networks.get(manuscript.manuscript_containerinfo.network_id)
     network.remove()
-    if(remove_container_info):
-        container_info.network_ip_substring = ""
-        container_info.network_id = ""
-        container_info.save()
 
-def delete_manuscript_docker_stack(manuscript, remove_container_info=False):
-    #Note we don't use these methods "remove_container_info" because we just blast away the whole thing at the end
+def delete_manuscript_docker_stack(manuscript):
     try:
-        stop_delete_oauthproxy_container(manuscript, remove_container_info=False)
-        stop_delete_repo2docker_container(manuscript, remove_container_info=False)
-        delete_network(manuscript, remove_container_info=False)
-        delete_repo2docker_image(manuscript, remove_container_info=False)
-        delete_oauth2proxy_image(manuscript, remove_container_info=False)
+        stop_delete_oauthproxy_container(manuscript)
+        stop_delete_repo2docker_container(manuscript)
+        delete_network(manuscript)
+        delete_repo2docker_image(manuscript)
+        delete_oauth2proxy_image(manuscript)
 
-        if remove_container_info:
-            manuscript.manuscript_containerinfo.delete()
-            return("Manuscript stack and ContainerInfo deleted")
-            
-        return("Manuscript stack deleted")
+        manuscript.manuscript_containerinfo.delete()
+        return("Manuscript stack and ContainerInfo deleted")
 
     except m.ContainerInfo.DoesNotExist:
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
@@ -327,8 +293,8 @@ def build_manuscript_docker_stack(manuscript, refresh_notebook_if_up=False):
     start_oauthproxy_container(manuscript)
 
 def refresh_notebook_stack(manuscript):
-    stop_delete_repo2docker_container(manuscript, remove_container_info=False)
-    delete_repo2docker_image(manuscript, remove_container_info=False)
+    stop_delete_repo2docker_container(manuscript)
+    delete_repo2docker_image(manuscript)
     build_repo2docker_image(manuscript)
     start_repo2docker_container(manuscript)
 

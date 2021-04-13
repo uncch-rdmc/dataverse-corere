@@ -93,16 +93,8 @@ def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     
     #TODO: This check may be too complicated, could maybe just check for the info
-    #TODO: Is this check even working right. I get an error saying there is no containerinfo right after
     if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)): 
-        print("CONTAINER INFO EXISTS?" + str(hasattr(manuscript, 'manuscript_containerinfo')))
         d.build_manuscript_docker_stack(manuscript)
-        # print("RECREATE DOCKERS IN OPEN BINDER")
-        # d.build_repo2docker_image(manuscript)
-        # d.build_oauthproxy_image(manuscript)
-        # d.start_network(manuscript)
-        # old_path = d.start_repo2docker_container(manuscript)
-        # d.start_oauthproxy_container(manuscript)
 
     return redirect(manuscript.manuscript_containerinfo.container_public_address())
 

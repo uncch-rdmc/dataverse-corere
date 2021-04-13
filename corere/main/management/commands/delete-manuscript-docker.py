@@ -19,5 +19,4 @@ class Command(BaseCommand):
         if input("Are you sure you wish to delete the docker stack for 'Manuscript " + str(manuscript.id) + " - " + manuscript.title + "'? (y/n)") != "y":
             exit() 
 
-        #return d.delete_manuscript_docker_stack(manuscript, remove_container_info=True)
         return d.delete_manuscript_docker_stack_crude(manuscript)

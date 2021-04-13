@@ -882,11 +882,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     #TODO: Run these async.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        print("HAS ATTR")
-                        print(self.object.manuscript.manuscript_containerinfo.__dict__)
                         d.refresh_notebook_stack(self.object.manuscript)
                     else:
-                        print("NO ATTR")
                         d.build_manuscript_docker_stack(self.object.manuscript)
                     return redirect('submission_editfiles', id=self.object.id)
                 else:
