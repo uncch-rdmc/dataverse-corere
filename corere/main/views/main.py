@@ -77,6 +77,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_has_submissions": (manuscript.get_max_submission_version_id() != None),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
@@ -91,6 +92,9 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
+
+    if(not manuscript.get_max_submission_version_id()):
+        raise Http404()
     
     #TODO: This check may be too complicated, could maybe just check for the info
     if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)): 

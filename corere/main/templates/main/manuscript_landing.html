@@ -257,7 +257,9 @@
             <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
         {% endif %}
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
+        {% if manuscript_has_submissions %}
+            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/binder/'">Launch Notebook</button>
+        {% endif %}
         {% comment %} {% if m_begin_flag %}  {% endcomment %}
             {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
             {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}

@@ -284,8 +284,6 @@ def delete_manuscript_docker_stack_crude(manuscript):
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
 
 def build_manuscript_docker_stack(manuscript, refresh_notebook_if_up=False):
-    print("RECREATE DOCKERS IN OPEN BINDER")
-
     build_repo2docker_image(manuscript)
     build_oauthproxy_image(manuscript)
     start_network(manuscript)
