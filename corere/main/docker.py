@@ -6,17 +6,16 @@ from corere.main import constants as c
 from django.db.models import Q
 logger = logging.getLogger(__name__)
 
+#TODO TODO: REDO THIS FIRST FUNCTION
 
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
-#TODO: NEEDS TO be dynamic?
-#TODO: Needs to correctly delete old image
-    try:
-        manuscript.manuscript_containerinfo.delete() #for now we just delete it each time
-        #TODO: Delete oauth2 proxy as well
-    except Exception as e: #TODO: make more specific
-        print("EXCEPTION ", e)
-        pass 
+    # try:
+    #     manuscript.manuscript_containerinfo.delete() #for now we just delete it each time
+    #     #TODO: Delete oauth2 proxy as well
+    # except Exception as e: #TODO: make more specific
+    #     print("EXCEPTION ", e)
+    #     pass 
 
     path = g.get_submission_repo_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
@@ -27,15 +26,15 @@ def build_repo2docker_image(manuscript):
     
     logger.debug("build_repo2docker_image result:" + str(result))
 
-    container_info = m.ContainerInfo()
+    #TODO: should this logic be moved outside of this function. Is it needed in other places?
+    if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
+        container_info = m.ContainerInfo() 
+    else:
+        container_info = manuscript.manuscript_containerinfo
     container_info.repo_image_name = image_name
     container_info.submission_version = sub_version
     container_info.manuscript = manuscript
     container_info.save()
-
-    #TODO: better logging, make sure there is nothing compromising in the logs
-    #print(result.stderr)
-    #print(result.stdout)
 
 def delete_repo2docker_image(manuscript, remove_container_info=True):
     client = docker.from_env()
@@ -112,9 +111,13 @@ def delete_oauth2proxy_image(manuscript, remove_container_info=True):
 
 def start_repo2docker_container(manuscript):
     container_info = manuscript.manuscript_containerinfo
-    if(container_info.repo_container_id):
-        stop_delete_repo2docker_container(manuscript, remove_container_info=False)
-        container_info.repo_container_id = ""
+    print("start_repo2docker_container")
+    print(container_info.__dict__)
+
+# #TODO: Probably shouldn't do this, we handle it elsewhere? I could also delete the ID in a different place...
+#     if(container_info.repo_container_id):
+#         stop_delete_repo2docker_container(manuscript, remove_container_info=False)
+#         container_info.repo_container_id = ""
 
     # if(!container_info.container_port): #we reuse existing port/ip on recreation
     #     while True:
@@ -128,6 +131,8 @@ def start_repo2docker_container(manuscript):
     run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
     #TODO: Set the "*" to be more specific
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""
+
+    print(run_string)
 
     container = client.containers.run(container_info.repo_image_name, run_string,  detach=True) #network=container_info.container_network_name()) #ports={'8888/tcp': container_port},
     notebook_network = client.networks.get(container_info.container_network_name())
@@ -155,9 +160,10 @@ def stop_delete_repo2docker_container(manuscript, remove_container_info=True):
 def start_oauthproxy_container(manuscript): 
     container_info = manuscript.manuscript_containerinfo
 
-    if(container_info.proxy_container_id):
-        stop_delete_oauthproxy_container(manuscript, remove_container_info=False)
-        container_info.proxy_container_id = ""
+# #TODO: Probably shouldn't do this, we handle it elsewhere. I could also delete the ID in a different place...
+#     if(container_info.proxy_container_id):
+#         stop_delete_oauthproxy_container(manuscript, remove_container_info=False)
+#         container_info.proxy_container_id = ""
 
     #If the info previously exists for the 
     if(not container_info.proxy_container_port):
@@ -290,6 +296,22 @@ def delete_manuscript_docker_stack(manuscript, remove_container_info=False):
 
     except m.ContainerInfo.DoesNotExist:
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
+
+def build_manuscript_docker_stack(manuscript, refresh_notebook_if_up=False):
+    print("RECREATE DOCKERS IN OPEN BINDER")
+
+    build_repo2docker_image(manuscript)
+    build_oauthproxy_image(manuscript)
+    start_network(manuscript)
+    start_repo2docker_container(manuscript)
+    start_oauthproxy_container(manuscript)
+
+def refresh_notebook_stack(manuscript):
+    stop_delete_repo2docker_container(manuscript, remove_container_info=False)
+    delete_repo2docker_image(manuscript, remove_container_info=False)
+    build_repo2docker_image(manuscript)
+    start_repo2docker_container(manuscript)
+
 #What are the steps:
 # - Build Image
 # - Run image as a container

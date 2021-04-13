@@ -6,6 +6,7 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from .. import constants as c 
+from corere.main import docker as d
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
@@ -878,6 +879,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
+                    
+                    #TODO: Run these async.
+                    if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
+                        print("HAS ATTR")
+                        print(self.object.manuscript.manuscript_containerinfo.__dict__)
+                        d.refresh_notebook_stack(self.object.manuscript)
+                    else:
+                        print("NO ATTR")
+                        d.build_manuscript_docker_stack(self.object.manuscript)
                     return redirect('submission_editfiles', id=self.object.id)
                 else:
                     self.message = 'You must upload some files to the submission!'

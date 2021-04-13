@@ -5,6 +5,8 @@ from corere.main import models as m
 from corere.main import docker as d
 from django.contrib.auth.models import Group
 
+#TODO: If we run into many issues with intermediate failures that end uncleanly, we should probably delete all the resources by tag
+#      This will require improving the tags somewhat, including the manuscript id
 class Command(BaseCommand):
     help = "Wipe docker stack for a Manuscript (jupyter-notebook, oauthproxy, network), along with its ContainerInfo."
 
