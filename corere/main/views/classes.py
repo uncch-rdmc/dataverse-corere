@@ -879,7 +879,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
-                    
+
                     #TODO: Run these async.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
                         print("HAS ATTR")
@@ -896,7 +896,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                         'root_object_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object)#,
+                        "repo_branch":g.helper_get_submission_branch_name(self.object)
                         })
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):

@@ -6,8 +6,6 @@ from corere.main import constants as c
 from django.db.models import Q
 logger = logging.getLogger(__name__)
 
-#TODO TODO: REDO THIS FIRST FUNCTION
-
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
     # try:
@@ -19,7 +17,7 @@ def build_repo2docker_image(manuscript):
 
     path = g.get_submission_repo_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
-    image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG  
+    image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) 
     #jupyter-repo2docker  --no-run --image-name "test-version1:corere-jupyter" "../../../corere-git/10_-_manuscript_-_test10"
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
     result = subprocess.run([run_string], shell=True, capture_output=True)
@@ -81,7 +79,7 @@ def build_oauthproxy_image(manuscript):
         f.write(docker_string)
 
     #run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
-    container_info.proxy_image_name = ("oauthproxy-" + str(manuscript.id) + "-" + manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
+    container_info.proxy_image_name = ("oauthproxy-" + str(manuscript.id) + "-" + manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id)
     container_info.save()
     run_string = "docker build . -t " + container_info.proxy_image_name
     result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
@@ -293,6 +291,28 @@ def delete_manuscript_docker_stack(manuscript, remove_container_info=False):
             return("Manuscript stack and ContainerInfo deleted")
             
         return("Manuscript stack deleted")
+
+    except m.ContainerInfo.DoesNotExist:
+        return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
+
+#This deletes the stack via tags based on manuscript id, not via info from ContainerInfo
+#In the end its probably not much different, but its being designed to use only for admins
+def delete_manuscript_docker_stack_crude(manuscript):
+    #delete containers via tags
+    try:
+        run_string = "docker ps -a |  grep ':" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) + "' | awk '{print $1}' | xargs docker rm -f"
+        print(subprocess.run([run_string], shell=True, capture_output=True))
+        
+        #delete images via tags. note the lack of a colon.
+        run_string = "docker images | grep '" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) + "' | awk '{print $3}' | xargs docker rmi"
+        print(subprocess.run([run_string], shell=True, capture_output=True))
+        
+        #delete all unused networks
+        run_string = "docker network prune -f"
+        print(subprocess.run([run_string], shell=True, capture_output=True))
+
+        manuscript.manuscript_containerinfo.delete()
+        return("Manuscript stack and ContainerInfo deleted")
 
     except m.ContainerInfo.DoesNotExist:
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
