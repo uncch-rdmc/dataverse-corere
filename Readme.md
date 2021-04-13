@@ -18,6 +18,8 @@ Docker is required for deployment of notebook and proxy containers.
 
 Git is required for corere to manage user upload files and the versions. It is recommended to point Corere to a separate folder from the one used for other Git activities.
 
+A postgres database is also required.
+
 CentOS or RHEL is preferred, but is not required. Corere should also run on macOS.
 
 ## Installation:
