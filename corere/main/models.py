@@ -969,6 +969,7 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
         if(len(split_name) == 3):
             [ _, assigned_obj, m_id ] = split_name
             if(assigned_obj == "Manuscript"):
-                logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
                 manuscript = Manuscript.objects.get(id=m_id)
-                d.update_oauthproxy_container_authenticated_emails(manuscript)
+                if ((hasattr(manuscript, 'manuscript_containerinfo'))):
+                    logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+                    d.update_oauthproxy_container_authenticated_emails(manuscript)

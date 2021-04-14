@@ -8,21 +8,12 @@ logger = logging.getLogger(__name__)
 
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
-    # try:
-    #     manuscript.manuscript_containerinfo.delete() #for now we just delete it each time
-    #     #TODO: Delete oauth2 proxy as well
-    # except Exception as e: #TODO: make more specific
-    #     print("EXCEPTION ", e)
-    #     pass 
-
     path = g.get_submission_repo_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
     image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) 
-    #jupyter-repo2docker  --no-run --image-name "test-version1:corere-jupyter" "../../../corere-git/10_-_manuscript_-_test10"
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
     result = subprocess.run([run_string], shell=True, capture_output=True)
-    
-    logger.debug("build_repo2docker_image result:" + str(result))
+    logger.debug("build_repo2docker_image for manuscript: "+ str(manuscript.id) + ". Result:" + str(result))
 
     #TODO: should this logic be moved outside of this function. Is it needed in other places?
     if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
@@ -57,7 +48,6 @@ def _write_oauthproxy_email_list_to_working_directory(manuscript):
     ).values('email')
 
     for ue in user_email_list:
-        print(ue.get("email"))
         email_file.write(ue.get("email")+"\n")
 
     email_file.close()
@@ -83,19 +73,6 @@ def build_oauthproxy_image(manuscript):
 
     logger.debug("build_oauthproxy_image result:" + str(result))
 
-    # dockerfile = io.BytesIO(bytes(docker_string.encode()))
-    # #this fails right now because the file I am using has to be in my docker folder
-    # client.images.build(fileobj=dockerfile) #custom_context=True
-
-    #print("HEY HEY YA")
-
-    #It looks like we may have to create a tar.gz with the dockerfile and our emails: https://github.com/docker/docker-py/issues/974
-    #Or maybe I can change the docker root dir to something that actually exists? https://unix.stackexchange.com/questions/452368/change-docker-root-dir-on-red-hat-linux
-    #Or maybe there is some command I can do to get the file I want into docker? https://stackoverflow.com/questions/37789984/how-to-copy-folders-to-docker-image-from-dockerfile
-    #I could also just run the build command directly on the filesystem, not through the api, and provide the context https://www.cloudbees.com/blog/3-different-ways-to-provide-docker-build-context/
-    #I'm leaning towards using subprocess.run and just running inside a folder in tmp
-
-    #dockerfile.close()
 
 def delete_oauth2proxy_image(manuscript):
     client = docker.from_env()
@@ -103,25 +80,17 @@ def delete_oauth2proxy_image(manuscript):
 
 def start_repo2docker_container(manuscript):
     container_info = manuscript.manuscript_containerinfo
-    print("start_repo2docker_container")
-    print(container_info.__dict__)
+    logger.debug("start_repo2docker_container for manuscript: " + str(manuscript.id))
 
-    # if(!container_info.container_port): #we reuse existing port/ip on recreation
-    #     while True:
-    #         container_info.repo_container_port = random.randint(50000, 50019)
-    #         if not m.ContainerInfo.objects.filter(Q(repo_container_port=container_port) | Q(proxy_container_port=container_port)).exists():
-    #             break
     if(not container_info.repo_container_ip): 
         container_info.repo_container_ip = "0.0.0.0"
 
     client = docker.from_env()    
     run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
-    #TODO: Set the "*" to be more specific
+    #TODO: Maybe set the '*' to specify only corere's host. 
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""
 
-    print(run_string)
-
-    container = client.containers.run(container_info.repo_image_name, run_string,  detach=True) #network=container_info.container_network_name()) #ports={'8888/tcp': container_port},
+    container = client.containers.run(container_info.repo_image_name, run_string,  detach=True)
     notebook_network = client.networks.get(container_info.container_network_name())
     notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".2")
 
@@ -131,14 +100,6 @@ def start_repo2docker_container(manuscript):
 def stop_delete_repo2docker_container(manuscript):
     stop_delete_container(manuscript.manuscript_containerinfo.repo_container_id)
 
-
-# TODO: There are 3 cases where I'd run start:
-#        1. New notebook creation - after submission file upload
-#        2. Recreating after file upload
-#        3. Recreating after user access has been changed
-# 2. we need to delete the juptyer notebook but not the proxy (if we do it right)
-# 3. we need to delete the proxy but not the notebook (if we do it right)
-# I should probably check back with the previous notebook create code for the right way to do this. Also think more if the logic should really be in here?
 def start_oauthproxy_container(manuscript): 
     container_info = manuscript.manuscript_containerinfo
 
@@ -156,6 +117,7 @@ def start_oauthproxy_container(manuscript):
 
     emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
 
+    #+ "--cookie-httponly=" + "'true'" + " " \
     #            + "--whitelist-domain=" + "'" + container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "'" + " " \
     #            + "--email-domain=" + "'*'" + " " \
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
@@ -169,17 +131,15 @@ def start_oauthproxy_container(manuscript):
             + "--client-secret=" + "'ya9okC55lOXmAp3LqZ2biJcWhu6k2MbAQnImJstHqB0='" + " " \
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
             + "--cookie-secret=" + "'3BC2D1B35884E2CCF5F964775FB7B74A'" + " " \
-            + "--cookie-domain=" + "''" + " " \
-            + "--cookie-expire=" + "'5s'" + " " \
-            + "--cookie-refresh=" + "'0s'" + " " \
-            + "--cookie-httponly=" + "'true'" + " " \
+            + "--cookie-refresh=" + "'1h'" + " " \
+            + "--cookie-expire=" + "'48h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
+            + "--banner=" + "'" + "Please authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
 
     if(settings.DEBUG):
         command += "--cookie-secure=" + "'false'" + " "
     else:
         command += "--cookie-secure=" + "'true'" + " "
-    print("OAUTH PROXY COMMAND: " + command)
 
     container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
 
@@ -197,7 +157,6 @@ def start_oauthproxy_container(manuscript):
     return container_info.container_public_address()
     
 def update_oauthproxy_container_authenticated_emails(manuscript):
-    #What should we do if there is no container yet? Error or just do nothing?
     container_info = manuscript.manuscript_containerinfo
     _write_oauthproxy_email_list_to_working_directory(manuscript)
 
@@ -263,9 +222,12 @@ def delete_manuscript_docker_stack(manuscript):
 
 #This deletes the stack via tags based on manuscript id, not via info from ContainerInfo
 #In the end its probably not much different, but its being designed to use only for admins
+#TODO: If you delete the last stack with this method, starting up a new stack is very slow.
+#      I assume this has to do with deletion of intermediates, or the docker network prune.
+#      It would be good to fix this.
 def delete_manuscript_docker_stack_crude(manuscript):
-    #delete containers via tags
     try:
+        #delete containers via tags
         run_string = "docker ps -a |  grep ':" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) + "' | awk '{print $1}' | xargs docker rm -f"
         print(subprocess.run([run_string], shell=True, capture_output=True))
         
@@ -295,25 +257,3 @@ def refresh_notebook_stack(manuscript):
     delete_repo2docker_image(manuscript)
     build_repo2docker_image(manuscript)
     start_repo2docker_container(manuscript)
-
-#What are the steps:
-# - Build Image
-# - Run image as a container
-#   - Eventually will need to handle the OAuth2-Proxy crap
-# - Delete Container
-# - Delete Image
-
-#Thoughts:
-# - how will I actually do port/ip in production???
-
-# docker run -p 54321:8888 12c7e0b2e62f jupyter notebook --ip 0.0.0.0 --NotebookApp.custom_display_url=http://0.0.0.0:54321
-
-
-# docker run -p 61111:8888 bitnami/oauth2-proxy:latest oauth2-proxy --http-address='127.0.0.1:4180' --https-address=':443' --redirect-url='http://127.0.0.1:4180' --upstream='http://0.0.0.0:54329/' --email-domain='*' --client-id='54171f39-1251-40b7-ab06-78a43c267650' --client-secret='ya9okC55lOXmAp3LqZ2biJcWhu6k2MbAQnImJstHqB0=' --cookie-name='_oauth2_proxy' --cookie-secret='3BC2D1B35884E2CCF5F964775FB7B74A' --cookie-domain='' --cookie-expire='5s' --cookie-refresh='0s' --cookie-secure='true' --cookie-httponly='true'
-
-
-
-
-#I've gotten really close to getthing these two containers to talk together. Something is up with the networking. I think they can talk together via ip, but not via their names?
-#Maybe something is up with the python-docker library, maybe it doesn't alias by default? But I added the alias and it still doesn't work
-#Also worth noting that we should change the "ID" fields in container_info to name if we keep using them that way

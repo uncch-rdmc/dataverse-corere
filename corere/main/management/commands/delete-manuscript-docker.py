@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('manuscript_id', type=int)
+        parser.add_argument('--crude', action='store_true', help='Runs the crude deletion, which does not require an intact ContainerInfo and stack. The only downside to this is currently if you delete the last containers via this method, the creation of your first containers is very slow.')
 
     def handle(self, *args, **options):
         manuscript = m.Manuscript.objects.get(id=options['manuscript_id'])
@@ -19,4 +20,9 @@ class Command(BaseCommand):
         if input("Are you sure you wish to delete the docker stack for 'Manuscript " + str(manuscript.id) + " - " + manuscript.title + "'? (y/n)") != "y":
             exit() 
 
-        return d.delete_manuscript_docker_stack_crude(manuscript)
+        crude = options.get('crude', [])
+
+        if(crude):
+            return d.delete_manuscript_docker_stack_crude(manuscript)
+        else
+            return d.delete_manuscript_docker_stack(manuscript)
