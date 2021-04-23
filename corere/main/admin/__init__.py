@@ -58,6 +58,7 @@ admin.site.register(m.User, UserAdmin)
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
+admin.site.register(m.ContainerInfo)
 
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
 admin.site.register(m.HistoricalSubmission, HistoryAdmin)

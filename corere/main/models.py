@@ -1,6 +1,7 @@
 import logging
 import uuid
 # from . import constants as c
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, Group
@@ -11,7 +12,7 @@ from django_fsm import FSMField, transition, RETURN_VALUE, has_transition_perm, 
 from django.db.models import Q, Max
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from django.db.models.signals import post_delete
 from guardian.shortcuts import get_users_with_perms, assign_perm
@@ -19,6 +20,7 @@ from simple_history.models import HistoricalRecords
 from simple_history.utils import update_change_reason
 from corere.main import constants as c
 from corere.main import git as g
+from corere.main import docker as d
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
@@ -268,7 +270,7 @@ class Submission(AbstractCreateUpdateModel):
         unique_together = ('manuscript', 'version_id',)
 
     def save(self, *args, **kwargs):
-        prev_max_version_id = Submission.objects.filter(manuscript=self.manuscript).aggregate(Max('version_id'))['version_id__max']
+        prev_max_version_id = self.manuscript.get_max_submission_version_id()
         first_save = False
         if not self.pk: #only first save. Nessecary for submission in progress check but also to allow admin editing of submissions
             first_save = True
@@ -661,6 +663,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
+
+    def get_max_submission_version_id(self):
+        return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
             
     ##### django-fsm (workflow) related functions #####
     
@@ -758,6 +763,28 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
+class ContainerInfo(models.Model):
+    repo_image_name = models.CharField(max_length=128, blank=True, null=True)
+    proxy_image_name = models.CharField(max_length=128, blank=True, null=True)
+    repo_container_id = models.CharField(max_length=64, blank=True, null=True)
+    repo_container_ip = models.CharField(max_length=24, blank=True, null=True)
+    # repo_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
+    proxy_container_id = models.CharField(max_length=64, blank=True, null=True)
+    proxy_container_ip = models.CharField(max_length=24, blank=True, null=True)
+    proxy_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
+    network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
+    network_id = models.CharField(max_length=64, blank=True, null=True)
+    submission_version = models.IntegerField()
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+
+    def container_public_address(self):
+        return "http://" + self.proxy_container_ip + ":" + str(self.proxy_container_port) #I don't understand why python decides my charfield is an int?
+
+    def container_network_name(self):
+        return "notebook-" + str(self.manuscript.id)
+
+    # def proxy_image_name(self):
+    #     return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
 
 ####################################################
 
@@ -931,3 +958,18 @@ def add_history_info(sender, instance, **kwargs):
         new_record.save()
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
+
+#See: https://stackoverflow.com/questions/7899127/
+@receiver(signal=m2m_changed, sender=User.groups.through)
+def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
+    if action == 'post_remove' or action == 'post_add':
+        #This splits up the group name for checking to see whether its a group we should act upon
+        #It would be better to have names formalized someday
+        split_name = instance.name.split()
+        if(len(split_name) == 3):
+            [ _, assigned_obj, m_id ] = split_name
+            if(assigned_obj == "Manuscript"):
+                manuscript = Manuscript.objects.get(id=m_id)
+                if ((hasattr(manuscript, 'manuscript_containerinfo'))):
+                    logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+                    d.update_oauthproxy_container_authenticated_emails(manuscript)

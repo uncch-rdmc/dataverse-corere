@@ -17,6 +17,12 @@ INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
+DOCKER_GEN_TAG = "jupyter-corere"
+DOCKER_OAUTH_PROXY_BASE_IMAGE = "bitnami/oauth2-proxy:latest"
+
+#Used to build OAuth2Proxy, which requires a file to be passed to store permitted email addresses.
+DOCKER_BUILD_FOLDER = "/tmp"
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -117,6 +123,7 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = (
+    'social_core.backends.globus.GlobusOpenIdConnect',
     'social_core.backends.google.GoogleOAuth2',
     'social_core.backends.github.GithubOAuth2',
     'guardian.backends.ObjectPermissionBackend',
@@ -227,6 +234,15 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 # Social Auth: Github configuration
 SOCIAL_AUTH_GITHUB_KEY = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_KEY"]
 SOCIAL_AUTH_GITHUB_SECRET = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"]
+
+#NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
+
+# Social Auth: Globus configuration
+SOCIAL_AUTH_GLOBUS_KEY = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_KEY"]
+SOCIAL_AUTH_GLOBUS_SECRET = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_SECRET"]
+SOCIAL_AUTH_GLOBUS_AUTH_EXTRA_ARGUMENTS = {
+    'access_type': 'offline',
+}
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 

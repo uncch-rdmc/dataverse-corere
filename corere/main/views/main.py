@@ -4,6 +4,7 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
+from corere.main import docker as d
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
 from corere.main.utils import get_pretty_user_list_by_group
@@ -76,6 +77,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_has_submissions": (manuscript.get_max_submission_version_id() != None),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
@@ -90,12 +92,15 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_binder(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
-        logger.warning("User id:{0} attempted to launch binder for Manuscript id:{1} which they had no permission to and should not be able to see".format(request.user.id, id))
-        raise Http404()
 
-    binder_url = binder_build_load(manuscript)
-    return redirect(binder_url)
+    if(not manuscript.get_max_submission_version_id()):
+        raise Http404()
+    
+    #TODO: This check may be too complicated, could maybe just check for the info
+    if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)): 
+        d.build_manuscript_docker_stack(manuscript)
+
+    return redirect(manuscript.manuscript_containerinfo.container_public_address())
 
 @login_required()
 def site_actions(request):
@@ -121,3 +126,8 @@ def switch_role(request):
         else:
             logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_full_string +")")
     return redirect(request.GET.get('next', ''))
+
+@login_required
+def test_iframe(request):
+    args = {}
+    return render(request, "main/test_iframe.html", args)

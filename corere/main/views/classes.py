@@ -6,6 +6,7 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from .. import constants as c 
+from corere.main import docker as d
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
@@ -661,7 +662,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def dispatch(self, request, *args, **kwargs):
         #If new submission with previous submission existing, copy over data from the previous submission
         if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = m.Submission.objects.filter(manuscript=self.object.manuscript).aggregate(Max('version_id'))['version_id__max']
+            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
             if prev_max_sub_version_id:
                 self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
 
@@ -878,6 +879,12 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
+
+                    #TODO: Run these async.
+                    if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
+                        d.refresh_notebook_stack(self.object.manuscript)
+                    else:
+                        d.build_manuscript_docker_stack(self.object.manuscript)
                     return redirect('submission_editfiles', id=self.object.id)
                 else:
                     self.message = 'You must upload some files to the submission!'
@@ -886,7 +893,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                         'root_object_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object)#,
+                        "repo_branch":g.helper_get_submission_branch_name(self.object)
                         })
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
