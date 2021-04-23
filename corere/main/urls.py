@@ -46,6 +46,7 @@ urlpatterns = [
     path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
+    path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),

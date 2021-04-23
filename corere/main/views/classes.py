@@ -837,7 +837,8 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                 else:
                     messages.add_message(request, messages.SUCCESS, self.message)
 
-                return redirect('manuscript_landing', id=self.object.manuscript.id)
+                #return redirect('manuscript_landing', id=self.object.manuscript.id)
+                return redirect('submission_notebook', id=self.object.manuscript.id)
         else:
             logger.debug(formset.errors)
 
@@ -882,8 +883,10 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     #TODO: Run these async.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
+                        logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
                         d.refresh_notebook_stack(self.object.manuscript)
                     else:
+                        logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
                         d.build_manuscript_docker_stack(self.object.manuscript)
                     return redirect('submission_editfiles', id=self.object.id)
                 else:
@@ -1092,3 +1095,27 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
+
+class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    template = 'main/test_iframe.html'
+
+    def get(self, request, *args, **kwargs):
+        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
+
+        print(notebook_url)
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
+            'notebook_url': notebook_url}
+
+        return render(request, self.template, context)
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('submit_continue'):
+            pass
+        pass
