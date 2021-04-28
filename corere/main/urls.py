@@ -58,7 +58,5 @@ urlpatterns = [
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
     path('switch_role/', main.switch_role, name="switch_role"),
-
-    path('test_iframe/', main.test_iframe, name="test_iframe"),
     
 ]

@@ -1102,7 +1102,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-    template = 'main/test_iframe.html'
+    template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
@@ -1120,26 +1120,17 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             pass
         pass
 
+#This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
+#This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
+#Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
 class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-    template = 'main/browser_redirect.html'
+    template = 'main/notebook_redirect.html'
 
     def get(self, request, *args, **kwargs):
-        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
-
-        print(notebook_url)
-
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
-            'notebook_url': notebook_url}
-
+        context = {'sub_id':self.object.id}
         return render(request, self.template, context)
-
-    def post(self, request, *args, **kwargs):
-        if request.POST.get('submit_continue'):
-            pass
-        pass
