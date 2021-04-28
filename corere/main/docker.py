@@ -1,4 +1,5 @@
 import docker, logging, subprocess, random, io, os
+import shutil
 from django.conf import settings
 from corere.main import git as g
 from corere.main import models as m
@@ -52,16 +53,30 @@ def _write_oauthproxy_email_list_to_working_directory(manuscript):
 
     email_file.close()
 
+def _write_oauth_proxy_html_templates_to_working_directory(manuscript):
+    container_info = manuscript.manuscript_containerinfo
+    client = docker.from_env()    
+
+    email_file_path = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/email-templates"
+
+    if os.path.exists(email_file_path) and os.path.isdir(email_file_path):
+        shutil.rmtree(email_file_path)
+
+    #/Users/madunlap/Documents/GitHub/dataverse-corere/corere   /main/static/oauth2-proxy/email-templates
+    shutil.copytree(settings.BASE_DIR + "/main/static/oauth2-proxy/email-templates", email_file_path )
+
 def build_oauthproxy_image(manuscript):
     container_info = manuscript.manuscript_containerinfo
     client = docker.from_env()    
 
     _write_oauthproxy_email_list_to_working_directory(manuscript)
+    _write_oauth_proxy_html_templates_to_working_directory(manuscript)
 
     docker_build_folder = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/"
     dockerfile_path = docker_build_folder + "dockerfile"
     docker_string = "FROM " + settings.DOCKER_OAUTH_PROXY_BASE_IMAGE + "\n" \
-                  + "COPY authenticated_emails.txt /opt/bitnami/oauth2-proxy/authenticated_emails.txt"
+                  + "COPY authenticated_emails.txt /opt/bitnami/oauth2-proxy/authenticated_emails.txt \n" \
+                  + "ADD email-templates /opt/bitnami/oauth2-proxy/email-templates"
     with open(dockerfile_path, 'w') as f:
         f.write(docker_string)
 
@@ -88,7 +103,9 @@ def start_repo2docker_container(manuscript):
     client = docker.from_env()    
     run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
     #TODO: Maybe set the '*' to specify only corere's host. 
-    run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""
+    run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""   
+    # run_string += " && "
+
 
     container = client.containers.run(container_info.repo_image_name, run_string,  detach=True)
     notebook_network = client.networks.get(container_info.container_network_name())
@@ -116,14 +133,24 @@ def start_oauthproxy_container(manuscript):
     client = docker.from_env()
 
     emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
+    template_files_path = "/opt/bitnami/oauth2-proxy/email-templates"
 
     #+ "--cookie-httponly=" + "'true'" + " " \
     #            + "--whitelist-domain=" + "'" + container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "'" + " " \
     #            + "--email-domain=" + "'*'" + " " \
+    
+                #+ "--upstream=" + "'http://0.0.0.0:8000/submission/49/notebook/' " \
+
+    #            + "--banner=" + "'" + "Please authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
+
+    latest_submission = m.Submission.objects.get(manuscript=manuscript, version_id=manuscript.get_max_submission_version_id())
+
+    #Note: host.docker.internal may have issues on linux.
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
             + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
+            + "--upstream=" + "'http://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebook_redirect/' " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
@@ -134,7 +161,7 @@ def start_oauthproxy_container(manuscript):
             + "--cookie-refresh=" + "'1h'" + " " \
             + "--cookie-expire=" + "'48h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
-            + "--banner=" + "'" + "Please authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
+            + "--custom-templates-dir='" + template_files_path + "' " \
 
     if(settings.DEBUG):
         command += "--cookie-secure=" + "'false'" + " "

@@ -47,6 +47,7 @@ urlpatterns = [
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
     path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
+    path('submission/<int:id>/notebook_redirect/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebook"),
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
@@ -59,4 +60,5 @@ urlpatterns = [
     path('switch_role/', main.switch_role, name="switch_role"),
 
     path('test_iframe/', main.test_iframe, name="test_iframe"),
+    
 ]

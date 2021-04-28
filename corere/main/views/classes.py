@@ -1119,3 +1119,27 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         if request.POST.get('submit_continue'):
             pass
         pass
+
+class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    template = 'main/browser_redirect.html'
+
+    def get(self, request, *args, **kwargs):
+        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
+
+        print(notebook_url)
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
+            'notebook_url': notebook_url}
+
+        return render(request, self.template, context)
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('submit_continue'):
+            pass
+        pass

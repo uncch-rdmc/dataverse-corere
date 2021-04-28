@@ -131,3 +131,8 @@ def switch_role(request):
 def test_iframe(request):
     args = {}
     return render(request, "main/test_iframe.html", args)
+
+@login_required
+def browser_redirect(request):
+    args = {}
+    return render(request, "main/browser_redirect.html", args)

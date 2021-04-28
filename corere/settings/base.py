@@ -18,7 +18,7 @@ INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
 DOCKER_GEN_TAG = "jupyter-corere"
-DOCKER_OAUTH_PROXY_BASE_IMAGE = "bitnami/oauth2-proxy:latest"
+DOCKER_OAUTH_PROXY_BASE_IMAGE = "bitnami/oauth2-proxy:7.1.2"
 
 #Used to build OAuth2Proxy, which requires a file to be passed to store permitted email addresses.
 DOCKER_BUILD_FOLDER = "/tmp"

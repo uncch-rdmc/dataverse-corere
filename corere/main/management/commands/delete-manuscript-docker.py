@@ -24,5 +24,5 @@ class Command(BaseCommand):
 
         if(crude):
             return d.delete_manuscript_docker_stack_crude(manuscript)
-        else
+        else:
             return d.delete_manuscript_docker_stack(manuscript)

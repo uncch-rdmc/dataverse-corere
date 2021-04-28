@@ -666,7 +666,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_max_submission_version_id(self):
         return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
-            
+
     ##### django-fsm (workflow) related functions #####
     
     #Extra function defined so fsm errors can be passed to use when submitting a form.
