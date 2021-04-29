@@ -12,7 +12,6 @@ from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404, HttpResponse
 from django.contrib.auth.decorators import login_required
-from corere.main.binderhub import binder_build_load 
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
 
@@ -90,7 +89,7 @@ def manuscript_landing(request, id=None):
     return render(request, "main/manuscript_landing.html", args)
 
 @login_required
-def open_binder(request, id=None):
+def open_notebook(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
 
     if(not manuscript.get_max_submission_version_id()):

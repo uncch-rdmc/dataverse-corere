@@ -5,10 +5,6 @@ export UPLOAD_OUTPUT_PATH=
 export DJANGO_LOG_DIRECTORY=
 export DJANGO_SETTINGS_MODULE=corere.settings.development
 
-### BINDERHUB ###
-# Address of your Binderhub server. 
-export BINDER_ADDR=
-
 ### GIT ###
 # Absolute path where you want corere to store files (utilizing git). DO NOT use an existing git folder unless you want to risk wiping out your personal code.
 export CORERE_GIT_FOLDER=
