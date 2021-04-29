@@ -117,7 +117,8 @@ def start_repo2docker_container(manuscript):
 def stop_delete_repo2docker_container(manuscript):
     stop_delete_container(manuscript.manuscript_containerinfo.repo_container_id)
 
-def start_oauthproxy_container(manuscript): 
+#We need the request to get the server address to pass to oauth2-proxy. Technically we only need this when creating the back button but we require it anyways.
+def start_oauthproxy_container(manuscript, request): 
     container_info = manuscript.manuscript_containerinfo
 
     #If the info previously exists for the 
@@ -142,10 +143,20 @@ def start_oauthproxy_container(manuscript):
                 #+ "--upstream=" + "'http://0.0.0.0:8000/submission/49/notebook/' " \
 
     #            + "--banner=" + "'" + "Please authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
+    #            + "--footer=" + "'" + "<button onclick=\"window.history.back();\" type=\"button\" class=\"btn btn-secondary btn-sm\" data-toggle=\"tooltip\" data-placement=\"auto\" title=\"button\">Back</button> Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
 
-    latest_submission = m.Submission.objects.get(manuscript=manuscript, version_id=manuscript.get_max_submission_version_id())
+    latest_submission = manuscript.get_latest_submission()
 
+    #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
     #Note: host.docker.internal may have issues on linux.
+    print(request.get_host())
+    print(request.is_secure())
+
+    if(request.is_secure()):
+        host_and_handler = "https://" + request.get_host()
+    else:
+        host_and_handler = "http://" + request.get_host()
+
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
@@ -158,10 +169,12 @@ def start_oauthproxy_container(manuscript):
             + "--client-secret=" + "'ya9okC55lOXmAp3LqZ2biJcWhu6k2MbAQnImJstHqB0='" + " " \
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
             + "--cookie-secret=" + "'3BC2D1B35884E2CCF5F964775FB7B74A'" + " " \
-            + "--cookie-refresh=" + "'1h'" + " " \
-            + "--cookie-expire=" + "'48h'" + " " \
+            + "--cookie-refresh=" + "'0s'" + " " \
+            + "--cookie-expire=" + "'5s'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
+            + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
+            + "--footer=" + "'" + host_and_handler + "'" + " "
 
     if(settings.DEBUG):
         command += "--cookie-secure=" + "'false'" + " "
@@ -272,12 +285,12 @@ def delete_manuscript_docker_stack_crude(manuscript):
     except m.ContainerInfo.DoesNotExist:
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
 
-def build_manuscript_docker_stack(manuscript, refresh_notebook_if_up=False):
+def build_manuscript_docker_stack(manuscript, request, refresh_notebook_if_up=False):
     build_repo2docker_image(manuscript)
     build_oauthproxy_image(manuscript)
     start_network(manuscript)
     start_repo2docker_container(manuscript)
-    start_oauthproxy_container(manuscript)
+    start_oauthproxy_container(manuscript, request)
 
 def refresh_notebook_stack(manuscript):
     stop_delete_repo2docker_container(manuscript)

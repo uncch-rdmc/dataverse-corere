@@ -257,6 +257,7 @@ class Submission(AbstractCreateUpdateModel):
     _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
     version_id = models.IntegerField(verbose_name='Version number')
+    files_changed = models.BooleanField(default=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
@@ -666,6 +667,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_max_submission_version_id(self):
         return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
+
+    def get_latest_submission(self):
+        return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
 
     ##### django-fsm (workflow) related functions #####
     

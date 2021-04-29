@@ -96,9 +96,20 @@ def open_binder(request, id=None):
     if(not manuscript.get_max_submission_version_id()):
         raise Http404()
     
+    latest_submission = manuscript.get_latest_submission()
+
     #TODO: This check may be too complicated, could maybe just check for the info
-    if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)): 
-        d.build_manuscript_docker_stack(manuscript)
+    if(hasattr(manuscript, 'manuscript_containerinfo')): 
+        if(latest_submission.files_changed):
+            logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
+            d.refresh_notebook_stack(manuscript)
+            latest_submission.files_changed = False
+            latest_submission.save()
+    else:
+        logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
+        d.build_manuscript_docker_stack(manuscript, request)
+        latest_submission.files_changed = False
+        latest_submission.save()
 
     return redirect(manuscript.manuscript_containerinfo.container_public_address())
 

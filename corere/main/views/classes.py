@@ -826,7 +826,8 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
-                    return redirect('submission_uploadfiles', id=self.object.id)
+                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    return redirect(container_flow_address)
                 elif self.object._status == "new":
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
                         logger.debug("PermissionDenied")
@@ -836,9 +837,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                     messages.add_message(request, messages.SUCCESS, "Your submission has been submitted!")
                 else:
                     messages.add_message(request, messages.SUCCESS, self.message)
-
-                #return redirect('manuscript_landing', id=self.object.manuscript.id)
-                return redirect('submission_notebook', id=self.object.manuscript.id)
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
         else:
             logger.debug(formset.errors)
 
@@ -880,15 +879,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
-
-                    #TODO: Run these async.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
-                        d.refresh_notebook_stack(self.object.manuscript)
+                        if(self.object.files_changed):
+                            logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
+                            d.refresh_notebook_stack(self.object.manuscript)
+                            self.object.files_changed = False
+                            self.object.save()
                     else:
                         logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
-                        d.build_manuscript_docker_stack(self.object.manuscript)
-                    return redirect('submission_editfiles', id=self.object.id)
+                        d.build_manuscript_docker_stack(self.object.manuscript, request)
+                        self.object.files_changed = False
+                        self.object.save()
+                    #return redirect('submission_editfiles', id=self.object.id)
+                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    return redirect(container_flow_address)
                 else:
                     self.message = 'You must upload some files to the submission!'
                     messages.add_message(request, messages.ERROR, self.message)
@@ -928,6 +932,10 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         git_file.size = file.size
         git_file.parent_submission = self.object
         git_file.save(force_insert=True)
+
+        #TODO: maybe centralize this flag setting to happen by the GitFile model
+        self.object.files_changed = True
+        self.object.save()
 
         return HttpResponse(status=200)
 
@@ -976,6 +984,9 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
         except m.GitFile.DoesNotExist:
             logger.warning("While deleting file " + file_path + " on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
 
+        self.object.files_changed = True
+        self.object.save()
+
         return HttpResponse(status=200)
 
 class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
@@ -995,6 +1006,9 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
                 m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
             except m.GitFile.DoesNotExist:
                 logger.warning("While deleting file " + b + " using delete all on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
+        self.object.files_changed = True
+        self.object.save()
 
         return HttpResponse(status=200)
 
@@ -1107,8 +1121,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def get(self, request, *args, **kwargs):
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
-        print(notebook_url)
-
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
             'notebook_url': notebook_url}
@@ -1116,8 +1128,9 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get('submit_continue'):
-            pass
+        if request.POST.get('submit'):
+            return redirect('submission_editfiles', id=self.object.id)
+        #TODO: Implement back.
         pass
 
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
