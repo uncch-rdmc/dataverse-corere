@@ -124,6 +124,14 @@ td.custom-control {
     border-right-color: #7386D5;
 }
 
+//TODO: Enanabling the commented out lines gets iframe to size right, but then the form buttons get hidden. Figure out later.
+iframe {
+    //height: 50%;
+    //position: absolute;
+    height:800px;
+    width: 100% ;
+ }
+
 /* Datatables OLD */
 
 // body {

@@ -104,10 +104,10 @@ def start_repo2docker_container(manuscript):
     run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
     #TODO: Maybe set the '*' to specify only corere's host. 
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""   
-    # run_string += " && "
 
 
-    container = client.containers.run(container_info.repo_image_name, run_string,  detach=True)
+    #Add this if you need direct access. Defeats the whole point of a proxy. # ports={'8888/tcp': "60000"},
+    container = client.containers.run(container_info.repo_image_name, run_string, detach=True)
     notebook_network = client.networks.get(container_info.container_network_name())
     notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".2")
 
@@ -170,7 +170,7 @@ def start_oauthproxy_container(manuscript, request):
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
             + "--cookie-secret=" + "'3BC2D1B35884E2CCF5F964775FB7B74A'" + " " \
             + "--cookie-refresh=" + "'0s'" + " " \
-            + "--cookie-expire=" + "'5s'" + " " \
+            + "--cookie-expire=" + "'2h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
             + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \

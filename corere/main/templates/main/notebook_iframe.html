@@ -1,6 +1,9 @@
 {% extends "main/layout.html" %}
 {% block content %}
-<iframe src="{{notebook_url}}" width="800px" height="600px" sandbox="allow-scripts allow-forms allow-top-navigation" title="test"></iframe>
+{% comment %} sandbox="allow-scripts allow-forms allow-top-navigation allow-same-origin"  height="1000px"  {% endcomment %}
+
+
+<iframe src="{{notebook_url}}" title="notebook"></iframe>
 
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
