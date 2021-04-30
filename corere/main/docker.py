@@ -164,10 +164,10 @@ def start_oauthproxy_container(manuscript, request):
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
-            + "--client-id=" + "'54171f39-1251-40b7-ab06-78a43c267650'" + " " \
-            + "--client-secret=" + "'ya9okC55lOXmAp3LqZ2biJcWhu6k2MbAQnImJstHqB0='" + " " \
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
-            + "--cookie-secret=" + "'3BC2D1B35884E2CCF5F964775FB7B74A'" + " " \
+            + "--client-id=" + "'" + settings.SOCIAL_AUTH_GLOBUS_KEY + "'" + " " \
+            + "--client-secret=" + "'" + settings.SOCIAL_AUTH_GLOBUS_SECRET + "'" + " " \
+            + "--cookie-secret=" + "'" + settings.OAUTHPROXY_COOKIE_SECRET + "'" + " " \
             + "--cookie-refresh=" + "'0s'" + " " \
             + "--cookie-expire=" + "'168h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
