@@ -8,6 +8,7 @@
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
         <input type="submit" name="back" value="Back">
+        <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
         <input type="submit" name="submit" value="Continue">
 </form>
 

@@ -147,16 +147,15 @@ def start_oauthproxy_container(manuscript, request):
 
     latest_submission = manuscript.get_latest_submission()
 
-    #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
-    #Note: host.docker.internal may have issues on linux.
-    print(request.get_host())
-    print(request.is_secure())
+
 
     if(request.is_secure()):
         host_and_handler = "https://" + request.get_host()
     else:
         host_and_handler = "http://" + request.get_host()
-
+    #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
+    #Note: host.docker.internal may have issues on linux.
+    #Note: whitelist-domain is used to allow redirects after using the oauth2 sign-in direct url
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
@@ -170,11 +169,12 @@ def start_oauthproxy_container(manuscript, request):
             + "--cookie-name=" + "'_oauth2_proxy'" + " " \
             + "--cookie-secret=" + "'3BC2D1B35884E2CCF5F964775FB7B74A'" + " " \
             + "--cookie-refresh=" + "'0s'" + " " \
-            + "--cookie-expire=" + "'2h'" + " " \
+            + "--cookie-expire=" + "'168h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
             + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
-            + "--footer=" + "'" + host_and_handler + "'" + " "
+            + "--footer=" + "'" + host_and_handler + "'" + " " \
+            + "--whitelist-domain=" + "'" + request.get_host() + "'" + " "
 
     if(settings.DEBUG):
         command += "--cookie-secure=" + "'false'" + " "

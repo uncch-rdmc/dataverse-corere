@@ -1,4 +1,4 @@
-import logging, os, requests 
+import logging, os, requests, urllib
 import git
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
@@ -20,6 +20,7 @@ from corere.main import git as g
 logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
 from django.db.models import Max
+
 #from guardian.decorators import permission_required_or_404
 
 ########################################## GENERIC + MIXINS ##########################################
@@ -826,7 +827,14 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
-                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    # container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() 
+                    if(request.is_secure()):
+                        container_flow_redirect = "https://" + request.get_host()
+                    else:
+                        container_flow_redirect = "http://" + request.get_host()
+                    container_flow_redirect += "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
                     return redirect(container_flow_address)
                 elif self.object._status == "new":
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
@@ -891,7 +899,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         self.object.files_changed = False
                         self.object.save()
                     #return redirect('submission_editfiles', id=self.object.id)
-                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    #container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() 
+                    if(request.is_secure()):
+                        container_flow_redirect = "https://" + request.get_host()
+                    else:
+                        container_flow_redirect = "http://" + request.get_host()
+                    container_flow_redirect += "/submission/" + str(self.object.id) + "/notebook_redirect/"
+                    container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
                     return redirect(container_flow_address)
                 else:
                     self.message = 'You must upload some files to the submission!'
@@ -1123,7 +1138,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
-            'notebook_url': notebook_url}
+            'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
 
         return render(request, self.template, context)
 
