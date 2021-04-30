@@ -20,6 +20,8 @@ from corere.main import git as g
 logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
 from django.db.models import Max
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 #from guardian.decorators import permission_required_or_404
 
@@ -827,14 +829,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
-                    # container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
-                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() 
-                    if(request.is_secure()):
-                        container_flow_redirect = "https://" + request.get_host()
-                    else:
-                        container_flow_redirect = "http://" + request.get_host()
-                    container_flow_redirect += "/submission/" + str(self.object.id) + "/notebook_redirect/"
-                    container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
+                    container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 elif self.object._status == "new":
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
@@ -898,15 +893,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         d.build_manuscript_docker_stack(self.object.manuscript, request)
                         self.object.files_changed = False
                         self.object.save()
-                    #return redirect('submission_editfiles', id=self.object.id)
-                    #container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(self.object.id) + "/notebook_redirect/"
-                    container_flow_address = self.object.manuscript.manuscript_containerinfo.container_public_address() 
-                    if(request.is_secure()):
-                        container_flow_redirect = "https://" + request.get_host()
-                    else:
-                        container_flow_redirect = "http://" + request.get_host()
-                    container_flow_redirect += "/submission/" + str(self.object.id) + "/notebook_redirect/"
-                    container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
+                    container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
                     self.message = 'You must upload some files to the submission!'
@@ -1125,6 +1112,24 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
+#This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
+#This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
+#Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
+class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    template = 'main/notebook_redirect.html'
+
+    def get(self, request, *args, **kwargs):
+        if 'postauth' in request.GET:
+            request.user.last_oauthproxy_forced_signin = datetime.now();
+            request.user.save()
+        context = {'sub_id':self.object.id}
+        return render(request, self.template, context)
+
 class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1145,20 +1150,28 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def post(self, request, *args, **kwargs):
         if request.POST.get('submit'):
             return redirect('submission_editfiles', id=self.object.id)
-        #TODO: Implement back.
+        if request.POST.get('back'):
+            return redirect('submission_uploadfiles', id=self.object.id)
         pass
 
-#This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
-#This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
-#Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
-class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
-    parent_reference_name = 'manuscript'
-    parent_id_name = "manuscript_id"
-    parent_model = m.Manuscript
-    object_friendly_name = 'submission'
-    model = m.Submission
-    template = 'main/notebook_redirect.html'
 
-    def get(self, request, *args, **kwargs):
-        context = {'sub_id':self.object.id}
-        return render(request, self.template, context)
+def _helper_get_oauth_url(request, submission):
+    # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))
+    # print("time now:" + str(timezone.now()))
+    #This code is for doing pro-active reauthentication via oauth2. We do this so that the user isn't presented with the oauth2 login inside their iframe (which they can't use).
+    if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
+        #We need to send the user to reauth
+        # print("REAUTH")
+        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
+        if(request.is_secure()):
+            container_flow_redirect = "https://" + request.get_host()
+        else:
+            container_flow_redirect = "http://" + request.get_host()
+        container_flow_redirect += "/submission/" + str(submission.id) + "/notebook_redirect/?postauth"
+        container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
+    else:
+        # print("NO REAUTH")
+        #We don't need to send the user to reauth
+        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebook_redirect/"
+
+    return container_flow_address

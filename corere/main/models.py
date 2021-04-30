@@ -27,6 +27,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
+from datetime import date
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -67,6 +68,10 @@ class User(AbstractUser):
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     email = models.EmailField(unique=True, blank=False)
+    #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
+    #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
+    #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
+    last_oauthproxy_forced_signin = models.DateTimeField(default=date(1900, 1, 1))
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
