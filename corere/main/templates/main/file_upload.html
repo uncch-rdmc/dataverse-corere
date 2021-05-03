@@ -10,7 +10,11 @@
         
         {% if m_status == "new" or s_status == "new" %}
             <input type=button value="Back" onclick="location.href='../edit/'">
-            <input type="submit" name="submit_continue" value="Continue">
+            {% if obj_type == 'submission' %}
+                <input type="submit" name="submit_continue" value="Launch Notebook">
+            {% else %}
+                <input type="submit" name="submit_continue" value="Continue">
+            {% endif %}
         {% else %}
             <input type=button value="Home" onClick="location.href='/'">
         {% endif %}

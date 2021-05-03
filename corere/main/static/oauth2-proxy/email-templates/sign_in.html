@@ -63,13 +63,13 @@
 
           <span id="back_span">         
             <script>
-              {{/* Custom: We need to determine if the path is '/submission/ [id] /notebook_redirect/' or not */}}
+              {{/* Custom: We need to determine if the path is '/submission/ [id] /notebooklogin/' or not */}}
               
               console.log(window.location.pathname)
               console.log(document.referrer)
               var pathArray = window.location.pathname.split('/');
               console.log(pathArray)
-              if(pathArray[1] == 'submission' && pathArray[3] == 'notebook_redirect') {
+              if(pathArray[1] == 'submission' && pathArray[3] == 'notebooklogin') {
                 console.log("inside button creator")
                 var backButton = document.createElement("button");
                 backButton.innerText = "Back";

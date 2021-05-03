@@ -160,7 +160,7 @@ def start_oauthproxy_container(manuscript, request):
             + "--https-address=" + "':443'" + " " \
             + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
             + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
-            + "--upstream=" + "'http://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebook_redirect/' " \
+            + "--upstream=" + "'http://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \

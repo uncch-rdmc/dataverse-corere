@@ -1167,11 +1167,11 @@ def _helper_get_oauth_url(request, submission):
             container_flow_redirect = "https://" + request.get_host()
         else:
             container_flow_redirect = "http://" + request.get_host()
-        container_flow_redirect += "/submission/" + str(submission.id) + "/notebook_redirect/?postauth"
+        container_flow_redirect += "/submission/" + str(submission.id) + "/notebooklogin/?postauth"
         container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
     else:
         # print("NO REAUTH")
         #We don't need to send the user to reauth
-        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebook_redirect/"
+        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address

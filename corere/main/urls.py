@@ -47,7 +47,7 @@ urlpatterns = [
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
     path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
-    path('submission/<int:id>/notebook_redirect/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebook"),
+    path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebook"), #Technically this page is more than login, but login is a good user facing name
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
