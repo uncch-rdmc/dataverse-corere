@@ -1,5 +1,5 @@
 {% extends "main/layout_registration.html" %}
-
+{% load static compress %}
 {% block content %}
 
 <div class="jumbotron">
@@ -10,14 +10,9 @@
     <h2>Login to continue</h2>
     <br/><br/>
     {% comment %} icons in span from https://fontawesome.com/ {% endcomment %}
+    {% comment %} Should use the correct icon for globus {% endcomment %}
     <p class="lead">
-        <a class="btn btn-secondary btn-lg" href="/auth/login/google-oauth2" role="button"><span class="fab fa-google"></span> Login with Google</a>
-    </p>
-    <p class="lead">
-        <a class="btn btn-secondary btn-lg" href="/auth/login/github" role="button"><span class="fab fa-github"></span> Login with Github</a>
-    </p>
-    <p class="lead">
-        <a class="btn btn-secondary btn-lg" href="/auth/login/globus" role="button"><span class="fab fa-globus"></span> Login with Globus</a>
+        <a class="btn btn-primary btn-lg" href="/auth/login/globus" role="button"><img width="41px" height="30px" style="margin-right:6px" src="{% static 'main/globus_logo_white.png' %}" /> Login with Globus</a>
     </p>
 </div>
 

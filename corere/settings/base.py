@@ -222,18 +222,6 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.user_details',
 )
 
-# Social Auth: Google configuration
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ["SOCIAL_AUTH_GOOGLE_OAUTH2_KEY"]
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ["SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET"]
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-]
-
-# Social Auth: Github configuration
-SOCIAL_AUTH_GITHUB_KEY = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_KEY"]
-SOCIAL_AUTH_GITHUB_SECRET = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"]
-
 #NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
 
 # Social Auth: Globus configuration
