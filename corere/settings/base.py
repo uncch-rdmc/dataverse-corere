@@ -2,6 +2,8 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+#TODO: Test removing this setting at some point and see how many warnings we still get. Hopefully other packages will fix their defaults.
+DEFAULT_AUTO_FIELD='django.db.models.AutoField' 
 
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/'
