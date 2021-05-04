@@ -6,7 +6,7 @@ chardet==3.0.4
 cryptography==3.4.6
 defusedxml==0.7.0
 docker==4.4.4
-Django==3.1.8
+Django==3.2.1
 django-appconf==1.0.4
 django-autoslug==1.9.8
 django-braces==1.14.0
