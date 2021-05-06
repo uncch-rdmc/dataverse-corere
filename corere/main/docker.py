@@ -1,4 +1,4 @@
-import docker, logging, subprocess, random, io, os
+import docker, logging, subprocess, random, io, os, time
 import shutil
 from django.conf import settings
 from corere.main import git as g
@@ -13,18 +13,18 @@ def build_repo2docker_image(manuscript):
     sub_version = manuscript.get_max_submission_version_id()
     image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) 
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"
-    result = subprocess.run([run_string], shell=True, capture_output=True)
+
+    #this happens first so we create the folder and reset the file (with 'w' instead of 'a')
+    build_log_path = get_build_log_path(manuscript)
+    os.makedirs(os.path.dirname(build_log_path), exist_ok=True)
+    with open(build_log_path, 'w+') as logfile: 
+        result = subprocess.run([run_string], shell=True, stdout=logfile, stderr=subprocess.STDOUT)
     logger.debug("build_repo2docker_image for manuscript: "+ str(manuscript.id) + ". Result:" + str(result))
 
-    #TODO: should this logic be moved outside of this function. Is it needed in other places?
-    if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
-        container_info = m.ContainerInfo() 
-    else:
-        container_info = manuscript.manuscript_containerinfo
-    container_info.repo_image_name = image_name
-    container_info.submission_version = sub_version
-    container_info.manuscript = manuscript
-    container_info.save()
+    manuscript.manuscript_containerinfo.repo_image_name = image_name
+    manuscript.manuscript_containerinfo.submission_version = sub_version
+    manuscript.manuscript_containerinfo.manuscript = manuscript
+    manuscript.manuscript_containerinfo.save()
 
 def delete_repo2docker_image(manuscript):
     client = docker.from_env()
@@ -32,7 +32,7 @@ def delete_repo2docker_image(manuscript):
 
 def _write_oauthproxy_email_list_to_working_directory(manuscript):
     container_info = manuscript.manuscript_containerinfo
-    client = docker.from_env()    
+    client = docker.from_env()
 
     #TODO: I need to write a file with the list of emails allowed to access the container to the filesystem where docker can use it to build
     email_file_path = settings.DOCKER_BUILD_FOLDER + "/oauthproxy-" + str(manuscript.id) + "/authenticated_emails.txt"
@@ -84,7 +84,9 @@ def build_oauthproxy_image(manuscript):
     container_info.proxy_image_name = ("oauthproxy-" + str(manuscript.id) + "-" + manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id)
     container_info.save()
     run_string = "docker build . -t " + container_info.proxy_image_name
-    result = subprocess.run([run_string], shell=True, capture_output=True, cwd=docker_build_folder)
+
+    with open(get_build_log_path(manuscript), 'a+') as logfile: 
+        result = subprocess.run([run_string], shell=True, stdout=logfile, stderr=subprocess.STDOUT, cwd=docker_build_folder)
 
     logger.debug("build_oauthproxy_image result:" + str(result))
 
@@ -105,9 +107,15 @@ def start_repo2docker_container(manuscript):
     #TODO: Maybe set the '*' to specify only corere's host. 
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""   
 
-
     #Add this if you need direct access. Defeats the whole point of a proxy. # ports={'8888/tcp': "60000"},
     container = client.containers.run(container_info.repo_image_name, run_string, detach=True)
+    while container.status != "created": #This is a really lazy means of waiting for the container to complete
+        print(container.status)
+        time.sleep(.1)
+    #TODO: This never seems to have any contents. Maybe because when created first starts there is nothing?
+    print(container.logs())
+    print(container.logs(), file=open(get_build_log_path(manuscript), "a"))
+
     notebook_network = client.networks.get(container_info.container_network_name())
     notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".2")
 
@@ -182,6 +190,13 @@ def start_oauthproxy_container(manuscript, request):
         command += "--cookie-secure=" + "'true'" + " "
 
     container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
+    while container.status != "created": #This is a really lazy means of waiting for the container to complete
+        print(container.status)
+        time.sleep(.1)
+    #TODO: This never seems to have any contents. Maybe because when created first starts there is nothing?
+    print(container.logs())
+    print(container.logs(), file=open(get_build_log_path(manuscript), "a"))
+
 
     container_info.proxy_container_id = container.id
     container_info.save()
@@ -286,14 +301,35 @@ def delete_manuscript_docker_stack_crude(manuscript):
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
 
 def build_manuscript_docker_stack(manuscript, request, refresh_notebook_if_up=False):
+    if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
+        m.ContainerInfo().manuscript = manuscript
+
+    manuscript.manuscript_containerinfo.build_in_progress = True
+    manuscript.manuscript_containerinfo.save()
+
     build_repo2docker_image(manuscript)
     build_oauthproxy_image(manuscript)
     start_network(manuscript)
     start_repo2docker_container(manuscript)
     start_oauthproxy_container(manuscript, request)
 
+    manuscript.manuscript_containerinfo.build_in_progress = False
+    manuscript.manuscript_containerinfo.save()
+
 def refresh_notebook_stack(manuscript):
+    if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
+        m.ContainerInfo().manuscript = manuscript
+
+    manuscript.manuscript_containerinfo.build_in_progress = True
+    manuscript.manuscript_containerinfo.save()
+
     stop_delete_repo2docker_container(manuscript)
     delete_repo2docker_image(manuscript)
     build_repo2docker_image(manuscript)
     start_repo2docker_container(manuscript)
+
+    manuscript.manuscript_containerinfo.build_in_progress = False
+    manuscript.manuscript_containerinfo.save()
+            
+def get_build_log_path(manuscript):
+    return settings.DOCKER_BUILD_FOLDER + "/docker-build-logs/" + str(manuscript.id) + ".log"

@@ -1,5 +1,4 @@
-import logging, os, requests, urllib
-import git
+import logging, os, requests, urllib, time, git
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -882,8 +881,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
+
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        if(self.object.files_changed):
+                        if self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                            while self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                                time.sleep(.1)
+                                self.object.manuscript.manuscript_containerinfo.refresh_from_db()
+                        
+                        elif(self.object.files_changed):
                             logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
                             d.refresh_notebook_stack(self.object.manuscript)
                             self.object.files_changed = False
@@ -893,6 +898,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         d.build_manuscript_docker_stack(self.object.manuscript, request)
                         self.object.files_changed = False
                         self.object.save()
+
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:

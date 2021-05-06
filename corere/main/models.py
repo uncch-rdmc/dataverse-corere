@@ -783,8 +783,9 @@ class ContainerInfo(models.Model):
     proxy_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
-    submission_version = models.IntegerField()
+    submission_version = models.IntegerField(blank=True, null=True)
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+    build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
         return "http://" + self.proxy_container_ip + ":" + str(self.proxy_container_port) #I don't understand why python decides my charfield is an int?

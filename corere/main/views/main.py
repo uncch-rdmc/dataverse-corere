@@ -1,4 +1,4 @@
-import logging, json
+import logging, json, time
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -99,7 +99,12 @@ def open_notebook(request, id=None):
 
     #TODO: This check may be too complicated, could maybe just check for the info
     if(hasattr(manuscript, 'manuscript_containerinfo')): 
-        if(latest_submission.files_changed):
+        if manuscript.manuscript_containerinfo.build_in_progress:
+            while manuscript.manuscript_containerinfo.build_in_progress:
+                time.sleep(.1)
+                manuscript.manuscript_containerinfo.refresh_from_db()
+
+        elif(latest_submission.files_changed):
             logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
             d.refresh_notebook_stack(manuscript)
             latest_submission.files_changed = False
