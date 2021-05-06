@@ -108,7 +108,8 @@ def start_repo2docker_container(manuscript):
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""   
 
     #Add this if you need direct access. Defeats the whole point of a proxy. # ports={'8888/tcp': "60000"},
-    container = client.containers.run(container_info.repo_image_name, run_string, detach=True)
+    container = client.containers.run(container_info.repo_image_name, run_string, detach=True, network=container_info.container_network_name())
+
     while container.status != "created": #This is a really lazy means of waiting for the container to complete
         print(container.status)
         time.sleep(.1)
@@ -117,6 +118,7 @@ def start_repo2docker_container(manuscript):
     print(container.logs(), file=open(get_build_log_path(manuscript), "a"))
 
     notebook_network = client.networks.get(container_info.container_network_name())
+    notebook_network.disconnect(container, force=True) #we disconnect it and then re-add it with the correct ip. I couldn't find a way to start the contain with no network and then just add this.
     notebook_network.connect(container, ipv4_address=container_info.network_ip_substring + ".2")
 
     container_info.repo_container_id = container.id
