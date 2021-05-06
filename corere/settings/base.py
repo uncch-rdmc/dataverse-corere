@@ -2,14 +2,14 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-#TODO: Test removing this setting at some point and see how many warnings we still get. Hopefully other packages will fix their defaults.
+#TODO: Test removing this setting at some point and see how many warnings we still get. Hopefully other packages will fix their defaults. We should also explore setting our autofield to BigAutoField.
 DEFAULT_AUTO_FIELD='django.db.models.AutoField' 
 
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-MEDIA_ROOT = os.environ["MEDIA_ROOT"]
+#MEDIA_ROOT = os.environ["MEDIA_ROOT"]
 #MEDIA_URL
 
 #Invitation related

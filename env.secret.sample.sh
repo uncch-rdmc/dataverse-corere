@@ -1,5 +1,4 @@
 export DJANGO_SECRET_KEY=
-export GIT_PRIVATE_ADMIN_TOKEN=
 
 ### SOCIAL AUTH ###
 # Values used for Globus OAuth2.
