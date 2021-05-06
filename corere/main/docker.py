@@ -238,7 +238,7 @@ def stop_delete_container(container_id):
 def start_network(manuscript):
     while True: #get an unused subnet.
         network_part_3 = random.randint(10, 255)
-        network_sub = "192.168." + str(network_part_3)
+        network_sub = "10.255." + str(network_part_3)
         if not m.ContainerInfo.objects.filter(network_ip_substring=network_sub).exists():
             break
 
