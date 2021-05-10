@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
+    logger.debug("Begin build_repo2docker_image for manuscript: " + str(manuscript.id))
     path = g.get_submission_repo_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
     image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) 
@@ -27,10 +28,12 @@ def build_repo2docker_image(manuscript):
     manuscript.manuscript_containerinfo.save()
 
 def delete_repo2docker_image(manuscript):
+    logger.debug("Begin delete_repo2docker_image for manuscript: " + str(manuscript.id))
     client = docker.from_env()
     client.images.remove(image=manuscript.manuscript_containerinfo.repo_image_name, force=True)
 
 def _write_oauthproxy_email_list_to_working_directory(manuscript):
+    logger.debug("Begin _write_oauthproxy_email_list_to_working_directory for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
     client = docker.from_env()
 
@@ -54,6 +57,7 @@ def _write_oauthproxy_email_list_to_working_directory(manuscript):
     email_file.close()
 
 def _write_oauth_proxy_html_templates_to_working_directory(manuscript):
+    logger.debug("Begin _write_oauth_proxy_html_templates_to_working_directory for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
     client = docker.from_env()    
 
@@ -66,6 +70,7 @@ def _write_oauth_proxy_html_templates_to_working_directory(manuscript):
     shutil.copytree(settings.BASE_DIR + "/main/static/oauth2-proxy/email-templates", email_file_path )
 
 def build_oauthproxy_image(manuscript):
+    logger.debug("Begin build_oauthproxy_image for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
     client = docker.from_env()    
 
@@ -92,12 +97,13 @@ def build_oauthproxy_image(manuscript):
 
 
 def delete_oauth2proxy_image(manuscript):
+    logger.debug("Begin delete_oauth2proxy_image for manuscript: " + str(manuscript.id))
     client = docker.from_env()
     client.images.remove(image=manuscript.manuscript_containerinfo.proxy_image_name, force=True)
 
 def start_repo2docker_container(manuscript):
+    logger.debug("Begin start_repo2docker_container for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
-    logger.debug("start_repo2docker_container for manuscript: " + str(manuscript.id))
 
     if(not container_info.repo_container_ip): 
         container_info.repo_container_ip = "0.0.0.0"
@@ -125,10 +131,12 @@ def start_repo2docker_container(manuscript):
     container_info.save()
 
 def stop_delete_repo2docker_container(manuscript):
+    logger.debug("Begin stop_delete_repo2docker_container for manuscript: " + str(manuscript.id))
     stop_delete_container(manuscript.manuscript_containerinfo.repo_container_id)
 
 #We need the request to get the server address to pass to oauth2-proxy. Technically we only need this when creating the back button but we require it anyways.
 def start_oauthproxy_container(manuscript, request): 
+    logger.debug("Begin start_oauthproxy_container for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
 
     #If the info previously exists for the 
@@ -214,6 +222,7 @@ def start_oauthproxy_container(manuscript, request):
     return container_info.container_public_address()
     
 def update_oauthproxy_container_authenticated_emails(manuscript):
+    logger.debug("Begin update_oauthproxy_container_authenticated_emails for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
     _write_oauthproxy_email_list_to_working_directory(manuscript)
 
@@ -226,6 +235,7 @@ def update_oauthproxy_container_authenticated_emails(manuscript):
 
 
 def stop_delete_oauthproxy_container(manuscript):
+    logger.debug("Begin stop_delete_oauthproxy_container for manuscript: " + str(manuscript.id))
     stop_delete_container(manuscript.manuscript_containerinfo.proxy_container_id)
 
 def stop_delete_container(container_id):
@@ -236,6 +246,7 @@ def stop_delete_container(container_id):
 
 #Note: this does not handle recreation like the container code.
 def start_network(manuscript):
+    logger.debug("Begin start_network for manuscript: " + str(manuscript.id))
     while True: #get an unused subnet.
         network_part_3 = random.randint(10, 255)
         network_sub = "10.255." + str(network_part_3)
@@ -259,11 +270,13 @@ def start_network(manuscript):
     container_info.save()
 
 def delete_network(manuscript):
+    logger.debug("Begin delete_network for manuscript: " + str(manuscript.id))
     client = docker.from_env()
     network = client.networks.get(manuscript.manuscript_containerinfo.network_id)
     network.remove()
 
 def delete_manuscript_docker_stack(manuscript):
+    logger.debug("Begin delete_manuscript_docker_stack for manuscript: " + str(manuscript.id))
     try:
         stop_delete_oauthproxy_container(manuscript)
         stop_delete_repo2docker_container(manuscript)
@@ -283,6 +296,7 @@ def delete_manuscript_docker_stack(manuscript):
 #      I assume this has to do with deletion of intermediates, or the docker network prune.
 #      It would be good to fix this.
 def delete_manuscript_docker_stack_crude(manuscript):
+    logger.debug("Begin delete_manuscript_docker_stack_crude for manuscript: " + str(manuscript.id))
     try:
         #delete containers via tags
         run_string = "docker ps -a |  grep ':" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) + "' | awk '{print $1}' | xargs docker rm -f"
@@ -303,6 +317,7 @@ def delete_manuscript_docker_stack_crude(manuscript):
         return("No ContainerInfo found, so stack was not deleted. Possibly it was never created.")
 
 def build_manuscript_docker_stack(manuscript, request, refresh_notebook_if_up=False):
+    logger.debug("Begin build_manuscript_docker_stack for manuscript: " + str(manuscript.id))
     if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
         m.ContainerInfo().manuscript = manuscript
 
@@ -319,6 +334,7 @@ def build_manuscript_docker_stack(manuscript, request, refresh_notebook_if_up=Fa
     manuscript.manuscript_containerinfo.save()
 
 def refresh_notebook_stack(manuscript):
+    logger.debug("Begin refresh_notebook_stack for manuscript: " + str(manuscript.id))
     if (not (hasattr(manuscript, 'manuscript_containerinfo'))):
         m.ContainerInfo().manuscript = manuscript
 

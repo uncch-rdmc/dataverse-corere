@@ -984,7 +984,7 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
     #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
     if type(instance) == User:
         update_groups = instance.groups.all()
-        print(instance.groups.all())
+        #print(instance.groups.all())
 
     #If a group is added/removed from a user, we are passed the group specifically
     if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
