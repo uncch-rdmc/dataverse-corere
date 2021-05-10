@@ -969,17 +969,35 @@ def add_history_info(sender, instance, **kwargs):
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
 
+#TODO: This works right when updating users through the UI, but when run via the admin user page the update doesn't work.
+#      I think we need a different case to catch the update there, as 
 #See: https://stackoverflow.com/questions/7899127/
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    if action == 'post_remove' or action == 'post_add':
+    # print(model)
+    # print(reverse)
+    # print(action)
+    # print(instance.__dict__)
+
+    update_groups = []
+
+    #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
+    if type(instance) == User:
+        update_groups = instance.groups.all()
+        print(instance.groups.all())
+
+    #If a group is added/removed from a user, we are passed the group specifically
+    if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
+        update_groups = [instance]
+
+    for group in update_groups:
         #This splits up the group name for checking to see whether its a group we should act upon
         #It would be better to have names formalized someday
-        split_name = instance.name.split()
+        split_name = group.name.split()
         if(len(split_name) == 3):
             [ _, assigned_obj, m_id ] = split_name
             if(assigned_obj == "Manuscript"):
                 manuscript = Manuscript.objects.get(id=m_id)
                 if ((hasattr(manuscript, 'manuscript_containerinfo'))):
-                    logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+                    logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
                     d.update_oauthproxy_container_authenticated_emails(manuscript)
