@@ -12,7 +12,7 @@ LOGOUT_REDIRECT_URL = '/'
 #MEDIA_ROOT = os.environ["MEDIA_ROOT"]
 #MEDIA_URL
 
-ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"]
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 CONTAINER_ADDRESS = os.environ["CONTAINER_ADDRESS"]
 
 #Invitation related
