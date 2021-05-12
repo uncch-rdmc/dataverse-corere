@@ -154,32 +154,18 @@ def start_oauthproxy_container(manuscript, request):
 
     emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
     template_files_path = "/opt/bitnami/oauth2-proxy/email-templates"
-
-    #+ "--cookie-httponly=" + "'true'" + " " \
-    #            + "--whitelist-domain=" + "'" + container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "'" + " " \
-    #            + "--email-domain=" + "'*'" + " " \
-    
-                #+ "--upstream=" + "'http://0.0.0.0:8000/submission/49/notebook/' " \
-
-    #            + "--banner=" + "'" + "Please authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
-    #            + "--footer=" + "'" + "<button onclick=\"window.history.back();\" type=\"button\" class=\"btn btn-secondary btn-sm\" data-toggle=\"tooltip\" data-placement=\"auto\" title=\"button\">Back</button> Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
-
     latest_submission = manuscript.get_latest_submission()
 
+    #TODO: Should probably make security not contingent on request.
 
-
-    if(request.is_secure()):
-        host_and_handler = "https://" + request.get_host()
-    else:
-        host_and_handler = "http://" + request.get_host()
     #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
     #Note: host.docker.internal may have issues on linux.
     #Note: whitelist-domain is used to allow redirects after using the oauth2 sign-in direct url
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
-            + "--https-address=" + "':443'" + " " \
-            + "--redirect-url=" + "'http://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
-            + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
-            + "--upstream=" + "'http://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
+            + "--https-address=" + "'0.0.0.0:443'" + " " \
+            + "--redirect-url=" + "'" + request.scheme + "://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
+            + "--upstream=" + "'" + request.scheme + "://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
+            + "--upstream=" + "'" + request.scheme + "://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
@@ -192,7 +178,7 @@ def start_oauthproxy_container(manuscript, request):
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
             + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
-            + "--footer=" + "'" + host_and_handler + "'" + " " \
+            + "--footer=" + "'" + request.scheme + "://" + request.get_host() + "'" + " " \
             + "--whitelist-domain=" + "'" + request.get_host() + "'" + " "
 
     if(settings.DEBUG):
@@ -200,7 +186,13 @@ def start_oauthproxy_container(manuscript, request):
     else:
         command += "--cookie-secure=" + "'true'" + " "
 
-    container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) #network=container_info.container_network_name())
+    if(request.is_secure()):
+        container = client.containers.run(container_info.proxy_image_name, command, ports={'443/tcp': container_info.proxy_container_port}, detach=True) 
+    else:
+        container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) 
+    
+    
+    #network=container_info.container_network_name())
     while container.status != "created": #This is a really lazy means of waiting for the container to complete
         print(container.status)
         time.sleep(.1)
