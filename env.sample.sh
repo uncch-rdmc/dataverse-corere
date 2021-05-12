@@ -13,3 +13,6 @@ export POSTGRES_HOST=localhost
 
 #Location for local file uploads (Manuscripts, etc). Unused currently
 #export MEDIA_ROOT=
+
+export ALLOWED_HOSTS="['*']"
+export CONTAINER_ADDRESS="localhost"

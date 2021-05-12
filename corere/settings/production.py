@@ -8,9 +8,6 @@ DEBUG = False
 #     INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEBUG
 #     MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
 
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
-ALLOWED_HOSTS = ['*'] #Should find a better kube solution
-
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 #These settings are based upon gmail, switch to your prefered smtp service

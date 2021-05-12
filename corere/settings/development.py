@@ -6,8 +6,6 @@ if(DEBUG):
     INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEBUG
     MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
-
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

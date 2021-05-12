@@ -1133,7 +1133,7 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         if 'postauth' in request.GET:
             request.user.last_oauthproxy_forced_signin = datetime.now();
             request.user.save()
-        context = {'sub_id':self.object.id}
+        context = {'sub_id':self.object.id,'scheme':request.scheme,'host':request.get_host()}
         return render(request, self.template, context)
 
 class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):

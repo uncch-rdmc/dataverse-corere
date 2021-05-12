@@ -142,11 +142,12 @@ def start_oauthproxy_container(manuscript, request):
     #If the info previously exists for the 
     if(not container_info.proxy_container_port):
         while True:
+            #TODO: Random is pretty inefficient if the space is maxed. We should maybe start at a random and increment up
             container_info.proxy_container_port = random.randint(50020, 50039)
             if not m.ContainerInfo.objects.filter(proxy_container_port=container_info.proxy_container_port).exists():
                 break
     if(not container_info.proxy_container_ip):
-        container_info.proxy_container_ip = "localhost"
+        container_info.proxy_container_ip = settings.CONTAINER_ADDRESS
     
     run_string = ""
     client = docker.from_env()

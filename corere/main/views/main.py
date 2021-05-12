@@ -103,11 +103,13 @@ def open_notebook(request, id=None):
     if(hasattr(manuscript, 'manuscript_containerinfo')): 
         print("THREE")
         if manuscript.manuscript_containerinfo.build_in_progress:
+            print("FOUR A")
             while manuscript.manuscript_containerinfo.build_in_progress:
                 time.sleep(.1)
                 manuscript.manuscript_containerinfo.refresh_from_db()
 
         elif(latest_submission.files_changed):
+            print("FOUR B")
             logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
             d.refresh_notebook_stack(manuscript)
             latest_submission.files_changed = False
