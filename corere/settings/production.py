@@ -20,3 +20,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 COMPRESS_OFFLINE = True
 COMPRESS_ENABLED = False
+
+CONTAINER_PROTOCOL = 'https'
