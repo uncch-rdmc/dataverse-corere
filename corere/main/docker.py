@@ -158,15 +158,20 @@ def start_oauthproxy_container(manuscript, request):
 
     #TODO: Should probably make security not contingent on request.
 
+    #We add 20 because our web server will provide ssl and will be listening on the ports 20 up.
+    if(settings.CONTAINER_PROTOCOL == 'https'):
+        proxy_container_external_port = container_info.proxy_container_port + 20
+    else:
+        proxy_container_external_port = container_info.proxy_container_port
 
     #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
     #Note: host.docker.internal may have issues on linux.
     #Note: whitelist-domain is used to allow redirects after using the oauth2 sign-in direct url
     command = "--http-address=" + "'0.0.0.0:4180'" + " " \
             + "--https-address=" + "'0.0.0.0:443'" + " " \
-            + "--redirect-url=" + "'" + settings.CONTAINER_PROTOCOL + "://"+container_info.proxy_container_ip+":"+str(container_info.proxy_container_port) + "/oauth2/callback' " \
-            + "--upstream=" + "'" + settings.CONTAINER_PROTOCOL + "://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
-            + "--upstream=" + "'" + settings.CONTAINER_PROTOCOL + "://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
+            + "--redirect-url=" + "'" + settings.CONTAINER_PROTOCOL + "://"+container_info.proxy_container_ip+":"+str(proxy_container_external_port) + "/oauth2/callback' " \
+            + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
+            + "--upstream=" + "'http://host.docker.internal:8000/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
@@ -182,14 +187,11 @@ def start_oauthproxy_container(manuscript, request):
             + "--footer=" + "'" + settings.CONTAINER_PROTOCOL + "://" + request.get_host() + "'" + " " \
             + "--whitelist-domain=" + "'" + request.get_host() + "'" + " "
 
-    if(settings.DEBUG):
-        command += "--cookie-secure=" + "'false'" + " "
-    else:
-        command += "--cookie-secure=" + "'true'" + " "
-
     if(settings.CONTAINER_PROTOCOL == 'https'):
+        command += "--cookie-secure=" + "'true'" + " "
         container = client.containers.run(container_info.proxy_image_name, command, ports={'443/tcp': container_info.proxy_container_port}, detach=True) 
     else:
+        command += "--cookie-secure=" + "'false'" + " "
         container = client.containers.run(container_info.proxy_image_name, command, ports={'4180/tcp': container_info.proxy_container_port}, detach=True) 
     
     
@@ -200,7 +202,6 @@ def start_oauthproxy_container(manuscript, request):
     #TODO: This never seems to have any contents. Maybe because when created first starts there is nothing?
     print(container.logs())
     print(container.logs(), file=open(get_build_log_path(manuscript), "a"))
-
 
     container_info.proxy_container_id = container.id
     container_info.save()
