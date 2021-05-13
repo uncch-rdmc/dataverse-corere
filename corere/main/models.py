@@ -788,7 +788,13 @@ class ContainerInfo(models.Model):
     build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
-        return settings.CONTAINER_PROTOCOL + "://" + self.proxy_container_ip + ":" + str(self.proxy_container_port) #I don't understand why python decides my charfield is an int?
+        #We add 20 because our web server will provide ssl and will be listening on the ports 20 down.
+        if(settings.CONTAINER_PROTOCOL == 'https'):
+            proxy_container_external_port = self.proxy_container_port - 20
+        else:
+            proxy_container_external_port = self.proxy_container_port
+
+        return settings.CONTAINER_PROTOCOL + "://" + self.proxy_container_ip + ":" + str(proxy_container_external_port) #I don't understand why python decides my charfield is an int?
 
     def container_network_name(self):
         return "notebook-" + str(self.manuscript.id)

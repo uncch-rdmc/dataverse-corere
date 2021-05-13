@@ -21,6 +21,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 COMPRESS_OFFLINE = True
 COMPRESS_ENABLED = False
 
-#Set to http for development purposes. Containers will be available on 50000-50019.
-#Set to https for production purposes. Internal containers will be assigned ports 50000-50019, but will expect a webserverto provide ssl and upstream to them on ports 50020-50039.
+#Set to http for development purposes. Containers will be available on 50020-50039.
+#Set to https for production purposes. Internal containers will be assigned ports 50020-50039, but will expect a webserver to provide ssl and upstream to them via ports 50000-50019.
 CONTAINER_PROTOCOL = 'https'
