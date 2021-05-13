@@ -788,9 +788,9 @@ class ContainerInfo(models.Model):
     build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
-        #We add 20 because our web server will provide ssl and will be listening on the ports 20 down.
+        #We add 20 because our web server will provide ssl and will be listening on the ports 20 up. But we also change the range of the internal ports
         if(settings.CONTAINER_PROTOCOL == 'https'):
-            proxy_container_external_port = self.proxy_container_port - 20
+            proxy_container_external_port = self.proxy_container_port + 20
         else:
             proxy_container_external_port = self.proxy_container_port
 
