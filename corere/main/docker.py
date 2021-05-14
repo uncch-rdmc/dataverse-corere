@@ -108,8 +108,31 @@ def start_repo2docker_container(manuscript):
     if(not container_info.repo_container_ip): 
         container_info.repo_container_ip = "0.0.0.0"
 
+    #NOTE: THIS IS COPIED FROM start_oauthproxy_container. We have to know the proxy port here though so we can set the allow_origin.
+    #If the info previously exists for the 
+    if(not container_info.proxy_container_port):
+        while True:
+            #TODO: Random is pretty inefficient if the space is maxed. We should maybe start at a random and increment up
+            if(settings.CONTAINER_PROTOCOL == 'https'):
+                container_info.proxy_container_port = random.randint(50020-20, 50039-20)
+            else:
+                container_info.proxy_container_port = random.randint(50020, 50039)
+            
+            if not m.ContainerInfo.objects.filter(proxy_container_port=container_info.proxy_container_port).exists():
+                break
+    if(not container_info.proxy_container_ip):
+        container_info.proxy_container_ip = settings.CONTAINER_ADDRESS
+
+    print("PUBLIC ADDRESS BEFORE REPO2DOCKER LAUNCH")
+    print(container_info.container_public_address())
+    print(container_info.container_public_address()+"/view/globus_logo_white.png")
+
     client = docker.from_env()    
-    run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' " #--NotebookApp.allow_origin='*'
+    #origin_addr = settings.CONTAINER_PROTOCOL + "://" + container_inf.proxy_container_ip + ":" + str(container_info.proxy_container_port) #note, not adding 20
+    #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+ origin_addr +"'"
+    run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"'"
+    #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'"
+    #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"/view/globus_logo_white.png'"
     #TODO: Maybe set the '*' to specify only corere's host. 
     run_string += "--NotebookApp.tornado_settings=\"{ 'headers': { 'Content-Security-Policy': \\\"frame-ancestors 'self' *\\\" } }\""   
 
@@ -139,6 +162,7 @@ def start_oauthproxy_container(manuscript, request):
     logger.debug("Begin start_oauthproxy_container for manuscript: " + str(manuscript.id))
     container_info = manuscript.manuscript_containerinfo
 
+    #NOTE: THIS LOGIC IS RARELY CALLED BECAUSE WE ALREADY DO THE SAME LOGIC IN REPO2DOCKER. WE HAVE TO KNOW THE PORT BEFORE LAUNCHING THAT CONTAINER TO SET allow-origin.
     #If the info previously exists for the 
     if(not container_info.proxy_container_port):
         while True:
@@ -159,6 +183,9 @@ def start_oauthproxy_container(manuscript, request):
     emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
     template_files_path = "/opt/bitnami/oauth2-proxy/email-templates"
     latest_submission = manuscript.get_latest_submission()
+
+    print("HOST INSIDE docker.py")
+    print(request.get_host())
 
     #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
     #Note: host.docker.internal may have issues on linux.

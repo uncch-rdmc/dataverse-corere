@@ -1145,6 +1145,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
+        print(self.object.__dict__)
+        print(self.object.manuscript.__dict__)
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
@@ -1169,6 +1171,7 @@ def _helper_get_oauth_url(request, submission):
         #We need to send the user to reauth
         # print("REAUTH")
         container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
+        print(request.get_host())
         if(request.is_secure()):
             container_flow_redirect = "https://" + request.get_host()
         else:
