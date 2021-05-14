@@ -99,7 +99,6 @@ def open_notebook(request, id=None):
     print("TWO")
     latest_submission = manuscript.get_latest_submission()
 
-    #TODO: This check may be too complicated, could maybe just check for the info
     if(hasattr(manuscript, 'manuscript_containerinfo')): 
         print("THREE")
         if manuscript.manuscript_containerinfo.build_in_progress:
@@ -121,6 +120,8 @@ def open_notebook(request, id=None):
         latest_submission.files_changed = False
         latest_submission.save()
 
+    print("FIVE")
+    print(manuscript.manuscript_containerinfo.container_public_address())
     return redirect(manuscript.manuscript_containerinfo.container_public_address())
 
 @login_required()
