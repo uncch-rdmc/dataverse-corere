@@ -13,7 +13,9 @@ LOGOUT_REDIRECT_URL = '/'
 #MEDIA_URL
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+#NOTE: Container address does not include the port, server address does (if needed)
 CONTAINER_ADDRESS = os.environ["CONTAINER_ADDRESS"]
+SERVER_ADDRESS = os.environ["SERVER_ADDRESS"]
 
 #Invitation related
 SITE_ID = 1

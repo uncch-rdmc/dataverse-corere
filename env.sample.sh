@@ -16,4 +16,7 @@ export POSTGRES_HOST=localhost
 
 #Allowed hosts should be formatted as a comma separated set of strings. E.g. localhost,testserver:8000
 export ALLOWED_HOSTS=*
+
+#NOTE: Container address does not include the port, server address does (if needed)
 export CONTAINER_ADDRESS="localhost"
+export SERVER_ADDRESS="localhost:8000"

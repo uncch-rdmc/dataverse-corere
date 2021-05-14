@@ -120,15 +120,15 @@ def start_repo2docker_container(manuscript):
             
             if not m.ContainerInfo.objects.filter(proxy_container_port=container_info.proxy_container_port).exists():
                 break
-    if(not container_info.proxy_container_ip):
-        container_info.proxy_container_ip = settings.CONTAINER_ADDRESS
+    if(not container_info.proxy_container_address):
+        container_info.proxy_container_address = settings.CONTAINER_ADDRESS
 
     print("PUBLIC ADDRESS BEFORE REPO2DOCKER LAUNCH")
     print(container_info.container_public_address())
     print(container_info.container_public_address()+"/view/globus_logo_white.png")
 
     client = docker.from_env()    
-    #origin_addr = settings.CONTAINER_PROTOCOL + "://" + container_inf.proxy_container_ip + ":" + str(container_info.proxy_container_port) #note, not adding 20
+    #origin_addr = settings.CONTAINER_PROTOCOL + "://" + container_inf.proxy_container_address + ":" + str(container_info.proxy_container_port) #note, not adding 20
     #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+ origin_addr +"'"
     run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"'"
     #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'"
@@ -174,8 +174,8 @@ def start_oauthproxy_container(manuscript, request):
             
             if not m.ContainerInfo.objects.filter(proxy_container_port=container_info.proxy_container_port).exists():
                 break
-    if(not container_info.proxy_container_ip):
-        container_info.proxy_container_ip = settings.CONTAINER_ADDRESS
+    if(not container_info.proxy_container_address):
+        container_info.proxy_container_address = settings.CONTAINER_ADDRESS
     
     run_string = ""
     client = docker.from_env()
@@ -183,9 +183,6 @@ def start_oauthproxy_container(manuscript, request):
     emails_file_path = "/opt/bitnami/oauth2-proxy/authenticated_emails.txt"
     template_files_path = "/opt/bitnami/oauth2-proxy/email-templates"
     latest_submission = manuscript.get_latest_submission()
-
-    print("HOST INSIDE docker.py")
-    print(request.get_host())
 
     #Note: We have hijacked "footer" to instead pass the corere server address to our custom oauth2-proxy template
     #Note: host.docker.internal may have issues on linux.
@@ -207,8 +204,8 @@ def start_oauthproxy_container(manuscript, request):
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
             + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript.title + "'" + " " \
-            + "--footer=" + "'" + settings.CONTAINER_PROTOCOL + "://" + request.get_host() + "'" + " " \
-            + "--whitelist-domain=" + "'" + request.get_host() + "'" + " "
+            + "--footer=" + "'" + settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "'" + " " \
+            + "--whitelist-domain=" + "'" + settings.SERVER_ADDRESS + "'" + " "
 
     if(settings.CONTAINER_PROTOCOL == 'https'):
         command += "--cookie-secure=" + "'true'" + " "
@@ -265,8 +262,8 @@ def stop_delete_container(container_id):
 def start_network(manuscript):
     logger.debug("Begin start_network for manuscript: " + str(manuscript.id))
     while True: #get an unused subnet.
-        network_part_3 = random.randint(10, 255)
-        network_sub = "10.255." + str(network_part_3)
+        network_part_2 = random.randint(10, 255)
+        network_sub = "10." + str(network_part_2) + ".255"
         if not m.ContainerInfo.objects.filter(network_ip_substring=network_sub).exists():
             break
 

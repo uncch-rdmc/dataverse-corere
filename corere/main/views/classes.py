@@ -1133,7 +1133,7 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         if 'postauth' in request.GET:
             request.user.last_oauthproxy_forced_signin = datetime.now();
             request.user.save()
-        context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':request.get_host()}
+        context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
 
 class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
@@ -1171,11 +1171,10 @@ def _helper_get_oauth_url(request, submission):
         #We need to send the user to reauth
         # print("REAUTH")
         container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
-        print(request.get_host())
         if(request.is_secure()):
-            container_flow_redirect = "https://" + request.get_host()
+            container_flow_redirect = "https://" + settings.SERVER_ADDRESS
         else:
-            container_flow_redirect = "http://" + request.get_host()
+            container_flow_redirect = "http://" + settings.SERVER_ADDRESS
         container_flow_redirect += "/submission/" + str(submission.id) + "/notebooklogin/?postauth"
         container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
     else:

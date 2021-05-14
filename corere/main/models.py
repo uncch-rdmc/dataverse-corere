@@ -779,7 +779,7 @@ class ContainerInfo(models.Model):
     repo_container_ip = models.CharField(max_length=24, blank=True, null=True)
     # repo_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
     proxy_container_id = models.CharField(max_length=64, blank=True, null=True)
-    proxy_container_ip = models.CharField(max_length=24, blank=True, null=True)
+    proxy_container_address = models.CharField(max_length=24, blank=True, null=True)
     proxy_container_port = models.IntegerField(blank=True, null=True, unique=True)
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
@@ -794,7 +794,7 @@ class ContainerInfo(models.Model):
         else:
             proxy_container_external_port = self.proxy_container_port
 
-        return settings.CONTAINER_PROTOCOL + "://" + self.proxy_container_ip + ":" + str(proxy_container_external_port) #I don't understand why python decides my charfield is an int?
+        return settings.CONTAINER_PROTOCOL + "://" + self.proxy_container_address + ":" + str(proxy_container_external_port) #I don't understand why python decides my charfield is an int?
 
     def container_network_name(self):
         return "notebook-" + str(self.manuscript.id)
