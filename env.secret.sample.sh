@@ -1,3 +1,4 @@
+#Make sure this is greater than 50 characters in production
 export DJANGO_SECRET_KEY=
 
 ### SOCIAL AUTH ###

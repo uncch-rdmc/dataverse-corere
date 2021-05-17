@@ -2,6 +2,10 @@ from .base import *
 
 DEBUG = False
 
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # We shouldn't be installing the debug apps in production anyways, so this logic shouldn't get called
 # Leaving it here to make it clear enabling debug will not enable debug apps and middleware
 # if(DEBUG):
