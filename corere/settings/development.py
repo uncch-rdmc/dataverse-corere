@@ -27,3 +27,4 @@ CRISPY_FAIL_SILENTLY = not DEBUG
 #Set to http for development purposes. Containers will be available on 50000-50019.
 #Set to https for production purposes. Internal containers will be assigned ports 50000-50019, but will expect a webserverto provide ssl and upstream to them on ports 50020-50039.
 CONTAINER_PROTOCOL = 'http'
+CONTAINER_TO_CORERE_ADDRESS = 'host.docker.internal:8000' #when deployed locally we need to use this address to connect from oauth2proxy to our host machine

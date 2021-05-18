@@ -191,7 +191,7 @@ def start_oauthproxy_container(manuscript, request):
             + "--https-address=" + "'0.0.0.0:443'" + " " \
             + "--redirect-url=" + "'" + container_info.container_public_address() + "/oauth2/callback' " \
             + "--upstream=" + "'http://" +container_info.network_ip_substring+ ".2:8888" + "/' " \
-            + "--upstream=" + "'"+ settings.CONTAINER_PROTOCOL + "://"+ settings.SERVER_ADDRESS +"/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
+            + "--upstream=" + "'"+ settings.CONTAINER_PROTOCOL + "://"+ settings.CONTAINER_TO_CORERE_ADDRESS +"/submission/" + str(latest_submission.id) + "/notebooklogin/' " \
             + "--provider=" + "'oidc'" + " " \
             + "--provider-display-name=" + "'Globus'" + " " \
             + "--oidc-issuer-url=" + "'https://auth.globus.org'" + " " \
