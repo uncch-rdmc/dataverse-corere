@@ -125,12 +125,11 @@ def start_repo2docker_container(manuscript):
 
     print("PUBLIC ADDRESS BEFORE REPO2DOCKER LAUNCH")
     print(container_info.container_public_address())
-    print(container_info.container_public_address()+"/view/globus_logo_white.png")
 
     client = docker.from_env()    
     #origin_addr = settings.CONTAINER_PROTOCOL + "://" + container_inf.proxy_container_address + ":" + str(container_info.proxy_container_port) #note, not adding 20
     #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+ origin_addr +"'"
-    run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"'"
+    run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"' " #trailing space is important!!!
     #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*'"
     #run_string = "jupyter notebook --ip " + container_info.repo_container_ip + " --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='"+container_info.container_public_address() +"/view/globus_logo_white.png'"
     #TODO: Maybe set the '*' to specify only corere's host. 
