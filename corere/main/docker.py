@@ -215,10 +215,10 @@ def start_oauthproxy_container(manuscript, request):
 
     #network=container_info.container_network_name())
     while container.status != "created": #This is a really lazy means of waiting for the container to complete
-        print(container.status)
+        #print(container.status)
         time.sleep(.1)
     #TODO: This never seems to have any contents. Maybe because when created first starts there is nothing?
-    print(container.logs())
+    #print(container.logs())
     print(container.logs(), file=open(get_build_log_path(manuscript), "a"))
 
     container_info.proxy_container_id = container.id

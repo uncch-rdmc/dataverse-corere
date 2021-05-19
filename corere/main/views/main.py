@@ -91,36 +91,28 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_notebook(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    print("ONE")
-
     if(not manuscript.get_max_submission_version_id()):
         raise Http404()
     
-    print("TWO")
     latest_submission = manuscript.get_latest_submission()
 
     if(hasattr(manuscript, 'manuscript_containerinfo')): 
-        print("THREE")
         if manuscript.manuscript_containerinfo.build_in_progress:
-            print("FOUR A")
             while manuscript.manuscript_containerinfo.build_in_progress:
                 time.sleep(.1)
                 manuscript.manuscript_containerinfo.refresh_from_db()
 
         elif(latest_submission.files_changed):
-            print("FOUR B")
             logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
             d.refresh_notebook_stack(manuscript)
             latest_submission.files_changed = False
             latest_submission.save()
     else:
-        print("THREE B")
         logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
         d.build_manuscript_docker_stack(manuscript, request)
         latest_submission.files_changed = False
         latest_submission.save()
 
-    print("FIVE")
     print(manuscript.manuscript_containerinfo.container_public_address())
     return redirect(manuscript.manuscript_containerinfo.container_public_address())
 
