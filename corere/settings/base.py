@@ -2,13 +2,20 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+#TODO: Test removing this setting at some point and see how many warnings we still get. Hopefully other packages will fix their defaults. We should also explore setting our autofield to BigAutoField.
+DEFAULT_AUTO_FIELD='django.db.models.AutoField' 
 
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-MEDIA_ROOT = os.environ["MEDIA_ROOT"]
+#MEDIA_ROOT = os.environ["MEDIA_ROOT"]
 #MEDIA_URL
+
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+#NOTE: Container address does not include the port, server address does (if needed)
+CONTAINER_ADDRESS = os.environ["CONTAINER_ADDRESS"]
+SERVER_ADDRESS = os.environ["SERVER_ADDRESS"]
 
 #Invitation related
 SITE_ID = 1
@@ -18,7 +25,7 @@ INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
 DOCKER_GEN_TAG = "jupyter-corere"
-DOCKER_OAUTH_PROXY_BASE_IMAGE = "bitnami/oauth2-proxy:latest"
+DOCKER_OAUTH_PROXY_BASE_IMAGE = "bitnami/oauth2-proxy:7.1.2"
 
 #Used to build OAuth2Proxy, which requires a file to be passed to store permitted email addresses.
 DOCKER_BUILD_FOLDER = "/tmp"
@@ -88,7 +95,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
-                'corere.main.processors.export_vars',
             ],
         },
     },
@@ -223,18 +229,6 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.user_details',
 )
 
-# Social Auth: Google configuration
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ["SOCIAL_AUTH_GOOGLE_OAUTH2_KEY"]
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ["SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET"]
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/userinfo.profile',
-]
-
-# Social Auth: Github configuration
-SOCIAL_AUTH_GITHUB_KEY = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_KEY"]
-SOCIAL_AUTH_GITHUB_SECRET = os.environ["SOCIAL_AUTH_GITHUB_OAUTH2_SECRET"]
-
 #NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
 
 # Social Auth: Globus configuration
@@ -243,6 +237,8 @@ SOCIAL_AUTH_GLOBUS_SECRET = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_SECRET"]
 SOCIAL_AUTH_GLOBUS_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'offline',
 }
+
+OAUTHPROXY_COOKIE_SECRET = os.environ["OAUTHPROXY_COOKIE_SECRET"]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 

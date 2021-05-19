@@ -1,4 +1,4 @@
-import logging, json
+import logging, json, time
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -12,7 +12,6 @@ from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404, HttpResponse
 from django.contrib.auth.decorators import login_required
-from corere.main.binderhub import binder_build_load 
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
 
@@ -90,16 +89,31 @@ def manuscript_landing(request, id=None):
     return render(request, "main/manuscript_landing.html", args)
 
 @login_required
-def open_binder(request, id=None):
+def open_notebook(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-
     if(not manuscript.get_max_submission_version_id()):
         raise Http404()
     
-    #TODO: This check may be too complicated, could maybe just check for the info
-    if(not (hasattr(manuscript, 'manuscript_containerinfo') and manuscript.manuscript_containerinfo.proxy_container_ip and manuscript.manuscript_containerinfo.repo_container_ip)): 
-        d.build_manuscript_docker_stack(manuscript)
+    latest_submission = manuscript.get_latest_submission()
 
+    if(hasattr(manuscript, 'manuscript_containerinfo')): 
+        if manuscript.manuscript_containerinfo.build_in_progress:
+            while manuscript.manuscript_containerinfo.build_in_progress:
+                time.sleep(.1)
+                manuscript.manuscript_containerinfo.refresh_from_db()
+
+        elif(latest_submission.files_changed):
+            logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
+            d.refresh_notebook_stack(manuscript)
+            latest_submission.files_changed = False
+            latest_submission.save()
+    else:
+        logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
+        d.build_manuscript_docker_stack(manuscript, request)
+        latest_submission.files_changed = False
+        latest_submission.save()
+
+    print(manuscript.manuscript_containerinfo.container_public_address())
     return redirect(manuscript.manuscript_containerinfo.container_public_address())
 
 @login_required()
@@ -126,8 +140,3 @@ def switch_role(request):
         else:
             logger.warning("User " + request.user.username + " attempted to switch their active role to a role they do not have ("+ role_full_string +")")
     return redirect(request.GET.get('next', ''))
-
-@login_required
-def test_iframe(request):
-    args = {}
-    return render(request, "main/test_iframe.html", args)

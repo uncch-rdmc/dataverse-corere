@@ -27,6 +27,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
+from datetime import date
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -67,6 +68,10 @@ class User(AbstractUser):
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     email = models.EmailField(unique=True, blank=False)
+    #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
+    #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
+    #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
+    last_oauthproxy_forced_signin = models.DateTimeField(default=date(1900, 1, 1))
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
@@ -257,6 +262,7 @@ class Submission(AbstractCreateUpdateModel):
     _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
     version_id = models.IntegerField(verbose_name='Version number')
+    files_changed = models.BooleanField(default=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
@@ -666,7 +672,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_max_submission_version_id(self):
         return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
-            
+
+    def get_latest_submission(self):
+        return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
+
     ##### django-fsm (workflow) related functions #####
     
     #Extra function defined so fsm errors can be passed to use when submitting a form.
@@ -770,15 +779,22 @@ class ContainerInfo(models.Model):
     repo_container_ip = models.CharField(max_length=24, blank=True, null=True)
     # repo_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
     proxy_container_id = models.CharField(max_length=64, blank=True, null=True)
-    proxy_container_ip = models.CharField(max_length=24, blank=True, null=True)
-    proxy_container_port = models.CharField(max_length=5, blank=True, null=True, unique=True) #should be an int?
+    proxy_container_address = models.CharField(max_length=24, blank=True, null=True)
+    proxy_container_port = models.IntegerField(blank=True, null=True, unique=True)
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
-    submission_version = models.IntegerField()
+    submission_version = models.IntegerField(blank=True, null=True)
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+    build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
-        return "http://" + self.proxy_container_ip + ":" + str(self.proxy_container_port) #I don't understand why python decides my charfield is an int?
+        #We add 20 because our web server will provide ssl and will be listening on the ports 20 up. But we also change the range of the internal ports
+        if(settings.CONTAINER_PROTOCOL == 'https'):
+            proxy_container_external_port = self.proxy_container_port + 20
+        else:
+            proxy_container_external_port = self.proxy_container_port
+
+        return settings.CONTAINER_PROTOCOL + "://" + self.proxy_container_address + ":" + str(proxy_container_external_port) #I don't understand why python decides my charfield is an int?
 
     def container_network_name(self):
         return "notebook-" + str(self.manuscript.id)
@@ -959,17 +975,35 @@ def add_history_info(sender, instance, **kwargs):
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
 
+#TODO: This works right when updating users through the UI, but when run via the admin user page the update doesn't work.
+#      I think we need a different case to catch the update there, as 
 #See: https://stackoverflow.com/questions/7899127/
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    if action == 'post_remove' or action == 'post_add':
+    # print(model)
+    # print(reverse)
+    # print(action)
+    # print(instance.__dict__)
+
+    update_groups = []
+
+    #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
+    if type(instance) == User:
+        update_groups = instance.groups.all()
+        #print(instance.groups.all())
+
+    #If a group is added/removed from a user, we are passed the group specifically
+    if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
+        update_groups = [instance]
+
+    for group in update_groups:
         #This splits up the group name for checking to see whether its a group we should act upon
         #It would be better to have names formalized someday
-        split_name = instance.name.split()
+        split_name = group.name.split()
         if(len(split_name) == 3):
             [ _, assigned_obj, m_id ] = split_name
             if(assigned_obj == "Manuscript"):
                 manuscript = Manuscript.objects.get(id=m_id)
                 if ((hasattr(manuscript, 'manuscript_containerinfo'))):
-                    logger.debug("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(instance.name))
+                    logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
                     d.update_oauthproxy_container_authenticated_emails(manuscript)

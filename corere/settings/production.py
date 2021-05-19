@@ -2,14 +2,15 @@ from .base import *
 
 DEBUG = False
 
+#SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 # We shouldn't be installing the debug apps in production anyways, so this logic shouldn't get called
 # Leaving it here to make it clear enabling debug will not enable debug apps and middleware
 # if(DEBUG):
 #     INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEBUG
 #     MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
-
-# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
-ALLOWED_HOSTS = ['*'] #Should find a better kube solution
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -23,3 +24,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 COMPRESS_OFFLINE = True
 COMPRESS_ENABLED = False
+
+#Set to http for development purposes. Containers will be available on 50020-50039.
+#Set to https for production purposes. Internal containers will be assigned ports 50020-50039, but will expect a webserver to provide ssl and upstream to them via ports 50000-50019.
+CONTAINER_PROTOCOL = 'https'
+CONTAINER_TO_CORERE_ADDRESS = os.environ["SERVER_ADDRESS"]

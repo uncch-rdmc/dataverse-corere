@@ -652,6 +652,8 @@ class DownloadGitFileWidget(forms.widgets.TextInput):
         try:
             self.download_url = "/submission/"+str(self.object_instance.parent_submission.id)+"/downloadfile/?file_path="+self.object_instance.path + self.object_instance.name
         except AttributeError as e:
+            #TODO: I think this error occurs sometimes during form loading, because these widgets get called multiple times.
+            #      Not sure though. Even if that is true, it seems like a code smell.
             logger.error("error adding download url to editfiles widget: " + str(e))
             self.download_url = ""
         return {

@@ -1,0 +1,19 @@
+{% extends "main/layout.html" %}
+{% block content %}
+{% comment %} sandbox="allow-scripts allow-forms allow-top-navigation allow-same-origin"  height="1000px"  {% endcomment %}
+
+
+<iframe src="{{notebook_url}}" title="notebook"></iframe>
+
+<form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+        <input type="submit" name="back" value="Back">
+        <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
+        <input type="submit" name="submit" value="Continue">
+</form>
+
+{% endblock content %}
+
+{% comment %} 
+    <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
+{% endcomment %}

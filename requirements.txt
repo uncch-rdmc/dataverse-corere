@@ -1,4 +1,4 @@
-asgiref==3.3.1
+asgiref==3.3.2
 Authlib==0.15.3
 certifi==2020.12.5
 cffi==1.14.5
@@ -6,7 +6,7 @@ chardet==3.0.4
 cryptography==3.4.6
 defusedxml==0.7.0
 docker==4.4.4
-Django==3.1.8
+Django==3.2.1
 django-appconf==1.0.4
 django-autoslug==1.9.8
 django-braces==1.14.0
@@ -36,6 +36,7 @@ oauthlib==3.1.0
 psycopg2-binary==2.8.6
 pycparser==2.20
 PyJWT==2.0.1
+python-jose==3.2.0
 python3-openid==3.2.0
 pytz==2021.1
 rcssmin==1.0.6
@@ -45,6 +46,6 @@ rjsmin==1.1.0
 six==1.15.0
 sseclient-py==1.7
 social-auth-app-django==4.0.0
-social-auth-core==4.0.3
+social-auth-core==4.1.0
 sqlparse==0.4.1
 urllib3==1.26.4

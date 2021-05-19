@@ -1,5 +1,4 @@
-import logging, os, requests 
-import git
+import logging, os, requests, urllib, time, git
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -20,6 +19,9 @@ from corere.main import git as g
 logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
 from django.db.models import Max
+from datetime import datetime, timedelta
+from django.utils import timezone
+
 #from guardian.decorators import permission_required_or_404
 
 ########################################## GENERIC + MIXINS ##########################################
@@ -826,7 +828,8 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
-                    return redirect('submission_uploadfiles', id=self.object.id)
+                    container_flow_address = _helper_get_oauth_url(request, self.object)
+                    return redirect(container_flow_address)
                 elif self.object._status == "new":
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
                         logger.debug("PermissionDenied")
@@ -836,8 +839,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                     messages.add_message(request, messages.SUCCESS, "Your submission has been submitted!")
                 else:
                     messages.add_message(request, messages.SUCCESS, self.message)
-
-                return redirect('manuscript_landing', id=self.object.manuscript.id)
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
         else:
             logger.debug(formset.errors)
 
@@ -880,12 +882,25 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if request.POST.get('submit_continue'):
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
 
-                    #TODO: Run these async.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        d.refresh_notebook_stack(self.object.manuscript)
+                        if self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                            while self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                                time.sleep(.1)
+                                self.object.manuscript.manuscript_containerinfo.refresh_from_db()
+                        
+                        elif(self.object.files_changed):
+                            logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
+                            d.refresh_notebook_stack(self.object.manuscript)
+                            self.object.files_changed = False
+                            self.object.save()
                     else:
-                        d.build_manuscript_docker_stack(self.object.manuscript)
-                    return redirect('submission_editfiles', id=self.object.id)
+                        logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
+                        d.build_manuscript_docker_stack(self.object.manuscript, request)
+                        self.object.files_changed = False
+                        self.object.save()
+
+                    container_flow_address = _helper_get_oauth_url(request, self.object)
+                    return redirect(container_flow_address)
                 else:
                     self.message = 'You must upload some files to the submission!'
                     messages.add_message(request, messages.ERROR, self.message)
@@ -925,6 +940,10 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         git_file.size = file.size
         git_file.parent_submission = self.object
         git_file.save(force_insert=True)
+
+        #TODO: maybe centralize this flag setting to happen by the GitFile model
+        self.object.files_changed = True
+        self.object.save()
 
         return HttpResponse(status=200)
 
@@ -973,6 +992,9 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
         except m.GitFile.DoesNotExist:
             logger.warning("While deleting file " + file_path + " on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
 
+        self.object.files_changed = True
+        self.object.save()
+
         return HttpResponse(status=200)
 
 class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
@@ -992,6 +1014,9 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
                 m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
             except m.GitFile.DoesNotExist:
                 logger.warning("While deleting file " + b + " using delete all on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
+        self.object.files_changed = True
+        self.object.save()
 
         return HttpResponse(status=200)
 
@@ -1092,3 +1117,69 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
+
+#This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
+#This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
+#Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
+class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    template = 'main/notebook_redirect.html'
+
+    def get(self, request, *args, **kwargs):
+        if 'postauth' in request.GET:
+            request.user.last_oauthproxy_forced_signin = datetime.now();
+            request.user.save()
+        context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
+        return render(request, self.template, context)
+
+class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    template = 'main/notebook_iframe.html'
+
+    def get(self, request, *args, **kwargs):
+        print(self.object.__dict__)
+        print(self.object.manuscript.__dict__)
+        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
+
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
+            'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+
+        return render(request, self.template, context)
+
+    def post(self, request, *args, **kwargs):
+        if request.POST.get('submit'):
+            return redirect('submission_editfiles', id=self.object.id)
+        if request.POST.get('back'):
+            return redirect('submission_uploadfiles', id=self.object.id)
+        pass
+
+
+def _helper_get_oauth_url(request, submission):
+    # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))
+    # print("time now:" + str(timezone.now()))
+    #This code is for doing pro-active reauthentication via oauth2. We do this so that the user isn't presented with the oauth2 login inside their iframe (which they can't use).
+    if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
+        #We need to send the user to reauth
+        # print("REAUTH")
+        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
+        if(request.is_secure()):
+            container_flow_redirect = "https://" + settings.SERVER_ADDRESS
+        else:
+            container_flow_redirect = "http://" + settings.SERVER_ADDRESS
+        container_flow_redirect += "/submission/" + str(submission.id) + "/notebooklogin/?postauth"
+        container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
+    else:
+        # print("NO REAUTH")
+        #We don't need to send the user to reauth
+        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
+
+    return container_flow_address

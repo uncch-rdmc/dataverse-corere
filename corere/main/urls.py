@@ -27,7 +27,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/createsubmission/', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:id>/deletefile/', classes.ManuscriptDeleteFileView.as_view(), name="manuscript_deletefile"),
     path('manuscript/<int:id>/downloadfile/', classes.ManuscriptDownloadFileView.as_view(), name="manuscript_downloadfile"),
-    path('manuscript/<int:id>/binder/', main.open_binder, name="manuscript_binder"),
+    path('manuscript/<int:id>/notebook/', main.open_notebook, name="manuscript_notebook"),
     path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
 
@@ -46,6 +46,8 @@ urlpatterns = [
     path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
     path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
+    path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
+    path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebook"), #Technically this page is more than login, but login is a good user facing name
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
@@ -56,6 +58,5 @@ urlpatterns = [
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
     path('switch_role/', main.switch_role, name="switch_role"),
-
-    path('test_iframe/', main.test_iframe, name="test_iframe"),
+    
 ]
