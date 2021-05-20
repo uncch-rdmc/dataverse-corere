@@ -38,7 +38,7 @@ class GenericCorereObjectView(View):
     template = 'main/form_object_generic.html'
     redirect = '..'
     read_only = False
-    message = None
+    msg = None
     http_method_names = ['get', 'post'] #Used by the base View class
     #For GetOrGenerateObjectMixin, instantiated here so they don't override.
     parent_reference_name = None
@@ -90,7 +90,7 @@ class GenericCorereObjectView(View):
         if self.form.is_valid():
             if not self.read_only:
                 self.form.save() #Note: this is what saves a newly created model instance
-            messages.add_message(request, messages.SUCCESS, self.message)
+            messages.add_message(request, messages.SUCCESS, self.msg)
             return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)
@@ -127,7 +127,7 @@ class GetOrGenerateObjectMixin(object):
     def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
-            self.message = _("generic_objectUpdated").format(object_type=self.object_friendly_name, object_id=self.object.id)
+            self.msg = _("generic_objectUpdated_banner").format(object_type=self.object_friendly_name, object_id=self.object.id)
         elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
@@ -135,7 +135,7 @@ class GetOrGenerateObjectMixin(object):
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
                 if(self.parent_reference_name == "submission"):
                     setattr(self.object, "manuscript", self.object.submission.manuscript)
-            self.message = _("generic_objectCreated").format(object_type=self.object_friendly_name)
+            self.msg = _("generic_objectCreated_banner").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
         return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
@@ -223,8 +223,8 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         #print(self.from_submission)
         if(self.from_submission):
-            self.message = _("manuscript_additionalInfoDuringSubmissionFlowHelpText")
-            messages.add_message(request, messages.INFO, self.message)
+            self.msg = _("manuscript_additionalInfoDuringSubmissionFlowHelpText_banner")
+            messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
             'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
@@ -261,11 +261,11 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.keyword_formset.save()
 
             if request.POST.get('submit_continue'):
-                messages.add_message(request, messages.SUCCESS, self.message)
+                messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
             elif request.POST.get('submit_continue_submission'):
-                messages.add_message(request, messages.SUCCESS, self.message)
+                messages.add_message(request, messages.SUCCESS, self.msg)
                 return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
             else:
                 return redirect(self.redirect)
@@ -332,8 +332,8 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
                 return redirect('manuscript_addauthor', id=self.object.id)
             else:
-                self.message = _('manuscript_noFiles')
-                messages.add_message(request, messages.ERROR, self.message)
+                self.msg = _('manuscript_noFiles_banner')
+                messages.add_message(request, messages.ERROR, self.msg)
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
                     'root_object_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
@@ -418,11 +418,11 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = _("manuscript_objectTransferAuthorSuccess").format(object_id=self.object_id, object_title=self.object.title)
-            messages.add_message(request, messages.SUCCESS, self.message)
+            self.msg = _("manuscript_objectTransferAuthorSuccess_banner").format(object_id=self.object_id, object_title=self.object.title)
+            messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.message = _("manuscript_objectTransferAuthorFailure").format(object_id=self.object_id, object_title=self.object.title)
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg = _("manuscript_objectTransferAuthorFailure_banner").format(object_id=self.object_id, object_title=self.object.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.id))
 
 class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
@@ -593,7 +593,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get('submit_continue'):
-                    messages.add_message(request, messages.SUCCESS, self.message)
+                    messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('submission_uploadfiles', id=self.object.id)
 
                 return redirect(self.redirect)
@@ -839,10 +839,10 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         raise Http404()
                     self.object.submit(request.user)
                     self.object.save()
-                    self.message = _("submission_submitted")
-                    messages.add_message(request, messages.SUCCESS, self.message)
+                    self.msg = _("submission_submitted_banner")
+                    messages.add_message(request, messages.SUCCESS, self.msg)
                 else:
-                    messages.add_message(request, messages.SUCCESS, self.message)
+                    messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('manuscript_landing', id=self.object.manuscript.id)
         else:
             logger.debug(formset.errors)
@@ -906,8 +906,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
-                    self.message = _('submission_noFiles')
-                    messages.add_message(request, messages.ERROR, self.message)
+                    self.msg = _('submission_noFiles_banner')
+                    messages.add_message(request, messages.ERROR, self.msg)
 
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                         'root_object_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
@@ -1065,11 +1065,11 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message= _("submission_objectTransferEditorBeginSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.SUCCESS, self.message)
+            self.msg= _("submission_objectTransferEditorBeginSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.message= _("submission_objectTransferEditorBeginFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
@@ -1090,11 +1090,11 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message= _("submission_objectTransferEditorReturnSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.SUCCESS, self.message)
+            self.msg= _("submission_objectTransferEditorReturnSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.message= _("submission_objectTransferEditorReturnFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferEditorReturnFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
@@ -1116,11 +1116,11 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
 
-            self.message= _("submission_objectTransferAuthorSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.SUCCESS, self.message)
+            self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.message= _("submission_objectTransferAuthorFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url

@@ -43,19 +43,18 @@ def invite_assign_author(request, id=None):
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 new_user = helper_create_user_and_invite(request, email, author_role)
-                message = _("user_inviteRole").format(email=email, role="author")
-                messages.add_message(request, messages.INFO, message)
+                msg = _("user_inviteRole_banner").format(email=email, role="author")
+                messages.add_message(request, messages.INFO, msg)
                 users.append(new_user) #add new new_user to the other users provided
             for u in users:
                 if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
-                message = _("user_addAsRoleToManuscript").format(role="author", email=u.email, manuscript_title=manuscript.title)
-                messages.add_message(request, messages.INFO, message.format(u.email, manuscript.title))
-                logger.info(message.format(u.email, manuscript.title))
-                #Admin gave Author access to Matthew for manuscript bug5
-                notification_msg = '{0} has given you author access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_title=manuscript.title)
+                messages.add_message(request, messages.INFO, msg.format(u.email, manuscript.title))
+                logger.info(msg.format(u.email, manuscript.title))
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/manuscript/'+str(manuscript.id))
         else:
@@ -89,8 +88,8 @@ def add_author(request, id=None):
             if not fsm_check_transition_perm(manuscript.begin, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
-            message = _("manuscript_submitted").format(manuscript_title=manuscript.title, manuscript_id=manuscript.id)
-            messages.add_message(request, messages.INFO, message)
+            msg = _("manuscript_submitted_banner").format(manuscript_title=manuscript.title, manuscript_id=manuscript.id)
+            messages.add_message(request, messages.INFO, msg)
             manuscript.begin()
             manuscript.save()
 
@@ -139,10 +138,10 @@ def assign_editor(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_editor_group.user_set.add(u)
-                message = _("user_addAsRoleToManuscript").format(role="editor", email=u.email, manuscript_title=manuscript.title)
-                messages.add_message(request, messages.INFO, message)
-                logger.info(message)
-                notification_msg = '{0} has given you editor access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="editor", email=u.email, manuscript_title=manuscript.title)
+                messages.add_message(request, messages.INFO, msg)
+                logger.info(msg)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="editor", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/manuscript/'+str(manuscript.id))
         else:
@@ -187,10 +186,10 @@ def assign_curator(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_curator_group.user_set.add(u)
-                message = _("user_addAsRoleToManuscript").format(role="curator", email=u.email, manuscript_title=manuscript.title)
-                messages.add_message(request, messages.INFO, message)
-                logger.info(message)
-                notification_msg = '{0} has given you curator access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_title=manuscript.title)
+                messages.add_message(request, messages.INFO, msg)
+                logger.info(msg)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="curator", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/manuscript/'+str(manuscript.id))
         else:
@@ -234,10 +233,10 @@ def assign_verifier(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_verifier_group.user_set.add(u)
-                message = _("user_addAsRoleToManuscript").format(role="verifier", email=u.email, manuscript_title=manuscript.title)
-                messages.add_message(request, messages.INFO, message)
-                logger.info(message)
-                notification_msg = '{0} has given you verifier access to manuscript {1}!'.format(request.user.email, manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="verifier", email=u.email, manuscript_title=manuscript.title)
+                messages.add_message(request, messages.INFO, msg)
+                logger.info(msg)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="verifier", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
             return redirect('/manuscript/'+str(manuscript.id))
         else:
@@ -285,8 +284,8 @@ def account_user_details(request):
     if request.method == 'POST':
         if form.is_valid():
             user = form.save()
-            message = _("user_infoUpdated")
-            messages.add_message(request, messages.SUCCESS, message)
+            msg = _("user_infoUpdated_banner")
+            messages.add_message(request, messages.SUCCESS, msg)
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -294,8 +293,8 @@ def account_user_details(request):
 
 def logout_view(request):
     logout(request)
-    message = _("user_loggedOut")
-    messages.add_message(request, messages.INFO, message)
+    msg = _("user_loggedOut_banner")
+    messages.add_message(request, messages.INFO, msg)
     return redirect('/')
 
 @login_required()
@@ -325,7 +324,7 @@ def invite_user_not_author(request, role, role_text):
             if form.is_valid():
                 email = form.cleaned_data['email']
                 if(email):
-                    message = _("user_inviteRole").format(email=email, role=role_text)
+                    msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                     new_user = helper_create_user_and_invite(request, email, role)
                     messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
             else:

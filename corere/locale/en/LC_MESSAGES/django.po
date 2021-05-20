@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-05-20 21:29+0000\n"
+"POT-Creation-Date: 2021-05-20 22:04+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -79,78 +79,83 @@ msgid "Manage group"
 msgstr ""
 
 #: corere/main/views/classes.py:130
-msgid "generic_objectUpdated"
-msgstr "Your {object_type}: {object_id} has been updated!"
+msgid "generic_objectUpdated_banner"
+msgstr "Your {object_type}: #{object_id} has been updated!"
 
 #: corere/main/views/classes.py:138
-msgid "generic_objectCreated"
+msgid "generic_objectCreated_banner"
 msgstr "Your new {object_type} has been created!"
 
 #: corere/main/views/classes.py:226
-msgid "manuscript_additionalInfoDuringSubmissionFlowHelpText"
+msgid "manuscript_additionalInfoDuringSubmissionFlowHelpText_banner"
 msgstr "First, please fill out the additional info regarding your Manuscript."
 
 #: corere/main/views/classes.py:335
-msgid "manuscript_noFiles"
+msgid "manuscript_noFiles_banner"
 msgstr "You must upload some files to the manuscript!"
 
 #: corere/main/views/classes.py:421
-msgid "manuscript_objectTransferAuthorSuccess"
+msgid "manuscript_objectTransferAuthorSuccess_banner"
 msgstr "Your Manuscript #{object_id}: {object_title} was handed to authors!"
 
 #: corere/main/views/classes.py:424
-msgid "manuscript_objectTransferAuthorFailure"
+msgid "manuscript_objectTransferAuthorFailure_banner"
 msgstr "Your Manuscript #{object_id}: {object_title} could not be handed to authors, please contact the administrator."
 
 #: corere/main/views/classes.py:842
-msgid "submission_submitted"
+msgid "submission_submitted_banner"
 msgstr "Your submission has been submitted!"
 
 #: corere/main/views/classes.py:909
-msgid "submission_noFiles"
+msgid "submission_noFiles_banner"
 msgstr "You must upload some files to the submission!"
 
 #: corere/main/views/classes.py:1068
-msgid "submission_objectTransferEditorBeginSuccess"
+msgid "submission_objectTransferEditorBeginSuccess_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} was handed to the editors for review!"
 
 #: corere/main/views/classes.py:1071
-msgid "submission_objectTransferEditorBeginFailure"
+msgid "submission_objectTransferEditorBeginFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be handed to editors, please contact the administrator."
 
 #: corere/main/views/classes.py:1093
-msgid "submission_objectTransferEditorReturnSuccess"
+msgid "submission_objectTransferEditorReturnSuccess_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} was handed to the editors for review!"
 
 #: corere/main/views/classes.py:1096
-msgid "submission_objectTransferEditorReturnFailure"
+msgid "submission_objectTransferEditorReturnFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be handed to editors, please contact the administrator."
 
 #: corere/main/views/classes.py:1119
-msgid "submission_objectTransferAuthorSuccess"
-msgstr "Your Submission for Manuscript {manuscript_id}: {manuscript_title}  was returned to the authors!"
+msgid "submission_objectTransferAuthorSuccess_banner"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title}  was returned to the authors!"
 
 #: corere/main/views/classes.py:1122
-msgid "submission_objectTransferAuthorFailure"
-msgstr "Your Submission for Manuscript {manuscript_id}: {manuscript_title} could not be returned to the authors, please contact the administrator."
+msgid "submission_objectTransferAuthorFailure_banner"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be returned to the authors, please contact the administrator."
 
-#: corere/main/views/users.py:46 corere/main/views/users.py:328
-msgid "user_inviteRole"
+#: corere/main/views/users.py:46 corere/main/views/users.py:327
+msgid "user_inviteRole_banner"
 msgstr "You have invited {email} to CoReRe as an {role}!"
 
-#: corere/main/views/users.py:54 corere/main/views/users.py:142
-#: corere/main/views/users.py:190 corere/main/views/users.py:237
-msgid "user_addAsRoleToManuscript"
+#: corere/main/views/users.py:54 corere/main/views/users.py:141
+#: corere/main/views/users.py:189 corere/main/views/users.py:236
+msgid "user_addAsRoleToManuscript_banner"
 msgstr "You have given {email} {role} access to manuscript {manuscript_title}!"
 
-#: corere/main/views/users.py:92
-msgid "manuscript_submitted"
-msgstr "Your Manuscript {manuscript_id}: {manuscript_title} has been submitted!"
+#: corere/main/views/users.py:57 corere/main/views/users.py:144
+#: corere/main/views/users.py:192 corere/main/views/users.py:239
+msgid "user_addedYouAsRoleToManuscript_notify"
+msgstr "{email} has given you {role} access to manuscript {manuscript_title}!"
 
-#: corere/main/views/users.py:288
-msgid "user_infoUpdated"
+#: corere/main/views/users.py:91
+msgid "manuscript_submitted_banner"
+msgstr "Your Manuscript #{manuscript_id}: {manuscript_title} has been submitted!"
+
+#: corere/main/views/users.py:287
+msgid "user_infoUpdated_banner"
 msgstr "User info has been updated!"
 
-#: corere/main/views/users.py:297
-msgid "user_loggedOut"
+#: corere/main/views/users.py:296
+msgid "user_loggedOut_banner"
 msgstr "You have succesfully logged out!"
