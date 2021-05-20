@@ -16,11 +16,13 @@ from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
-logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
 from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.utils.translation import gettext as _
+
+logger = logging.getLogger(__name__)  
 
 #from guardian.decorators import permission_required_or_404
 
@@ -125,7 +127,7 @@ class GetOrGenerateObjectMixin(object):
     def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been updated!'
+            self.message = _("generic_objectUpdated").format(object_type=self.object_friendly_name, object_id=self.object.id)
         elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
@@ -133,7 +135,7 @@ class GetOrGenerateObjectMixin(object):
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
                 if(self.parent_reference_name == "submission"):
                     setattr(self.object, "manuscript", self.object.submission.manuscript)
-            self.message = 'Your new '+self.object_friendly_name +' has been created!'
+            self.message = _("generic_objectCreated").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
         return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
@@ -219,9 +221,10 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             root_object_title = self.object.manuscript.title
 
-        print(self.from_submission)
+        #print(self.from_submission)
         if(self.from_submission):
-            messages.add_message(request, messages.INFO, "First, please fill out the additional info regarding your Manuscript.")
+            self.message = _("manuscript_additionalInfoDuringSubmissionFlowHelpText")
+            messages.add_message(request, messages.INFO, self.message)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
             'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
@@ -329,7 +332,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
                 return redirect('manuscript_addauthor', id=self.object.id)
             else:
-                self.message = 'You must upload some files to the manuscript!'
+                self.message = _('manuscript_noFiles')
                 messages.add_message(request, messages.ERROR, self.message)
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
@@ -415,10 +418,10 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
+            self.message = _("manuscript_objectTransferAuthorSuccess").format(object_id=self.object_id, object_title=self.object.title)
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
+            self.message = _("manuscript_objectTransferAuthorFailure").format(object_id=self.object_id, object_title=self.object.title)
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.id))
 
@@ -836,7 +839,8 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         raise Http404()
                     self.object.submit(request.user)
                     self.object.save()
-                    messages.add_message(request, messages.SUCCESS, "Your submission has been submitted!")
+                    self.message = _("submission_submitted")
+                    messages.add_message(request, messages.SUCCESS, self.message)
                 else:
                     messages.add_message(request, messages.SUCCESS, self.message)
                     return redirect('manuscript_landing', id=self.object.manuscript.id)
@@ -902,7 +906,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
-                    self.message = 'You must upload some files to the submission!'
+                    self.message = _('submission_noFiles')
                     messages.add_message(request, messages.ERROR, self.message)
 
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
@@ -1061,10 +1065,10 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for review!'
+            self.message= _("submission_objectTransferEditorBeginSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
+            self.message= _("submission_objectTransferEditorBeginFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1086,10 +1090,10 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for return!'
+            self.message= _("submission_objectTransferEditorReturnSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
+            self.message= _("submission_objectTransferEditorReturnFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1111,10 +1115,11 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was returned to the authors!'
+
+            self.message= _("submission_objectTransferAuthorSuccess").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.SUCCESS, self.message)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
+            self.message= _("submission_objectTransferAuthorFailure").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.ERROR, self.message)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 

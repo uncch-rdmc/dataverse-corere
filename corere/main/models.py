@@ -24,7 +24,7 @@ from corere.main import docker as d
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
-from django.utils.translation import gettext_lazy as _
+#from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
 from datetime import date
@@ -83,9 +83,9 @@ class User(AbstractUser):
 
 class Edition(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        ISSUES = 'issues', _('Issues')
-        NO_ISSUES = 'no_issues', _('No Issues')
+        NEW = 'new', 'New'
+        ISSUES = 'issues', 'Issues'
+        NO_ISSUES = 'no_issues', 'No Issues'
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
     report = models.TextField(default="", verbose_name='Report')
@@ -135,11 +135,11 @@ class Edition(AbstractCreateUpdateModel):
 
 class Curation(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        INCOM_MATERIALS = 'incom_materials', _('Incomplete Materials')
-        MAJOR_ISSUES = 'major_issues', _('Major Issues')
-        MINOR_ISSUES = 'minor_issues', _('Minor Issues')
-        NO_ISSUES = 'no_issues', _('No Issues')
+        NEW = 'new', 'New'
+        INCOM_MATERIALS = 'incom_materials', 'Incomplete Materials'
+        MAJOR_ISSUES = 'major_issues', 'Major Issues'
+        MINOR_ISSUES = 'minor_issues', 'Minor Issues'
+        NO_ISSUES = 'no_issues', 'No Issues'
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", verbose_name='Report')
@@ -542,14 +542,14 @@ class Submission(AbstractCreateUpdateModel):
 
 class Author(models.Model):
     class IdScheme(models.TextChoices):
-        ORCID = 'ORCID', _('ORCID') 
-        ISNI = 'ISNI', _('ISNI')
-        LCNA = 'LCNA', _('LCNA')
-        VIAF = 'VIAF', _('VIAF')
-        GND = 'GND', _('GND')
-        DAI = 'DAI', _('DAI')
-        REID = 'ResearcherID', _('ResearcherID')
-        SCID = 'ScopusID', _('ScopusID')
+        ORCID = 'ORCID', 'ORCID'
+        ISNI = 'ISNI', 'ISNI'
+        LCNA = 'LCNA', 'LCNA'
+        VIAF = 'VIAF', 'VIAF'
+        GND = 'GND', 'GND'
+        DAI = 'DAI', 'DAI'
+        REID = 'ResearcherID', 'ResearcherID'
+        SCID = 'ScopusID', 'ScopusID'
 
     first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
@@ -570,28 +570,28 @@ class Keyword(models.Model):
 
 class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        AWAITING_INITIAL = 'awaiting_init', _('Awaiting Initial Submission')
-        AWAITING_RESUBMISSION = 'awaiting_resub', _('Awaiting Resubmission')
-        REVIEWING = 'reviewing', _('Reviewing Submission')
-        PROCESSING = 'processing', _('Processing Submission')
-        COMPLETED = 'completed', _('Completed')
+        NEW = 'new', 'New'
+        AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
+        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Resubmission'
+        REVIEWING = 'reviewing', 'Reviewing Submission'
+        PROCESSING = 'processing', 'Processing Submission'
+        COMPLETED = 'completed', 'Completed'
 
     class Subjects(models.TextChoices):
-        AGRICULTURAL = 'agricultural', _('Agricultural Sciences')
-        ARTS_AND_HUMANITIES = 'arts', _('Arts and Humanities')
-        ASTRONOMY_ASTROPHYSICS = 'astronomy', _('Astronomy and Astrophysics')
-        BUSINESS_MANAGEMENT = 'business', _('Business and Management')
-        CHEMISTRY = 'chemistry', _('Chemistry')
-        COMPUTER_INFORMATION = 'computer', _('Computer and Information Science')
-        ENVIRONMENTAL = 'environmental', _('Earth and Environmental Sciences')
-        ENGINEERING = 'engineering', _('Engineering')
-        LAW = 'law', _('Law')
-        MATHEMATICS = 'mathematics', _('Mathematical Sciences')
-        HEALTH = 'health', _('Medicine, Health and Life Sciences')
-        PHYSICS = 'physics', _('Physics')
-        SOCIAL = 'social', _('Social Sciences')
-        OTHER = 'other', _('Other')
+        AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
+        ARTS_AND_HUMANITIES = 'arts', 'Arts and Humanities'
+        ASTRONOMY_ASTROPHYSICS = 'astronomy', 'Astronomy and Astrophysics'
+        BUSINESS_MANAGEMENT = 'business', 'Business and Management'
+        CHEMISTRY = 'chemistry', 'Chemistry'
+        COMPUTER_INFORMATION = 'computer', 'Computer and Information Science'
+        ENVIRONMENTAL = 'environmental', 'Earth and Environmental Sciences'
+        ENGINEERING = 'engineering', 'Engineering'
+        LAW = 'law', 'Law'
+        MATHEMATICS = 'mathematics', 'Mathematical Sciences'
+        HEALTH = 'health', 'Medicine, Health and Life Sciences'
+        PHYSICS = 'physics', 'Physics'
+        SOCIAL = 'social', 'Social Sciences'
+        OTHER = 'other', 'Other'
 
     title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
@@ -809,12 +809,12 @@ class ContainerInfo(models.Model):
 class GitFile(AbstractCreateUpdateModel):
     #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
-        CODE = 'code', _('Code')
-        DATA = 'data', _('Data')
-        DOC_README = 'doc_readme', _('Documentation - Readme')
-        DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
-        DOC_OTHER = 'doc_other', _('Documentation - Other')
-        #UNSET = '-', _('-')
+        CODE = 'code', 'Code'
+        DATA = 'data', 'Data'
+        DOC_README = 'doc_readme', 'Documentation - Readme'
+        DOC_CODEBOOK = 'doc_codebook', 'Documentation - Codebook'
+        DOC_OTHER = 'doc_other', 'Documentation - Other'
+        #UNSET = '-','-'
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -861,10 +861,10 @@ class GitFile(AbstractCreateUpdateModel):
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
     class RefCycle(models.TextChoices):
-        SUBMISSION = 'submission', _('Submission')
-        EDITION = 'edition', _('Edition')
-        CURATION = 'curation', _('Curation')
-        VERIFICATION = 'verification', _('Verification')
+        SUBMISSION = 'submission', 'Submission'
+        EDITION = 'edition', 'Edition'
+        CURATION = 'curation', 'Curation'
+        VERIFICATION = 'verification', 'Verification'
 
     text    = models.TextField(default="", blank=True, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])

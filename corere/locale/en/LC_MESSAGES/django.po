@@ -1,0 +1,156 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-20 21:29+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:17
+msgid "Home"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:21
+msgid "Object permissions"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:32
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:87
+msgid "Please correct the errors below."
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:36
+msgid "Users"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:42
+msgid "User permissions"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:45
+msgid "User"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:49
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:104
+msgid "Action"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:66
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:121
+msgid "View"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:67
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:122
+msgid "Edit"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:78
+msgid "Manage user"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:91
+msgid "Groups"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:97
+msgid "Group permissions"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:100
+msgid "Group"
+msgstr ""
+
+#: corere/main/templates/main/admin/guardian_obj_perms_manage_custom.html:133
+msgid "Manage group"
+msgstr ""
+
+#: corere/main/views/classes.py:130
+msgid "generic_objectUpdated"
+msgstr "Your {object_type}: {object_id} has been updated!"
+
+#: corere/main/views/classes.py:138
+msgid "generic_objectCreated"
+msgstr "Your new {object_type} has been created!"
+
+#: corere/main/views/classes.py:226
+msgid "manuscript_additionalInfoDuringSubmissionFlowHelpText"
+msgstr "First, please fill out the additional info regarding your Manuscript."
+
+#: corere/main/views/classes.py:335
+msgid "manuscript_noFiles"
+msgstr "You must upload some files to the manuscript!"
+
+#: corere/main/views/classes.py:421
+msgid "manuscript_objectTransferAuthorSuccess"
+msgstr "Your Manuscript #{object_id}: {object_title} was handed to authors!"
+
+#: corere/main/views/classes.py:424
+msgid "manuscript_objectTransferAuthorFailure"
+msgstr "Your Manuscript #{object_id}: {object_title} could not be handed to authors, please contact the administrator."
+
+#: corere/main/views/classes.py:842
+msgid "submission_submitted"
+msgstr "Your submission has been submitted!"
+
+#: corere/main/views/classes.py:909
+msgid "submission_noFiles"
+msgstr "You must upload some files to the submission!"
+
+#: corere/main/views/classes.py:1068
+msgid "submission_objectTransferEditorBeginSuccess"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} was handed to the editors for review!"
+
+#: corere/main/views/classes.py:1071
+msgid "submission_objectTransferEditorBeginFailure"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be handed to editors, please contact the administrator."
+
+#: corere/main/views/classes.py:1093
+msgid "submission_objectTransferEditorReturnSuccess"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} was handed to the editors for review!"
+
+#: corere/main/views/classes.py:1096
+msgid "submission_objectTransferEditorReturnFailure"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be handed to editors, please contact the administrator."
+
+#: corere/main/views/classes.py:1119
+msgid "submission_objectTransferAuthorSuccess"
+msgstr "Your Submission for Manuscript {manuscript_id}: {manuscript_title}  was returned to the authors!"
+
+#: corere/main/views/classes.py:1122
+msgid "submission_objectTransferAuthorFailure"
+msgstr "Your Submission for Manuscript {manuscript_id}: {manuscript_title} could not be returned to the authors, please contact the administrator."
+
+#: corere/main/views/users.py:46 corere/main/views/users.py:328
+msgid "user_inviteRole"
+msgstr "You have invited {email} to CoReRe as an {role}!"
+
+#: corere/main/views/users.py:54 corere/main/views/users.py:142
+#: corere/main/views/users.py:190 corere/main/views/users.py:237
+msgid "user_addAsRoleToManuscript"
+msgstr "You have given {email} {role} access to manuscript {manuscript_title}!"
+
+#: corere/main/views/users.py:92
+msgid "manuscript_submitted"
+msgstr "Your Manuscript {manuscript_id}: {manuscript_title} has been submitted!"
+
+#: corere/main/views/users.py:288
+msgid "user_infoUpdated"
+msgstr "User info has been updated!"
+
+#: corere/main/views/users.py:297
+msgid "user_loggedOut"
+msgstr "You have succesfully logged out!"

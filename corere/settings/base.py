@@ -192,11 +192,12 @@ LOGGING = {
 }
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
-USE_I18N = False
-USE_L10N = False
+USE_I18N = True
+USE_L10N = True
 USE_TZ = True
+LOCALE_PATHS = ( os.path.join(BASE_DIR, 'locale'), )
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
