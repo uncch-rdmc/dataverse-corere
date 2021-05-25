@@ -51,7 +51,8 @@ class GenericCorereObjectView(View):
     file_delete_url = None
     #TODO: This is too much. Need a better way to deal with these params. Also some are for manuscript and some are for submission
     helper = f.GenericFormSetHelper()
-    page_header = ""
+    page_title = ""
+    page_help_text = None
     note_formset = None
     note_helper = None
     
@@ -71,21 +72,21 @@ class GenericCorereObjectView(View):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title}
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
         print(self.redirect)
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         if self.form.is_valid():
             if not self.read_only:
@@ -96,7 +97,7 @@ class GenericCorereObjectView(View):
             logger.debug(self.form.errors)
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title}
 
         return render(request, self.template, context)
 
@@ -217,9 +218,9 @@ class GenericManuscriptView(GenericCorereObjectView):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         #print(self.from_submission)
         if(self.from_submission):
@@ -227,7 +228,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -246,9 +247,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
 
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         if not self.read_only and self.form.is_valid() \
             and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
@@ -276,7 +277,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
@@ -293,25 +294,27 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
-    page_header = "Create New Manuscript"
+    page_title = "Create New Manuscript"
     create = True
     redirect = "/"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_header = "Edit Manuscript"
+    page_title = _("manuscript_editFiles_pageTitle")
+    page_help_text = _("manuscript_editFiles_helpText")
 
 class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_header = "Edit Manuscript"
+    page_title = _("manuscript_editFiles_pageTitle")
     from_submission = True
+    page_help_text = _("manuscript_editFiles_helpText")
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     #form_dict = f.ReadOnlyManuscriptForm #TODO: IMPLEMENT READONLY
     transition_method_name = 'view_noop'
-    page_header = "View Manuscript"
+    page_title = "View Manuscript"
     http_method_names = ['get']
     read_only = True
 
@@ -319,12 +322,20 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Manuscript"
+    page_title = _("manuscript_uploadFiles_pageTitle")
+    
+                
+    def dispatch(self, request, *args, **kwargs):
+        # if self.object._status == m.Manuscript.Status.NEW:
+        #     print("HELLO")
+        #     self.page_help_text = _("manuscript_uploadFilesNew_helpText")
+
+        return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-            'root_object_title': self.object.title, 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+            'manuscript_title': self.object.title, 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             })
 
     def post(self, request, *args, **kwargs):
@@ -336,15 +347,12 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 messages.add_message(request, messages.ERROR, self.msg)
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-                    'root_object_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+                    'manuscript_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
                     })
 
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Manuscript"
     http_method_names = ['post']
 
     #TODO: Should we making sure these files are safe?
@@ -384,14 +392,14 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'view_noop'
-    page_header = "View Files for Manuscript"
+    page_title = "View Files for Manuscript"
     http_method_names = ['get']
     read_only = True
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header
+            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
@@ -399,9 +407,9 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'read_only': self.read_only, 'page_header': self.page_header,
+        return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'root_object_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
@@ -454,9 +462,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     v_metadata_audit_formset = None
 
     def get(self, request, *args, **kwargs):     
-        root_object_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
         if(self.note_formset is not None):
@@ -500,7 +508,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def post(self, request, *args, **kwargs):
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
-        root_object_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript.title
 
         if(self.note_formset):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -618,7 +626,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.note_formset.save()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
@@ -783,7 +791,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
-    page_header = "Create New Submission"
+    page_title = "Create New Submission"
     template = 'main/form_object_submission.html'
     create = True
 
@@ -794,13 +802,13 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
-    page_header = "Edit Submission"
+    page_title = "Edit Submission"
     template = 'main/form_object_submission.html'
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
     transition_method_name = 'view_noop'
-    page_header = "View Submission"
+    page_title = "View Submission"
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
 
@@ -809,7 +817,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files.html'
     helper=f.GitFileFormSetHelper()
-    page_header = "Edit File Metadata for Submission"
+    page_title = "Edit File Metadata for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -820,9 +828,9 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'children_formset':formset, 'page_header': self.page_header})
+            'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
     #Originally copied from GenericCorereObjectView
     def post(self, request, *args, **kwargs):
@@ -848,9 +856,9 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             logger.debug(formset.errors)
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
+            'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
@@ -867,7 +875,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Submission"
+    page_title = "Upload Files for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -876,7 +884,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object)#,
             })
@@ -910,7 +918,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     messages.add_message(request, messages.ERROR, self.msg)
 
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-                        'root_object_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
+                        'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                         "repo_branch":g.helper_get_submission_branch_name(self.object)
                         })
@@ -920,7 +928,7 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Submission"
+    page_title = "Upload Files for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -1037,8 +1045,8 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -1155,8 +1163,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
-            'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text,  
+            'manuscript_title': self.object.manuscript.title, 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
 
         return render(request, self.template, context)
 

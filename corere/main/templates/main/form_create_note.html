@@ -1,8 +1,8 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_full.html" %}
 {% block content %}
 {% load crispy_forms_tags %}
 
-<h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
+{% include "main/page_title.html" %}    
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <table>

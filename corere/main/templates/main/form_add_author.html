@@ -1,4 +1,4 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_fixed.html" %}
 {% block content %}
 {% load groups_contain_count %}
 {% load crispy_forms_tags %}
@@ -23,7 +23,8 @@
         })
     }
 </script>
-<h5 class="my-3"> {{page_header}}: {{root_object_title}}</h5>
+
+{% include "main/page_title.html" %}
 Please enter the email address of the Author who you want to submit the manuscript data in CoReRe. They will be assigned to the manuscript (and invited to CoReRE if they are not already a user).
 </br></br>
 <form action="" method="post">

@@ -1,0 +1,14 @@
+<div class="page-title">
+    {% comment %} <div style="background:#B3C6F5; margin: 0px -10px 0px -10px; padding: 5px 10px 1px 10px;"> {% endcomment %}
+    <div class="main_holder">
+        <span class="test1" > {{page_title}}: </span> <span class="test2" >{{manuscript_title}}</span>
+        {% comment %} <h5> Manuscript: {{manuscript_title}}</h5> {% endcomment %}
+    </div>
+    {% comment %} <h6 style="background:#8899aa; margin: 0px -10px 0px -10px; padding: 5px 10px 5px 10px;"> Step: Please enter information about the manuscript</h6> {% endcomment %}
+</div>
+<hr>
+{% if page_help_text %}
+<p> </p>
+<p><h6><i> {{page_help_text}}</i></h6></p>
+{% endif %}
+

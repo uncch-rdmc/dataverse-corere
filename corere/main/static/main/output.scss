@@ -6,6 +6,41 @@
 
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
+// #content {
+
+// }
+
+.test1 {
+    margin-bottom: 1rem;
+    font-weight: 500;
+    line-height: 1.2;
+    font-size: 2rem;
+    // margin-top: 1;
+}
+
+.test2 {
+    margin-bottom: 1rem;
+    font-weight: 250;
+    line-height: 1.2;
+    font-size: 2rem;
+    // margin-top: 0;
+}
+
+div.fixed {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0px 10px 10px 10px;
+    background: #ffffff;
+}
+
+div.full {
+    background: #ffffff;
+}
+
+body {
+    background: #eeeeee;
+}
+
 .navbar {
     background: #7386D5;
 }
@@ -36,9 +71,13 @@
  * Datatables (we don't have direct control of the html, so a lot of overrides)
  */
 
-.main_holder h5 {
+.page-title {
+    padding-top: 10px;
+}
+
+.main_holder {
     color: #7386D5;
-    display:block;
+    // display:block;
 }
 
 table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {

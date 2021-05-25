@@ -119,7 +119,7 @@ def open_notebook(request, id=None):
 @login_required()
 def site_actions(request):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
-        return render(request, 'main/site_actions.html', {'page_header': "site_actions"})
+        return render(request, 'main/site_actions.html', {'page_title': "site_actions"})
     else:
         raise Http404()
 

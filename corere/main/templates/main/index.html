@@ -1,4 +1,4 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_full.html" %}
 {% load i18n %}
 {% load auth_extras %}
 {% block content %}
@@ -141,7 +141,9 @@
 
 <div>
     <div class="main_holder" id="manuscript_table_holder">
-        <h5 class="my-3"> Manuscripts </h5>
+    <div class="page-title">
+        <span> Manuscripts </span>
+    </div>
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}

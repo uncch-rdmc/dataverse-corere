@@ -1,6 +1,8 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_fixed.html" %}
 {% block content %}
-    <h5 class="my-3"> Notifications </h5>
+    <div class="page-title">
+        <span> Notifications </span>
+    </div>
     {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}
     {% live_notify_list %}

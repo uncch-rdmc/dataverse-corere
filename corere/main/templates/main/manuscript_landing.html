@@ -1,4 +1,4 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_full.html" %}
 {% load i18n %}
 {% load auth_extras %}
 {% block content %}
@@ -242,7 +242,8 @@
     
 </script>
 <div class="main_holder">
-    <h5> Manuscript: {{manuscript_title}} </h5>
+    <h5> Manuscript: {{manuscript_title}} </span>
+</div>
     <div class="my-1 dt-buttons btn-group flex-wrap">    
         {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
         {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
@@ -289,12 +290,14 @@
             Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
         {% endif %}
     </p>
-</div>
 
-<div class="main_holder" id="submission_table_holder">
+
+    <div class="main_holder" id="submission_table_holder">
         <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
             <hr>
-            <h5 class="my-3"> Submissions </h5> 
+            <div class="page-title">
+                <span> Submissions </span>
+            </div> 
             <thead>
                 {% for field in submission_columns %}
                     <th>{{ field }}</th>
@@ -304,5 +307,5 @@
             </tbody>
         </table>
     </div >
-
+</div>
 {% endblock %}

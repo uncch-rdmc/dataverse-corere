@@ -5,9 +5,8 @@
     </head>
     <body>
         {% include 'main/header.html' %}
-        <div class="mx-3 my-3">
-            {% block content %}{% endblock %}
-        </div>
+        <div id="content" class="full">
+        {% block content %}{% endblock %}
         {% include 'main/footer.html' %}
     </body>
 </html>

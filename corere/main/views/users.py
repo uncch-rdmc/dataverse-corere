@@ -60,7 +60,7 @@ def invite_assign_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_header': "Assign Author to Verify this Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': "Assign Author to Verify this Manuscript"})
 
 #Called during initial manuscript creation
 @login_required
@@ -99,7 +99,7 @@ def add_author(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
 
     return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'page_header': "Assign Author to Verify this Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Author', 'page_title': "Assign Author to Verify this Manuscript"})
 
 
 @login_required
@@ -147,7 +147,7 @@ def assign_editor(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'page_header': "Assign Editor to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'page_title': "Assign Editor to Manuscript"})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -195,7 +195,7 @@ def assign_curator(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
-        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'page_header': "Assign Curator to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'page_title': "Assign Curator to Manuscript"})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -242,7 +242,7 @@ def assign_verifier(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
-        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'page_header': "Assign Verifier to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'page_title': "Assign Verifier to Manuscript"})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
@@ -289,7 +289,7 @@ def account_user_details(request):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form, 'page_header': "Edit Account Details"})
+    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': "Edit Account Details"})
 
 def logout_view(request):
     logout(request)
@@ -329,7 +329,7 @@ def invite_user_not_author(request, role, role_text):
                     messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
             else:
                 logger.debug(form.errors) #TODO: DO MORE?
-        return render(request, 'main/form_user_details.html', {'form': form, 'page_header': "Invite {0}".format(role_text.capitalize())})
+        return render(request, 'main/form_user_details.html', {'form': form, 'page_title': "Invite {0}".format(role_text.capitalize())})
 
     else:
         raise Http404()
