@@ -31,6 +31,9 @@ def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorInviteAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
+    page_title = _("user_assignAuthor_pageTitle")
+    page_help_text = _("user_assignAuthor_helpText")
+
     if(manuscript.is_complete()):
         raise Http404()
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
@@ -59,8 +62,8 @@ def invite_assign_author(request, id=None):
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': "Assign Author to Verify this Manuscript"})
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 'manuscript_title': manuscript.title,
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': page_title, 'page_help_text': page_help_text})
 
 #Called during initial manuscript creation
 @login_required
@@ -69,6 +72,9 @@ def add_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
+    page_title = _("user_assignAuthor_pageTitle")
+    page_help_text = _("user_assignAuthor_helpText")
+
     if(manuscript.is_complete()):
         raise Http404()
     if request.method == 'POST':
@@ -99,7 +105,7 @@ def add_author(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
 
     return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'page_title': "Assign Author to Verify this Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text})
 
 
 @login_required
@@ -123,6 +129,7 @@ def unassign_author(request, id=None, user_id=None):
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
+    page_title = _("user_assignEditor_pageTitle")
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
@@ -147,7 +154,7 @@ def assign_editor(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'page_title': "Assign Editor to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -171,6 +178,7 @@ def unassign_editor(request, id=None, user_id=None):
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
+    page_title = _("user_assignCurator_pageTitle")
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
@@ -195,7 +203,7 @@ def assign_curator(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
-        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'page_title': "Assign Curator to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -218,6 +226,7 @@ def unassign_curator(request, id=None, user_id=None):
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
+    page_title = _("user_assignVerifier_pageTitle")
     #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
@@ -242,7 +251,7 @@ def assign_verifier(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
-        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'page_title': "Assign Verifier to Manuscript"})
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
@@ -274,6 +283,7 @@ def account_associate_oauth(request, key=None):
 
 @login_required()
 def account_user_details(request):
+    page_title = _("user_accountDetails_pageTitle")
     if(request.user.invite_key):
         #we clear out the invite_key now that we can associate the user
         #we do it regardless incase a new user clicks out of the page.
@@ -281,6 +291,7 @@ def account_user_details(request):
         request.user.invite_key = "" 
         request.user.save()
     form = EditUserForm(request.POST or None, instance=request.user)
+
     if request.method == 'POST':
         if form.is_valid():
             user = form.save()
@@ -289,7 +300,7 @@ def account_user_details(request):
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': "Edit Account Details"})
+    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title})
 
 def logout_view(request):
     logout(request)

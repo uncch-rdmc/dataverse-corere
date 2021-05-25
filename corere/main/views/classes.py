@@ -102,7 +102,7 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
 class GitFilesMixin(object):
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             self.repo_dict_gen = g.get_manuscript_files_list(self.object)
             self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile/?file_path="
@@ -116,7 +116,7 @@ class GitFilesMixin(object):
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
 
-        return super(GitFilesMixin, self).dispatch(request, *args, **kwargs)
+        return super(GitFilesMixin, self).setup(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -125,7 +125,7 @@ class GitFilesMixin(object):
 #Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
 class GetOrGenerateObjectMixin(object):
     #TODO: This gets called on every get, do we need to generate the messages this early?
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
             self.msg = _("generic_objectUpdated_banner").format(object_type=self.object_friendly_name, object_id=self.object.id)
@@ -139,7 +139,7 @@ class GetOrGenerateObjectMixin(object):
             self.msg = _("generic_objectCreated_banner").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
-        return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
+        return super(GetOrGenerateObjectMixin, self).setup(request, *args, **kwargs)
     
 # class ChooseRoleFormMixin(object):
 #     def dispatch(self, request, *args, **kwargs):
@@ -155,7 +155,7 @@ class GetOrGenerateObjectMixin(object):
 #TODO: Is this specifically for noop transitions? if so we should name it that way.
 class TransitionPermissionMixin(object):
     transition_on_parent = False
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(self.transition_on_parent):
             parent_object = getattr(self.object, self.parent_reference_name)
             transition_method = getattr(parent_object, self.transition_method_name)
@@ -165,12 +165,12 @@ class TransitionPermissionMixin(object):
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
-        return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
+        return super(TransitionPermissionMixin, self).setup(request, *args, **kwargs)    
     pass
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(len(self.groups_required)>0):
             if not request.user.is_authenticated:
                 raise Http404()
@@ -180,7 +180,7 @@ class GroupRequiredMixin(object):
                     user_groups.append(group)
                 if len(set(user_groups).intersection(self.groups_required)) <= 0:
                     raise Http404()
-        return super(GroupRequiredMixin, self).dispatch(request, *args, **kwargs)
+        return super(GroupRequiredMixin, self).setup(request, *args, **kwargs)
 
 ############################################# MANUSCRIPT #############################################
 
@@ -294,27 +294,27 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
-    page_title = "Create New Manuscript"
+    page_title = _("manuscript_create_pageTitle")
     create = True
     redirect = "/"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_title = _("manuscript_editFiles_pageTitle")
-    page_help_text = _("manuscript_editFiles_helpText")
+    page_title = _("manuscript_edit_pageTitle")
+    page_help_text = _("manuscript_edit_helpText")
 
 class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_title = _("manuscript_editFiles_pageTitle")
+    page_title = _("manuscript_edit_pageTitle")
     from_submission = True
-    page_help_text = _("manuscript_editFiles_helpText")
+    page_help_text = _("manuscript_edit_helpText")
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     #form_dict = f.ReadOnlyManuscriptForm #TODO: IMPLEMENT READONLY
     transition_method_name = 'view_noop'
-    page_title = "View Manuscript"
+    page_title = _("manuscript_view_pageTitle")
     http_method_names = ['get']
     read_only = True
 
@@ -323,13 +323,10 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
-    
                 
     def dispatch(self, request, *args, **kwargs):
-        # if self.object._status == m.Manuscript.Status.NEW:
-        #     print("HELLO")
-        #     self.page_help_text = _("manuscript_uploadFilesNew_helpText")
-
+        if self.object._status == m.Manuscript.Status.NEW:
+            self.page_help_text = _("manuscript_uploadFilesNew_helpText")
         return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -392,7 +389,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'view_noop'
-    page_title = "View Files for Manuscript"
+    page_title = _("manuscript_viewFiles_pageTitle")
     http_method_names = ['get']
     read_only = True
 
@@ -690,6 +687,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_edition_noop, request.user) or has_transition_perm(self.object.submission_edition.edit_noop, request.user))):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_editionReview_helpText")
             elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
         except (m.Edition.DoesNotExist, KeyError):
@@ -697,6 +696,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_curationReview_helpText")
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
         except (m.Curation.DoesNotExist, KeyError):
@@ -704,6 +705,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
                 self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_verificationReview_helpText")
             elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
         except (m.Verification.DoesNotExist, KeyError):
@@ -791,7 +794,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
-    page_title = "Create New Submission"
+    page_title = _("submission_create_pageTitle")
+    page_help_text = _("submission_edit_helpText")
     template = 'main/form_object_submission.html'
     create = True
 
@@ -802,22 +806,28 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
-    page_title = "Edit Submission"
+    page_help_text = _("submission_edit_helpText") #Sometimes overwritten by GenericSubmissionFormView
     template = 'main/form_object_submission.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_edit_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
+        return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
     transition_method_name = 'view_noop'
-    page_title = "View Submission"
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_view_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files.html'
     helper=f.GitFileFormSetHelper()
-    page_title = "Edit File Metadata for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -862,10 +872,17 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
 
 class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
+    page_title = _("submission_editFileMetadata_pageTitle")
+    page_help_text = _("submission_editFilesMetadata_helpText")
     form = f.GitFileFormSet
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_editFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'view_noop'
+    page_title = _("submission_viewFileMetadata_pageTitle")
     form = f.GitFileReadOnlyFileFormSet
     read_only = True
 
@@ -875,18 +892,22 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_title = "Upload Files for Submission"
+    page_help_text = _("submission_uploadFiles_helpText")
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
 
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object)#,
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
     def post(self, request, *args, **kwargs):
@@ -920,19 +941,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                         'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object)
+                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text
                         })
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
-    form = f.SubmissionUploadFilesForm
-    template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_title = "Upload Files for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
-    object_friendly_name = 'submission'
     model = m.Submission
 
     #TODO: Should we making sure these files are safe?
