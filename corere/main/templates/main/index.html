@@ -139,11 +139,10 @@
     } 
 </script>
 
+{% include "main/page_title.html" with no_hr=True %}
+<br>
 <div>
     <div class="main_holder" id="manuscript_table_holder">
-    <div class="page-title">
-        <span> Manuscripts </span>
-    </div>
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}

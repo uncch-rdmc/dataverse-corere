@@ -1,8 +1,6 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
-    <div class="page-title">
-        <span> Notifications </span>
-    </div>
+    {% include "main/page_title.html" %}
     {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}
     {% live_notify_list %}

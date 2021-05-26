@@ -4,8 +4,8 @@
 {% load crispy_forms_tags %}
 {% load always_escape %}
 
-{% include "main/page_title.html" %}    
-
+{% include "main/page_title.html" with no_hr=True %}    
+<br>
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ children_formset.non_form_errors }}

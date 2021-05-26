@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-05-25 19:29+0000\n"
+"POT-Creation-Date: 2021-05-25 20:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -175,10 +175,6 @@ msgstr "Edit Submission {submission_version} File Metadata for Manuscript"
 msgid "submission_editFilesMetadata_helpText"
 msgstr "Enter the metadata about your submission files"
 
-#: corere/main/views/classes.py:880
-msgid "submission_editFiles_pageTitle"
-msgstr "Edit Submission {submission_version} File Metadata for Manuscript"
-
 #: corere/main/views/classes.py:885
 msgid "submission_viewFileMetadata_pageTitle"
 msgstr "View Submission {submission_version} File Metadata for Manuscript"
@@ -219,6 +215,14 @@ msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title}  was
 msgid "submission_objectTransferAuthorFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} could not be returned to the authors, please contact the administrator."
 
+#: corere/main/views/main.py:24
+msgid "index_pageTitle"
+msgstr "Manuscripts"
+
+#: corere/main/views/main.py:89
+msgid "manuscript_landing_pageTitle"
+msgstr "Manuscript"
+
 #: corere/main/views/users.py:34 corere/main/views/users.py:75
 msgid "user_assignAuthor_pageTitle"
 msgstr "Assign Author to Manuscript"
@@ -227,7 +231,7 @@ msgstr "Assign Author to Manuscript"
 msgid "user_assignAuthor_helpText"
 msgstr "Please enter the email address of the Author who you want to submit the manuscript data in CoReRe. They will be assigned to the manuscript (and invited to CoReRE if they are not already a user)."
 
-#: corere/main/views/users.py:49 corere/main/views/users.py:338
+#: corere/main/views/users.py:49 corere/main/views/users.py:339
 msgid "user_inviteRole_banner"
 msgstr "You have invited {email} to CoReRe as an {role}!"
 
@@ -268,3 +272,7 @@ msgstr "User info has been updated!"
 #: corere/main/views/users.py:307
 msgid "user_loggedOut_banner"
 msgstr "You have succesfully logged out!"
+
+#: corere/main/views/users.py:314
+msgid "notifications_pageTitle"
+msgstr "Notifications"

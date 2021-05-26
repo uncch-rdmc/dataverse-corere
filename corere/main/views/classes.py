@@ -872,19 +872,21 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
 
 class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
-    page_title = _("submission_editFileMetadata_pageTitle")
     page_help_text = _("submission_editFilesMetadata_helpText")
     form = f.GitFileFormSet
 
     def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_editFiles_pageTitle").format(submission_version=self.object.version_id)
+        self.page_title = _("submission_editFilesMetadata_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'view_noop'
-    page_title = _("submission_viewFileMetadata_pageTitle")
     form = f.GitFileReadOnlyFileFormSet
     read_only = True
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 #We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):

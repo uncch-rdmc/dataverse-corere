@@ -310,7 +310,8 @@ def logout_view(request):
 
 @login_required()
 def notifications(request):
-    return render(request, 'main/notifications.html')
+    return render(request, 'main/notifications.html', 
+        {'page_title': _("notifications_pageTitle")})
 
 @login_required()
 def invite_editor(request):

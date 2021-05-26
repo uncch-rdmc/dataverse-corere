@@ -10,7 +10,7 @@
 
 // }
 
-.test1 {
+.page-title {
     margin-bottom: 1rem;
     font-weight: 500;
     line-height: 1.2;
@@ -18,7 +18,7 @@
     // margin-top: 1;
 }
 
-.test2 {
+.manuscript-title {
     margin-bottom: 1rem;
     font-weight: 250;
     line-height: 1.2;
@@ -26,19 +26,31 @@
     // margin-top: 0;
 }
 
+div.layout {
+    background: #ffffff;
+    //height: 100%; //This would make the white fill the screen, but it causes issues with scrollbars, formatting etc
+}
+
 div.fixed {
     max-width: 1140px;
     margin: 0 auto;
     padding: 0px 10px 10px 10px;
-    background: #ffffff;
 }
 
 div.full {
-    background: #ffffff;
+    padding: 0px 15px 15px 15px;
 }
 
-body {
+html, body {
+    height: 100%;
+}
+
+body.fixed {
     background: #eeeeee;
+}
+
+body.full {
+    background: #ffffff;
 }
 
 .navbar {
@@ -71,7 +83,7 @@ body {
  * Datatables (we don't have direct control of the html, so a lot of overrides)
  */
 
-.page-title {
+.title {
     padding-top: 10px;
 }
 

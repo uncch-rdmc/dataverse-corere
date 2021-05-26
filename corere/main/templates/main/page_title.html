@@ -1,19 +1,19 @@
-<div class="page-title">
-    {% comment %} <div style="background:#B3C6F5; margin: 0px -10px 0px -10px; padding: 5px 10px 1px 10px;"> {% endcomment %}
+<div class="title">
     <div class="main_holder">
-        <span class="test1" > {{page_title}}{% spaceless %}
+        <span class="page-title" > {{page_title}}{% spaceless %}
         {% if manuscript_title %}
-        : </span> <span class="test2" >{{manuscript_title}}</span>
+        : </span> <span class="manuscript-title" >{{manuscript_title}}</span>
         {% else %}
         </span>
         {% endif %}{% endspaceless %}
-        {% comment %} <h5> Manuscript: {{manuscript_title}}</h5> {% endcomment %}
     </div>
-    {% comment %} <h6 style="background:#8899aa; margin: 0px -10px 0px -10px; padding: 5px 10px 5px 10px;"> Step: Please enter information about the manuscript</h6> {% endcomment %}
 </div>
-<hr>
+{% comment %} <p> </p> {% endcomment %}
 {% if page_help_text %}
-<p> </p>
-<p><h6><i> {{page_help_text}}</i></h6></p>
+<br>
+<h6><i><span style="color:#666666; margin-left:1px;"> {{page_help_text}} </span></i></h6>
+{% endif %}
+{% if not no_hr %}
+<hr>
 {% endif %}
 

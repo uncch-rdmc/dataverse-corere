@@ -14,12 +14,14 @@ from django.http import Http404, HttpResponse
 from django.contrib.auth.decorators import login_required
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
+from django.utils.translation import gettext as _
 
 logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
         args = {'user':     request.user, 
+                'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
                 'submission_columns':  helper_submission_columns(request.user),
                 'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
@@ -84,6 +86,7 @@ def manuscript_landing(request, id=None):
             'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
             'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
             'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
+            'page_title': _("manuscript_landing_pageTitle"),
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower
             }
     return render(request, "main/manuscript_landing.html", args)

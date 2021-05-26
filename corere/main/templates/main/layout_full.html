@@ -3,9 +3,9 @@
     <head>
         {% include 'main/head.html' %}
     </head>
-    <body>
+    <body class="full">
         {% include 'main/header.html' %}
-        <div id="content" class="full">
+        <div id="content" class="full layout" >
         {% block content %}{% endblock %}
         {% include 'main/footer.html' %}
     </body>
