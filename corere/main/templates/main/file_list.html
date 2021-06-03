@@ -1,18 +1,14 @@
 {% load always_escape %}
-
-<div id="filesWithHeader">
-    {% if obj_type == "submission" %}
-        <button class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
-    {% endif %}
-    
+<div id="filesWithHeader">    
     <div id="filesHeaderDiv" 
         {% if not repo_dict_gen %}
             style="visibility:hidden;"
         {% endif %}> 
-        {% if not read_only %}
+        {% comment %} {% if not read_only %}
             </br>
-        {% endif %}
-        Files: 
+        {% endif %} {% endcomment %}
+        <hr> 
+        <h5 class="main_holder">Uploaded Files:</h5>
     </div>
 
     <table id="filestable">
@@ -26,4 +22,8 @@
         </tr>
         {% endfor %}
     </table>
+    {% if obj_type == "submission" and repo_dict_gen%}
+        <br>
+        <button class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
+    {% endif %}
 </div>

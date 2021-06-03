@@ -954,6 +954,7 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     model = m.Submission
+    object_friendly_name = 'submission'
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
