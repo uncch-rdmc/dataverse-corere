@@ -859,6 +859,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                     self.object.save()
                     self.msg = _("submission_submitted_banner")
                     messages.add_message(request, messages.SUCCESS, self.msg)
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
                 else:
                     messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('manuscript_landing', id=self.object.manuscript.id)

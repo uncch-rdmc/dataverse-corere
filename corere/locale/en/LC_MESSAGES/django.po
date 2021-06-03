@@ -168,7 +168,7 @@ msgid "submission_submitted_banner"
 msgstr "Your submission has been submitted!"
 
 #: corere/main/views/classes.py:875
-msgid "submission_editFileMetadata_pageTitle"
+msgid "submission_editFilesMetadata_pageTitle"
 msgstr "Edit Submission {submission_version} File Metadata for Manuscript"
 
 #: corere/main/views/classes.py:876
