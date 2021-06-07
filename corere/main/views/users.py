@@ -17,6 +17,7 @@ from django.http import Http404
 from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm
 from django.utils.translation import gettext as _
+from django.db import IntegrityError
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -42,13 +43,16 @@ def invite_assign_author(request, id=None):
         if form.is_valid():
             email = form.cleaned_data['email']
             users = list(form.cleaned_data['users_to_add']) 
-
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
-                new_user = helper_create_user_and_invite(request, email, author_role)
-                msg = _("user_inviteRole_banner").format(email=email, role="author")
-                messages.add_message(request, messages.INFO, msg)
-                users.append(new_user) #add new new_user to the other users provided
+                try:
+                    new_user = helper_create_user_and_invite(request, email, author_role)
+                    msg = _("user_inviteRole_banner").format(email=email, role="author")
+                    messages.add_message(request, messages.INFO, msg)
+                    users.append(new_user) #add new new_user to the other users provided
+                except IntegrityError: #If user entered in email field already exists
+                    user = User.objects.get(email=email)
+                    users.append(user)
             for u in users:
                 if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))

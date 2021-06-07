@@ -943,6 +943,7 @@ class VMetadataBaseForm(forms.ModelForm):
     #      But I don't want to do this until things are more stable and I have tests working again.
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+        self.empty_permitted = False
         if(previous_vmetadata):
             self.fields['operating_system'].initial = previous_vmetadata.operating_system
             self.fields['machine_type'].initial = previous_vmetadata.machine_type

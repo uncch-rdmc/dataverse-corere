@@ -12,7 +12,7 @@
     function unassign(manuscriptid, rolename, userid) {
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch('/manuscript/'+manuscriptid+'/unassign'+rolename+'/'+userid, {
+        fetch('/manuscript/'+manuscriptid+'/unassign'+rolename+'/'+userid+'/', {
             method: 'POST',
             headers: headers, 
             credentials: 'include'

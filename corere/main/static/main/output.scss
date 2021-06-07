@@ -10,6 +10,16 @@
 
 // }
 
+table.filestable {
+    td.filespath {
+        padding-left: 10px;
+    }
+}
+
+ul.live_notify_list {
+    margin-left: -40px; //I don't understand the styling I'm having to override with this
+}
+
 .page-title {
     margin-bottom: 1rem;
     font-weight: 500;

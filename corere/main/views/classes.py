@@ -651,7 +651,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     #Custom method, called via dispatch. Copies over submission and its verification metadatas
     #This does not copy over GitFiles, those are done later in the flow
     def copy_previous_submission_contents(self, manuscript, version_id):
-        print("COPY PREV SUB")
+        #print("COPY PREV SUB")
         prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
         #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
 
