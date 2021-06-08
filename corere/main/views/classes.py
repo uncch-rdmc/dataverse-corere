@@ -1155,12 +1155,13 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
 #This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
 #Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
-class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    transition_method_name = 'edit_noop'
     template = 'main/notebook_redirect.html'
 
     def get(self, request, *args, **kwargs):
@@ -1170,12 +1171,13 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
 
-class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    transition_method_name = 'edit_noop'
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):

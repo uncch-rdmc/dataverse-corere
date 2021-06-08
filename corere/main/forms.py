@@ -766,6 +766,10 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
 #------------- Edition -------------
 
 class EditionBaseForm(forms.ModelForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(EditionBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+
     class Meta:
         model = m.Edition
         fields = ['report','_status']
@@ -819,6 +823,9 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 #------------- Curation -------------
 
 class CurationBaseForm(forms.ModelForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(CurationBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
     class Meta:
         model = m.Curation
         fields = ['report','_status']
@@ -875,6 +882,9 @@ ReadOnlyCurationSubmissionFormset = inlineformset_factory(
 #------------- Verification -------------
 
 class VerificationBaseForm(forms.ModelForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(VerificationBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
     class Meta:
         model = m.Verification
         fields = ['code_executability','report','_status']
@@ -944,6 +954,8 @@ class VMetadataBaseForm(forms.ModelForm):
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
         self.empty_permitted = False
+        self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+
         if(previous_vmetadata):
             self.fields['operating_system'].initial = previous_vmetadata.operating_system
             self.fields['machine_type'].initial = previous_vmetadata.machine_type

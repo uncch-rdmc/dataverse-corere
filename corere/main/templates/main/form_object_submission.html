@@ -116,19 +116,19 @@
     {% crispy form helper %}
     <hr>
     {% if edition_formset %}
-        <h6>Edition:</h6>
+        <h5 class="cblue">Edition</h5>
         {{ edition_formset.non_form_errors }}
         {% crispy edition_formset helper %}
         <hr>
     {% endif %}
     {% if curation_formset %}
-        <h6>Curation:</h6>
+        <h5 class="cblue">Curation</h5>
         {{ curation_formset.non_form_errors }}
         {% crispy curation_formset helper %}
         <hr>
     {% endif %}
     {% if verification_formset %}
-        <h6>Verification:</h6>
+        <h5 class="cblue">Verification</h5>
         {{ verification_formset.non_form_errors }}
         {% crispy verification_formset helper %}
         <hr>
@@ -139,27 +139,27 @@
     {% endif %}
     
     {% if v_metadata_formset %}
-        <h6>Verification Metadata:</h6>
+        <h5 class="cblue">Verification Metadata</h5>
         {{ v_metadata_formset.non_form_errors }}
         {% crispy v_metadata_formset helper %}
     {% endif %}
 
     {% if v_metadata_software_formset %}
-        <h6 id="title-v_metadata_software">Verification Metadata - Software:</h6>
+        <h6 id="title-v_metadata_software">Verification Metadata - Software</h5>
         <span id="na_span_vametadata_software" style="display:none"><p>N/A</p></span>
         {{ v_metadata_software_formset.non_form_errors }}
         {% crispy v_metadata_software_formset v_metadata_software_inline_helper %}
     {% endif %}
     
     {% if v_metadata_badge_formset %}
-        <h6>Verification Metadata - Badges:</h6>
+        <h5 class="cblue">Verification Metadata - Badges</h5>
         <span id="na_span_vametadata_badge" style="display:none"><p>N/A</p></span>
         {{ v_metadata_badge_formset.non_form_errors }}
         {% crispy v_metadata_badge_formset v_metadata_badge_inline_helper %}
     {% endif %}
 
     {% if v_metadata_audit_formset %}
-        <h6>Verification Metadata - Audits:</h6>
+        <h5 class="cblue">Verification Metadata - Audits</h5>
         <span id="na_span_vametadata_audit" style="display:none"><p>N/A</p></span>
         {{ v_metadata_audit_formset.non_form_errors }}
         {% crispy v_metadata_audit_formset v_metadata_audit_inline_helper %}

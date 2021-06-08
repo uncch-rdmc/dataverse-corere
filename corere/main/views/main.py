@@ -44,6 +44,8 @@ def manuscript_landing(request, id=None):
     elif(has_transition_perm(manuscript.view_noop, request.user)):
         manuscript_avail_buttons.append('viewManuscript')
         manuscript_avail_buttons.append('viewManuscriptFiles')
+    else:
+        raise Http404()
     if(has_transition_perm(manuscript.begin, request.user)):
         manuscript_avail_buttons.append('progressManuscript')
     #TODO: add launchNotebook once integration is better
@@ -94,30 +96,33 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_notebook(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not manuscript.get_max_submission_version_id()):
-        raise Http404()
-    
-    latest_submission = manuscript.get_latest_submission()
+    if(has_transition_perm(manuscript.edit_noop, request.user)):
+        if(not manuscript.get_max_submission_version_id()):
+            raise Http404()
+        
+        latest_submission = manuscript.get_latest_submission()
 
-    if(hasattr(manuscript, 'manuscript_containerinfo')): 
-        if manuscript.manuscript_containerinfo.build_in_progress:
-            while manuscript.manuscript_containerinfo.build_in_progress:
-                time.sleep(.1)
-                manuscript.manuscript_containerinfo.refresh_from_db()
+        if(hasattr(manuscript, 'manuscript_containerinfo')): 
+            if manuscript.manuscript_containerinfo.build_in_progress:
+                while manuscript.manuscript_containerinfo.build_in_progress:
+                    time.sleep(.1)
+                    manuscript.manuscript_containerinfo.refresh_from_db()
 
-        elif(latest_submission.files_changed):
-            logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
-            d.refresh_notebook_stack(manuscript)
+            elif(latest_submission.files_changed):
+                logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
+                d.refresh_notebook_stack(manuscript)
+                latest_submission.files_changed = False
+                latest_submission.save()
+        else:
+            logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
+            d.build_manuscript_docker_stack(manuscript, request)
             latest_submission.files_changed = False
             latest_submission.save()
-    else:
-        logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
-        d.build_manuscript_docker_stack(manuscript, request)
-        latest_submission.files_changed = False
-        latest_submission.save()
 
-    print(manuscript.manuscript_containerinfo.container_public_address())
-    return redirect(manuscript.manuscript_containerinfo.container_public_address())
+        print(manuscript.manuscript_containerinfo.container_public_address())
+        return redirect(manuscript.manuscript_containerinfo.container_public_address())
+    else:
+        raise Http404()
 
 @login_required()
 def site_actions(request):

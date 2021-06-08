@@ -38,19 +38,19 @@
     {% crispy form manuscript_helper %}
     <hr>
     {% if author_formset %}
-        Authors{% if request.user|has_group:"Role Author" %}*{% endif %}
+        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}
+        <h5 class="cblue">Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
     {% endif %}
     {% if keyword_formset %}
-        Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}
+        <h5 class="cblue">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
