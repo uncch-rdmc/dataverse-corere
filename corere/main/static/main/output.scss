@@ -20,6 +20,23 @@ ul.live_notify_list {
     margin-left: -40px; //I don't understand the styling I'm having to override with this
 }
 
+//Adding alert-danger and alert to formset errors (without having to touch styles)
+ul.errorlist { 
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    position: relative;
+    padding: .75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: .25rem;
+
+    li {
+        margin-left: 40px;
+    }
+
+}
+
 .page-title {
     margin-bottom: 1rem;
     font-weight: 500;

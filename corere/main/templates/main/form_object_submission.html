@@ -70,7 +70,7 @@
                 v_hu_div.style.display = "block";
                 v_mr_div.style.display = "block";
                 v_ms_h.style.display = "block";
-                v_ms_sp.style.display = "";
+                //v_ms_sp.style.display = "";
                 v_ms_tbl.style.display = "";
                 v_ms_tbl_ad.style.display = "";
             } else {
@@ -81,7 +81,7 @@
                 v_hu_div.style.display = "none";
                 v_mr_div.style.display = "none";
                 v_ms_h.style.display = "none";
-                v_ms_sp.style.display = "none";
+                //v_ms_sp.style.display = "none";
                 v_ms_tbl.style.display = "none";
                 v_ms_tbl_ad.style.display = "none";
             } 
@@ -116,19 +116,19 @@
     {% crispy form helper %}
     <hr>
     {% if edition_formset %}
-        <h5 class="cblue">Edition</h5>
+        <h5 class="cblue">Editor Review</h5>
         {{ edition_formset.non_form_errors }}
         {% crispy edition_formset helper %}
         <hr>
     {% endif %}
     {% if curation_formset %}
-        <h5 class="cblue">Curation</h5>
+        <h5 class="cblue">Curator Review</h5>
         {{ curation_formset.non_form_errors }}
         {% crispy curation_formset helper %}
         <hr>
     {% endif %}
     {% if verification_formset %}
-        <h5 class="cblue">Verification</h5>
+        <h5 class="cblue">Verifier Review</h5>
         {{ verification_formset.non_form_errors }}
         {% crispy verification_formset helper %}
         <hr>
@@ -144,8 +144,8 @@
         {% crispy v_metadata_formset helper %}
     {% endif %}
 
-    {% if v_metadata_software_formset %}
-        <h6 id="title-v_metadata_software">Verification Metadata - Software</h5>
+    {% if v_metadata_software_formset %} 
+        <h5 id="title-v_metadata_software" class="cblue"><hr>Verification Metadata - Software</h5>
         <span id="na_span_vametadata_software" style="display:none"><p>N/A</p></span>
         {{ v_metadata_software_formset.non_form_errors }}
         {% crispy v_metadata_software_formset v_metadata_software_inline_helper %}
@@ -164,7 +164,7 @@
         {{ v_metadata_audit_formset.non_form_errors }}
         {% crispy v_metadata_audit_formset v_metadata_audit_inline_helper %}
     {% endif %}
-
+    <hr>  
     {% comment %} Putting read_only checks around every submit was done to make the view page show up right even when you are a role that could edit at that point {% endcomment %}
     {% if verification_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">

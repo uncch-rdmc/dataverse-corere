@@ -87,8 +87,8 @@ class Edition(AbstractCreateUpdateModel):
         ISSUES = 'issues', 'Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
-    report = models.TextField(default="", verbose_name='Report')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the editor')
+    report = models.TextField(default="", verbose_name='Details')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -141,8 +141,8 @@ class Curation(AbstractCreateUpdateModel):
         MINOR_ISSUES = 'minor_issues', 'Minor Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
-    report = models.TextField(default="", verbose_name='Report')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
+    report = models.TextField(default="", verbose_name='Details')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -195,9 +195,9 @@ class Verification(AbstractCreateUpdateModel):
         SUCCESS_W_MOD = "success_w_mod"
         SUCCESS = "success"
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    report = models.TextField(default="", verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Details')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
