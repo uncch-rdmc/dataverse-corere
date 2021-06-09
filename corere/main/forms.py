@@ -283,19 +283,15 @@ class DataSourceBaseForm(forms.ModelForm):
     def is_valid(self):
         result = super(DataSourceBaseForm, self).is_valid()
 
-        validation_errors = [] #we store all the "generic" errors and raise them at once
-        # if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-        #     or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
-        #     ):
-        #     validation_errors.append(ValidationError("You must specify an author."))
-        if(self.data['data_source_formset-0-text'] == ""):
-            validation_errors.append(ValidationError("You must specify a data source."))
-        # if(self.data['keyword_formset-0-text'] == ""):
-        #     validation_errors.append(ValidationError("You must specify a keyword."))    
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['data_source_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a data source."))
 
-        if validation_errors:
-            result = True
-            raise ValidationError(validation_errors)
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
 
         return result
 
@@ -357,19 +353,15 @@ class KeywordBaseForm(forms.ModelForm):
     def is_valid(self):
         result = super(KeywordBaseForm, self).is_valid()
 
-        validation_errors = [] #we store all the "generic" errors and raise them at once
-        # if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-        #     or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
-        #     ):
-        #     validation_errors.append(ValidationError("You must specify an author."))
-        # if(self.data['data_source_formset-0-text'] == ""):
-        #     validation_errors.append(ValidationError("You must specify a data source."))
-        if(self.data['keyword_formset-0-text'] == ""):
-            validation_errors.append(ValidationError("You must specify a keyword."))    
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['keyword_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a keyword."))    
 
-        if validation_errors:
-            result = True
-            raise ValidationError(validation_errors)
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
 
         return result
 
@@ -430,19 +422,17 @@ class AuthorBaseForm(forms.ModelForm):
     def is_valid(self):
         result = super(AuthorBaseForm, self).is_valid()
 
-        validation_errors = [] #we store all the "generic" errors and raise them at once
-        if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-            or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
-            ):
-            validation_errors.append(ValidationError("You must specify an author."))
-        # if(self.data['data_source_formset-0-text'] == ""):
-        #     validation_errors.append(ValidationError("You must specify a data source."))
-        # if(self.data['keyword_formset-0-text'] == ""):
-        #     validation_errors.append(ValidationError("You must specify a keyword."))    
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
+                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+                ):
+                validation_errors.append(ValidationError("You must specify an author."))
 
-        if validation_errors:
-            result = True
-            raise ValidationError(validation_errors)
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
 
         return result
 
