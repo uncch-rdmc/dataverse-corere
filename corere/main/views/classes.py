@@ -340,12 +340,12 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
                 return redirect('manuscript_addauthor', id=self.object.id)
             else:
-                self.msg = _('manuscript_noFiles_banner')
-                messages.add_message(request, messages.ERROR, self.msg)
+                # self.msg = _('manuscript_noFiles_banner')
+                # messages.add_message(request, messages.ERROR, self.msg)
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
                     'manuscript_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
+                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('manuscript_noFiles_error')
                     })
 
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
@@ -938,13 +938,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
-                    self.msg = _('submission_noFiles_banner')
-                    messages.add_message(request, messages.ERROR, self.msg)
+                    # self.msg = _('submission_noFiles_banner')
+                    # messages.add_message(request, messages.ERROR, self.msg)
 
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                         'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text
+                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error')
                         })
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
