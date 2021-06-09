@@ -14,6 +14,9 @@
             prefix: '{{ author_formset.prefix }}',
             formCssClass: 'author_table',
             addText: 'add author'
+            {% if request.user|has_group:"Role Author" %}
+            , hideLastAddForm: false
+            {% endif %}
         });
         {% endif %}
         {% if data_source_formset.extra != 0 %}
@@ -21,6 +24,9 @@
             prefix: '{{ data_source_formset.prefix }}',
             formCssClass: 'data_source_table',
             addText: 'add data source'
+            {% if request.user|has_group:"Role Author" %}
+            , hideLastAddForm: false
+            {% endif %}
         });
         {% endif %}
         {% if keyword_formset.extra != 0 %}
@@ -28,6 +34,9 @@
             prefix: '{{ keyword_formset.prefix }}',
             formCssClass: 'keyword_table',
             addText: 'add keyword'
+            {% if request.user|has_group:"Role Author" %}
+            , hideLastAddForm: false
+            {% endif %}
         });
         {% endif %}
     })

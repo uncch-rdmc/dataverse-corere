@@ -130,9 +130,9 @@ class ManuscriptJson(CorereBaseDatatableView):
 def helper_submission_columns(user):
     columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['buttons','Buttons']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
-        columns.append(['edition_status', 'Edition Status'])
-        columns.append(['curation_status','Curation Status'])
-        columns.append(['verification_status','Verification Status'])
+        columns.append(['edition_status', 'Editor Review'])
+        columns.append(['curation_status','Curator Review'])
+        columns.append(['verification_status','Verifier Review'])
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
     return columns
 
