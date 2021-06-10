@@ -6,7 +6,7 @@ chardet==3.0.4
 cryptography==3.4.6
 defusedxml==0.7.0
 docker==4.4.4
-Django==3.2.1
+Django==3.2.2
 django-appconf==1.0.4
 django-autoslug==1.9.8
 django-braces==1.14.0
@@ -52,4 +52,4 @@ sseclient-py==1.7
 social-auth-app-django==4.0.0
 social-auth-core==4.1.0
 sqlparse==0.4.1
-urllib3==1.26.4
+urllib3==1.26.5
