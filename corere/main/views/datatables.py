@@ -152,7 +152,7 @@ class SubmissionJson(CorereBaseDatatableView):
             else:
                 return ''
 
-        elif column == 'edition_status':
+        elif column[0] == 'edition_status':
             try:
                 if(has_transition_perm(submission.submission_edition.view_noop, user)):
                     return '{0}'.format(submission.submission_edition.get__status_display())
@@ -217,7 +217,7 @@ class SubmissionJson(CorereBaseDatatableView):
             #     avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.generate_report, user)):
                 avail_buttons.append('generateReportForSubmission')
-            if(has_transition_perm(submission.return_submission, user)):
+            if(has_transition_perm(submission.finish_submission, user)):
                 avail_buttons.append('returnSubmission')
 
             return avail_buttons

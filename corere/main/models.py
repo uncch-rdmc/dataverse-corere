@@ -515,12 +515,12 @@ class Submission(AbstractCreateUpdateModel):
     
     #TODO: It would be better to have this logic as a manuscript transition. 
     # Its somewhat annoying to get to the latest submission from the manuscript, so for now it'll remain here.
-    def can_return_submission(self):
+    def can_finish_submission(self):
         return True
 
-    @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_return_submission],
+    @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_finish_submission],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
-    def return_submission(self):
+    def finish_submission(self):
         if(self.submission_curation._status == Curation.Status.NO_ISSUES):
             if(self.submission_verification._status == Verification.Status.SUCCESS):
                 self.manuscript._status = Manuscript.Status.COMPLETED
@@ -675,6 +675,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
+
+    def get_landing_url(self):
+        return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
     ##### django-fsm (workflow) related functions #####
     

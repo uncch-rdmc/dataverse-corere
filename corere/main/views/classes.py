@@ -21,6 +21,8 @@ from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from notifications.signals import notify
+from templated_email import send_templated_mail
 
 logger = logging.getLogger(__name__)  
 
@@ -408,6 +410,7 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
+#NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
 class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
@@ -423,11 +426,12 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.msg = _("manuscript_objectTransferAuthorSuccess_banner").format(object_id=self.object_id, object_title=self.object.title)
-            messages.add_message(request, messages.SUCCESS, self.msg)
+
         except (TransitionNotAllowed):
-            self.msg = _("manuscript_objectTransferAuthorFailure_banner").format(object_id=self.object_id, object_title=self.object.title)
+            ### Messaging ###
+            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.title)
             messages.add_message(request, messages.ERROR, self.msg)
+            ### End Messaging ###
         return redirect('/manuscript/'+str(self.object.id))
 
 class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
@@ -569,30 +573,66 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.note_formset.save()
 
                 try:
-                    # if request.POST.get('submit_progress_submission'):
-                    #     if not fsm_check_transition_perm(self.object.submit, request.user): 
-                    #         logger.debug("PermissionDenied")
-                    #         raise Http404()
-                    #     self.object.submit(request.user)
-                    #     self.object.save()
+                    #NOTE: We submit the actual submission (during the author workflow) only after they've finised editing file metadata
+
+                    status = None
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.submit_edition()
+                        status = self.object.submit_edition()
                         self.object.save()
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.review_curation()
+                        status = self.object.review_curation()
                         self.object.save()
                     elif request.POST.get('submit_progress_verification'):
                         if not fsm_check_transition_perm(self.object.review_verification, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.review_verification()
+                        status = self.object.review_verification()
                         self.object.save()
+
+
+                    ### Messaging ###
+                    if(status != None):
+                        if(status == m.Submission.Status.IN_PROGRESS_CURATION):
+                            #Send message/notification to curators that the submission is ready
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                        elif(status == m.Submission.Status.IN_PROGRESS_VERIFICATION):
+                            #Send message/notification to verifiers that the submission is ready
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    ### End Messaging ###
+
+
+
+
+                        #is there another one for completed? report happens when curation/verification "fails" but does it when you succeed?
+                        # - Generate report and return submission to authors happens on EVERY submission, even the "final" one. At least currently.
+                        #    - We should probably have generate report actually send the report to the editors. Maybe doublecheck on this with the curators first.
+                        #    - I don't think "return submission" is actually a part of the workflow, maybe doublecheck on this too?
+                        #       - We probably shouldn't say "return submission to authors" on the final submission. If at all
+                        # - We should give a message to the authors when "return submission to authors" is completed
+                        # - Should we add another submission status for the manuscript being completed? Would make notifications easier, also maybe easier to tell in admin
+                        #    - Technically you can tell by looking at the edition/curation/verification
+                        #
+
+
+
+
+
+
+
                 except TransitionNotAllowed as e:
                     logger.error("TransitionNotAllowed: " + str(e))
                     raise
@@ -755,41 +795,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
         #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
 
-
         return super().dispatch(request, *args, **kwargs)
-
-        # if self.read_only:
-        #     #All Manuscript fields are visible to all users, so no role-based forms
-        #     self.form = f.ReadOnlyManuscriptForm
-        #     self.author_formset = f.ReadOnlyAuthorFormSet
-        #     self.data_source_formset = f.ReadOnlyDataSourceFormSet
-        #     self.keyword_formset = f.ReadOnlyKeywordFormSet
-        # else:
-        #     role_name = get_role_name_for_form(request.user, self.object, request.session)
-        #     self.form = f.ManuscriptForms[role_name]
-        #     self.author_formset = f.AuthorManuscriptFormsets[role_name]
-        #     self.data_source_formset = f.DataSourceManuscriptFormsets[role_name]
-        #     self.keyword_formset = f.KeywordManuscriptFormsets[role_name]
-        
-
-
-
-
-        # print("=== Inline Formset Questions ===")
-        # print(self.v_metadata_audit_formset.__dict__)
-        #print(self.v_metadata_audit_formset.form.__dict__)
-        #print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
-        # self.v_metadata_audit_formset.form.base_fields['name'].disabled = True
-        # print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
-        # print("=== Restrictor Tests ===")
-        # print(f.VMetadataSubmissionFormset.form.base_fields['host_url'].__dict__)
-        # print(f.VMetadataSubmissionFormsetRestrictTest.form.base_fields['host_url'].__dict__)
-        
-       
-        #print(f.VMetadataSubmissionFormset.form.__dict__)
-        #print(f.testfactorydict['0'].form.__dict__)
-        # print(f.VMetadataSubmissionFormset.__dict__)
-        # print(f.testfactorydict['1'].__dict__)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
@@ -857,8 +863,20 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         raise Http404()
                     self.object.submit(request.user)
                     self.object.save()
-                    self.msg = _("submission_submitted_banner")
+
+                    ## Messaging ###
+                    self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
                     messages.add_message(request, messages.SUCCESS, self.msg)
+                    logger.info(self.msg)
+                    recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                    notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                    notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                    for u in recipients: #We have to loop to get the user model fields
+                        send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    ## End Messaging ###
+
+                    # self.msg = _("submission_submitted_banner")
+                    # messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('manuscript_landing', id=self.object.manuscript.id)
                 else:
                     messages.add_message(request, messages.SUCCESS, self.msg)
@@ -1069,7 +1087,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
-
+#NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
@@ -1094,8 +1112,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.msg= _("submission_objectTransferEditorBeginSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.SUCCESS, self.msg)
+
         except (TransitionNotAllowed):
             self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.ERROR, self.msg)
@@ -1126,7 +1143,8 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#NOTE: for some reason, these banner messages aren't showing up.
+class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -1135,18 +1153,42 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
     def post(self, request, *args, **kwargs):
         try:
-            if not fsm_check_transition_perm(self.object.return_submission, request.user): 
+            if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                self.object.return_submission()
+                self.object.finish_submission()
                 self.object.save()
+
+                ### Messaging ###
+                print("SUBMISSION STATUS: " + self.object._status)
+                if(self.object._status == m.Submission.Status.RETURNED):
+                    print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
+                    if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
+                        #If completed, send message to... editor and authors?
+                        self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                        for u in recipients: #We have to loop to get the user model fields
+                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    else:
+                        #If not complete, send message to author about submitting again
+                        self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                        for u in recipients: #We have to loop to get the user model fields
+                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                ### End Messaging ###
+
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
 
-            self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
-            messages.add_message(request, messages.SUCCESS, self.msg)
+
         except (TransitionNotAllowed):
             self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
             messages.add_message(request, messages.ERROR, self.msg)

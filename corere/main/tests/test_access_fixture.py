@@ -472,8 +472,8 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         # cannot generate report or return the report
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -957,8 +957,8 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         # can generate report but not return it
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -1434,8 +1434,8 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         # Editor cannot generate report but can return the report
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 302)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())
@@ -1909,8 +1909,8 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         # cannot generate report or return the report
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_return", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
     @mock.patch('corere.main.views.classes.helper_populate_gitlab_files_submission', mock.Mock())
     @mock.patch('corere.main.views.main.gitlab_delete_file', mock.Mock())

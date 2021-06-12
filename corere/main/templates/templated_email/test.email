@@ -1,0 +1,8 @@
+{% block subject %}Test Subject{% endblock %}
+{% block plain %}
+Hello {{user_email}},
+
+{{notification_msg}}
+
+Thanks, you rock!
+{% endblock %}

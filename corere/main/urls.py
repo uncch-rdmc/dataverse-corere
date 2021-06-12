@@ -28,7 +28,7 @@ urlpatterns = [
     path('manuscript/<int:id>/deletefile/', classes.ManuscriptDeleteFileView.as_view(), name="manuscript_deletefile"),
     path('manuscript/<int:id>/downloadfile/', classes.ManuscriptDownloadFileView.as_view(), name="manuscript_downloadfile"),
     path('manuscript/<int:id>/notebook/', main.open_notebook, name="manuscript_notebook"),
-    path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
+    #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
@@ -43,9 +43,9 @@ urlpatterns = [
     path('submission/<int:id>/deleteallfiles/', classes.SubmissionDeleteAllFilesView.as_view(), name="submission_deleteallfiles"),
     path('submission/<int:id>/downloadfile/', classes.SubmissionDownloadFileView.as_view(), name="submission_downloadfile"),
     path('submission/<int:id>/downloadall/', classes.SubmissionDownloadAllFilesView.as_view(), name="submission_downloadall"),
-    path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
+    #path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
     path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
-    path('submission/<int:id>/return/', classes.SubmissionReturnView.as_view(), name="submission_return"),
+    path('submission/<int:id>/finish/', classes.SubmissionFinishView.as_view(), name="submission_finish"),
     path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
     path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebook"), #Technically this page is more than login, but login is a good user facing name
 

@@ -18,6 +18,7 @@ from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm
 from django.utils.translation import gettext as _
 from django.db import IntegrityError
+from templated_email import send_templated_mail
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -25,9 +26,11 @@ logger = logging.getLogger(__name__)
 # Corere emails the user telling them to sign-up. This has a one-time 
 
 # TODO: We should probably make permissions part of our constants as well
-#Called after manuscript creation flow
+
+
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+# @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+@permission_required_or_404(c.perm_path(c.PERM_MANU_CURATE), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorInviteAddForm(request.POST or None)
@@ -35,34 +38,42 @@ def invite_assign_author(request, id=None):
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
 
-    if(manuscript.is_complete()):
-        raise Http404()
+    # if(manuscript.is_complete()): #or not(request.user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or request.user.is_superuser)):
+    #     raise Http404()
+
     manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
     can_remove_author = request.user.has_any_perm(c.PERM_MANU_REMOVE_AUTHORS, manuscript)
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
             users = list(form.cleaned_data['users_to_add']) 
+            new_user = ''
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 try:
                     new_user = helper_create_user_and_invite(request, email, author_role)
-                    msg = _("user_inviteRole_banner").format(email=email, role="author")
-                    messages.add_message(request, messages.INFO, msg)
+                    # msg = _("user_inviteRole_banner").format(email=email, role="author")
+                    # messages.add_message(request, messages.INFO, msg)
                     users.append(new_user) #add new new_user to the other users provided
                 except IntegrityError: #If user entered in email field already exists
                     user = User.objects.get(email=email)
                     users.append(user)
             for u in users:
                 if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
-                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
+                    logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form)".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
+                
+                ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_title=manuscript.title)
-                messages.add_message(request, messages.INFO, msg.format(u.email, manuscript.title))
-                logger.info(msg.format(u.email, manuscript.title))
+                logger.info(msg)
+                messages.add_message(request, messages.INFO, msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.title)
-                notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                if(u != new_user):
+                    notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                    send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                ### End Messaging ###
+
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -88,8 +99,10 @@ def add_author(request, id=None):
             try:
                 user = User.objects.get(email=email)
                 author_role.user_set.add(user)
+                new_user = False
                 #assign role
             except User.DoesNotExist:
+                new_user = True
                 user = helper_create_user_and_invite(request, email, author_role)
 
             manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
@@ -98,10 +111,21 @@ def add_author(request, id=None):
             if not fsm_check_transition_perm(manuscript.begin, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
-            msg = _("manuscript_submitted_banner").format(manuscript_title=manuscript.title, manuscript_id=manuscript.id)
-            messages.add_message(request, messages.INFO, msg)
             manuscript.begin()
             manuscript.save()
+
+            ### Messaging ###
+            msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=user.email, manuscript_title=manuscript.title)
+            logger.info(msg.format(user.email, manuscript.title))
+            messages.add_message(request, messages.INFO, msg)
+            notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.title)
+            if(not new_user):
+                notify.send(request.user, verb='assigned', recipient=user, target=manuscript, public=False, description=notification_msg)
+                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[user.email], context={ 'notification_msg':notification_msg, 'user_email':user.email} )
+
+            msg = _("manuscript_submitted_banner").format(manuscript_title=manuscript.title, manuscript_id=manuscript.id)
+            messages.add_message(request, messages.INFO, msg)
+            ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))
 
@@ -134,7 +158,6 @@ def unassign_author(request, id=None, user_id=None):
 def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
     page_title = _("user_assignEditor_pageTitle")
-    #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
         raise Http404()
@@ -149,11 +172,16 @@ def assign_editor(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_editor_group.user_set.add(u)
+
+                ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="editor", email=u.email, manuscript_title=manuscript.title)
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="editor", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                ### End Messaging ###
+
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -183,7 +211,6 @@ def unassign_editor(request, id=None, user_id=None):
 def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
     page_title = _("user_assignCurator_pageTitle")
-    #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
         raise Http404()
@@ -198,11 +225,16 @@ def assign_curator(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_curator_group.user_set.add(u)
+
+                ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_title=manuscript.title)
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="curator", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                ### End Messaging ###
+
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -231,7 +263,6 @@ def unassign_curator(request, id=None, user_id=None):
 def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
     page_title = _("user_assignVerifier_pageTitle")
-    #MAD: I moved these outside... is that bad?
     manuscript = Manuscript.objects.get(pk=id)
     if(manuscript.is_complete()):
         raise Http404()
@@ -246,11 +277,16 @@ def assign_verifier(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_verifier_group.user_set.add(u)
+
+                ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="verifier", email=u.email, manuscript_title=manuscript.title)
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="verifier", email=request.user.email, manuscript_title=manuscript.title)
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                ### End Messaging ###
+
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
@@ -340,9 +376,11 @@ def invite_user_not_author(request, role, role_text):
             if form.is_valid():
                 email = form.cleaned_data['email']
                 if(email):
+                    ### Messaging ###
                     msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                     new_user = helper_create_user_and_invite(request, email, role)
                     messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+                    ### End Messaging ###
             else:
                 logger.debug(form.errors) #TODO: DO MORE?
         return render(request, 'main/form_user_details.html', {'form': form, 'page_title': "Invite {0}".format(role_text.capitalize())})

@@ -167,7 +167,7 @@
                             action: function ( e, dt, node, config ) {
                                 var headers = new Headers();
                                 headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                fetch('/submission/'+submission_id+'/return/', {
+                                fetch('/submission/'+submission_id+'/finish/', {
                                     method: 'POST',
                                     headers: headers, 
                                     credentials: 'include'
@@ -265,10 +265,11 @@
             {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
             {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
         {% comment %} {% endif %} {% endcomment %}
-        {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR %} 
+        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
             <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
             <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">
-                {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %} 
+                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %}  {% endcomment %}
+                {% if request.user|has_group:GROUP_ROLE_CURATOR %}
                     <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a>
                 {% endif %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
