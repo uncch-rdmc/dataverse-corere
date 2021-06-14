@@ -19,7 +19,6 @@ SERVER_ADDRESS = os.environ["SERVER_ADDRESS"]
 
 #Invitation related
 SITE_ID = 1
-SITE_NAME = os.environ["SERVER_ADDRESS"]
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 
