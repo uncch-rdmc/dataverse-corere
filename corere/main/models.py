@@ -503,12 +503,12 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
     
-    def can_generate_report(self):
+    def can_send_report(self):
         return True
 
-    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
+    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_send_report],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
-    def generate_report(self):
+    def send_report(self):
         pass
 
     #-----------------------

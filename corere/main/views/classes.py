@@ -1127,11 +1127,11 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
     def post(self, request, *args, **kwargs):
         try:
-            if not fsm_check_transition_perm(self.object.generate_report, request.user): 
+            if not fsm_check_transition_perm(self.object.send_report, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                self.object.generate_report()
+                self.object.send_report()
                 self.object.save()
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
