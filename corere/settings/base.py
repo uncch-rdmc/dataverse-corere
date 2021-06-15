@@ -228,10 +228,10 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
-    'corere.main.views.users.account_user_details'
+    #'corere.main.views.users.account_user_details' #We tried to use this to redirect to user details at the end but it blows up
 )
 
-#NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
+#NOTE: As part of glbous registration, we currently have pre-reserve ports 50020-50039 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
 
 # Social Auth: Globus configuration
 SOCIAL_AUTH_GLOBUS_KEY = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_KEY"]
