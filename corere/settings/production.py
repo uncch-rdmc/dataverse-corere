@@ -31,3 +31,5 @@ COMPRESS_ENABLED = False
 #Set to https for production purposes. Internal containers will be assigned ports 50020-50039, but will expect a webserver to provide ssl and upstream to them via ports 50000-50019.
 CONTAINER_PROTOCOL = 'https'
 CONTAINER_TO_CORERE_ADDRESS = os.environ["SERVER_ADDRESS"]
+
+SKIP_DOCKER = True

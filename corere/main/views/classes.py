@@ -855,6 +855,10 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
+                    if (settings.SKIP_DOCKER):
+                        self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+                        messages.add_message(request, messages.INFO, self.msg)
+                        return redirect('submission_uploadfiles', id=self.object.id)
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 elif self.object._status == "new":
@@ -934,6 +938,11 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def post(self, request, *args, **kwargs):
         if not self.read_only:
             if request.POST.get('submit_continue'):
+                if (settings.SKIP_DOCKER):
+                    self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+                    messages.add_message(request, messages.INFO, self.msg)
+                    return redirect('submission_editfiles', id=self.object.id)
+
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
 
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
