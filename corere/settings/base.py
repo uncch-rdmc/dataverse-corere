@@ -130,8 +130,8 @@ REST_FRAMEWORK = {
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.globus.GlobusOpenIdConnect',
-    'social_core.backends.google.GoogleOAuth2',
-    'social_core.backends.github.GithubOAuth2',
+    # 'social_core.backends.google.GoogleOAuth2',
+    # 'social_core.backends.github.GithubOAuth2',
     'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend', #Standard django auth, used for admin
 )
@@ -228,6 +228,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
+    'corere.main.views.users.account_user_details'
 )
 
 #NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
