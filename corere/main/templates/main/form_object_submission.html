@@ -7,11 +7,15 @@
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
     $(function () {
+        {% comment %} all of the commented stuff below in this js should be fixing an add option for software, but it blows up on create now? {% endcomment %}
+        {% comment %} {% if not read_only %}
+        {% if s_status != "new" %} {% endcomment %}
         $('#v_metadata_software_table tbody tr').formset({
             prefix: '{{ v_metadata_software_formset.prefix }}',
             formCssClass: 'v_metadata_software_table',
             addText: '{% if not read_only %}add software{% endif %}'
         });
+        {% comment %} {% endif %} {% endcomment %}
         $('#v_metadata_badge_table tbody tr').formset({
             prefix: '{{ v_metadata_badge_formset.prefix }}',
             formCssClass: 'v_metadata_badge_table',
@@ -22,6 +26,7 @@
             formCssClass: 'v_metadata_audit_table',
             addText: '{% if not read_only %}add audit{% endif %}'
         });
+        {% comment %} {% endif %} {% endcomment %}
 
         //inline N/A text when there are no entries (only happens during readonly)
         if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
@@ -33,6 +38,8 @@
         if(!document.getElementById("id_v_metadata_audit_formset-0-id") && document.getElementById("na_span_vametadata_audit")) {
             na_span_vametadata_audit.style.display = "block";
         }
+        
+        
 
         //checkbox conditionality and popups
         var hp_checkbox = document.getElementById('id_high_performance');
@@ -181,7 +188,7 @@
         {% if not read_only %}
         <input type="submit" name="submit_progress_edition" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
         {% endif %}
-     {% elif create %}
+    {% elif create %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         {% if not read_only %}
         <input type="submit" name="submit_continue" value="Create and Continue">

@@ -1,0 +1,148 @@
+/* 
+ * This file is named output.scss so the same name is generated when calling manage.py compress and when being created automatically.
+ * If you rename this, make sure to change your process on how nginx gets its files.
+ */
+@import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
+/* line 9, corere/main/static/main/output.scss */
+.navbar {
+  background: #7386D5; }
+
+/* line 13, corere/main/static/main/output.scss */
+.btn-primary {
+  color: white;
+  background-color: #8596d6;
+  border-color: #989898; }
+
+/* line 19, corere/main/static/main/output.scss */
+.btn-secondary {
+  color: #000;
+  background-color: #e7e7e7;
+  border-color: #989898; }
+
+/* line 25, corere/main/static/main/output.scss */
+.btn-secondary.disabled, .btn-secondary:disabled {
+  color: #000;
+  background-color: #e7e7e7;
+  border-color: #222; }
+
+/* line 31, corere/main/static/main/output.scss */
+.btn.disabled, .btn:disabled {
+  opacity: .3; }
+
+/* 
+ * Datatables (we don't have direct control of the html, so a lot of overrides)
+ */
+/* line 39, corere/main/static/main/output.scss */
+.cblue h5 {
+  color: #7386D5;
+  display: block; }
+
+/* line 44, corere/main/static/main/output.scss */
+table.dataTable tbody > tr.selected, table.dataTable tbody > tr > .selected {
+  background-color: #7386D5;
+  opacity: .75; }
+
+/* line 49, corere/main/static/main/output.scss */
+.dropdown-item.disabled, .dropdown-item:disabled {
+  color: #9fa8b1; }
+
+/* line 53, corere/main/static/main/output.scss */
+.dataTables_filter {
+  margin-left: 10px;
+  float: right; }
+
+/* line 58, corere/main/static/main/output.scss */
+table.dataTable thead .sorting:after, table.dataTable thead .sorting_asc:after, table.dataTable thead .sorting_desc:after, table.dataTable thead .sorting_asc_disabled:after, table.dataTable thead .sorting_desc_disabled:after {
+  right: 0.35em; }
+
+/* line 62, corere/main/static/main/output.scss */
+table.dataTable thead .sorting:before, table.dataTable thead .sorting_asc:before, table.dataTable thead .sorting_desc:before, table.dataTable thead .sorting_asc_disabled:before, table.dataTable thead .sorting_desc_disabled:before {
+  right: .95em; }
+
+/* line 66, corere/main/static/main/output.scss */
+ul.pagination {
+  float: right; }
+  /* line 68, corere/main/static/main/output.scss */
+  ul.pagination a {
+    color: #7386D5; }
+  /* line 72, corere/main/static/main/output.scss */
+  ul.pagination .page-item.active .page-link {
+    color: #fff;
+    background-color: #7386D5;
+    border-color: #7386D5; }
+
+/* line 79, corere/main/static/main/output.scss */
+table.dataTable tbody th.focus, table.dataTable tbody td.focus {
+  box-shadow: unset; }
+
+/* line 83, corere/main/static/main/output.scss */
+.dropdown-menu a:hover {
+  color: #fff;
+  background-color: #7386D5;
+  border-color: #fff; }
+
+/* line 90, corere/main/static/main/output.scss */
+.notification_count.badge {
+  margin-top: -0.4em; }
+
+/* line 95, corere/main/static/main/output.scss */
+.tableentryflex {
+  display: flex; }
+
+/* line 100, corere/main/static/main/output.scss */
+.asteriskField {
+  display: none; }
+
+/* line 102, corere/main/static/main/output.scss */
+[id^=hint_id] {
+  display: none; }
+
+/* line 105, corere/main/static/main/output.scss */
+.dt-button-background {
+  background: transparent !important; }
+
+/* line 108, corere/main/static/main/output.scss */
+td.custom-control {
+  display: table-cell; }
+
+/* line 112, corere/main/static/main/output.scss */
+.tooltip-icon {
+  color: #7386D5;
+  margin-left: 2px;
+  font-size: .9rem; }
+
+/* line 117, corere/main/static/main/output.scss */
+.tooltip-inner {
+  background-color: #7386D5; }
+
+/* line 120, corere/main/static/main/output.scss */
+.tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, .tooltip.bs-tooltip-bottom .arrow::before {
+  border-bottom-color: #7386D5; }
+
+/* line 123, corere/main/static/main/output.scss */
+.tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, .tooltip.bs-tooltip-top .arrow::before {
+  border-top-color: #7386D5; }
+
+/* line 126, corere/main/static/main/output.scss */
+.tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, .tooltip.bs-tooltip-left .arrow::before {
+  border-left-color: #7386D5; }
+
+/* line 129, corere/main/static/main/output.scss */
+.tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, .tooltip.bs-tooltip-right .arrow::before {
+  border-right-color: #7386D5; }
+
+/* line 134, corere/main/static/main/output.scss */
+iframe {
+  height: 800px;
+  width: 100%; }
+
+/* Datatables OLD */
+/* ---------------------------------------------------
+    SIDEBAR STYLE
+----------------------------------------------------- */
+/* ---------------------------------------------------
+    CONTENT STYLE
+----------------------------------------------------- */
+/* ---------------------------------------------------
+    MEDIAQUERIES
+----------------------------------------------------- */

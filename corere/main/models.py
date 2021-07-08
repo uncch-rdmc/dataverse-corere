@@ -843,9 +843,9 @@ class GitFile(AbstractCreateUpdateModel):
 
     @property
     def parent(self):
-        if self.parent_submission_id is not None:
+        if self.parent_submission_id != None:
             return self.parent_submission
-        if self.parent_manuscript_id is not None:
+        if self.parent_manuscript_id != None:
             return self.parent_submission
         raise AssertionError("Neither 'parent_submission' or 'parent_manuscript' is set")
 
@@ -915,11 +915,12 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
+#If we add any field requirements to software it'll cause issues with our submission form saving.
 class VerificationMetadataSoftware(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
     #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
@@ -1009,4 +1010,5 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                 manuscript = Manuscript.objects.get(id=m_id)
                 if ((hasattr(manuscript, 'manuscript_containerinfo'))):
                     logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
-                    d.update_oauthproxy_container_authenticated_emails(manuscript)
+                    if (not settings.SKIP_DOCKER):
+                        d.update_oauthproxy_container_authenticated_emails(manuscript)
