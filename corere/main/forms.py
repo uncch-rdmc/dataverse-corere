@@ -16,6 +16,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
+from django.http import Http404
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -612,7 +613,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
         user = CrequestMiddleware.get_request().user
         for i, form in enumerate(deleted_forms):
-            if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
 
         return deleted_forms

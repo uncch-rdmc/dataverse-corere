@@ -23,6 +23,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from notifications.signals import notify
 from templated_email import send_templated_mail
+from django.utils.datastructures import MultiValueDictKeyError
 
 logger = logging.getLogger(__name__)  
 
@@ -532,8 +533,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
 
-#TODO: I think this whole section is why software is blowing up. I think we need to pass the instance to post no matter what, which can only happen after v_metadata is saved?
-
         #TODO: not sure if we need to do this ID logic in the post    
         try:
             # if(self.v_metadata_software_formset is not None):
@@ -578,29 +577,33 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     updated_request = request.POST.copy()
                     
                     #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
-                    if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
-                        updated_request = request.POST.copy()
-                        updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                        softwares_counter = 0
-                        while True:
-                            if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
-                                break
-                            #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
-                            updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                            softwares_counter = softwares_counter + 1
+                    try:
+                        if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
+                            updated_request = request.POST.copy()
+                            updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                            softwares_counter = 0
+                            while True:
+                                if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
+                                    break
+                                #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
+                                updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                                softwares_counter = softwares_counter + 1
 
-                        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
-                        f.VMetadataSoftwareVMetadataFormsets[role_name]
+                            role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+                            f.VMetadataSoftwareVMetadataFormsets[role_name]
 
-                        #TODO: save_as_new may not be a good idea all of the time??
-                        self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
+                            #TODO: save_as_new may not be a good idea all of the time??
+                            self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
 
-                    if(self.v_metadata_software_formset.is_valid()):
-                        self.v_metadata_software_formset.save()
-                    else:
-                        #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
-                        print(self.v_metadata_software_formset.errors)
-                        logger.debug(self.v_metadata_software_formset.errors)
+                        if(self.v_metadata_software_formset.is_valid()):
+                            self.v_metadata_software_formset.save()
+                        else:
+                            #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
+                            print(self.v_metadata_software_formset.errors)
+                            logger.debug(self.v_metadata_software_formset.errors)
+                    except MultiValueDictKeyError:
+                        logger.error("MULTI VALUE KEY DICT ERROR")
+                        logger.error(request.POST)
 
                 if(self.v_metadata_badge_formset):
                     self.v_metadata_badge_formset.save()
@@ -698,6 +701,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         else:
             if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
                 self.note_formset.save()
+                return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
@@ -728,7 +732,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     #Custom method, called via dispatch. Copies over submission and its verification metadatas
     #This does not copy over GitFiles, those are done later in the flow
     def copy_previous_submission_contents(self, manuscript, version_id):
-        print("COPY PREV SUB")
+        #print("COPY PREV SUB")
         prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
         #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
 
