@@ -14,12 +14,14 @@ from django.http import Http404, HttpResponse
 from django.contrib.auth.decorators import login_required
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
+from django.utils.translation import gettext as _
 
 logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
         args = {'user':     request.user, 
+                'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
                 'submission_columns':  helper_submission_columns(request.user),
                 'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
@@ -42,6 +44,8 @@ def manuscript_landing(request, id=None):
     elif(has_transition_perm(manuscript.view_noop, request.user)):
         manuscript_avail_buttons.append('viewManuscript')
         manuscript_avail_buttons.append('viewManuscriptFiles')
+    else:
+        raise Http404()
     if(has_transition_perm(manuscript.begin, request.user)):
         manuscript_avail_buttons.append('progressManuscript')
     #TODO: add launchNotebook once integration is better
@@ -84,6 +88,7 @@ def manuscript_landing(request, id=None):
             'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
             'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
             'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
+            'page_title': _("manuscript_landing_pageTitle"),
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower
             }
     return render(request, "main/manuscript_landing.html", args)
@@ -91,35 +96,38 @@ def manuscript_landing(request, id=None):
 @login_required
 def open_notebook(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    if(not manuscript.get_max_submission_version_id()):
-        raise Http404()
-    
-    latest_submission = manuscript.get_latest_submission()
+    if(has_transition_perm(manuscript.edit_noop, request.user)):
+        if(not manuscript.get_max_submission_version_id()):
+            raise Http404()
+        
+        latest_submission = manuscript.get_latest_submission()
 
-    if(hasattr(manuscript, 'manuscript_containerinfo')): 
-        if manuscript.manuscript_containerinfo.build_in_progress:
-            while manuscript.manuscript_containerinfo.build_in_progress:
-                time.sleep(.1)
-                manuscript.manuscript_containerinfo.refresh_from_db()
+        if(hasattr(manuscript, 'manuscript_containerinfo')): 
+            if manuscript.manuscript_containerinfo.build_in_progress:
+                while manuscript.manuscript_containerinfo.build_in_progress:
+                    time.sleep(.1)
+                    manuscript.manuscript_containerinfo.refresh_from_db()
 
-        elif(latest_submission.files_changed):
-            logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
-            d.refresh_notebook_stack(manuscript)
+            elif(latest_submission.files_changed):
+                logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
+                d.refresh_notebook_stack(manuscript)
+                latest_submission.files_changed = False
+                latest_submission.save()
+        else:
+            logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
+            d.build_manuscript_docker_stack(manuscript, request)
             latest_submission.files_changed = False
             latest_submission.save()
-    else:
-        logger.info("Building docker stack (on main page) for manuscript: " + str(manuscript.id))
-        d.build_manuscript_docker_stack(manuscript, request)
-        latest_submission.files_changed = False
-        latest_submission.save()
 
-    print(manuscript.manuscript_containerinfo.container_public_address())
-    return redirect(manuscript.manuscript_containerinfo.container_public_address())
+        print(manuscript.manuscript_containerinfo.container_public_address())
+        return redirect(manuscript.manuscript_containerinfo.container_public_address())
+    else:
+        raise Http404()
 
 @login_required()
 def site_actions(request):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
-        return render(request, 'main/site_actions.html', {'page_header': "site_actions"})
+        return render(request, 'main/site_actions.html', {'page_title': "site_actions"})
     else:
         raise Http404()
 

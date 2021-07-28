@@ -16,11 +16,16 @@ from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
-logger = logging.getLogger(__name__)  
 from django.http import HttpResponse
 from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
+from django.utils.translation import gettext as _
+from notifications.signals import notify
+from templated_email import send_templated_mail
+from django.utils.datastructures import MultiValueDictKeyError
+
+logger = logging.getLogger(__name__)  
 
 #from guardian.decorators import permission_required_or_404
 
@@ -36,7 +41,7 @@ class GenericCorereObjectView(View):
     template = 'main/form_object_generic.html'
     redirect = '..'
     read_only = False
-    message = None
+    msg = None
     http_method_names = ['get', 'post'] #Used by the base View class
     #For GetOrGenerateObjectMixin, instantiated here so they don't override.
     parent_reference_name = None
@@ -49,7 +54,8 @@ class GenericCorereObjectView(View):
     file_delete_url = None
     #TODO: This is too much. Need a better way to deal with these params. Also some are for manuscript and some are for submission
     helper = f.GenericFormSetHelper()
-    page_header = ""
+    page_title = ""
+    page_help_text = None
     note_formset = None
     note_helper = None
     
@@ -69,37 +75,37 @@ class GenericCorereObjectView(View):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title}
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
         print(self.redirect)
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         if self.form.is_valid():
             if not self.read_only:
                 self.form.save() #Note: this is what saves a newly created model instance
-            messages.add_message(request, messages.SUCCESS, self.message)
+            messages.add_message(request, messages.SUCCESS, self.msg)
             return redirect(self.redirect)
         else:
             logger.debug(self.form.errors)
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title}
 
         return render(request, self.template, context)
 
 class GitFilesMixin(object):
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
             self.repo_dict_gen = g.get_manuscript_files_list(self.object)
             self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile/?file_path="
@@ -113,7 +119,7 @@ class GitFilesMixin(object):
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
 
-        return super(GitFilesMixin, self).dispatch(request, *args, **kwargs)
+        return super(GitFilesMixin, self).setup(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -122,10 +128,10 @@ class GitFilesMixin(object):
 #Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
 class GetOrGenerateObjectMixin(object):
     #TODO: This gets called on every get, do we need to generate the messages this early?
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' has been updated!'
+            self.msg = _("generic_objectUpdated_banner").format(object_type=self.object_friendly_name, object_id=self.object.id)
         elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
@@ -133,10 +139,10 @@ class GetOrGenerateObjectMixin(object):
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
                 if(self.parent_reference_name == "submission"):
                     setattr(self.object, "manuscript", self.object.submission.manuscript)
-            self.message = 'Your new '+self.object_friendly_name +' has been created!'
+            self.msg = _("generic_objectCreated_banner").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
-        return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
+        return super(GetOrGenerateObjectMixin, self).setup(request, *args, **kwargs)
     
 # class ChooseRoleFormMixin(object):
 #     def dispatch(self, request, *args, **kwargs):
@@ -152,7 +158,7 @@ class GetOrGenerateObjectMixin(object):
 #TODO: Is this specifically for noop transitions? if so we should name it that way.
 class TransitionPermissionMixin(object):
     transition_on_parent = False
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(self.transition_on_parent):
             parent_object = getattr(self.object, self.parent_reference_name)
             transition_method = getattr(parent_object, self.transition_method_name)
@@ -162,12 +168,12 @@ class TransitionPermissionMixin(object):
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
-        return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
+        return super(TransitionPermissionMixin, self).setup(request, *args, **kwargs)    
     pass
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
-    def dispatch(self, request, *args, **kwargs):
+    def setup(self, request, *args, **kwargs):
         if(len(self.groups_required)>0):
             if not request.user.is_authenticated:
                 raise Http404()
@@ -177,7 +183,7 @@ class GroupRequiredMixin(object):
                     user_groups.append(group)
                 if len(set(user_groups).intersection(self.groups_required)) <= 0:
                     raise Http404()
-        return super(GroupRequiredMixin, self).dispatch(request, *args, **kwargs)
+        return super(GroupRequiredMixin, self).setup(request, *args, **kwargs)
 
 ############################################# MANUSCRIPT #############################################
 
@@ -215,16 +221,17 @@ class GenericManuscriptView(GenericCorereObjectView):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
-        print(self.from_submission)
+        #print(self.from_submission)
         if(self.from_submission):
-            messages.add_message(request, messages.INFO, "First, please fill out the additional info regarding your Manuscript.")
+            self.msg = _("manuscript_additionalInfoDuringSubmissionFlowHelpText_banner")
+            messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -243,9 +250,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
 
         if(isinstance(self.object, m.Manuscript)):
-            root_object_title = self.object.title
+            manuscript_title = self.object.title
         else:
-            root_object_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript.title
 
         if not self.read_only and self.form.is_valid() \
             and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
@@ -258,11 +265,11 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.keyword_formset.save()
 
             if request.POST.get('submit_continue'):
-                messages.add_message(request, messages.SUCCESS, self.message)
+                messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
             elif request.POST.get('submit_continue_submission'):
-                messages.add_message(request, messages.SUCCESS, self.message)
+                messages.add_message(request, messages.SUCCESS, self.msg)
                 return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
             else:
                 return redirect(self.redirect)
@@ -273,7 +280,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_header': self.page_header, 'root_object_title': root_object_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
@@ -290,25 +297,27 @@ class ManuscriptCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Permiss
     permission_required = c.perm_path(c.PERM_MANU_ADD_M)
     accept_global_perms = True
     return_403 = True
-    page_header = "Create New Manuscript"
+    page_title = _("manuscript_create_pageTitle")
     create = True
     redirect = "/"
 
 class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_header = "Edit Manuscript"
+    page_title = _("manuscript_edit_pageTitle")
+    page_help_text = _("manuscript_edit_helpText")
 
 class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
-    page_header = "Edit Manuscript"
+    page_title = _("manuscript_edit_pageTitle")
     from_submission = True
+    page_help_text = _("manuscript_edit_helpText")
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     #form_dict = f.ReadOnlyManuscriptForm #TODO: IMPLEMENT READONLY
     transition_method_name = 'view_noop'
-    page_header = "View Manuscript"
+    page_title = _("manuscript_view_pageTitle")
     http_method_names = ['get']
     read_only = True
 
@@ -316,12 +325,17 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Manuscript"
+    page_title = _("manuscript_uploadFiles_pageTitle")
+                
+    def dispatch(self, request, *args, **kwargs):
+        if self.object._status == m.Manuscript.Status.NEW:
+            self.page_help_text = _("manuscript_uploadFilesNew_helpText")
+        return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-            'root_object_title': self.object.title, 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+            'manuscript_title': self.object.title, 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             })
 
     def post(self, request, *args, **kwargs):
@@ -329,19 +343,16 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
                 return redirect('manuscript_addauthor', id=self.object.id)
             else:
-                self.message = 'You must upload some files to the manuscript!'
-                messages.add_message(request, messages.ERROR, self.message)
+                # self.msg = _('manuscript_noFiles_banner')
+                # messages.add_message(request, messages.ERROR, self.msg)
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-                    'root_object_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header,
+                    'manuscript_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('manuscript_noFiles_error')
                     })
 
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Manuscript"
     http_method_names = ['post']
 
     #TODO: Should we making sure these files are safe?
@@ -381,14 +392,14 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'view_noop'
-    page_header = "View Files for Manuscript"
+    page_title = _("manuscript_viewFiles_pageTitle")
     http_method_names = ['get']
     read_only = True
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_header': self.page_header
+            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
@@ -396,10 +407,11 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     transition_method_name = 'edit_noop'
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'read_only': self.read_only, 'page_header': self.page_header,
+        return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'root_object_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
+#NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
 class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
@@ -415,11 +427,12 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to authors!'
-            messages.add_message(request, messages.SUCCESS, self.message)
+
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to authors, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
+            ### Messaging ###
+            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.title)
+            messages.add_message(request, messages.ERROR, self.msg)
+            ### End Messaging ###
         return redirect('/manuscript/'+str(self.object.id))
 
 class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
@@ -441,6 +454,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
     prev_sub_vmetadata = None
+    #prev_sub_vmetadata_softwares = None
 
     edition_formset = None
     curation_formset = None
@@ -451,9 +465,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     v_metadata_audit_formset = None
 
     def get(self, request, *args, **kwargs):     
-        root_object_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
         if(self.note_formset is not None):
@@ -476,7 +490,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
         try:
             if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
             if(self.v_metadata_badge_formset is not None):
                 context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
             if(self.v_metadata_audit_formset is not None):
@@ -497,7 +511,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def post(self, request, *args, **kwargs):
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
-        root_object_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript.title
 
         if(self.note_formset):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -518,17 +532,19 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.v_metadata_formset):
             self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
+
         #TODO: not sure if we need to do this ID logic in the post    
         try:
-            if(self.v_metadata_software_formset is not None):
-                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+            # if(self.v_metadata_software_formset is not None):
+            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
                 self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
             if(self.v_metadata_audit_formset is not None):
                 self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
         except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_software_formset is not None):
-                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
+            # print("DNE")
+            # if(self.v_metadata_software_formset is not None):
+            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
             if(self.v_metadata_badge_formset is not None):
                 self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
             if(self.v_metadata_audit_formset is not None):
@@ -537,9 +553,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
         if not self.read_only:
+            # print(self.v_metadata_software_formset)
+            # print((self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid()))
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
                 and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
-                and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
+                #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
                 and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
                 self.form.save() #Note: this is what saves a newly created model instance
@@ -551,8 +569,42 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.verification_formset.save()
                 if(self.v_metadata_formset):
                     self.v_metadata_formset.save()
+                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
                 if(self.v_metadata_software_formset):
-                    self.v_metadata_software_formset.save()
+                    # All this logic is to fix our software verificatio metadata we have copied over from our previous submission
+                    # The forms provided in the formset have the old vmetadata id which breaks saving.
+                    # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
+                    updated_request = request.POST.copy()
+                    
+                    #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
+                    try:
+                        if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
+                            updated_request = request.POST.copy()
+                            updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                            softwares_counter = 0
+                            while True:
+                                if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
+                                    break
+                                #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
+                                updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                                softwares_counter = softwares_counter + 1
+
+                            role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+                            f.VMetadataSoftwareVMetadataFormsets[role_name]
+
+                            #TODO: save_as_new may not be a good idea all of the time??
+                            self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
+
+                        if(self.v_metadata_software_formset.is_valid()):
+                            self.v_metadata_software_formset.save()
+                        else:
+                            #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
+                            print(self.v_metadata_software_formset.errors)
+                            logger.debug(self.v_metadata_software_formset.errors)
+                    except MultiValueDictKeyError:
+                        logger.error("MULTI VALUE KEY DICT ERROR")
+                        logger.error(request.POST)
+
                 if(self.v_metadata_badge_formset):
                     self.v_metadata_badge_formset.save()
                 if(self.v_metadata_audit_formset): 
@@ -561,36 +613,72 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.note_formset.save()
 
                 try:
-                    # if request.POST.get('submit_progress_submission'):
-                    #     if not fsm_check_transition_perm(self.object.submit, request.user): 
-                    #         logger.debug("PermissionDenied")
-                    #         raise Http404()
-                    #     self.object.submit(request.user)
-                    #     self.object.save()
+                    #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
+
+                    status = None
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.submit_edition()
+                        status = self.object.submit_edition()
                         self.object.save()
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.review_curation()
+                        status = self.object.review_curation()
                         self.object.save()
                     elif request.POST.get('submit_progress_verification'):
                         if not fsm_check_transition_perm(self.object.review_verification, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
-                        self.object.review_verification()
+                        status = self.object.review_verification()
                         self.object.save()
+
+
+                    ### Messaging ###
+                    if(status != None):
+                        if(status == m.Submission.Status.IN_PROGRESS_CURATION):
+                            #Send message/notification to curators that the submission is ready
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                        elif(status == m.Submission.Status.IN_PROGRESS_VERIFICATION):
+                            #Send message/notification to verifiers that the submission is ready
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    ### End Messaging ###
+
+
+
+
+                        #is there another one for completed? report happens when curation/verification "fails" but does it when you succeed?
+                        # - Generate report and return submission to authors happens on EVERY submission, even the "final" one. At least currently.
+                        #    - We should probably have generate report actually send the report to the editors. Maybe doublecheck on this with the curators first.
+                        #    - I don't think "return submission" is actually a part of the workflow, maybe doublecheck on this too?
+                        #       - We probably shouldn't say "return submission to authors" on the final submission. If at all
+                        # - We should give a message to the authors when "return submission to authors" is completed
+                        # - Should we add another submission status for the manuscript being completed? Would make notifications easier, also maybe easier to tell in admin
+                        #    - Technically you can tell by looking at the edition/curation/verification
+                        #
+
+
+
+
+
+
+
                 except TransitionNotAllowed as e:
                     logger.error("TransitionNotAllowed: " + str(e))
                     raise
 
                 if request.POST.get('submit_continue'):
-                    messages.add_message(request, messages.SUCCESS, self.message)
+                    messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('submission_uploadfiles', id=self.object.id)
 
                 return redirect(self.redirect)
@@ -604,8 +692,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.verification_formset.errors)
                 if(self.v_metadata_formset):
                     logger.debug(self.v_metadata_formset.errors)
-                if(self.v_metadata_software_formset):
-                    logger.debug(self.v_metadata_software_formset.errors)
+                # if(self.v_metadata_software_formset):
+                #     logger.debug(self.v_metadata_software_formset.errors)
                 if(self.v_metadata_badge_formset):
                     logger.debug(self.v_metadata_badge_formset.errors)
                 if(self.v_metadata_audit_formset): 
@@ -613,9 +701,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         else:
             if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
                 self.note_formset.save()
+                return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': root_object_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
         if(self.note_formset is not None):
@@ -643,7 +732,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     #Custom method, called via dispatch. Copies over submission and its verification metadatas
     #This does not copy over GitFiles, those are done later in the flow
     def copy_previous_submission_contents(self, manuscript, version_id):
-        print("COPY PREV SUB")
+        #print("COPY PREV SUB")
         prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
         #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
 
@@ -652,12 +741,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         prev_sub.id = None #Do I need to do both?
         self.object = prev_sub
 
-        #print(prev_sub_vmetadata.__dict__)
-        #prev_sub_vmetadata.pk = None
-        #prev_sub_vmetadata.id = None
-        #self.object.submission_vmetadata = prev_sub_vmetadata
-
-        #Copy all verification metadatas
 
 
     #TODO: Move this to the top, after (probably) deleting add_formsets
@@ -679,6 +762,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_edition_noop, request.user) or has_transition_perm(self.object.submission_edition.edit_noop, request.user))):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_editionReview_helpText")
             elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
         except (m.Edition.DoesNotExist, KeyError):
@@ -686,6 +771,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_curationReview_helpText")
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
         except (m.Curation.DoesNotExist, KeyError):
@@ -693,6 +780,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
                 self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_verificationReview_helpText")
             elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
         except (m.Verification.DoesNotExist, KeyError):
@@ -718,8 +807,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name is "Curator" or role_name is "Admin")): #This is hacky, should be a "transition" perm on the object
-                #TODO: For some reason this (and audit) aren't actually showing up. They look to have contents and I don't think the javascript is hiding them...
+            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
                 self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
         except (m.Submission.DoesNotExist, KeyError):
             pass
@@ -728,7 +816,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name is "Curator" or role_name is "Admin")): #This is hacky, should be a "transition" perm on the object
+            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
                 self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
         except (m.Submission.DoesNotExist, KeyError):
             pass
@@ -741,46 +829,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
         #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
 
-
         return super().dispatch(request, *args, **kwargs)
-
-        # if self.read_only:
-        #     #All Manuscript fields are visible to all users, so no role-based forms
-        #     self.form = f.ReadOnlyManuscriptForm
-        #     self.author_formset = f.ReadOnlyAuthorFormSet
-        #     self.data_source_formset = f.ReadOnlyDataSourceFormSet
-        #     self.keyword_formset = f.ReadOnlyKeywordFormSet
-        # else:
-        #     role_name = get_role_name_for_form(request.user, self.object, request.session)
-        #     self.form = f.ManuscriptForms[role_name]
-        #     self.author_formset = f.AuthorManuscriptFormsets[role_name]
-        #     self.data_source_formset = f.DataSourceManuscriptFormsets[role_name]
-        #     self.keyword_formset = f.KeywordManuscriptFormsets[role_name]
-        
-
-
-
-
-        # print("=== Inline Formset Questions ===")
-        # print(self.v_metadata_audit_formset.__dict__)
-        #print(self.v_metadata_audit_formset.form.__dict__)
-        #print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
-        # self.v_metadata_audit_formset.form.base_fields['name'].disabled = True
-        # print(self.v_metadata_audit_formset.form.base_fields['name'].__dict__) 
-        # print("=== Restrictor Tests ===")
-        # print(f.VMetadataSubmissionFormset.form.base_fields['host_url'].__dict__)
-        # print(f.VMetadataSubmissionFormsetRestrictTest.form.base_fields['host_url'].__dict__)
-        
-       
-        #print(f.VMetadataSubmissionFormset.form.__dict__)
-        #print(f.testfactorydict['0'].form.__dict__)
-        # print(f.VMetadataSubmissionFormset.__dict__)
-        # print(f.testfactorydict['1'].__dict__)
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
-    page_header = "Create New Submission"
+    page_title = _("submission_create_pageTitle")
+    page_help_text = _("submission_edit_helpText")
     template = 'main/form_object_submission.html'
     create = True
 
@@ -791,22 +846,28 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
-    page_header = "Edit Submission"
+    page_help_text = _("submission_edit_helpText") #Sometimes overwritten by GenericSubmissionFormView
     template = 'main/form_object_submission.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_edit_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
+        return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
     transition_method_name = 'view_noop'
-    page_header = "View Submission"
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_view_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
 class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/form_edit_files.html'
     helper=f.GitFileFormSetHelper()
-    page_header = "Edit File Metadata for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -817,9 +878,9 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'children_formset':formset, 'page_header': self.page_header})
+            'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
     #Originally copied from GenericCorereObjectView
     def post(self, request, *args, **kwargs):
@@ -828,6 +889,10 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             if not self.read_only:
                 formset.save() #Note: this is what saves a newly created model instance
                 if request.POST.get('back_save'):
+                    if (settings.SKIP_DOCKER):
+                        self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+                        messages.add_message(request, messages.INFO, self.msg)
+                        return redirect('submission_uploadfiles', id=self.object.id)
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 elif self.object._status == "new":
@@ -836,26 +901,49 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         raise Http404()
                     self.object.submit(request.user)
                     self.object.save()
-                    messages.add_message(request, messages.SUCCESS, "Your submission has been submitted!")
+
+                    ## Messaging ###
+                    self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                    messages.add_message(request, messages.SUCCESS, self.msg)
+                    logger.info(self.msg)
+                    recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                    notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                    notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                    for u in recipients: #We have to loop to get the user model fields
+                        send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    ## End Messaging ###
+
+                    # self.msg = _("submission_submitted_banner")
+                    # messages.add_message(request, messages.SUCCESS, self.msg)
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
                 else:
-                    messages.add_message(request, messages.SUCCESS, self.message)
+                    messages.add_message(request, messages.SUCCESS, self.msg)
                     return redirect('manuscript_landing', id=self.object.manuscript.id)
         else:
             logger.debug(formset.errors)
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'parent':self.object, 'children_formset':formset, 'page_header': self.page_header})
+            'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
+    page_help_text = _("submission_editFilesMetadata_helpText")
     form = f.GitFileFormSet
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_editFilesMetadata_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'view_noop'
     form = f.GitFileReadOnlyFileFormSet
     read_only = True
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
 
 #We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -863,23 +951,32 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     form = f.SubmissionUploadFilesForm
     template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Submission"
+    page_help_text = _("submission_uploadFiles_helpText")
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
 
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object)#,
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
             if request.POST.get('submit_continue'):
+                if (settings.SKIP_DOCKER):
+                    self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+                    messages.add_message(request, messages.INFO, self.msg)
+                    return redirect('submission_editfiles', id=self.object.id)
+
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
 
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
@@ -902,26 +999,23 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
-                    self.message = 'You must upload some files to the submission!'
-                    messages.add_message(request, messages.ERROR, self.message)
+                    # self.msg = _('submission_noFiles_banner')
+                    # messages.add_message(request, messages.ERROR, self.msg)
 
                     return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-                        'root_object_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
+                        'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object)
+                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error')
                         })
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
-    form = f.SubmissionUploadFilesForm
-    template = 'main/not_form_upload_files.html'
     transition_method_name = 'edit_noop'
-    page_header = "Upload Files for Submission"
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
-    object_friendly_name = 'submission'
     model = m.Submission
+    object_friendly_name = 'submission'
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
@@ -1033,10 +1127,10 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
-            'root_object_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_header': self.page_header})
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
-
+#NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
@@ -1061,11 +1155,10 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for review!'
-            messages.add_message(request, messages.SUCCESS, self.message)
+
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
@@ -1077,23 +1170,24 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
     def post(self, request, *args, **kwargs):
         try:
-            if not fsm_check_transition_perm(self.object.generate_report, request.user): 
+            if not fsm_check_transition_perm(self.object.send_report, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                self.object.generate_report()
+                self.object.send_report()
                 self.object.save()
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was handed to the editors for return!'
-            messages.add_message(request, messages.SUCCESS, self.message)
+            self.msg= _("submission_objectTransferEditorReturnSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be handed to editors, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferEditorReturnFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#NOTE: for some reason, these banner messages aren't showing up.
+class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -1102,31 +1196,57 @@ class SubmissionReturnView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
     def post(self, request, *args, **kwargs):
         try:
-            if not fsm_check_transition_perm(self.object.return_submission, request.user): 
+            if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                self.object.return_submission()
+                self.object.finish_submission()
                 self.object.save()
+
+                ### Messaging ###
+                print("SUBMISSION STATUS: " + self.object._status)
+                if(self.object._status == m.Submission.Status.RETURNED):
+                    print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
+                    if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
+                        #If completed, send message to... editor and authors?
+                        self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                        for u in recipients: #We have to loop to get the user model fields
+                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                    else:
+                        #If not complete, send message to author about submitting again
+                        self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                        for u in recipients: #We have to loop to get the user model fields
+                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                ### End Messaging ###
+
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.message = 'Your '+self.object_friendly_name + ': ' + str(self.object.id) + ' was returned to the authors!'
-            messages.add_message(request, messages.SUCCESS, self.message)
+
+
         except (TransitionNotAllowed):
-            self.message = 'Object '+self.object_friendly_name + ': ' + str(self.object.id) + ' could not be returned to the authors, please contact the administrator.'
-            messages.add_message(request, messages.ERROR, self.message)
+            self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
 #This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
 #Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
-class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    transition_method_name = 'edit_noop'
     template = 'main/notebook_redirect.html'
 
     def get(self, request, *args, **kwargs):
@@ -1136,12 +1256,13 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
 
-class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    transition_method_name = 'edit_noop'
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
@@ -1150,8 +1271,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_header': self.page_header, 'root_object_title': self.object.manuscript.title,
-            'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text,  
+            'manuscript_title': self.object.manuscript.title, 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
 
         return render(request, self.template, context)
 

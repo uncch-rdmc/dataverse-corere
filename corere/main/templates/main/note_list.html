@@ -1,6 +1,5 @@
 {% load crispy_forms_tags %}
 {% load static %}
-<script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
     $(function () {
         $('#note_table tbody tr').formset({
@@ -11,7 +10,7 @@
     })
 </script>
 
-<h6 class="my-3"> Notes </h6>
+<h5 class="cblue"> Notes </h5>
 
 {{ note_formset.non_form_errors }}
 {% crispy note_formset note_helper %}

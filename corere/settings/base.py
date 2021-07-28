@@ -13,7 +13,7 @@ LOGOUT_REDIRECT_URL = '/'
 #MEDIA_URL
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
-#NOTE: Container address does not include the port, server address does (if needed)
+#NOTE: Container address does not include the port, server address does (if needed).
 CONTAINER_ADDRESS = os.environ["CONTAINER_ADDRESS"]
 SERVER_ADDRESS = os.environ["SERVER_ADDRESS"]
 
@@ -130,8 +130,8 @@ REST_FRAMEWORK = {
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.globus.GlobusOpenIdConnect',
-    'social_core.backends.google.GoogleOAuth2',
-    'social_core.backends.github.GithubOAuth2',
+    # 'social_core.backends.google.GoogleOAuth2',
+    # 'social_core.backends.github.GithubOAuth2',
     'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend', #Standard django auth, used for admin
 )
@@ -174,7 +174,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['django_file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
         'corere': {
@@ -192,11 +192,12 @@ LOGGING = {
 }
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
-USE_I18N = False
-USE_L10N = False
+USE_I18N = True
+USE_L10N = True
 USE_TZ = True
+LOCALE_PATHS = ( os.path.join(BASE_DIR, 'locale'), )
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -227,9 +228,10 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
+    #'corere.main.views.users.account_user_details' #We tried to use this to redirect to user details at the end but it blows up
 )
 
-#NOTE: As part of glbous registration, we currently have pre-reserve ports 50000-50019 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
+#NOTE: As part of glbous registration, we currently have pre-reserve ports 50020-50039 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
 
 # Social Auth: Globus configuration
 SOCIAL_AUTH_GLOBUS_KEY = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_KEY"]

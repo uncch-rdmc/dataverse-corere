@@ -73,7 +73,7 @@ function fill_notification_list(data) {
             +    '<div>'+ message + '</div>'
             + '</div>'
 
-            //return '<li>' + message + '</li>';
+            //finish '<li>' + message + '</li>';
         }).join('')
 
         for (var i = 0; i < menus.length; i++){

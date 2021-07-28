@@ -27,7 +27,11 @@ Install docker and git.
 
 Clone or download this repository. Customize the settings files as needed. Copy the sample env files and fill out there required attributes. 
 
-Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). You will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. Also make sure when copying the client id, to use the one named `Client ID`.
+You should update your PYTHONPATH with the project folder so django-admin runs as expected: `export PYTHONPATH="/absolute/path/to/dataverse-corere:$PYTHONPATH"`
+
+Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). You will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. You will also need to register `http://localhost/auth/complete/globus/` for new user registration. Also make sure when copying the client id, to use the one named `Client ID`.
+
+Once the app is up and running, go to the Sites section of the admin console and change the names to match your current site. This is used mainly for email formatting.
 
 ## Usage
 

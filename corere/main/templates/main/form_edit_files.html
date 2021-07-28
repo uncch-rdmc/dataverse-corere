@@ -1,11 +1,11 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_full.html" %}
 {% block content %}
 {% load concat %}
 {% load crispy_forms_tags %}
 {% load always_escape %}
 
-<h5 class="my-3"> {{page_header}}: {{root_object_title}} </h5>
-
+{% include "main/page_title.html" with no_hr=True %}    
+<br>
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ children_formset.non_form_errors }}

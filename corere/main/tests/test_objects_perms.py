@@ -246,14 +246,14 @@ class TestManuscriptWorkflow(TestCase):
             submission2.review_verification()
 
         #-------------- Create curator report -----------
-        self.assertTrue(has_transition_perm(submission2.generate_report, self.curator))
-        submission2.generate_report()
+        self.assertTrue(has_transition_perm(submission2.send_report, self.curator))
+        submission2.send_report()
         submission2.save()
         self.assertEqual(submission2._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
 
         #-------------- Create editor return -----------
-        self.assertTrue(has_transition_perm(submission2.return_submission, self.editor))
-        submission2.return_submission()
+        self.assertTrue(has_transition_perm(submission2.finish_submission, self.editor))
+        submission2.finish_submission()
         submission2.save()
         self.assertEqual(submission2._status, m.Submission.Status.RETURNED)
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
@@ -307,14 +307,14 @@ class TestManuscriptWorkflow(TestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
 
         #-------------- Create curator report -----------
-        self.assertTrue(has_transition_perm(submission3.generate_report, self.curator))
-        submission3.generate_report()
+        self.assertTrue(has_transition_perm(submission3.send_report, self.curator))
+        submission3.send_report()
         submission3.save()
         self.assertEqual(submission3._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
 
         #-------------- Create editor return -----------
-        self.assertTrue(has_transition_perm(submission3.return_submission, self.editor))
-        submission3.return_submission()
+        self.assertTrue(has_transition_perm(submission3.finish_submission, self.editor))
+        submission3.finish_submission()
         submission3.save()
         self.assertEqual(submission3._status, m.Submission.Status.RETURNED)
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
@@ -382,14 +382,14 @@ class TestManuscriptWorkflow(TestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
 
         #-------------- Create curator report -----------
-        self.assertTrue(has_transition_perm(submission4.generate_report, self.curator))
-        submission4.generate_report()
+        self.assertTrue(has_transition_perm(submission4.send_report, self.curator))
+        submission4.send_report()
         submission4.save()
         self.assertEqual(submission4._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
 
         #-------------- Create editor return -----------
-        self.assertTrue(has_transition_perm(submission4.return_submission, self.editor))
-        submission4.return_submission()
+        self.assertTrue(has_transition_perm(submission4.finish_submission, self.editor))
+        submission4.finish_submission()
         submission4.save()
         self.assertEqual(submission4._status, m.Submission.Status.RETURNED)
         self.assertEqual(manuscript._status, m.Manuscript.Status.COMPLETED)

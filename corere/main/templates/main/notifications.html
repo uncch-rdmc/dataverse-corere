@@ -1,13 +1,14 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_fixed.html" %}
+
 {% block content %}
-    <h5 class="my-3"> Notifications </h5>
+    {% include "main/page_title.html" %}
     {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}
     {% live_notify_list %}
-    <button type="button" class="button button-secondary" data-dismiss="alert" aria-label="Close" onclick="
+    <input type=button value="Clear all notifications" onClick="
         $.ajax({
             url:'/inbox/notifications/mark-all-as-read/',
             type:'get' 
         }); 
-        fetch_api_data();">  Clear all notifications </button>         
-{% endblock content %}
+        fetch_api_data();">
+{% endblock %}

@@ -3,11 +3,10 @@
     <head>
         {% include 'main/head.html' %}
     </head>
-    <body>
-        {% include 'main/header_registration.html' %}
-        <div>
-            {% block content %}{% endblock %}
-        </div>
+    <body class="full">
+        {% include 'main/header.html' %}
+        <div id="content" class="full layout" >
+        {% block content %}{% endblock %}
         {% include 'main/footer.html' %}
     </body>
 </html>

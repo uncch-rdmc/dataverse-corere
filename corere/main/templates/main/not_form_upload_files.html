@@ -1,11 +1,7 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_fixed.html" %}
 {% block content %}
+{% include "main/page_title.html" %}
 
-{% if m_status == "new" %}
-<p>Please upload your manuscript files (manuscript and appendix):</p>
-{% else %}
-<h5>File Access: {{root_object_title}}</h5>
-{% endif %}
 {% if not read_only %}
 {% include "main/file_upload.html" %}
 {% endif %}

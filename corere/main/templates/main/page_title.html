@@ -1,0 +1,19 @@
+<div class="title">
+    <div class="cblue">
+        <span class="page-title" > {{page_title}}{% spaceless %}
+        {% if manuscript_title %}
+        : </span> <span class="manuscript-title" >{{manuscript_title}}</span>
+        {% else %}
+        </span>
+        {% endif %}{% endspaceless %}
+    </div>
+</div>
+{% comment %} <p> </p> {% endcomment %}
+{% if page_help_text %}
+<br>
+<h6><i><span style="color:#666666; margin-left:1px;"> {{page_help_text}} </span></i></h6>
+{% endif %}
+{% if not no_hr %}
+<hr>
+{% endif %}
+

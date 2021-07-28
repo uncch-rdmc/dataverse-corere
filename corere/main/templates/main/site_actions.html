@@ -1,6 +1,6 @@
-{% extends "main/layout.html" %}
+{% extends "main/layout_fixed.html" %}
 {% block content %}
-    <h5 class="my-3"> {{page_header}} z</h5>
+{% include "main/page_title.html" %}
     <ul class="list-group">
     <li class="list-group-item"><a href="inviteeditor">Invite Editor</a></li>
     <li class="list-group-item"><a href="invitecurator">Invite Curator</a></li>

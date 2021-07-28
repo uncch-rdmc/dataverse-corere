@@ -6,6 +6,80 @@
 
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
+// #content {
+
+// }
+
+table.filestable {
+    td.filespath {
+        padding-left: 10px;
+    }
+}
+
+ul.live_notify_list {
+    margin-left: -40px; //I don't understand the styling I'm having to override with this
+}
+
+//Adding alert-danger and alert to formset errors (without having to touch styles)
+ul.errorlist { 
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    position: relative;
+    padding: .75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: .25rem;
+
+    li {
+        margin-left: 40px;
+    }
+
+}
+
+.page-title {
+    margin-bottom: 1rem;
+    font-weight: 500;
+    line-height: 1.2;
+    font-size: 2rem;
+    // margin-top: 1;
+}
+
+.manuscript-title {
+    margin-bottom: 1rem;
+    font-weight: 250;
+    line-height: 1.2;
+    font-size: 2rem;
+    // margin-top: 0;
+}
+
+div.layout {
+    background: #ffffff;
+    //height: 100%; //This would make the white fill the screen, but it causes issues with scrollbars, formatting etc
+}
+
+div.fixed {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0px 10px 10px 10px;
+}
+
+div.full {
+    padding: 0px 15px 15px 15px;
+}
+
+html, body {
+    height: 100%;
+}
+
+body.fixed {
+    background: #eeeeee;
+}
+
+body.full {
+    background: #ffffff;
+}
+
 .navbar {
     background: #7386D5;
 }
@@ -36,9 +110,13 @@
  * Datatables (we don't have direct control of the html, so a lot of overrides)
  */
 
-.main_holder h5 {
+.title {
+    padding-top: 10px;
+}
+
+.cblue {
     color: #7386D5;
-    display:block;
+    // display:block;
 }
 
 table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
@@ -137,6 +215,10 @@ iframe {
     height:800px;
     width: 100% ;
  }
+
+textarea.smallerarea {
+    height:90px !important;
+}
 
 /* Datatables OLD */
 

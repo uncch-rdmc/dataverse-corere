@@ -3,11 +3,10 @@
     <head>
         {% include 'main/head.html' %}
     </head>
-    <body>
+    <body class="fixed">
         {% include 'main/header.html' %}
-        <div class="mx-3 my-3">
-            {% block content %}{% endblock %}
-        </div>
+        <div id="content" class="fixed layout">
+        {% block content %}{% endblock %}
         {% include 'main/footer.html' %}
     </body>
 </html>

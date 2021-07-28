@@ -16,6 +16,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
+from django.http import Http404
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -208,9 +209,10 @@ class ManuscriptBaseForm(forms.ModelForm):
             validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
-                raise ValidationError(validation_errors)
-
-            #also require a keyword, author, data source, producer(?)
+                #If we don't raise the error here the formset errors don't raise up
+                #But if we return any contents the error shows in the top errors field and in the formset field, and we don't want that
+                #So we return an empty list
+                raise ValidationError([])
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
@@ -268,11 +270,32 @@ ManuscriptForms = {
 }
 #------------- Data Source -------------
 
+#Doing this check in "is_valid" is probably not the right spot. We raise a validation error instead of letting the function complete.
 class DataSourceBaseForm(forms.ModelForm):
+    # def __init__ (self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.empty_permitted = False
+
     class Meta:
         model = m.DataSource
         fields = ["text"]
         labels = label_gen(model, fields)
+
+    def is_valid(self):
+        result = super(DataSourceBaseForm, self).is_valid()
+
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['data_source_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a data source."))
+
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
+
+        return result
+
 
 class DataSourceForm_Admin(DataSourceBaseForm):
     pass
@@ -317,11 +340,31 @@ ReadOnlyDataSourceFormSet = inlineformset_factory(
 
 #------------- Keyword -------------
 
+#Doing this check in "is_valid" is probably not the right spot. We raise a validation error instead of letting the function complete.
 class KeywordBaseForm(forms.ModelForm):
+    # def __init__ (self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.empty_permitted = False
+
     class Meta:
         model = m.Keyword
         fields = ["text"]
         labels = label_gen(model, fields)
+
+    def is_valid(self):
+        result = super(KeywordBaseForm, self).is_valid()
+
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['keyword_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a keyword."))    
+
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
+
+        return result
 
 class KeywordForm_Admin(KeywordBaseForm):
     pass
@@ -367,10 +410,32 @@ ReadOnlyKeywordFormSet = inlineformset_factory(
 #------------- Author (Connected to manuscript, Not User Model) -------------
 
 class AuthorBaseForm(forms.ModelForm):
+    # def __init__ (self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.empty_permitted = False
+
     class Meta:
         model = m.Author
         fields = ["first_name","last_name","identifier_scheme", "identifier"]
         labels = label_gen(model, fields)
+
+    #Doing this check in "is_valid" is probably not the right spot. We raise a validation error instead of letting the function complete.
+    def is_valid(self):
+        result = super(AuthorBaseForm, self).is_valid()
+
+        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+            validation_errors = [] #we store all the "generic" errors and raise them at once
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
+                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+                ):
+                validation_errors.append(ValidationError("You must specify an author."))
+
+            if validation_errors:
+                result = True
+                raise ValidationError(validation_errors)
+
+        return result
 
 class AuthorForm_Admin(AuthorBaseForm):
     pass
@@ -548,7 +613,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
         user = CrequestMiddleware.get_request().user
         for i, form in enumerate(deleted_forms):
-            if(not Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
 
         return deleted_forms
@@ -728,15 +793,6 @@ class SubmissionBaseForm(forms.ModelForm):
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
         labels = label_gen(model, fields)
 
-    #If edition/curation/verification set to "new", return error.
-    def clean(self):
-        if("submit_progress_edition" in self.data.keys() and self.data.get('edition_formset-0-_status','') == m.Edition.Status.NEW):
-            raise ValidationError('Submission editor approval must have a status other than ' + m.Edition.Status.NEW + '.')
-        if("submit_progress_curation" in self.data.keys() and self.data.get('curation_formset-0-_status','') == m.Curation.Status.NEW):
-            raise ValidationError('Submission curator approval must have a status other than ' + m.Curation.Status.NEW + '.')
-        if("submit_progress_verification" in self.data.keys() and self.data.get('verification_formset-0-_status','') == m.Verification.Status.NEW):
-            raise ValidationError('Submission verifier approval must have a status other than ' + m.Verification.Status.NEW + '.')
-
 class SubmissionForm_Admin(SubmissionBaseForm):
     pass
 
@@ -768,10 +824,24 @@ class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
 class EditionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Edition
-        fields = ['report','_status']
+        fields = ['_status','report']
         labels = label_gen(model, fields)
+
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(EditionBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        # self.helper = FormHelper(self)
+        # self.helper.form_show_errors = False
+        # self.form_show_errors = False
+
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
+
+    def clean(self):
+        form_data = self.cleaned_data
+        if form_data['_status'] == m.Edition.Status.NEW:
+            self._errors['_status'] = ['Review must have a status other than ' + m.Edition.Status.NEW + '.']
+        
 
 class EditionForm_Admin(EditionBaseForm):
     pass
@@ -821,10 +891,20 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
-        fields = ['report','_status']
+        fields = ['_status','report']
         labels = label_gen(model, fields)
+
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(CurationBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
+
+    def clean(self):
+        form_data = self.cleaned_data
+        if form_data['_status'] == m.Curation.Status.NEW:
+            self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW + '.']
 
 class CurationForm_Admin(CurationBaseForm):
     pass
@@ -877,10 +957,20 @@ ReadOnlyCurationSubmissionFormset = inlineformset_factory(
 class VerificationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Verification
-        fields = ['code_executability','report','_status']
+        fields = ['_status','code_executability','report']
         labels = label_gen(model, fields)
+    
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(VerificationBaseForm, self).__init__(*args, **kwargs)
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
+
+    def clean(self):
+        form_data = self.cleaned_data
+        if form_data['_status'] == m.Verification.Status.NEW:
+            self._errors['_status'] = ['Review must have a status other than ' + m.Verification.Status.NEW + '.']
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass
@@ -933,7 +1023,7 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 class VMetadataBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadata
-        fields = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
+        fields = ["operating_system", "packages_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
         #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
         always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
         labels = label_gen(model, fields, always_required)
@@ -943,6 +1033,9 @@ class VMetadataBaseForm(forms.ModelForm):
     #      But I don't want to do this until things are more stable and I have tests working again.
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+        self.empty_permitted = False
+        self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+
         if(previous_vmetadata):
             self.fields['operating_system'].initial = previous_vmetadata.operating_system
             self.fields['machine_type'].initial = previous_vmetadata.machine_type

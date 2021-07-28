@@ -182,6 +182,7 @@
                 //CORERE TODO: This should check for invalid-feedback off root and 
                 //if($('.' + options.formCssClass + ':last').parent().parent().find('tbody')[0].querySelectorAll(".invalid-feedback").length == 0){
                 if(!$(".invalid-feedback")[0] && !$(".alert-danger")[0]){
+                    console.log("HELLO2");
                     if (options.hideLastAddForm) $('.' + options.formCssClass + ':last').hide();
                     //ODUM CORERE: Also hide the th for the formCssClass as well as div class alert-danger (crude but should work)
                     if (options.hideLastAddForm && $('.' + options.formCssClass).length < 3 ) $('.' + options.formCssClass + ':last').parent().parent().find('th').hide();

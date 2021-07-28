@@ -24,10 +24,10 @@ from corere.main import docker as d
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
-from django.utils.translation import gettext_lazy as _
+#from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
-from datetime import date
+from datetime import date, datetime
 
 logger = logging.getLogger(__name__)  
 ####################################################
@@ -71,7 +71,7 @@ class User(AbstractUser):
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
     #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
     #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
-    last_oauthproxy_forced_signin = models.DateTimeField(default=date(1900, 1, 1))
+    last_oauthproxy_forced_signin = models.DateTimeField(default=datetime(1900, 1, 1))
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
@@ -83,12 +83,12 @@ class User(AbstractUser):
 
 class Edition(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        ISSUES = 'issues', _('Issues')
-        NO_ISSUES = 'no_issues', _('No Issues')
+        NEW = 'new', 'New'
+        ISSUES = 'issues', 'Issues'
+        NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Editor Approval', help_text='Was the submission approved by the editor')
-    report = models.TextField(default="", verbose_name='Report')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the editor')
+    report = models.TextField(default="", verbose_name='Details')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_edition')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_edition")
@@ -135,14 +135,14 @@ class Edition(AbstractCreateUpdateModel):
 
 class Curation(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        INCOM_MATERIALS = 'incom_materials', _('Incomplete Materials')
-        MAJOR_ISSUES = 'major_issues', _('Major Issues')
-        MINOR_ISSUES = 'minor_issues', _('Minor Issues')
-        NO_ISSUES = 'no_issues', _('No Issues')
+        NEW = 'new', 'New'
+        INCOM_MATERIALS = 'incom_materials', 'Incomplete Materials'
+        MAJOR_ISSUES = 'major_issues', 'Major Issues'
+        MINOR_ISSUES = 'minor_issues', 'Minor Issues'
+        NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Curation Status', help_text='Was the submission approved by the curator')
-    report = models.TextField(default="", verbose_name='Report')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
+    report = models.TextField(default="", verbose_name='Details')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -195,9 +195,9 @@ class Verification(AbstractCreateUpdateModel):
         SUCCESS_W_MOD = "success_w_mod"
         SUCCESS = "success"
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Verification Status', help_text='Was the submission able to be verified')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
-    report = models.TextField(default="", verbose_name='Report')
+    report = models.TextField(default="", verbose_name='Details')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_verification")
@@ -503,24 +503,24 @@ class Submission(AbstractCreateUpdateModel):
 
     #-----------------------
     
-    def can_generate_report(self):
+    def can_send_report(self):
         return True
 
-    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_generate_report],
+    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_send_report],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
-    def generate_report(self):
+    def send_report(self):
         pass
 
     #-----------------------
     
     #TODO: It would be better to have this logic as a manuscript transition. 
     # Its somewhat annoying to get to the latest submission from the manuscript, so for now it'll remain here.
-    def can_return_submission(self):
+    def can_finish_submission(self):
         return True
 
-    @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_return_submission],
+    @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_finish_submission],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
-    def return_submission(self):
+    def finish_submission(self):
         if(self.submission_curation._status == Curation.Status.NO_ISSUES):
             if(self.submission_verification._status == Verification.Status.SUCCESS):
                 self.manuscript._status = Manuscript.Status.COMPLETED
@@ -542,14 +542,14 @@ class Submission(AbstractCreateUpdateModel):
 
 class Author(models.Model):
     class IdScheme(models.TextChoices):
-        ORCID = 'ORCID', _('ORCID') 
-        ISNI = 'ISNI', _('ISNI')
-        LCNA = 'LCNA', _('LCNA')
-        VIAF = 'VIAF', _('VIAF')
-        GND = 'GND', _('GND')
-        DAI = 'DAI', _('DAI')
-        REID = 'ResearcherID', _('ResearcherID')
-        SCID = 'ScopusID', _('ScopusID')
+        ORCID = 'ORCID', 'ORCID'
+        ISNI = 'ISNI', 'ISNI'
+        LCNA = 'LCNA', 'LCNA'
+        VIAF = 'VIAF', 'VIAF'
+        GND = 'GND', 'GND'
+        DAI = 'DAI', 'DAI'
+        REID = 'ResearcherID', 'ResearcherID'
+        SCID = 'ScopusID', 'ScopusID'
 
     first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
@@ -570,28 +570,28 @@ class Keyword(models.Model):
 
 class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', _('New')
-        AWAITING_INITIAL = 'awaiting_init', _('Awaiting Initial Submission')
-        AWAITING_RESUBMISSION = 'awaiting_resub', _('Awaiting Resubmission')
-        REVIEWING = 'reviewing', _('Reviewing Submission')
-        PROCESSING = 'processing', _('Processing Submission')
-        COMPLETED = 'completed', _('Completed')
+        NEW = 'new', 'New'
+        AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
+        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Resubmission'
+        REVIEWING = 'reviewing', 'Reviewing Submission'
+        PROCESSING = 'processing', 'Processing Submission'
+        COMPLETED = 'completed', 'Completed'
 
     class Subjects(models.TextChoices):
-        AGRICULTURAL = 'agricultural', _('Agricultural Sciences')
-        ARTS_AND_HUMANITIES = 'arts', _('Arts and Humanities')
-        ASTRONOMY_ASTROPHYSICS = 'astronomy', _('Astronomy and Astrophysics')
-        BUSINESS_MANAGEMENT = 'business', _('Business and Management')
-        CHEMISTRY = 'chemistry', _('Chemistry')
-        COMPUTER_INFORMATION = 'computer', _('Computer and Information Science')
-        ENVIRONMENTAL = 'environmental', _('Earth and Environmental Sciences')
-        ENGINEERING = 'engineering', _('Engineering')
-        LAW = 'law', _('Law')
-        MATHEMATICS = 'mathematics', _('Mathematical Sciences')
-        HEALTH = 'health', _('Medicine, Health and Life Sciences')
-        PHYSICS = 'physics', _('Physics')
-        SOCIAL = 'social', _('Social Sciences')
-        OTHER = 'other', _('Other')
+        AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
+        ARTS_AND_HUMANITIES = 'arts', 'Arts and Humanities'
+        ASTRONOMY_ASTROPHYSICS = 'astronomy', 'Astronomy and Astrophysics'
+        BUSINESS_MANAGEMENT = 'business', 'Business and Management'
+        CHEMISTRY = 'chemistry', 'Chemistry'
+        COMPUTER_INFORMATION = 'computer', 'Computer and Information Science'
+        ENVIRONMENTAL = 'environmental', 'Earth and Environmental Sciences'
+        ENGINEERING = 'engineering', 'Engineering'
+        LAW = 'law', 'Law'
+        MATHEMATICS = 'mathematics', 'Mathematical Sciences'
+        HEALTH = 'health', 'Medicine, Health and Life Sciences'
+        PHYSICS = 'physics', 'Physics'
+        SOCIAL = 'social', 'Social Sciences'
+        OTHER = 'other', 'Other'
 
     title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
@@ -675,6 +675,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
+
+    def get_landing_url(self):
+        return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
     ##### django-fsm (workflow) related functions #####
     
@@ -809,12 +812,12 @@ class ContainerInfo(models.Model):
 class GitFile(AbstractCreateUpdateModel):
     #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
-        CODE = 'code', _('Code')
-        DATA = 'data', _('Data')
-        DOC_README = 'doc_readme', _('Documentation - Readme')
-        DOC_CODEBOOK = 'doc_codebook', _('Documentation - Codebook')
-        DOC_OTHER = 'doc_other', _('Documentation - Other')
-        #UNSET = '-', _('-')
+        CODE = 'code', 'Code'
+        DATA = 'data', 'Data'
+        DOC_README = 'doc_readme', 'Documentation - Readme'
+        DOC_CODEBOOK = 'doc_codebook', 'Documentation - Codebook'
+        DOC_OTHER = 'doc_other', 'Documentation - Other'
+        #UNSET = '-','-'
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
     md5 = models.CharField(max_length=32, verbose_name='md5', help_text='Generated cryptographic hash of the file contents. Used to tell if a file has changed between versions.') #, default="", )
@@ -840,9 +843,9 @@ class GitFile(AbstractCreateUpdateModel):
 
     @property
     def parent(self):
-        if self.parent_submission_id is not None:
+        if self.parent_submission_id != None:
             return self.parent_submission
-        if self.parent_manuscript_id is not None:
+        if self.parent_manuscript_id != None:
             return self.parent_submission
         raise AssertionError("Neither 'parent_submission' or 'parent_manuscript' is set")
 
@@ -861,12 +864,12 @@ class GitFile(AbstractCreateUpdateModel):
 #Note: If you add required fields here or in the form, you'll need to disable them. See unused_code.py
 class Note(AbstractCreateUpdateModel):
     class RefCycle(models.TextChoices):
-        SUBMISSION = 'submission', _('Submission')
-        EDITION = 'edition', _('Edition')
-        CURATION = 'curation', _('Curation')
-        VERIFICATION = 'verification', _('Verification')
+        SUBMISSION = 'submission', 'Submission'
+        EDITION = 'edition', 'Edition'
+        CURATION = 'curation', 'Curation'
+        VERIFICATION = 'verification', 'Verification'
 
-    text    = models.TextField(default="", blank=True, verbose_name='Note Text')
+    text    = models.TextField(verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
@@ -912,11 +915,12 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
+#If we add any field requirements to software it'll cause issues with our submission form saving.
 class VerificationMetadataSoftware(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
     #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares")
+    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
@@ -1006,4 +1010,5 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                 manuscript = Manuscript.objects.get(id=m_id)
                 if ((hasattr(manuscript, 'manuscript_containerinfo'))):
                     logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
-                    d.update_oauthproxy_container_authenticated_emails(manuscript)
+                    if (not settings.SKIP_DOCKER):
+                        d.update_oauthproxy_container_authenticated_emails(manuscript)
