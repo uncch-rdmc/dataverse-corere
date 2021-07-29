@@ -253,6 +253,7 @@ class Submission(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new'
         IN_PROGRESS_EDITION = 'in_progress_edition'
+        REJECTED_EDITOR = 'rejected_editor'
         IN_PROGRESS_CURATION = 'in_progress_curation'
         IN_PROGRESS_VERIFICATION = 'in_progress_verification'
         REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
