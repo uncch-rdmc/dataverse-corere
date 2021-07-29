@@ -894,7 +894,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         return redirect('submission_uploadfiles', id=self.object.id)
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
-                elif self.object._status == "new":
+                elif self.object._status == self.object.Status.NEW or self.object._status == self.object.Status.REJECTED_EDITOR:
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
                         logger.debug("PermissionDenied")
                         raise Http404()

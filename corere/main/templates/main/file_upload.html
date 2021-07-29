@@ -15,7 +15,7 @@
     <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
-        {% if m_status == "new" or s_status == "new" %}
+        {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" %}
             <input type=button value="Back" onclick="location.href='../edit/'">
             {% if obj_type == 'submission' %}
                 <input type="submit" name="submit_continue" value="Launch Notebook">
