@@ -574,7 +574,7 @@ class Manuscript(AbstractCreateUpdateModel):
         NEW = 'new', 'New'
         AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
         AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Resubmission'
-        REVIEWING = 'reviewing', 'Reviewing Submission'
+        REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
 
