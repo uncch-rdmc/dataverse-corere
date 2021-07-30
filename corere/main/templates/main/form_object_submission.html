@@ -180,8 +180,32 @@
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit_progress_verification" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
     {% elif curation_formset %}
+        {% comment %}cases to add: curation issues and no verification, curation issues and verification, no curation issues and no verification, no curation issues and no verification{%endcomment%}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit_progress_curation" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
+        <input type="submit" name="submit_progress_curation" value="Submit and Progress"  id="submit_progress_curation_button" >
+
+        <script>
+            var submit_button = document.getElementById('submit_progress_curation_button');
+            submit_button.onclick = function() {
+                var nv_checkbox = document.getElementById('id_curation_formset-0-needs_verification');
+                var cur_status = document.getElementById('id_curation_formset-0-_status'); //cur_status.value
+                console.log(cur_status.value)
+                if(nv_checkbox.checked) {
+                    if(cur_status.value == 'no_issues'){
+                        return confirm('You have approved this submission, and review will be handed to the verifiers. Is this ok?');
+                    } else {
+                        return confirm('You have not approved this submission, but review will still be handed to the verifiers. Is this ok?');
+                    }
+                } else {
+                    if(cur_status.value == 'no_issues'){
+                        return confirm('You have approved this submission, but have not selected verification. After this the manuscript will be ready for completion. Is this ok?');
+                    } else {
+                        return confirm('You have no approved this submission and have not selected verification. After this the editor will be able to create another submission. Is this ok?');
+                    }
+                }
+            };
+
+            </script>
     {% elif create %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit_continue" value="Create and Continue">

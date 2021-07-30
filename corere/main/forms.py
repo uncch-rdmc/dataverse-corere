@@ -891,7 +891,7 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
-        fields = ['_status','report']
+        fields = ['_status','report','needs_verification']
         labels = label_gen(model, fields)
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):

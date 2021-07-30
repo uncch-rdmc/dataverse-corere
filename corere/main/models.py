@@ -143,6 +143,7 @@ class Curation(AbstractCreateUpdateModel):
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", verbose_name='Details')
+    needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -418,7 +419,7 @@ class Submission(AbstractCreateUpdateModel):
         if(self.manuscript._status != Manuscript.Status.PROCESSING):       
             return False
         try:
-            if(self.submission_curation._status != Curation.Status.NO_ISSUES):
+            if(self.submission_curation.needs_verification == False):
                 #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
@@ -472,7 +473,7 @@ class Submission(AbstractCreateUpdateModel):
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def review_curation(self):
         try:
-            if(self.submission_curation._status == Curation.Status.NO_ISSUES):
+            if(self.submission_curation.needs_verification == True):
                 return self.Status.IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
@@ -523,7 +524,7 @@ class Submission(AbstractCreateUpdateModel):
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
     def finish_submission(self):
         if(self.submission_curation._status == Curation.Status.NO_ISSUES):
-            if(self.submission_verification._status == Verification.Status.SUCCESS):
+            if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
                 self.manuscript._status = Manuscript.Status.COMPLETED
                 ## We decided to leave completed manuscripts in the list and toggle their visibility
                 # Delete existing groups when done for clean-up and reporting
