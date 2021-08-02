@@ -143,6 +143,7 @@ class Curation(AbstractCreateUpdateModel):
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", verbose_name='Details')
+    needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_curation")
@@ -253,6 +254,7 @@ class Submission(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new'
         IN_PROGRESS_EDITION = 'in_progress_edition'
+        REJECTED_EDITOR = 'rejected_editor'
         IN_PROGRESS_CURATION = 'in_progress_curation'
         IN_PROGRESS_VERIFICATION = 'in_progress_verification'
         REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
@@ -348,7 +350,7 @@ class Submission(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=Status.NEW, target=RETURN_VALUE(), conditions=[],
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
     def edit_noop(self):
         return self._status
@@ -357,8 +359,8 @@ class Submission(AbstractCreateUpdateModel):
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: ((instance._status == instance.Status.NEW and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
-                                            or (instance._status != instance.Status.NEW and user.has_any_perm(c.PERM_MANU_VIEW_M, instance.manuscript))) )
+        permission=lambda instance, user: (( (instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+                                            or (instance._status != instance.Status.NEW and instance._status != instance.Status.REJECTED_EDITOR and user.has_any_perm(c.PERM_MANU_VIEW_M, instance.manuscript))) )
     def view_noop(self):
         return self._status
 
@@ -367,7 +369,8 @@ class Submission(AbstractCreateUpdateModel):
     def can_submit(self):
         return True
 
-    @transition(field=_status, source=Status.NEW, target=Status.IN_PROGRESS_EDITION, on_error=Status.NEW, conditions=[can_submit],
+    #TODO: I'm not sure if on_error is ever hit, but we'd want it to be NEW or REJECTED_EDITOR conditionally.
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=Status.IN_PROGRESS_EDITION, on_error=Status.NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
@@ -416,7 +419,7 @@ class Submission(AbstractCreateUpdateModel):
         if(self.manuscript._status != Manuscript.Status.PROCESSING):       
             return False
         try:
-            if(self.submission_curation._status != Curation.Status.NO_ISSUES):
+            if(self.submission_curation.needs_verification == False):
                 #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
@@ -446,16 +449,15 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_EDITION], target=RETURN_VALUE(), conditions=[can_submit_edition],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE,instance.manuscript)))
     def submit_edition(self):
-        #TODO: Call manuscript.process
         if(self.submission_edition._status == Edition.Status.NO_ISSUES):
             self.manuscript.process()
             self.manuscript.save()
             return self.Status.IN_PROGRESS_CURATION
         else:
-            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+            #g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
             self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
             self.manuscript.save()
-            return self.Status.RETURNED
+            return self.Status.REJECTED_EDITOR
 
     #-----------------------
 
@@ -471,7 +473,7 @@ class Submission(AbstractCreateUpdateModel):
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def review_curation(self):
         try:
-            if(self.submission_curation._status == Curation.Status.NO_ISSUES):
+            if(self.submission_curation.needs_verification == True):
                 return self.Status.IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
@@ -522,7 +524,7 @@ class Submission(AbstractCreateUpdateModel):
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
     def finish_submission(self):
         if(self.submission_curation._status == Curation.Status.NO_ISSUES):
-            if(self.submission_verification._status == Verification.Status.SUCCESS):
+            if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
                 self.manuscript._status = Manuscript.Status.COMPLETED
                 ## We decided to leave completed manuscripts in the list and toggle their visibility
                 # Delete existing groups when done for clean-up and reporting
@@ -573,7 +575,7 @@ class Manuscript(AbstractCreateUpdateModel):
         NEW = 'new', 'New'
         AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
         AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Resubmission'
-        REVIEWING = 'reviewing', 'Reviewing Submission'
+        REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
 
@@ -723,8 +725,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #Conditions: Submission with status of new
     def can_review(self):
+        #technically this'll return true when somehow a submission exists with NEW and another with REJECTED_EDITOR. Should never happen though.
         if(self.manuscript_submissions.filter(_status=Submission.Status.NEW).count() != 1):
-            return False
+            if(self.manuscript_submissions.filter(_status=Submission.Status.REJECTED_EDITOR).count() != 1):
+                return False
         return True
 
     # Perm: ability to create/edit a submission

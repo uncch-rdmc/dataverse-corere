@@ -464,6 +464,94 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     v_metadata_badge_formset = None
     v_metadata_audit_formset = None
 
+    #TODO: Move this to the top, after (probably) deleting add_formsets
+    def dispatch(self, request, *args, **kwargs):
+        #If new submission with previous submission existing, copy over data from the previous submission
+        if(request.method == 'GET' and not self.object.id):
+            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
+            if prev_max_sub_version_id:
+                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
+
+        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.form = f.SubmissionForms[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.form = f.ReadOnlySubmissionForm
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_edition_noop, request.user) or has_transition_perm(self.object.submission_edition.edit_noop, request.user))):
+                self.edition_formset = f.EditionSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_editionReview_helpText")
+            elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
+                self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+        except (m.Edition.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+                self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_curationReview_helpText")
+            elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
+                self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+        except (m.Curation.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
+                self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
+                self.page_help_text = _("submission_verificationReview_helpText")
+            elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
+                self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+        except (m.Verification.DoesNotExist, KeyError):
+            pass
+
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
+            elif(has_transition_perm(self.object.view_noop, request.user)):
+                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+
+        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
+            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        except (m.Curation.DoesNotExist, KeyError):
+            pass
+        try:
+            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
+            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
+        except (m.Submission.DoesNotExist, KeyError):
+            pass
+        except (m.Curation.DoesNotExist, KeyError):
+            pass
+
+        #TODO: Figure out how we should do perms for these
+        #self.v_metadata_formset = f.VMetadataSubmissionFormset
+        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
+        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
+        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):     
         manuscript_title = self.object.manuscript.title
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
@@ -742,95 +830,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         self.object = prev_sub
 
 
-
-    #TODO: Move this to the top, after (probably) deleting add_formsets
-    def dispatch(self, request, *args, **kwargs):
-        #If new submission with previous submission existing, copy over data from the previous submission
-        if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
-            if prev_max_sub_version_id:
-                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
-
-        role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.form = f.SubmissionForms[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.form = f.ReadOnlySubmissionForm
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_edition_noop, request.user) or has_transition_perm(self.object.submission_edition.edit_noop, request.user))):
-                self.edition_formset = f.EditionSubmissionFormsets[role_name]
-                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
-                self.page_help_text = _("submission_editionReview_helpText")
-            elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
-                self.edition_formset = f.ReadOnlyEditionSubmissionFormset
-        except (m.Edition.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.curation_formset = f.CurationSubmissionFormsets[role_name]
-                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
-                self.page_help_text = _("submission_curationReview_helpText")
-            elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
-                self.curation_formset = f.ReadOnlyCurationSubmissionFormset
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
-                self.verification_formset = f.VerificationSubmissionFormsets[role_name]
-                self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
-                self.page_help_text = _("submission_verificationReview_helpText")
-            elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
-                self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
-        except (m.Verification.DoesNotExist, KeyError):
-            pass
-
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-
-        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-
-        #TODO: Figure out how we should do perms for these
-        #self.v_metadata_formset = f.VMetadataSubmissionFormset
-        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
-        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
-        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
-
-        return super().dispatch(request, *args, **kwargs)
-
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
@@ -895,7 +894,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                         return redirect('submission_uploadfiles', id=self.object.id)
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
-                elif self.object._status == "new":
+                elif self.object._status == self.object.Status.NEW or self.object._status == self.object.Status.REJECTED_EDITOR:
                     if not fsm_check_transition_perm(self.object.submit, request.user): 
                         logger.debug("PermissionDenied")
                         raise Http404()

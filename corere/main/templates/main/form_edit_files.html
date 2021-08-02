@@ -10,7 +10,7 @@
     {% csrf_token %}
     {{ children_formset.non_form_errors }}
     {% crispy children_formset helper %}
-    {% if s_status == "new" %}
+    {% if s_status == "new" or s_status == "rejected_editor" %}
         <input type="submit" name="back_save" value="Back">
         <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
         {% if not read_only %}

@@ -87,7 +87,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = [['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
+    columns = [['selected',''],['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
         columns.append(['curators', "Curators"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
@@ -126,9 +126,8 @@ class ManuscriptJson(CorereBaseDatatableView):
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
         return qs
 
-
 def helper_submission_columns(user):
-    columns = [['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['buttons','Buttons']]
+    columns = [['selected',''],['id','ID'],['version_id', 'Submission'],['submission_status','Submission Status'],['buttons','Buttons']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         columns.append(['edition_status', 'Editor Review'])
         columns.append(['curation_status','Curator Review'])

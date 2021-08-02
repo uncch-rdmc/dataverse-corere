@@ -21,6 +21,9 @@
                 button_index = c;
             } else if(columns[c][0] === 'id' || columns[c][0] === 'created_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //Sometimes this doesn't work right, see issue #26 "Fix Datatable Visibility Bug"
                 column_settings.visible = false;
+            } else if(columns[c][0] === 'selected') {
+                column_settings.orderable = false;
+                column_settings.className = 'select-checkbox';
             }
             columns_config[c] = column_settings
         }
@@ -187,8 +190,10 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
-                    submission_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
-                    submission_status = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
+                    submission_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
+                    console.log(submission_id)
+                    submission_status = dt.rows( { selected: true } ).data()[0][3] //Implicit globals are not best practice
+                    console.log(submission_status)
                     //edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
                     //curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
                     //verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
@@ -222,7 +227,7 @@
                     fixButtonGroupCurve();
 
                     console.log('Table row deselected');
-                } )
+                } ) 
                 .order.neutral().draw()
                 .row(':eq(0)', { page: 'current' }).select();
                 
