@@ -88,7 +88,8 @@
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
-                    manuscript_id = dt.rows( { selected: true } ).data()[0][0] //Implicit globals are not best practice
+                    manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
+                    console.log(manuscript_id);
                     var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
 
                     dt.button('workOnManuscript:name').enable(true);
@@ -97,12 +98,17 @@
                     dt.button('workOnManuscript:name').enable(false);
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
-                    console.log(last_row)
+                    //console.log(last_row)
                     if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
-                });
+                }).on('dblclick', function(e, dt, type, indexes) {
+                    //manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
+                    window.open("manuscript/" + manuscript_id);
+                }
+                )
+                ;
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load
                 var selected_row = 0
                 if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
@@ -131,7 +137,12 @@
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
+                console.log("GETS CALLED");
                 column_settings.visible = true;
+            } 
+            else if(columns[c][0] === 'selected') {
+                column_settings.orderable = false;
+                column_settings.className = 'select-checkbox';
             }
             columns_config[c] = column_settings
         }

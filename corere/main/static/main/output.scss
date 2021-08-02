@@ -37,6 +37,13 @@ ul.errorlist {
 
 }
 
+table.dataTable tr.selected td.select-checkbox:after, table.dataTable tr.selected th.select-checkbox:after {
+    margin-left: -7px;
+    font-size: .5rem;
+    margin-top: 3px;
+    //I can't seem to figure out how to change the color of the checkmark here
+}
+
 .page-title {
     margin-bottom: 1rem;
     font-weight: 500;
