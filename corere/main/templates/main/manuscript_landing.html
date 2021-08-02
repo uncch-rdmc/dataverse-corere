@@ -190,8 +190,10 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     //MAD: these should be rewritten to get values from the construct columns, probably means we'll need a separate function for each table
-                    submission_id = dt.rows( { selected: true } ).data()[0][3] //Implicit globals are not best practice
-                    submission_status = dt.rows( { selected: true } ).data()[0][5] //Implicit globals are not best practice
+                    submission_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
+                    console.log(submission_id)
+                    submission_status = dt.rows( { selected: true } ).data()[0][3] //Implicit globals are not best practice
+                    console.log(submission_status)
                     //edition_id = dt.rows( { selected: true } ).data()[0][2] //Implicit globals are not best practice
                     //curation_id = dt.rows( { selected: true } ).data()[0][4] //Implicit globals are not best practice
                     //verification_id = dt.rows( { selected: true } ).data()[0][6] //Implicit globals are not best practice
