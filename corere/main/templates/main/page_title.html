@@ -1,3 +1,15 @@
+<!-- <div style="margin:0px -10px -10px -10px; background:  #7386D5AA;">
+    <div style="text-align: center;"><h1>Initial Submission Creation</div>
+<ol class="progtrckr" data-progtrckr-steps="5">
+    <li class="progtrckr-done">Order Processing</li>
+    <li class="progtrckr-done">Pre-Production</li>
+    <li class="progtrckr-done">In Production</li>
+    <li class="progtrckr-done">Shipped</li>
+    <li class="progtrckr-todo">Delivered</li>
+</ol>
+<hr>
+</div> -->
+
 <div class="title">
     <div class="cblue">
         <span class="page-title" > {{page_title}}{% spaceless %}
@@ -8,7 +20,11 @@
         {% endif %}{% endspaceless %}
     </div>
 </div>
-{% comment %} <p> </p> {% endcomment %}
+
+{% if progress_bar_html %}
+    {{progress_bar_html|safe }}
+{% endif %}
+
 {% if page_help_text %}
 <br>
 <h6><i><span style="color:#666666; margin-left:1px;"> {{page_help_text}} </span></i></h6>

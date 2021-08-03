@@ -15,7 +15,7 @@ from django.conf import settings
 from notifications.signals import notify
 from django.http import Http404
 from corere.main.templatetags.auth_extras import has_group
-from corere.main.utils import fsm_check_transition_perm
+from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_html
 from django.utils.translation import gettext as _
 from django.db import IntegrityError
 from templated_email import send_templated_mail
@@ -132,8 +132,11 @@ def add_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
 
+    progress_list = c.progress_list_manuscript
+    progress_bar_html = generate_progress_bar_html(progress_list, 'Invite Author')
+
     return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text})
+        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
 
 
 @login_required
