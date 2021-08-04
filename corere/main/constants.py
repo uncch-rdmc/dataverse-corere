@@ -41,5 +41,5 @@ def perm_path(perm):
     return 'main.'+perm
 
 progress_list_manuscript = ['Create Manuscript', 'Upload Files', 'Invite Author']
-progress_list_submission_first = ['Update Manuscript', 'Create Submission', 'Upload Files', 'Run Code', 'Update File Metadata']
-progress_list_submission_subsequent = ['Create Submission', 'Upload Files', 'Run Code', 'Update File Metadata']
+progress_list_submission_first = ['Update Manuscript', 'Create Submission', 'Upload Files', 'Run Code', 'Add File Metadata']
+progress_list_submission_subsequent = ['Create Submission', 'Upload Files', 'Run Code', 'Add File Metadata']

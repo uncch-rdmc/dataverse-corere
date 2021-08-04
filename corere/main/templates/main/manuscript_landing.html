@@ -66,7 +66,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    {% if first_submission %}
+                                    {% if submission_count > 0 %}
                                         window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
                                     {% else %}
                                         window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
@@ -80,7 +80,13 @@
                             text: 'Edit/Progress',
                             name: 'editSubmission',
                             action: function ( e, dt, node, config ) {
-                                window.location.href = "/submission/"+submission_id+"/edit/";
+                                {% if submission_count > 1 %}
+                                    window.location.href = "/submission/"+submission_id+"/edit/";
+                                {% else %}
+                                    window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
+                                {% endif %}
+
+                                
                             },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");

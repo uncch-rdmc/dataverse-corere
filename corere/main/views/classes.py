@@ -280,7 +280,11 @@ class GenericManuscriptView(GenericCorereObjectView):
                 return redirect('manuscript_uploadfiles', id=self.object.id)
             elif request.POST.get('submit_continue_submission'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
-                return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                try: #If it already exists from the user going between the form pages
+                    first_submission = self.object.get_latest_submission()
+                    return redirect('submission_edit', id=first_submission.id)
+                except m.Submission.DoesNotExist:
+                    return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
             else:
                 return redirect(self.redirect)
         else:
@@ -579,23 +583,17 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
     def get(self, request, *args, **kwargs):
         manuscript_title = self.object.manuscript.title
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
-        print(self.object.__dict__)
-
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            print("H1")
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
-                print("H2a")
             else:
                 progress_list = c.progress_list_submission_subsequent
-                print("H2b")
             progress_bar_html = generate_progress_bar_html(progress_list, 'Create Submission')
             context['progress_bar_html'] = progress_bar_html
-
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -781,28 +779,22 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     ### End Messaging ###
 
-
-
-
-                        #is there another one for completed? report happens when curation/verification "fails" but does it when you succeed?
-                        # - Generate report and return submission to authors happens on EVERY submission, even the "final" one. At least currently.
-                        #    - We should probably have generate report actually send the report to the editors. Maybe doublecheck on this with the curators first.
-                        #    - I don't think "return submission" is actually a part of the workflow, maybe doublecheck on this too?
-                        #       - We probably shouldn't say "return submission to authors" on the final submission. If at all
-                        # - We should give a message to the authors when "return submission to authors" is completed
-                        # - Should we add another submission status for the manuscript being completed? Would make notifications easier, also maybe easier to tell in admin
-                        #    - Technically you can tell by looking at the edition/curation/verification
-                        #
-
-
-
-
-
-
+                    #is there another one for completed? report happens when curation/verification "fails" but does it when you succeed?
+                    # - Generate report and return submission to authors happens on EVERY submission, even the "final" one. At least currently.
+                    #    - We should probably have generate report actually send the report to the editors. Maybe doublecheck on this with the curators first.
+                    #    - I don't think "return submission" is actually a part of the workflow, maybe doublecheck on this too?
+                    #       - We probably shouldn't say "return submission to authors" on the final submission. If at all
+                    # - We should give a message to the authors when "return submission to authors" is completed
+                    # - Should we add another submission status for the manuscript being completed? Would make notifications easier, also maybe easier to tell in admin
+                    #    - Technically you can tell by looking at the edition/curation/verification
+                    #
 
                 except TransitionNotAllowed as e:
                     logger.error("TransitionNotAllowed: " + str(e))
                     raise
+
+                if request.POST.get('back_save'):
+                    return redirect('manuscript_complete', id=self.object.manuscript.id)
 
                 if request.POST.get('submit_continue'):
                     messages.add_message(request, messages.SUCCESS, self.msg)
@@ -830,7 +822,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.note_formset.save()
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(),
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
         
@@ -930,7 +922,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update File Metadata')
+            progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
@@ -982,7 +974,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update File Metadata')
+            progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
