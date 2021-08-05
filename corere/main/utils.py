@@ -80,3 +80,25 @@ def get_pretty_user_list_by_group(group):
         else:
             user_list_pretty += [user.first_name + ' ' + user.last_name + ' (' +user.email +')']
     return user_list_pretty
+
+def generate_progress_bar_html(step_list, last_active_step):
+    list_html = '<ol class="progtrckr" data-progtrckr-steps="' + str(len(step_list)) + '">'
+    hit_active_step = False
+
+    for step in step_list:
+        if step == last_active_step:
+            hit_active_step = True
+        list_html += '<li class="progtrckr-'+('todo' if hit_active_step else 'done') +'">'+step+'</li>'
+
+
+    list_html += '</ol>'
+    return list_html
+
+
+# <ol class="progtrckr" data-progtrckr-steps="5">
+#     <li class="progtrckr-done">Order Processing</li>
+#     <li class="progtrckr-done">Pre-Production</li>
+#     <li class="progtrckr-done">In Production</li>
+#     <li class="progtrckr-done">Shipped</li>
+#     <li class="progtrckr-todo">Delivered</li>
+# </ol>

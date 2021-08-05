@@ -67,13 +67,9 @@ def manuscript_landing(request, id=None):
     manuscript_curators = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
     manuscript_verifiers = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
 
-    first_submission = True
-    if(manuscript.manuscript_submissions.count() > 0):
-        first_submission = False
-
     args = {'user':     request.user, 
             "manuscript_id": id,
-            "first_submission": first_submission,
+            "submission_count": manuscript.manuscript_submissions.count(),
             "manuscript_title": manuscript.title,
             "manuscript_authors": manuscript_authors,
             "manuscript_editors": manuscript_editors,

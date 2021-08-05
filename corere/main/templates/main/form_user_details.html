@@ -3,13 +3,11 @@
 {% load crispy_forms_tags %}
 
 {% include "main/page_title.html" %}  
-<form action="{{key|default_if_none:""}}" method="post">
+<form action="{{key|default_if_none:''}}" method="post">
     {% csrf_token %}
-    <table>
-        {{form|crispy}}
-    </table>
-    <input type="submit" name="submit" value="Submit">
+    {% crispy form helper %}
     <input type=button value="Back" onClick="javascript:history.go(-1);">
+    <input type="submit" name="submit" value="Submit">
 </form>
 
 {% endblock content %}

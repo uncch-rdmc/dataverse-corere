@@ -2,9 +2,9 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
-from corere.main.models import Manuscript, User
+from corere.main.models import Manuscript, User, CorereInvitation
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorAddForm, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -15,7 +15,7 @@ from django.conf import settings
 from notifications.signals import notify
 from django.http import Http404
 from corere.main.templatetags.auth_extras import has_group
-from corere.main.utils import fsm_check_transition_perm
+from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_html
 from django.utils.translation import gettext as _
 from django.db import IntegrityError
 from templated_email import send_templated_mail
@@ -89,12 +89,15 @@ def add_author(request, id=None):
     manuscript = Manuscript.objects.get(pk=id)
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
+    helper = UserByRoleAddFormHelper()
 
     if(manuscript.is_complete()):
         raise Http404()
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
             author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
             try:
                 user = User.objects.get(email=email)
@@ -103,7 +106,7 @@ def add_author(request, id=None):
                 #assign role
             except User.DoesNotExist:
                 new_user = True
-                user = helper_create_user_and_invite(request, email, author_role)
+                user = helper_create_user_and_invite(request, email, first_name, last_name, author_role)
 
             manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
             manu_author_group.user_set.add(user)
@@ -132,8 +135,11 @@ def add_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
 
-    return render(request, 'main/form_add_author.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text})
+    progress_list = c.progress_list_manuscript
+    progress_bar_html = generate_progress_bar_html(progress_list, 'Invite Author')
+
+    return render(request, 'main/form_add_author.html', {'form': form, 'helper': helper,  'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
+        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
 
 
 @login_required
@@ -372,29 +378,35 @@ def invite_verifier(request):
 def invite_user_not_author(request, role, role_text):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         form = UserInviteForm(request.POST or None)
+        helper = UserByRoleAddFormHelper()
         if request.method == 'POST':
             if form.is_valid():
                 email = form.cleaned_data['email']
-                if(email):
-                    ### Messaging ###
-                    msg = _("user_inviteRole_banner").format(email=email, role=role_text)
-                    new_user = helper_create_user_and_invite(request, email, role)
-                    messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
-                    ### End Messaging ###
+                first_name = form.cleaned_data['first_name']
+                last_name = form.cleaned_data['last_name']
+                
+                ### Messaging ###
+                msg = _("user_inviteRole_banner").format(email=email, role=role_text)
+                new_user = helper_create_user_and_invite(request, email, first_name, last_name, role)
+                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+                ### End Messaging ###
             else:
                 logger.debug(form.errors) #TODO: DO MORE?
-        return render(request, 'main/form_user_details.html', {'form': form, 'page_title': "Invite {0}".format(role_text.capitalize())})
+        return render(request, 'main/form_user_details.html', {'form': form, 'helper': helper, 'page_title': "Invite {0}".format(role_text.capitalize())})
 
     else:
         raise Http404()
 
 #TODO: Should most of this be added to the user save method?
-def helper_create_user_and_invite(request, email, role):
-    Invitation = get_invitation_model()
-    invite = Invitation.create(email)#, inviter=request.user)
+def helper_create_user_and_invite(request, email, first_name, last_name, role):
+    #Invitation = get_invitation_model()
+    #print(Invitation.__dict__)
+    invite = CorereInvitation.create(email, first_name, last_name)#, inviter=request.user)
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
+    new_user.first_name = first_name
+    new_user.last_name = last_name
     
     new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite

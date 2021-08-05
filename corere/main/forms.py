@@ -85,9 +85,24 @@ def label_gen(model, field_strings, required=[]):
 #-------------------------
 
 
+class UserByRoleAddFormHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            Div(
+                Div('first_name',css_class='col-md-6',),
+                Div('last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'email'
+        )
+
 #For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
-    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
+    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
     email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
 
 class CustomSelect2UserWidget(forms.SelectMultiple):
@@ -119,6 +134,8 @@ class EditUserForm(forms.ModelForm):
 
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
+    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
     email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
 #No actual editing is done in this form, just uploads

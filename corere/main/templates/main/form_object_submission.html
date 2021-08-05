@@ -119,9 +119,9 @@
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    <h5 class="cblue">Submisison Info</h5>
     {% crispy form helper %}
-    <hr>
-    
+
     {% if v_metadata_formset %}
         <h5 class="cblue">Verification Metadata</h5>
         {{ v_metadata_formset.non_form_errors }}
@@ -178,10 +178,12 @@
         <input type="submit" name="submit" value="Save">
     {% elif verification_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
+        <input type="submit" name="submit" value="Save" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_verification" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
     {% elif curation_formset %}
         {% comment %}cases to add: curation issues and no verification, curation issues and verification, no curation issues and no verification, no curation issues and no verification{%endcomment%}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
+        <input type="submit" name="submit" value="Save" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_curation" value="Submit and Progress"  id="submit_progress_curation_button" >
 
         <script>
@@ -208,12 +210,17 @@
             </script>
     {% elif create %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
+        <input type="submit" name="back_save" value="Back">
         <input type="submit" name="submit_continue" value="Create and Continue">
     {% elif s_status == "new" or s_status == "rejected_editor"%}
         <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{parent_id}}/';}">
+        {% if not s_version > 1 %}
+            <input type="submit" name="back_save" value="Back">
+        {% endif %}
         <input type="submit" name="submit_continue" value="Save and Continue">
     {% elif edition_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
+        <input type="submit" name="submit" value="Save" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_edition" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
     {% else %}
         {% comment %} <input type="submit" name="submit_progress_submission" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');"> {% endcomment %}
