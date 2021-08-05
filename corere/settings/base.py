@@ -19,6 +19,7 @@ SERVER_ADDRESS = os.environ["SERVER_ADDRESS"]
 
 #Invitation related
 SITE_ID = 1
+#INVITATION_MODEL = 'main.CorereInvitation' #Instead of using this we just reference CorereInvitation directly
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
 

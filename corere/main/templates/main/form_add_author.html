@@ -27,9 +27,7 @@
 {% include "main/page_title.html" %}
 <form action="" method="post">
     {% csrf_token %}
-    <table>
-        {{form|crispy}}
-    </table>
+    {% crispy form helper %}
     <input type=button value="Back" onclick="location.href='../uploadfiles/'">
     <input type="submit" name="submit" value="Submit" onClick="return confirm('This manuscript will be handed off to the Author, is that ok?');">
 </form>

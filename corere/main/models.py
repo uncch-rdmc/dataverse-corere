@@ -29,6 +29,15 @@ from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
 from datetime import date, datetime
 
+#for custom invitation class
+from invitations import signals
+from invitations.models import Invitation
+from invitations.adapters import get_invitations_adapter
+from django.utils.crypto import get_random_string
+from django.contrib.sites.models import Site
+from django.urls import reverse
+
+
 logger = logging.getLogger(__name__)  
 ####################################################
 
@@ -960,6 +969,59 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Packages Info', help_text='Please provide the list of your packages and their versions.')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+
+#other fields (email, created) are in base model
+#see https://github.com/bee-keeper/django-invitations/issues/143 for a bit more info (especially if we want to wire this into admin)
+class CorereInvitation(Invitation):
+    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
+    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
+
+    @classmethod
+    def create(cls, email, first_name, last_name, inviter=None, **kwargs):
+        key = get_random_string(64).lower()
+        print("In CorereInvitation.create()")
+        print(first_name)
+        instance = cls._default_manager.create(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            key=key,
+            inviter=inviter,
+            **kwargs)
+        return instance
+
+    def send_invitation(self, request, **kwargs):
+        current_site = kwargs.pop('site', Site.objects.get_current())
+        invite_url = reverse('invitations:accept-invite',
+                             args=[self.key])
+        invite_url = request.build_absolute_uri(invite_url)
+        ctx = kwargs
+        print("In CorereInvitation.create()")
+        print(self.first_name)
+        ctx.update({
+            'invite_url': invite_url,
+            'site_name': current_site.name,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'key': self.key,
+            'inviter': self.inviter,
+        })
+
+        email_template = 'invitations/email/email_invite'
+
+        get_invitations_adapter().send_mail(
+            email_template,
+            self.email,
+            ctx)
+        self.sent = timezone.now()
+        self.save()
+
+        signals.invite_url_sent.send(
+            sender=self.__class__,
+            instance=self,
+            invite_url_sent=invite_url,
+            inviter=self.inviter)
 
 ############### POST-SAVE ################
 
