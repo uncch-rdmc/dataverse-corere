@@ -55,12 +55,13 @@
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
                                 if(search_completed_vis_toggle == false) {
-                                    table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                                    //Implicit globals are not best practice
+                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                                     search_completed_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 3 ).search( "" ).draw();
+                                    table.columns( 4 ).search( "" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
@@ -73,12 +74,13 @@
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
                                 if(search_curator_vis_toggle == false) {
-                                    table.columns( 6 ).search( "{{request.user.username}}" ).draw();
+                                    //Implicit globals are not best practice
+                                    table.columns( 5 ).search( "{{request.user.username}}" ).draw();
                                     search_curator_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> All Curators' );
                                     
                                 } else {
-                                    table.columns( 6 ).search( "" ).draw();
+                                    table.columns( 5 ).search( "" ).draw();
                                     search_curator_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> All Curators' );
                                 }
@@ -89,7 +91,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
-                    console.log(manuscript_id);
+                    //console.log(manuscript_id);
                     var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
 
                     dt.button('workOnManuscript:name').enable(true);
@@ -99,7 +101,7 @@
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
                     //console.log(last_row)
-                    if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
+                    if(originalEvent != null && originalEvent.type == "keydown" && cell.index().row != last_row) { 
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
@@ -121,10 +123,11 @@
                 table.order.neutral().draw();
                 table.row(':first').select(); //Select first row always
 
-                table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                //Implicit globals are not best practice
+                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
-                table.columns( 6 ).search( "{{request.user.username}}" ).draw();
+                table.columns( 5 ).search( "{{request.user.username}}" ).draw();
                 {% endif %}
             }
         })
@@ -137,7 +140,6 @@
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
-                console.log("GETS CALLED");
                 column_settings.visible = true;
             } 
             else if(columns[c][0] === 'selected') {
@@ -157,6 +159,85 @@
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}
+                    <th>{{ field }}</th>
+                {% endfor %}
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+{% comment %} USER TABLE {% endcomment %}
+
+<script type="text/javascript">
+    var search_completed_vis_toggle = true;
+    var search_curator_vis_toggle = true;
+    var USER_LIST_JSON_URL = '{% url "user_table" %}';
+
+    $(document).ready(function() {;
+        dt_user_ajax = $.ajax({
+            url: USER_LIST_JSON_URL,
+            cache: false,
+            success: function (response) {
+                console.log("SUCCESS1")
+                console.log(response.data.slice(1))
+                var [columns_config, button_index] = constructTable(response.data[0]);
+                var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
+                var select_timeout;
+                var table = $('#user_table').DataTable({
+                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+                    searching: true,
+                    processing: true,
+                    stateSave: true,
+                    paging: true,
+                    select: 'single',
+                    columns: columns_config,
+                    dom: 'Bfrtpl',
+                    keys: true, //for keyboard
+                    rowId: 'id', //for retaining selected row
+                    data: response.data.slice(1),
+                    buttons: [
+                    
+                    ]
+                });
+                table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+                table.order.neutral().draw(); //NOT SURE WHAT THIS DOES
+                table.row(':first').select(); //Select first row always
+                console.log("SUCCESS2")
+            }
+        })
+
+    });
+
+    function constructTable(columns) {
+        var columns_config = [];
+        var button_index;
+        for (var c in columns) {
+            var column_settings = {name: columns[c][0], title:columns[c][1]}
+            if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
+                column_settings.visible = true;
+            } 
+            else if(columns[c][0] === 'selected') {
+                column_settings.orderable = false;
+                column_settings.className = 'select-checkbox';
+            }
+            columns_config[c] = column_settings
+        }
+        return [columns_config, button_index];
+    } 
+</script>
+
+
+<hr>
+<h2>Users</h2>
+
+<div>
+    <div class="cblue" id="user_table_holder">
+        <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+            <thead>
+                {% for field in user_columns %}
                     <th>{{ field }}</th>
                 {% endfor %}
             </thead>

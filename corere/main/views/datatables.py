@@ -109,9 +109,9 @@ class ManuscriptJson(CorereBaseDatatableView):
         if column[0] == 'curators':
             return ", ".join(list(m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).values_list('username', flat=True)))
         elif column[0] == 'created_at':
-            return '{0}'.format(manuscript.created_at.strftime("%Y/%m/%d")) #%H:%M:%S"
+            return '{0}'.format(manuscript.created_at.strftime("%b %d %Y %H:%M")) #%H:%M:%S"
         elif column[0] == 'updated_at':
-            return '{0}'.format(manuscript.updated_at.strftime("%Y/%m/%d"))
+            return '{0}'.format(manuscript.updated_at.strftime("%b %d %Y %H:%M"))
         else:
             return super(ManuscriptJson, self).render_column(manuscript, column[0])
 
@@ -278,4 +278,55 @@ class SubmissionJson(CorereBaseDatatableView):
         if search:
             qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search))
         return qs
+
+
+
+
+def helper_user_columns(user):
+    columns = [['selected',''],['id','ID'],['username','username'],['roles','Roles'],['assigned_manuscripts','Assigned Manuscripts']]
+    # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
+    #     columns.append(['curators', "Curators"])
+    # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
+    #     #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
+    #     columns.append(['updated_at','Last Update Date'])
+    return columns
+    #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
+
+# Customizing django-datatables-view defaults
+# See https://pypi.org/project/django-datatables-view/ for info on functions
+class UserJson(CorereBaseDatatableView):
+    max_display_length = 500
+
+    def get_columns(self):
+        return helper_user_columns(self.request.user)
+
+    # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
+    def render_column(self, user, column):
+        #these string matches aren't the most exact, but fine for now
+        if column[0] == 'roles':
+            return ', '.join(map(str, user.groups.filter(name__contains='Role')))
+        if column[0] == 'assigned_manuscripts':
+            return user.groups.filter(name__contains='Manuscript').count()
+        return super(UserJson, self).render_column(user, column[0])
+
+    def get_initial_queryset(self):
+        return(m.User.objects.all())
+        # manuscript_id = self.kwargs['manuscript_id']
+        # try:
+        #     manuscript = m.Manuscript.objects.get(id=manuscript_id)
+        # except ObjectDoesNotExist:
+        #     raise Http404()
+        # if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+        #     return(m.Submission.objects.filter(manuscript=manuscript_id).order_by('-version_id'))
+        # else:
+        #     raise Http404()    # return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=m.Manuscript).order_by('-id')
+
+    #Note: this isn't tied to the search bar in the datatable, that happens solely browserside
+    # def filter_queryset(self, qs):
+    #     # use parameters passed in GET request to filter (search) queryset
+    #     search = self.request.GET.get('search[value]', None)
+    #     if search:
+    #         qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
+    #     return qs
+
 

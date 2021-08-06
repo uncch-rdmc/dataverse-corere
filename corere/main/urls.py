@@ -58,5 +58,7 @@ urlpatterns = [
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
     path('switch_role/', main.switch_role, name="switch_role"),
+
+    path('user_table/', datatables.UserJson.as_view(), name="user_table"),
     
 ]

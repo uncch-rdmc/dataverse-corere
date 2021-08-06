@@ -5,7 +5,7 @@ from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
-from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
+from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns, helper_user_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
 from corere.main.utils import get_pretty_user_list_by_group
 from django.contrib.auth.models import Permission, Group
@@ -23,7 +23,8 @@ def index(request):
         args = {'user':     request.user, 
                 'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
-                'submission_columns':  helper_submission_columns(request.user),
+                #'submission_columns':  helper_submission_columns(request.user),
+                'user_columns':  helper_user_columns(request.user),
                 'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
                 'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
                 'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
