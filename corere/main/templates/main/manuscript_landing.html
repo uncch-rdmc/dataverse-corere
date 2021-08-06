@@ -24,7 +24,6 @@
                 column_settings.visible = false;
             } else if(columns[c][0] === 'submission_timestamp' || columns[c][0] === 'edition_timestamp' || columns[c][0] === 'curation_timestamp' || columns[c][0] === 'verification_timestamp') {
                 column_settings.visible = false;
-                console.log("HELLO")
             } else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
@@ -210,7 +209,6 @@
                                 column.visible( ! column.visible() );
                                 var column = table.column(11);
                                 column.visible( ! column.visible() );
-                                console.log("VISIBILES")
 
                                 if(table_show_timestamps == false) {
                                     table_show_timestamps = true;
@@ -324,7 +322,7 @@
     </div>
 
     <p class="my-2"> 
-        <b>Status: {{manuscript_status}} </b><br>
+        <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
         Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
         Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 

@@ -76,6 +76,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.get_max_submission_version_id() != None),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
