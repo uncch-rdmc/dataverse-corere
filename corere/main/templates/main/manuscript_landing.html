@@ -5,6 +5,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
+    var table_show_timestamps = false;
     var createSubButton = {{create_sub_allowed}};
 
     function sub_table_callback(table) {
@@ -21,6 +22,9 @@
                 button_index = c;
             } else if(columns[c][0] === 'id' || columns[c][0] === 'created_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //Sometimes this doesn't work right, see issue #26 "Fix Datatable Visibility Bug"
                 column_settings.visible = false;
+            } else if(columns[c][0] === 'submission_timestamp' || columns[c][0] === 'edition_timestamp' || columns[c][0] === 'curation_timestamp' || columns[c][0] === 'verification_timestamp') {
+                column_settings.visible = false;
+                console.log("HELLO")
             } else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
@@ -191,6 +195,33 @@
                             },
                             enabled: false
                         },
+                        {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
+                        {
+                            text: '<i class="far fa-eye-slash"></i> Timestamps Hidden',
+                            name: 'viewnotuserassigned',
+                            className: 'visibilityButton',
+                            action: function ( e, dt, node, config ) {
+                                //Implicit globals are not best practice
+                                var column = table.column(4);
+                                column.visible( ! column.visible() );
+                                var column = table.column(7);
+                                column.visible( ! column.visible() );
+                                var column = table.column(9);
+                                column.visible( ! column.visible() );
+                                var column = table.column(11);
+                                column.visible( ! column.visible() );
+                                console.log("VISIBILES")
+
+                                if(table_show_timestamps == false) {
+                                    table_show_timestamps = true;
+                                    this.text( '<i class="far fa-eye"></i> Timestamps Shown' );                                    
+                                } else {
+                                    table_show_timestamps  = false;
+                                    this.text( '<i class="far fa-eye-slash"></i> Timestamps Hidden' );
+                                }
+                            },
+                        },
+                        {% endif %}
 
                     ]
                 })

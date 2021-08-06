@@ -979,8 +979,6 @@ class CorereInvitation(Invitation):
     @classmethod
     def create(cls, email, first_name, last_name, inviter=None, **kwargs):
         key = get_random_string(64).lower()
-        print("In CorereInvitation.create()")
-        print(first_name)
         instance = cls._default_manager.create(
             email=email,
             first_name=first_name,
@@ -996,8 +994,6 @@ class CorereInvitation(Invitation):
                              args=[self.key])
         invite_url = request.build_absolute_uri(invite_url)
         ctx = kwargs
-        print("In CorereInvitation.create()")
-        print(self.first_name)
         ctx.update({
             'invite_url': invite_url,
             'site_name': current_site.name,
