@@ -2,7 +2,7 @@
 {% load bootstrap_msg_class_lvls %}
 {% load notifications_tags %}
 {% load auth_extras %}
-{% load groups_contain_count %}
+{% load groups_contain_count_no_completed %}
 
 {# NOTE: if you edit this navbar, edit the oauth2-proxy file sign_in.html  #}
 <nav class="navbar navbar-expand-lg navbar-light ">
@@ -26,7 +26,7 @@
             {% if request.user|has_group:"Role Curator" %} 
               <a class="dropdown-item" href="/site_actions">Site Actions</a>
             {% endif%}
-            {% if request.user|groups_contain_count:"Role" > 1 or request.user.is_superuser %}
+            {% if request.user|groups_contain_count_no_completed:"Role" > 1 or request.user.is_superuser %}
               <div class="dropdown-divider"></div>
               {% if request.user|has_group:"Role Author" %} 
                 {% if request.session.active_role == "Author" %} 

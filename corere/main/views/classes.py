@@ -1276,7 +1276,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
                         messages.add_message(request, messages.SUCCESS, self.msg)
-                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
                         notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
@@ -1285,7 +1285,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         #If not complete, send message to author about submitting again
                         self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
                         messages.add_message(request, messages.SUCCESS, self.msg)
-                        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                        recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
                         notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields

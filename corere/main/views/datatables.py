@@ -306,7 +306,7 @@ class UserJson(CorereBaseDatatableView):
         if column[0] == 'roles':
             return ', '.join(map(str, user.groups.filter(name__contains='Role')))
         if column[0] == 'assigned_manuscripts':
-            return user.groups.filter(name__contains='Manuscript').count()
+            return user.groups.filter(name__contains='Manuscript').exclude(name__endswith=c.GROUP_COMPLETED_SUFFIX).count()
         return super(UserJson, self).render_column(user, column[0])
 
     def get_initial_queryset(self):

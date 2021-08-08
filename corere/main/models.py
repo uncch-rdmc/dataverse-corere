@@ -536,11 +536,27 @@ class Submission(AbstractCreateUpdateModel):
             if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
                 self.manuscript._status = Manuscript.Status.COMPLETED
                 ## We decided to leave completed manuscripts in the list and toggle their visibility
-                # Delete existing groups when done for clean-up and reporting
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+
+                # Rename existing groups (add completed suffix) when done for clean-up and reporting
+                author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
+                author_group = Group.objects.get(name=author_name)
+                author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
+                author_group.save()
+
+                editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
+                editor_group = Group.objects.get(name=editor_name)
+                editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
+                editor_group.save()
+
+                curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+                curator_group = Group.objects.get(name=curator_name)
+                curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+                curator_group.save()
+
+                verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
+                verifier_group = Group.objects.get(name=verifier_name)
+                verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
+                verifier_group.save()
 
                 self.manuscript.save()
                 return
@@ -719,7 +735,7 @@ class Manuscript(AbstractCreateUpdateModel):
         # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
         #try:
 
-        if (self.manuscript_submissions.filter(Q(_status=Submission.Status.NEW)| Q(_status=Submission.Status.IN_PROGRESS_EDITION)
+        if (self.manuscript_submissions.filter(Q(_status=Submission.Status.NEW)| Q(_status=Submission.Status.REJECTED_EDITOR)| Q(_status=Submission.Status.IN_PROGRESS_EDITION)
                                              | Q(_status=Submission.Status.IN_PROGRESS_CURATION)| Q(_status=Submission.Status.IN_PROGRESS_VERIFICATION)).count() != 0):
             return False
         return True
@@ -783,10 +799,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
 @receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
 def delete_manuscript_groups(sender, instance, using, **kwargs):
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
 class ContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)

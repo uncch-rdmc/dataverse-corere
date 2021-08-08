@@ -1,6 +1,6 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
-{% load groups_contain_count %}
+{% load groups_contain_count_no_completed %}
 {% load crispy_forms_tags %}
 {% comment %} {{ form.media.css }} {% endcomment %}
 
@@ -45,7 +45,7 @@
     <tr>
         <td>{{ u.username }}</td>
         {% if role_name != "Author" or can_remove_author %}
-            <td>{{ u|groups_contain_count:group_substring }}</td>
+            <td>{{ u|groups_contain_count_no_completed:group_substring }}</td>
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="unassign('{{id}}','{{role_name|lower}}','{{u.id}}')"><span class="fas fa-user-minus"></span></button></td>
         {% endif %}
     </tr>

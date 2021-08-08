@@ -41,7 +41,7 @@ def invite_assign_author(request, id=None):
     # if(manuscript.is_complete()): #or not(request.user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or request.user.is_superuser)):
     #     raise Http404()
 
-    manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
+    manu_author_group = Group.objects.get(name__startswith=group_substring + " " + str(manuscript.id))
     can_remove_author = request.user.has_any_perm(c.PERM_MANU_REMOVE_AUTHORS, manuscript)
     if request.method == 'POST':
         if form.is_valid():
@@ -430,7 +430,7 @@ def helper_generate_select_table_info(role_name, group_substring):
     table_dict = "["
     for u in users:
         #{key1: "foo", key2: someObj}
-        count = u.groups.filter(name__contains=group_substring).count()
+        count = u.groups.filter(name__contains=group_substring).exclude(name__endswith=c.GROUP_COMPLETED_SUFFIX).count()
         table_dict += "['" + u.username +"','"+str(count)+"'],"
     table_dict += "]"
     return table_dict
