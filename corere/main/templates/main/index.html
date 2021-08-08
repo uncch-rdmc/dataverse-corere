@@ -7,7 +7,6 @@
 
 <script type="text/javascript">
     var search_completed_vis_toggle = true;
-    var search_curator_vis_toggle = true;
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
 
     $(document).ready(function() {;
@@ -15,7 +14,7 @@
             url: MANUSCRIPT_LIST_JSON_URL,
             cache: false,
             success: function (response) {
-                var [columns_config, button_index] = constructTable(response.data[0]);
+                var [columns_config, button_index] = constructTableM(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
                 var select_timeout;
                 var table = $('#manuscript_table').DataTable({
@@ -69,20 +68,22 @@
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
                         {
-                            text: '<i class="far fa-eye-slash"></i> All Curators',
+                            text: '<i class="far fa-eye"></i> All Manuscripts',
                             name: 'viewnotuserassigned',
+                            attr: {
+                                id: 'manuscriptViewMeButton'
+                            },
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
-                                if(search_curator_vis_toggle == false) {
+                                if(!$('#manuscript_table').hasClass("visibleMe")) {
                                     //Implicit globals are not best practice
                                     table.columns( 5 ).search( "{{request.user.username}}" ).draw();
-                                    search_curator_vis_toggle = true;
-                                    this.text( '<i class="far fa-eye-slash"></i> All Curators' );
-                                    
+                                    $('#manuscript_table').addClass("visibleMe")
+                                    this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
                                 } else {
                                     table.columns( 5 ).search( "" ).draw();
-                                    search_curator_vis_toggle = false;
-                                    this.text( '<i class="far fa-eye"></i> All Curators' );
+                                    $('#manuscript_table').removeClass("visibleMe")
+                                    this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
                             },
                         },
@@ -134,9 +135,10 @@
 
     });
 
-    function constructTable(columns) {
+    function constructTableM(columns) {
         var columns_config = [];
         var button_index;
+        console.log("HELLO")
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
@@ -145,7 +147,12 @@
             else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
+            } 
+            else if(columns[c][0] === 'users') {
+                console.log("hello3")
+                column_settings.visible = false;
             }
+            console.log(columns[c][0])
             columns_config[c] = column_settings
         }
         return [columns_config, button_index];
@@ -173,7 +180,6 @@
 
 <script type="text/javascript">
     var search_completed_vis_toggle = true;
-    var search_curator_vis_toggle = true;
     var USER_LIST_JSON_URL = '{% url "user_table" %}';
 
     $(document).ready(function() {;
@@ -181,8 +187,8 @@
             url: USER_LIST_JSON_URL,
             cache: false,
             success: function (response) {
-                console.log("SUCCESS1")
-                console.log(response.data.slice(1))
+                // console.log("SUCCESS1")
+                // console.log(response.data.slice(1))
                 var [columns_config, button_index] = constructTable(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
                 var select_timeout;
@@ -201,25 +207,45 @@
                     buttons: [
                     
                     ]
-                });
+                })
+                .on( 'select', function ( e, dt, type, indexes ) {
+                    username = dt.rows( { selected: true } ).data()[0][2]
+                    $('#manuscript_table').DataTable().columns(5).search(username).draw();
+                    if(! $('#manuscript_table').hasClass("visibleMe")) {
+                        $('#manuscript_table').addClass("visibleMe")
+                    }
+                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> Custom Manuscripts' );
+                    console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
+
+                } )
+                .on( 'deselect', function ( e, dt, type, indexes ) {
+                    if($('#manuscript_table').hasClass("visibleMe")) {
+                        $('#manuscript_table').removeClass("visibleMe")
+                    }
+
+                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> All Manuscripts' );
+                    $('#manuscript_table').DataTable().columns(5).search('').draw();
+                    // dt.button('workOnManuscript:name').enable(false);
+                } );
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
                 table.order.neutral().draw(); //NOT SURE WHAT THIS DOES
-                table.row(':first').select(); //Select first row always
-                console.log("SUCCESS2")
+
             }
         })
 
     });
 
     function constructTable(columns) {
+        console.log("HELLO 2")
         var columns_config = [];
         var button_index;
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
-            if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
-                column_settings.visible = true;
-            } 
-            else if(columns[c][0] === 'selected') {
+            // if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
+            //     column_settings.visible = true;
+            // } 
+            // else 
+            if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
             }

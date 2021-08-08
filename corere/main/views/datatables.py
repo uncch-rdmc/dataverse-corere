@@ -89,7 +89,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 def helper_manuscript_columns(user):
     columns = [['selected',''],['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns.append(['curators', "Curators"])
+        columns.append(['users', "Users"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
         columns.append(['updated_at','Last Update Date'])
@@ -106,8 +106,8 @@ class ManuscriptJson(CorereBaseDatatableView):
 
     # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
     def render_column(self, manuscript, column):
-        if column[0] == 'curators':
-            return ", ".join(list(m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)).values_list('username', flat=True)))
+        if column[0] == 'users':
+            return ", ".join(list(set(m.User.objects.filter(groups__name__contains="Manuscript " + str(manuscript.id)).values_list('username', flat=True))))
         elif column[0] == 'created_at':
             return '{0}'.format(manuscript.created_at.strftime("%b %d %Y %H:%M")) #%H:%M:%S"
         elif column[0] == 'updated_at':
