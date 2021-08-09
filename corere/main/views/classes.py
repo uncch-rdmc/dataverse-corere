@@ -592,7 +592,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Submission')
+            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.note_formset is not None):
@@ -831,7 +831,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Submission')
+            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.note_formset is not None):

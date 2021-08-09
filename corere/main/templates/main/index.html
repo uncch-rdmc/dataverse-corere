@@ -94,6 +94,10 @@
                                     this.text( 'Hide User Filter Table' );    
                                 } else {
                                     $('#user_table_holder').attr('hidden', true);
+                                    $('#user_table').DataTable().search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+                                    $('#user_table').DataTable().rows().deselect();
+                                    $('#manuscript_table').DataTable().search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+
                                     this.text( 'Show User Filter Table' );        
                                 }
                                 // if(!$('#manuscript_table').hasClass("visibleMe")) {
