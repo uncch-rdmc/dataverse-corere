@@ -33,6 +33,7 @@ DOCKER_BUILD_FOLDER = "/tmp"
 
 # Application definition
 INSTALLED_APPS = [
+    'django.forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,6 +52,8 @@ INSTALLED_APPS = [
     'simple_history',
     'corere.main',
 ]
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting' #to allow our custom override of default widgets
 
 INSTALLED_APPS_DEBUG = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
@@ -86,7 +89,7 @@ ROOT_URLCONF = 'corere.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'main/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
