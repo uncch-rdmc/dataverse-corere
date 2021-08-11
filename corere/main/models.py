@@ -586,7 +586,7 @@ class Author(models.Model):
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
 
 class DataSource(models.Model):
-    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='Data Source')
+    text = models.CharField(max_length=4000, blank=False, null=False, default="", verbose_name='Data Source')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_data_sources")
 
 class Keyword(models.Model):
@@ -621,15 +621,16 @@ class Manuscript(AbstractCreateUpdateModel):
         OTHER = 'other', 'Other'
 
     title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
-    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
-    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
-    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact Last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
+    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
+    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript includes qualitative analysis')
+    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Does this manuscript need verification of qualitative results by QDR?')
+    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
-    description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
+    description = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
+    additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')

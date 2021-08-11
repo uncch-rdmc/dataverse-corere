@@ -163,7 +163,7 @@ class ManuscriptFormHelper(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
-            'title','pub_id','description','subject',
+            'title','pub_id','description','subject', 'additional_info',
             Div(
                 Div('qual_analysis',css_class='col-md-6',),
                 Div('qdr_review',css_class='col-md-6',),
@@ -184,7 +184,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
-            'description','subject']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+            'description','subject','additional_info']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         always_required = ['title'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
@@ -214,12 +214,11 @@ class ManuscriptBaseForm(forms.ModelForm):
                 self.add_error('contact_email', 'This field is required.')
 
             validation_errors = [] #we store all the "generic" errors and raise them at once
-            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
-            if(self.data['data_source_formset-0-text'] == ""):
-                validation_errors.append(ValidationError("You must specify a data source."))
+            # if(self.data['data_source_formset-0-text'] == ""):
+            #     validation_errors.append(ValidationError("You must specify a data source."))
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
@@ -276,6 +275,7 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['contact_last_name'].disabled = True
         self.fields['contact_email'].disabled = True
         self.fields['description'].disabled = True
+        self.fields['additional_info'].disabled = True
         self.fields['subject'].disabled = True
 
 ManuscriptForms = {
