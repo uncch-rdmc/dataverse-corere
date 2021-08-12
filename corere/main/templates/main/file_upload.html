@@ -17,6 +17,14 @@
         
         {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" %}
             <input type=button value="Back" onclick="location.href='../edit/'">
+            {% if obj_type == "submission" %}
+            <!-- <button type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download">Download submission</span></button> -->
+            <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+            {% else %}
+            <!-- <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download"></span>Download manuscript</button> -->
+        
+            <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
+            {% endif %}
             {% if obj_type == 'submission' %}
                 <input type="submit" name="submit_continue" value="Launch Notebook">
             {% else %}
@@ -24,7 +32,16 @@
             {% endif %}
         {% else %}
             <input type=button value="Home" onClick="location.href='/'">
+            {% if obj_type == "submission" %}
+            <!-- <button type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download">Download submission</span></button> -->
+            <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
+            {% else %}
+            <!-- <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download"></span>Download manuscript</button> -->
+        
+            <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
+            {% endif %}
         {% endif %}
+
     </form>
     <script type="text/javascript">
         obj_type = "{{obj_type}}"

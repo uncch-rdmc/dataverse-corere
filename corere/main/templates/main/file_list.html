@@ -27,12 +27,5 @@
         <button class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
     {% endif %}
     <br>
-    {% if obj_type == "submission" %}
-    <button type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download">Download submission</span></button>
-    <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
-    {% else %}
-    <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download"></span>Download manuscript</button>
-
-    <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
-    {% endif %}
+   
     </div>
