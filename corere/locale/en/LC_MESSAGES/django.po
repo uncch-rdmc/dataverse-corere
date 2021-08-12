@@ -239,7 +239,7 @@ msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_title} coul
 
 #: corere/main/views/main.py:24
 msgid "index_pageTitle"
-msgstr "Manuscripts"
+msgstr "My Manuscripts"
 
 #: corere/main/views/main.py:91
 msgid "manuscript_landing_pageTitle"

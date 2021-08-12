@@ -27,6 +27,7 @@ urlpatterns = [
     path('manuscript/<int:manuscript_id>/createsubmission/', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:id>/deletefile/', classes.ManuscriptDeleteFileView.as_view(), name="manuscript_deletefile"),
     path('manuscript/<int:id>/downloadfile/', classes.ManuscriptDownloadFileView.as_view(), name="manuscript_downloadfile"),
+    path('manuscript/<int:id>/downloadall/', classes.ManuscriptDownloadAllFilesView.as_view(), name="manuscript_downloadall"),
     path('manuscript/<int:id>/notebook/', main.open_notebook, name="manuscript_notebook"),
     #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),

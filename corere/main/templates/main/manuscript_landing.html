@@ -59,7 +59,7 @@
                 var [columns_config, button_index] = constructTable(response.data[0]);
                 var table = $('#submission_table').DataTable({
                     lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-                    searching: true,
+                    searching: false,
                     processing: true,
                     stateSave: true,
                     select: 'single',

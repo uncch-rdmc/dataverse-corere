@@ -216,7 +216,11 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
-
+            if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
+                self.form_helper = f.ManuscriptFormHelperEditor()
+            else:
+                self.form_helper = f.ManuscriptFormHelperMain()
+            
         return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -231,7 +235,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper(), }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': self.form_helper, }#'role_name': self.role_name, 
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -294,7 +298,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': f.ManuscriptFormHelper()}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': self.form_helper}
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
@@ -470,6 +474,16 @@ class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         #This should ensure the user has read access
         #What data do we need to pull? Just the manuscript? Eh probably gotta do more lifting here
         return render(request, self.template, {'manuscript': self.object})
+
+class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ['get']
+    transition_method_name = 'view_noop'
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+
+    def get(self, request, *args, **kwargs):
+        return g.download_all_manuscript_files(self.object)
+
 
 ############################################# SUBMISSION #############################################
 

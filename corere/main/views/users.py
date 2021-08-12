@@ -85,11 +85,12 @@ def invite_assign_author(request, id=None):
 @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def add_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
-    form = AuthorAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
     helper = UserByRoleAddFormHelper()
+    form_initial = {'first_name':manuscript.contact_first_name, 'last_name':manuscript.contact_last_name, 'email':manuscript.contact_email}
+    form = AuthorAddForm(request.POST or None, initial=form_initial)
 
     if(manuscript.is_complete()):
         raise Http404()
