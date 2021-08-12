@@ -31,6 +31,7 @@ urlpatterns = [
     path('manuscript/<int:id>/notebook/', main.open_notebook, name="manuscript_notebook"),
     #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
+    path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),

@@ -15,6 +15,8 @@ from django.contrib.auth.decorators import login_required
 from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
 from django.utils.translation import gettext as _
+from django.contrib.auth.decorators import user_passes_test
+
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +123,13 @@ def open_notebook(request, id=None):
         return redirect(manuscript.manuscript_containerinfo.container_public_address())
     else:
         raise Http404()
+
+@user_passes_test(lambda u: u.is_superuser)
+def delete_notebook_stack(request, id=None):
+    manuscript = get_object_or_404(m.Manuscript, id=id)
+    d.delete_manuscript_docker_stack_crude(manuscript)
+    messages.add_message(request, messages.INFO, "Manuscript #"+ str(id) + " notebook stack has been deleted")
+    return redirect("/")
 
 @login_required()
 def site_actions(request):
