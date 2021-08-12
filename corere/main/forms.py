@@ -465,8 +465,8 @@ class AuthorBaseForm(forms.ModelForm):
         #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
         if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
             validation_errors = [] #we store all the "generic" errors and raise them at once
-            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" 
+                #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
 
