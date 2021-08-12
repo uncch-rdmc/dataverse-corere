@@ -165,6 +165,7 @@ class TransitionPermissionMixin(object):
         else:
             transition_method = getattr(self.object, self.transition_method_name)
         logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
+        logger.debug(str(transition_method))
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
@@ -475,9 +476,10 @@ class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         #What data do we need to pull? Just the manuscript? Eh probably gotta do more lifting here
         return render(request, self.template, {'manuscript': self.object})
 
-class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+#TODO: This might need a TransitionPermissionMixin
+class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     http_method_names = ['get']
-    transition_method_name = 'view_noop'
+    # transition_method_name = 'view_noop'
     model = m.Manuscript
     object_friendly_name = 'manuscript'
 
