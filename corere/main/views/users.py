@@ -41,7 +41,7 @@ def invite_assign_author(request, id=None):
     # if(manuscript.is_complete()): #or not(request.user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or request.user.is_superuser)):
     #     raise Http404()
 
-    manu_author_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
+    manu_author_group = Group.objects.get(name__startswith=group_substring + " " + str(manuscript.id))
     can_remove_author = request.user.has_any_perm(c.PERM_MANU_REMOVE_AUTHORS, manuscript)
     if request.method == 'POST':
         if form.is_valid():
@@ -85,11 +85,12 @@ def invite_assign_author(request, id=None):
 @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 def add_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
-    form = AuthorAddForm(request.POST or None)
     manuscript = Manuscript.objects.get(pk=id)
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
     helper = UserByRoleAddFormHelper()
+    form_initial = {'first_name':manuscript.contact_first_name, 'last_name':manuscript.contact_last_name, 'email':manuscript.contact_email}
+    form = AuthorAddForm(request.POST or None, initial=form_initial)
 
     if(manuscript.is_complete()):
         raise Http404()
@@ -430,7 +431,7 @@ def helper_generate_select_table_info(role_name, group_substring):
     table_dict = "["
     for u in users:
         #{key1: "foo", key2: someObj}
-        count = u.groups.filter(name__contains=group_substring).count()
+        count = u.groups.filter(name__contains=group_substring).exclude(name__endswith=c.GROUP_COMPLETED_SUFFIX).count()
         table_dict += "['" + u.username +"','"+str(count)+"'],"
     table_dict += "]"
     return table_dict

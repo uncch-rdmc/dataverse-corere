@@ -53,20 +53,6 @@
             }
         }
     }
-    
-    {% comment %}
-    Gets all the note tables and iterates through the tables.
-    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
-    This was required to set the field to be the username. 
-    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
-    That being said, this is pretty brittle as well.
-    {% endcomment %}
-    tables = document.getElementsByClassName("notes-table")
-    for (let table of tables) {
-        var lastTr = table.lastElementChild.lastElementChild;
-        lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
-    }
-
 
 </script>
 

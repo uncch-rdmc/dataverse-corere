@@ -44,10 +44,10 @@ def _write_oauthproxy_email_list_to_working_directory(manuscript):
 
     #Get the list of emails allowed to access the notebook
     #For now I think I'm just going to get a list of users in the 4 role groups
-    user_email_list = m.User.objects.filter(  Q(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)) 
-                        | Q(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)) 
-                        | Q(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)) 
-                        | Q(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+    user_email_list = m.User.objects.filter(  Q(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id)) 
+                        | Q(groups__name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
                         #| Q(is_superuser=True) #This seems to return the same use like a ton of times
     ).values('email')
 

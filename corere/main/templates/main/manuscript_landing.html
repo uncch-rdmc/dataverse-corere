@@ -5,6 +5,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
+    var table_show_timestamps = false;
     var createSubButton = {{create_sub_allowed}};
 
     function sub_table_callback(table) {
@@ -20,6 +21,8 @@
                 column_settings.visible = false;
                 button_index = c;
             } else if(columns[c][0] === 'id' || columns[c][0] === 'created_at' || columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'curators' || columns[c][0] === 'verifiers') { //Sometimes this doesn't work right, see issue #26 "Fix Datatable Visibility Bug"
+                column_settings.visible = false;
+            } else if(columns[c][0] === 'submission_timestamp' || columns[c][0] === 'edition_timestamp' || columns[c][0] === 'curation_timestamp' || columns[c][0] === 'verification_timestamp') {
                 column_settings.visible = false;
             } else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
@@ -43,6 +46,9 @@
         });
     }
 
+    console.log("submission count")
+    console.log({{submission_count}})
+
     $(document).ready(function() {
         console.log("Create sub outside")
         $.ajax({
@@ -53,7 +59,7 @@
                 var [columns_config, button_index] = constructTable(response.data[0]);
                 var table = $('#submission_table').DataTable({
                     lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-                    searching: true,
+                    searching: false,
                     processing: true,
                     stateSave: true,
                     select: 'single',
@@ -66,7 +72,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    {% if submission_count > 0 %}
+                                    {% if submission_count < 1 %}
                                         window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
                                     {% else %}
                                         window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
@@ -80,12 +86,7 @@
                             text: 'Edit/Progress',
                             name: 'editSubmission',
                             action: function ( e, dt, node, config ) {
-                                {% if submission_count > 1 %}
-                                    window.location.href = "/submission/"+submission_id+"/edit/";
-                                {% else %}
-                                    window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
-                                {% endif %}
-
+                                window.location.href = "/submission/"+submission_id+"/edit/";
                                 
                             },
                             init: function ( dt, node, config ) {
@@ -191,6 +192,32 @@
                             },
                             enabled: false
                         },
+                        {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
+                        {
+                            text: '<i class="far fa-eye-slash"></i> Timestamps Hidden',
+                            name: 'viewnotuserassigned',
+                            className: 'visibilityButton',
+                            action: function ( e, dt, node, config ) {
+                                //Implicit globals are not best practice
+                                var column = table.column(4);
+                                column.visible( ! column.visible() );
+                                var column = table.column(7);
+                                column.visible( ! column.visible() );
+                                var column = table.column(9);
+                                column.visible( ! column.visible() );
+                                var column = table.column(11);
+                                column.visible( ! column.visible() );
+
+                                if(table_show_timestamps == false) {
+                                    table_show_timestamps = true;
+                                    this.text( '<i class="far fa-eye"></i> Timestamps Shown' );                                    
+                                } else {
+                                    table_show_timestamps  = false;
+                                    this.text( '<i class="far fa-eye-slash"></i> Timestamps Hidden' );
+                                }
+                            },
+                        },
+                        {% endif %}
 
                     ]
                 })
@@ -293,7 +320,7 @@
     </div>
 
     <p class="my-2"> 
-        <b>Status: {{manuscript_status}} </b><br>
+        <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
         Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
         Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 

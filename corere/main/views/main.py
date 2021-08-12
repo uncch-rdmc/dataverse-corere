@@ -5,9 +5,9 @@ from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
-from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns
+from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns, helper_user_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
-from corere.main.utils import get_pretty_user_list_by_group
+from corere.main.utils import get_pretty_user_list_by_group_prefix
 from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404, HttpResponse
@@ -23,7 +23,8 @@ def index(request):
         args = {'user':     request.user, 
                 'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
-                'submission_columns':  helper_submission_columns(request.user),
+                #'submission_columns':  helper_submission_columns(request.user),
+                'user_columns':  helper_user_columns(request.user),
                 'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,
                 'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
                 'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
@@ -62,10 +63,10 @@ def manuscript_landing(request, id=None):
     if(has_transition_perm(manuscript.add_submission_noop, request.user)):
         manuscript_avail_buttons.append('createSubmission')
 
-    manuscript_authors = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
-    manuscript_editors = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
-    manuscript_curators = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
-    manuscript_verifiers = get_pretty_user_list_by_group(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
+    manuscript_authors = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
+    manuscript_editors = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
+    manuscript_curators = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
+    manuscript_verifiers = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
 
     args = {'user':     request.user, 
             "manuscript_id": id,
@@ -76,6 +77,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.get_max_submission_version_id() != None),
             'submission_columns':  helper_submission_columns(request.user),
             'GROUP_ROLE_EDITOR': c.GROUP_ROLE_EDITOR,

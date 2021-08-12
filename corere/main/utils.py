@@ -71,8 +71,8 @@ def get_role_name_for_form(user, manuscript, session, create):
             raise Http404()
     
 
-def get_pretty_user_list_by_group(group):
-    userset = Group.objects.get(name=group).user_set.all()
+def get_pretty_user_list_by_group_prefix(group):
+    userset = Group.objects.get(name__startswith=group).user_set.all()
     user_list_pretty = []
     for user in userset:
         if(not user.first_name and not user.last_name):

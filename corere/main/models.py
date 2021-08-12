@@ -536,11 +536,27 @@ class Submission(AbstractCreateUpdateModel):
             if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
                 self.manuscript._status = Manuscript.Status.COMPLETED
                 ## We decided to leave completed manuscripts in the list and toggle their visibility
-                # Delete existing groups when done for clean-up and reporting
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).delete()
-                # Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).delete()
+
+                # Rename existing groups (add completed suffix) when done for clean-up and reporting
+                author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
+                author_group = Group.objects.get(name=author_name)
+                author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
+                author_group.save()
+
+                editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
+                editor_group = Group.objects.get(name=editor_name)
+                editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
+                editor_group.save()
+
+                curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+                curator_group = Group.objects.get(name=curator_name)
+                curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+                curator_group.save()
+
+                verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
+                verifier_group = Group.objects.get(name=verifier_name)
+                verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
+                verifier_group.save()
 
                 self.manuscript.save()
                 return
@@ -570,7 +586,7 @@ class Author(models.Model):
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_authors")
 
 class DataSource(models.Model):
-    text = models.CharField(max_length=200, blank=False, null=False, default="", verbose_name='Data Source')
+    text = models.CharField(max_length=4000, blank=False, null=False, default="", verbose_name='Data Source')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_data_sources")
 
 class Keyword(models.Model):
@@ -605,15 +621,16 @@ class Manuscript(AbstractCreateUpdateModel):
         OTHER = 'other', 'Other'
 
     title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
-    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Publication ID', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript needs qualitative analysis')
-    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Was this manuscript reviewed by the Qualitative Data Repository?')
-    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Contact First Name', help_text='First name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Contact Last Name', help_text='Last name of the publication contact that will be stored in Dataverse')
-    contact_email = models.EmailField(blank=True, null=True, verbose_name='Contact Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
+    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript includes qualitative analysis')
+    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Does this manuscript need verification of qualitative results by QDR?')
+    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
+    contact_email = models.EmailField(blank=True, null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
-    description = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Description', help_text='Additional info about the manuscript')
+    description = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
+    additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
@@ -719,7 +736,7 @@ class Manuscript(AbstractCreateUpdateModel):
         # Technically we don't need to check 'in_progress' as in that case the manuscript will be processing, but redundancy is ok
         #try:
 
-        if (self.manuscript_submissions.filter(Q(_status=Submission.Status.NEW)| Q(_status=Submission.Status.IN_PROGRESS_EDITION)
+        if (self.manuscript_submissions.filter(Q(_status=Submission.Status.NEW)| Q(_status=Submission.Status.REJECTED_EDITOR)| Q(_status=Submission.Status.IN_PROGRESS_EDITION)
                                              | Q(_status=Submission.Status.IN_PROGRESS_CURATION)| Q(_status=Submission.Status.IN_PROGRESS_VERIFICATION)).count() != 0):
             return False
         return True
@@ -783,10 +800,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
 @receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
 def delete_manuscript_groups(sender, instance, using, **kwargs):
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
-    Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
+    Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
 class ContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
@@ -966,7 +983,8 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
     host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
-    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Packages Info', help_text='Please provide the list of your packages and their versions.')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
+    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
@@ -979,8 +997,6 @@ class CorereInvitation(Invitation):
     @classmethod
     def create(cls, email, first_name, last_name, inviter=None, **kwargs):
         key = get_random_string(64).lower()
-        print("In CorereInvitation.create()")
-        print(first_name)
         instance = cls._default_manager.create(
             email=email,
             first_name=first_name,
@@ -996,8 +1012,6 @@ class CorereInvitation(Invitation):
                              args=[self.key])
         invite_url = request.build_absolute_uri(invite_url)
         ctx = kwargs
-        print("In CorereInvitation.create()")
-        print(self.first_name)
         ctx.update({
             'invite_url': invite_url,
             'site_name': current_site.name,

@@ -33,6 +33,7 @@
             parallelUploads: 1,
             timeout: 0,
             url: '../uploader/',
+            dictDefaultMessage:'Drop files here or click to open upload window',
             init: function () {
                 this.on('success', function(file) {
                     var args = Array.prototype.slice.call(arguments);          

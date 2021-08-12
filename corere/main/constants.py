@@ -8,6 +8,7 @@ GROUP_MANUSCRIPT_EDITOR_PREFIX = "Editor Manuscript"
 GROUP_MANUSCRIPT_AUTHOR_PREFIX = "Author Manuscript"
 GROUP_MANUSCRIPT_VERIFIER_PREFIX = "Verifier Manuscript"
 GROUP_MANUSCRIPT_CURATOR_PREFIX = "Curator Manuscript"
+GROUP_COMPLETED_SUFFIX = "Completed"
 
 def get_roles():
     return [GROUP_ROLE_EDITOR, GROUP_ROLE_AUTHOR, GROUP_ROLE_VERIFIER, GROUP_ROLE_CURATOR]
@@ -41,5 +42,5 @@ def perm_path(perm):
     return 'main.'+perm
 
 progress_list_manuscript = ['Create Manuscript', 'Upload Files', 'Invite Author']
-progress_list_submission_first = ['Update Manuscript', 'Create Submission', 'Upload Files', 'Run Code', 'Add File Metadata']
-progress_list_submission_subsequent = ['Create Submission', 'Upload Files', 'Run Code', 'Add File Metadata']
+progress_list_submission_first = ['Update Manuscript', 'Add Submission Info', 'Upload Files', 'Run Code', 'Add File Metadata']
+progress_list_submission_subsequent = ['Add Submission Info', 'Upload Files', 'Run Code', 'Add File Metadata']

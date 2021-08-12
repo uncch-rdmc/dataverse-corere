@@ -157,13 +157,33 @@ class ManuscriptFilesForm(ReadOnlyFormMixin, forms.ModelForm):
         fields = []#['title','doi','open_data']#,'authors']
     pass
 
-class ManuscriptFormHelper(FormHelper):
+class ManuscriptFormHelperMain(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_tag = False
 
         self.layout = Layout(
-            'title','pub_id','description','subject',
+            'title','pub_id','description','subject', 'additional_info',
+            Div(
+                Div('qual_analysis',css_class='col-md-6',),
+                Div('qdr_review',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('contact_first_name',css_class='col-md-6',),
+                Div('contact_last_name',css_class='col-md-6',),
+                Div('contact_email',css_class='col-md-6',),
+                css_class='row',
+            )
+        )
+
+class ManuscriptFormHelperEditor(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            'title','pub_id','additional_info',
             Div(
                 Div('qual_analysis',css_class='col-md-6',),
                 Div('qdr_review',css_class='col-md-6',),
@@ -184,7 +204,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
-            'description','subject']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+            'description','subject','additional_info']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         always_required = ['title'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
@@ -214,12 +234,11 @@ class ManuscriptBaseForm(forms.ModelForm):
                 self.add_error('contact_email', 'This field is required.')
 
             validation_errors = [] #we store all the "generic" errors and raise them at once
-            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" or self.data['author_formset-0-identifier'] == ""
-                or self.data['author_formset-0-identifier_scheme'] == "" #or self.data['author_formset-0-position'] == ""
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
-            if(self.data['data_source_formset-0-text'] == ""):
-                validation_errors.append(ValidationError("You must specify a data source."))
+            # if(self.data['data_source_formset-0-text'] == ""):
+            #     validation_errors.append(ValidationError("You must specify a data source."))
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
@@ -249,14 +268,16 @@ class ManuscriptForm_Author(ManuscriptBaseForm):
         self.fields['qdr_review'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
+    class Meta(ManuscriptBaseForm.Meta):
+        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['description'].disabled = True
-        self.fields['subject'].disabled = True
-        self.fields['contact_first_name'].disabled = True
-        self.fields['contact_last_name'].disabled = True
-        self.fields['contact_email'].disabled = True
+        # self.fields['description'].disabled = True
+        # self.fields['subject'].disabled = True
+        # self.fields['contact_first_name'].disabled = True
+        # self.fields['contact_last_name'].disabled = True
+        # self.fields['contact_email'].disabled = True
 
 class ManuscriptForm_Curator(ManuscriptBaseForm):
 
@@ -276,6 +297,7 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['contact_last_name'].disabled = True
         self.fields['contact_email'].disabled = True
         self.fields['description'].disabled = True
+        self.fields['additional_info'].disabled = True
         self.fields['subject'].disabled = True
 
 ManuscriptForms = {
@@ -846,7 +868,7 @@ class EditionBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(EditionBaseForm, self).__init__(*args, **kwargs)
-        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
         # self.helper = FormHelper(self)
         # self.helper.form_show_errors = False
         # self.form_show_errors = False
@@ -913,7 +935,7 @@ class CurationBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(CurationBaseForm, self).__init__(*args, **kwargs)
-        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
 
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
@@ -979,7 +1001,7 @@ class VerificationBaseForm(forms.ModelForm):
     
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(VerificationBaseForm, self).__init__(*args, **kwargs)
-        self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
         
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
@@ -1040,9 +1062,9 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 class VMetadataBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadata
-        fields = ["operating_system", "packages_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+        fields = ["operating_system", "packages_info", "software_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
         #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
-        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info"]
+        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info", "software_info"]
         labels = label_gen(model, fields, always_required)
 
     #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
@@ -1051,7 +1073,8 @@ class VMetadataBaseForm(forms.ModelForm):
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
         self.empty_permitted = False
-        self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+        # self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+        # self.fields['software_info'].widget.attrs['class'] = 'smallerarea'
 
         if(previous_vmetadata):
             self.fields['operating_system'].initial = previous_vmetadata.operating_system
@@ -1062,6 +1085,7 @@ class VMetadataBaseForm(forms.ModelForm):
             self.fields['host_url'].initial = previous_vmetadata.host_url
             self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
             self.fields['packages_info'].initial = previous_vmetadata.packages_info
+            self.fields['software_info'].initial = previous_vmetadata.software_info
 
     def clean(self):
         #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.

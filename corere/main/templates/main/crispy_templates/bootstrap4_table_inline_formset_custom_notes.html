@@ -5,15 +5,16 @@
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 
 {% specialspaceless %}
+{% comment %} This script may not be needed now that we don't use the old resize-textarea.js . But it may serve other purposes {% endcomment %}
 <script>
     function showHideNoteSection(caller, name) {
         var x = document.getElementById(name);
         if (x.style.display === "none") {
             caller.value = "Hide";
             x.style.display = "";
-            $('textarea').each(function () { //{%comment%} reset textarea heights as they get mangled by other resize code when hidden {%endcomment%}
-                this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
-                });
+            // $('textarea').each(function () { //{%comment%} reset textarea heights as they get mangled by other resize code when hidden {%endcomment%}
+            //     this.setAttribute('style', 'height:' + (this.scrollHeight) + 'px;overflow-y:hidden;');
+            //     });
         } else {
             x.style.display = "none";
             caller.value = "Show";

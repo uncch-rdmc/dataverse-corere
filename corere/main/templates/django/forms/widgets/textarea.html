@@ -1,0 +1,2 @@
+{% comment %} We explicitly set the cols/rows here to override the django template defaults. This is used as the default textarea so we don't have to explicitly set each one {% endcomment %}
+<textarea name="{{ widget.name }}" cols="40" rows="4" {% include "django/forms/widgets/attrs.html" %} >{% if widget.value %}{{ widget.value }}{% endif %}</textarea>

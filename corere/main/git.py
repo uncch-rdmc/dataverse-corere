@@ -138,6 +138,18 @@ def download_all_submission_files(submission):
     response['Content-Disposition'] = 'attachment; filename="'+submission.manuscript.slug + '_-_submission_' + str(submission.version_id) + '.zip"'
     return response
 
+def download_all_manuscript_files(manuscript):
+    branch_name = 'master'
+    repo_path = get_manuscript_repo_path(manuscript)
+    repo = git.Repo(repo_path)
+
+    tempf = tempfile.TemporaryFile()
+    repo.archive(tempf, treeish=branch_name)
+    tempf.seek(0) #you have to return to the start of the temporaryfile after writing to it
+
+    response = HttpResponse(tempf.read(), content_type='application/zip')#temp.mime_type)
+    response['Content-Disposition'] = 'attachment; filename="'+manuscript.slug + '_-_manuscript.zip"'
+    return response
 
 def get_manuscript_repo_name(manuscript):
     return str(manuscript.id) + "_-_manuscript_-_" + manuscript.slug

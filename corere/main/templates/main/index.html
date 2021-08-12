@@ -7,7 +7,6 @@
 
 <script type="text/javascript">
     var search_completed_vis_toggle = true;
-    var search_curator_vis_toggle = true;
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
 
     $(document).ready(function() {;
@@ -15,7 +14,7 @@
             url: MANUSCRIPT_LIST_JSON_URL,
             cache: false,
             success: function (response) {
-                var [columns_config, button_index] = constructTable(response.data[0]);
+                var [columns_config, button_index] = constructTableM(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
                 var select_timeout;
                 var table = $('#manuscript_table').DataTable({
@@ -55,33 +54,62 @@
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
                                 if(search_completed_vis_toggle == false) {
-                                    table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                                    //Implicit globals are not best practice
+                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                                     search_completed_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 3 ).search( "" ).draw();
+                                    table.columns( 4 ).search( "" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
                             },
                         },
-                        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                         {
-                            text: '<i class="far fa-eye-slash"></i> All Curators',
+                            text: '<i class="far fa-eye"></i> All Manuscripts',
                             name: 'viewnotuserassigned',
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
-                                if(search_curator_vis_toggle == false) {
-                                    table.columns( 6 ).search( "{{request.user.username}}" ).draw();
-                                    search_curator_vis_toggle = true;
-                                    this.text( '<i class="far fa-eye-slash"></i> All Curators' );
-                                    
+                                if(!$('#manuscript_table').hasClass("visibleMe")) {
+                                    //Implicit globals are not best practice
+                                    table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                                    $('#manuscript_table').addClass("visibleMe")
+                                    this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
                                 } else {
-                                    table.columns( 6 ).search( "" ).draw();
-                                    search_curator_vis_toggle = false;
-                                    this.text( '<i class="far fa-eye"></i> All Curators' );
+                                    table.columns( 5 ).search( "" ).draw();
+                                    $('#manuscript_table').removeClass("visibleMe")
+                                    this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
+                            },
+                        },
+                        {
+                            text: 'Show User Filter Table',
+                            name: 'userFilterTable',
+                            className: 'userTableVisibilityButton',
+                            action: function ( e, dt, node, config ) {
+                                if($('#user_table_holder').is('[hidden]')){
+                                    $('#user_table_holder').removeAttr('hidden');
+                                    this.text( 'Hide User Filter Table' );    
+                                } else {
+                                    $('#user_table_holder').attr('hidden', true);
+                                    $('#user_table').DataTable().search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+                                    $('#user_table').DataTable().rows().deselect();
+                                    $('#manuscript_table').DataTable().search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+
+                                    this.text( 'Show User Filter Table' );        
+                                }
+                                // if(!$('#manuscript_table').hasClass("visibleMe")) {
+                                //     //Implicit globals are not best practice
+                                //     table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                                //     $('#manuscript_table').addClass("visibleMe")
+                                //     this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
+                                // } else {
+                                //     table.columns( 5 ).search( "" ).draw();
+                                //     $('#manuscript_table').removeClass("visibleMe")
+                                //     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
+                                // }
                             },
                         },
                         {% endif %}
@@ -89,7 +117,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
-                    console.log(manuscript_id);
+                    //console.log(manuscript_id);
                     var avail_buttons = dt.rows( { selected: true } ).data()[0][button_index];
 
                     dt.button('workOnManuscript:name').enable(true);
@@ -99,7 +127,7 @@
                 } )
                 .on('key-focus', function (e, dt, cell, originalEvent) {
                     //console.log(last_row)
-                    if(originalEvent.type == "keydown" && cell.index().row != last_row) { 
+                    if(originalEvent != null && originalEvent.type == "keydown" && cell.index().row != last_row) { 
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
@@ -121,37 +149,60 @@
                 table.order.neutral().draw();
                 table.row(':first').select(); //Select first row always
 
-                table.columns( 3 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                //Implicit globals are not best practice
+                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
-                table.columns( 6 ).search( "{{request.user.username}}" ).draw();
+                table.columns( 5 ).search( "{{request.user.username}}" ).draw();
                 {% endif %}
             }
         })
 
     });
 
-    function constructTable(columns) {
+    function constructTableM(columns) {
         var columns_config = [];
         var button_index;
+        console.log("HELLO")
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
-                console.log("GETS CALLED");
                 column_settings.visible = true;
             } 
             else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
+            } 
+            else if(columns[c][0] === 'users') {
+                console.log("hello3")
+                column_settings.visible = false;
             }
+            console.log(columns[c][0])
             columns_config[c] = column_settings
         }
         return [columns_config, button_index];
     } 
 </script>
 
+
+<div class="cblue" id="user_table_holder" hidden>
+    <br>
+    <h2>Users</h2>
+    <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            {% for field in user_columns %}
+                <th>{{ field }}</th>
+            {% endfor %}
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <hr>
+</div>
+
 {% include "main/page_title.html" with no_hr=True %}
 <br>
+
 <div>
     <div class="cblue" id="manuscript_table_holder">
         <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
@@ -165,5 +216,149 @@
         </table>
     </div>
 </div>
+
+
+{% comment %} USER TABLE {% endcomment %}
+
+<script type="text/javascript">
+    var search_completed_vis_toggle = true;
+    var USER_LIST_JSON_URL = '{% url "user_table" %}';
+
+    $(document).ready(function() {;
+        dt_user_ajax = $.ajax({
+            url: USER_LIST_JSON_URL,
+            cache: false,
+            success: function (response) {
+                // console.log("SUCCESS1")
+                // console.log(response.data.slice(1))
+                var [columns_config, button_index] = constructTable(response.data[0]);
+                var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
+                var select_timeout;
+                var table = $('#user_table').DataTable({
+                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+                    searching: true,
+                    processing: true,
+                    stateSave: true,
+                    paging: true,
+                    select: 'single',
+                    columns: columns_config,
+                    dom: 'Bfrtpl',
+                    keys: true, //for keyboard
+                    rowId: 'id', //for retaining selected row
+                    data: response.data.slice(1),
+                    buttons: [
+                        {
+                            text: '<i class="far fa-eye"></i> All Shown',
+                            name: 'showAll',
+                            action: function ( e, dt, node, config ) {
+                                table.columns( 3 ).search( "" ).draw();
+                                $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye"></i> All Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye"></i> Editors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );
+                            },
+                        },
+                        {
+                            text: '<i class="far fa-eye"></i> Authors Shown',
+                            name: 'showOnlyAuthors',
+                            action: function ( e, dt, node, config ) {
+                                table.columns( 3 ).search( "Author" ).draw();
+                                $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
+                            },
+                        },
+                        {
+                            text: '<i class="far fa-eye"></i> Editors Shown',
+                            name: 'showOnlyEditors',
+                            action: function ( e, dt, node, config ) {
+                                table.columns( 3 ).search( "Editor" ).draw();
+                                $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye-slash"></i> Authors Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye"></i> Editors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
+                            },
+                        },
+                        {
+                            text: '<i class="far fa-eye"></i> Curators Shown',
+                            name: 'showOnlyCurators',
+                            action: function ( e, dt, node, config ) {
+                                table.columns( 3 ).search( "Curator" ).draw();
+                                $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye-slash"></i> Authors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
+                            },
+                        },
+                        {
+                            text: '<i class="far fa-eye"></i> Verifiers Shown',
+                            name: 'showOnlyVerifiers',
+                            action: function ( e, dt, node, config ) {
+                                table.columns( 3 ).search( "Verifier" ).draw();
+                                $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
+                                $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
+                                $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
+                            },
+                        },
+
+                    ]
+                })
+                .on( 'select', function ( e, dt, type, indexes ) {
+                    username = dt.rows( { selected: true } ).data()[0][2]
+                    $('#manuscript_table').DataTable().columns(5).search(username).draw();
+                    if(! $('#manuscript_table').hasClass("visibleMe")) {
+                        $('#manuscript_table').addClass("visibleMe")
+                    }
+                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> Custom Manuscripts' );
+                    console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
+
+                } )
+                .on( 'deselect', function ( e, dt, type, indexes ) {
+                    if($('#manuscript_table').hasClass("visibleMe")) {
+                        $('#manuscript_table').removeClass("visibleMe")
+                    }
+
+                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> All Manuscripts' );
+                    $('#manuscript_table').DataTable().columns(5).search('').draw();
+                    // dt.button('workOnManuscript:name').enable(false);
+                } );
+                table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
+                table.order.neutral().draw(); //NOT SURE WHAT THIS DOES
+
+            }
+        })
+
+    });
+
+    function constructTable(columns) {
+        console.log("HELLO 2")
+        var columns_config = [];
+        var button_index;
+        for (var c in columns) {
+            var column_settings = {name: columns[c][0], title:columns[c][1]}
+            // if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
+            //     column_settings.visible = true;
+            // } 
+            // else 
+            if(columns[c][0] === 'selected') {
+                column_settings.orderable = false;
+                column_settings.className = 'select-checkbox';
+            }
+            columns_config[c] = column_settings
+        }
+        return [columns_config, button_index];
+    } 
+</script>
+
+
+
+
 
 {% endblock %}
