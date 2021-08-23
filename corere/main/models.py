@@ -107,7 +107,7 @@ class Edition(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != Submission.Status.IN_PROGRESS_EDITION):
+            if(not self.pk and self.submission._status != Submission.Status.IN_PROGRESS_EDITION):
                 raise FieldError('A edition cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_EDITION)
         except Edition.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
@@ -162,7 +162,7 @@ class Curation(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != Submission.Status.IN_PROGRESS_CURATION):
+            if(not self.pk and self.submission._status != Submission.Status.IN_PROGRESS_CURATION):
                 raise FieldError('A curation cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_CURATION)
         except Curation.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
@@ -217,7 +217,7 @@ class Verification(AbstractCreateUpdateModel):
 
     def save(self, *args, **kwargs):
         try:
-            if(self.submission._status != Submission.Status.IN_PROGRESS_VERIFICATION):
+            if(not self.pk and self.submission._status != Submission.Status.IN_PROGRESS_VERIFICATION):
                 raise FieldError('A verification cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_VERIFICATION)
         except Verification.submission.RelatedObjectDoesNotExist:
             pass #this is caught in super
