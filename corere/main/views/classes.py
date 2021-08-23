@@ -201,6 +201,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     role_name = None
     from_submission = False
     create = False
+    form_helper = None
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -217,11 +218,12 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
-            if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
-                self.form_helper = f.ManuscriptFormHelperEditor()
-            else:
-                self.form_helper = f.ManuscriptFormHelperMain()
             
+        if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
+            self.form_helper = f.ManuscriptFormHelperEditor()
+        else:
+            self.form_helper = f.ManuscriptFormHelperMain()
+
         return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -236,7 +238,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': self.form_helper, }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper }#'role_name': self.role_name, 
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
@@ -254,6 +256,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             progress_list = c.progress_list_manuscript
             progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
+
+        if(self.form_helper):
+            context['manuscript_helper'] = self.form_helper
         #TODO: Add logic for manuscript creation
 
         return render(request, self.template, context)
@@ -299,7 +304,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper, 'manuscript_helper': self.form_helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 'helper': self.helper}
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
@@ -317,6 +322,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             progress_list = c.progress_list_manuscript
             progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
+
+        if(self.form_helper):
+            context['manuscript_helper'] = self.form_helper
 
         return render(request, self.template, context)
            
@@ -933,17 +941,20 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
         formset = self.form
 
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+            'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
+            context['progress_bar_html'] = progress_bar_html
 
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html})
+        return render(request, self.template, context)
 
     #Originally copied from GenericCorereObjectView
     def post(self, request, *args, **kwargs):
@@ -985,17 +996,20 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
         else:
             logger.debug(formset.errors)
 
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+            'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
+            context['progress_bar_html'] = progress_bar_html
 
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html})
+        return render(request, self.template, context)
 
 class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
     transition_method_name = 'edit_noop'
@@ -1033,18 +1047,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
+            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text }
+
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+            context['progress_bar_html'] = progress_bar_html
 
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
-            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
-            })
+        return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
@@ -1076,18 +1092,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
                 else:
+                    context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+                        'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
+                        'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
+                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error')}
+                    
                     if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
                         if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                             progress_list = c.progress_list_submission_first
                         else:
                             progress_list = c.progress_list_submission_subsequent
                         progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+                        context['progress_bar_html'] = progress_bar_html
 
-                    return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-                        'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
-                        'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error'), 'progress_bar_html': progress_bar_html
-                        })
+                    return render(request, self.template, context)
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
@@ -1347,20 +1365,19 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
-        print(self.object.__dict__)
-        print(self.object.manuscript.__dict__)
         notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
+        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text,  
+            'manuscript_title': self.object.manuscript.title, 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+        
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
             else:
                 progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Run Code')
-
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_title': self.object.manuscript.title, 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id, 'progress_bar_html': progress_bar_html}
+            context['progress_bar_html'] = progress_bar_html
 
         return render(request, self.template, context)
 
