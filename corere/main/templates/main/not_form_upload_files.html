@@ -4,6 +4,8 @@
 
 {% if not read_only %}
 {% include "main/file_upload.html" %}
+{% else %}
+<input type=button value="Home" onClick="location.href='..';">
 {% endif %}
 {% include "main/file_list.html" %}
 <script>
