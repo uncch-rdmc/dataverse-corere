@@ -87,7 +87,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = [['selected',''],['id','ID'],['title','Title'],['pub_id','Pub ID'],['_status','Status']]
+    columns = [['selected',''],['id','ID'],['pub_name','Pub Name'],['pub_id','Pub ID'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
         columns.append(['users', "Users"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
@@ -123,7 +123,7 @@ class ManuscriptJson(CorereBaseDatatableView):
         # use parameters passed in GET request to filter (search) queryset
         search = self.request.GET.get('search[value]', None)
         if search:
-            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
+            qs = qs.filter(Q(pub_name__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
         return qs
 
 def helper_submission_columns(user):
@@ -276,7 +276,7 @@ class SubmissionJson(CorereBaseDatatableView):
         # use parameters passed in GET request to filter (search) queryset
         search = self.request.GET.get('search[value]', None)
         if search:
-            qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search))
+            qs = qs.filter(Q(pub_name__icontains=search)|Q(pub_id__icontains=search))
         return qs
 
 

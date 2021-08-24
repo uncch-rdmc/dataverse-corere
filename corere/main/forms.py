@@ -143,7 +143,7 @@ class UserInviteForm(forms.Form):
 class SubmissionUploadFilesForm(ReadOnlyFormMixin, forms.ModelForm):
     class Meta:
         model = m.Submission
-        fields = []#['title','doi','open_data']#,'authors']
+        fields = []#['pub_name','doi','open_data']#,'authors']
     pass
 
 ############# Manuscript Views Forms #############
@@ -154,7 +154,7 @@ class SubmissionUploadFilesForm(ReadOnlyFormMixin, forms.ModelForm):
 class ManuscriptFilesForm(ReadOnlyFormMixin, forms.ModelForm):
     class Meta:
         model = m.Manuscript
-        fields = []#['title','doi','open_data']#,'authors']
+        fields = []#['pub_name','doi','open_data']#,'authors']
     pass
 
 class ManuscriptFormHelperMain(FormHelper):
@@ -163,7 +163,7 @@ class ManuscriptFormHelperMain(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
-            'title','pub_id','description','subject', 'additional_info',
+            'pub_name','pub_id','description','subject', 'additional_info',
             Div(
                 Div('qual_analysis',css_class='col-md-6',),
                 Div('qdr_review',css_class='col-md-6',),
@@ -183,7 +183,7 @@ class ManuscriptFormHelperEditor(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
-            'title','pub_id','additional_info',
+            'pub_name','pub_id','additional_info',
             Div(
                 Div('qual_analysis',css_class='col-md-6',),
                 Div('qdr_review',css_class='col-md-6',),
@@ -203,9 +203,9 @@ class ManuscriptBaseForm(forms.ModelForm):
     class Meta:
         abstract = True
         model = m.Manuscript
-        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
             'description','subject','additional_info']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
-        always_required = ['title'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
+        always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
     def clean(self):
@@ -259,7 +259,7 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['title','description','subject','contact_first_name','contact_last_name','contact_email']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):
@@ -269,7 +269,7 @@ class ManuscriptForm_Author(ManuscriptBaseForm):
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        fields = ['title','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -290,7 +290,7 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
-        self.fields['title'].disabled = True
+        self.fields['pub_name'].disabled = True
         self.fields['qual_analysis'].disabled = True
         self.fields['qdr_review'].disabled = True
         self.fields['contact_first_name'].disabled = True

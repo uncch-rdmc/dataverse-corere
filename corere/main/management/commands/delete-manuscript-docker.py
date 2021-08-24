@@ -17,7 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         manuscript = m.Manuscript.objects.get(id=options['manuscript_id'])
 
-        if input("Are you sure you wish to delete the docker stack for 'Manuscript " + str(manuscript.id) + " - " + manuscript.title + "'? (y/n)") != "y":
+        if input("Are you sure you wish to delete the docker stack for Manuscript " + manuscript. get_display_title + "? (y/n)") != "y":
             exit() 
 
         crude = options.get('crude', [])

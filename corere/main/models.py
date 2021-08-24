@@ -620,13 +620,13 @@ class Manuscript(AbstractCreateUpdateModel):
         SOCIAL = 'social', 'Social Sciences'
         OTHER = 'other', 'Other'
 
-    title = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
-    pub_id = models.CharField(max_length=200, default="", blank=True, null=True, db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
+    pub_name = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
+    pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
     qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript includes qualitative analysis')
     qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Does this manuscript need verification of qualitative results by QDR?')
-    contact_first_name = models.CharField(max_length=150, blank=True, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
-    contact_last_name =  models.CharField(max_length=150, blank=True, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
-    contact_email = models.EmailField(blank=True, null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
+    contact_first_name = models.CharField(max_length=150, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
+    contact_last_name =  models.CharField(max_length=150, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
+    contact_email = models.EmailField(null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
@@ -637,7 +637,7 @@ class Manuscript(AbstractCreateUpdateModel):
      
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
-    slug = AutoSlugField(populate_from='title')
+    slug = AutoSlugField(populate_from='get_display_title') #TODO: make this based off other things?
 
     class Meta:
         permissions = [
@@ -655,9 +655,6 @@ class Manuscript(AbstractCreateUpdateModel):
             (c.PERM_MANU_CURATE, 'Can curate manuscript/submission'),
             (c.PERM_MANU_VERIFY, 'Can verify manuscript/submission'),
         ]
-
-    def __str__(self):
-        return '{0}: {1}'.format(self.id, self.title)
 
     def save(self, *args, **kwargs):
         first_save = False
@@ -706,6 +703,16 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def get_landing_url(self):
         return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
+
+    def get_display_title(self):
+        try:
+            return self.pub_id + " (" + self.contact_last_name + ")"
+        except TypeError:
+            return self.pub_name
+
+
+    # def __str__(self):
+    #     return '{0}: {1}'.format(self.id, self.title)
 
     ##### django-fsm (workflow) related functions #####
     

@@ -65,10 +65,10 @@ def invite_assign_author(request, id=None):
                 manu_author_group.user_set.add(u)
                 
                 ### Messaging ###
-                msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_title=manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_title=manuscript.get_display_title())
                 logger.info(msg)
                 messages.add_message(request, messages.INFO, msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.title)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.get_display_title())
                 if(u != new_user):
                     notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
                     send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
@@ -77,7 +77,7 @@ def invite_assign_author(request, id=None):
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 'manuscript_title': manuscript.title,
+    return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 'manuscript_title': manuscript.get_display_title(),
         'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': page_title, 'page_help_text': page_help_text})
 
 #Called during initial manuscript creation
@@ -119,15 +119,15 @@ def add_author(request, id=None):
             manuscript.save()
 
             ### Messaging ###
-            msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=user.email, manuscript_title=manuscript.title)
-            logger.info(msg.format(user.email, manuscript.title))
+            msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=user.email, manuscript_title=manuscript.get_display_title())
+            logger.info(msg.format(user.email, manuscript.get_display_title()))
             messages.add_message(request, messages.INFO, msg)
-            notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.title)
+            notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_title=manuscript.get_display_title())
             if(not new_user):
                 notify.send(request.user, verb='assigned', recipient=user, target=manuscript, public=False, description=notification_msg)
                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[user.email], context={ 'notification_msg':notification_msg, 'user_email':user.email} )
 
-            msg = _("manuscript_submitted_banner").format(manuscript_title=manuscript.title, manuscript_id=manuscript.id)
+            msg = _("manuscript_submitted_banner").format(manuscript_title=manuscript.get_display_title(), manuscript_id=manuscript.id)
             messages.add_message(request, messages.INFO, msg)
             ### End Messaging ###
 
@@ -140,7 +140,7 @@ def add_author(request, id=None):
     progress_bar_html = generate_progress_bar_html(progress_list, 'Invite Author')
 
     return render(request, 'main/form_add_author.html', {'form': form, 'helper': helper,  'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.title, 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
+        'group_substring': group_substring, 'role_name': 'Author', 'manuscript_title': manuscript.get_display_title(), 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
 
 
 @login_required
@@ -181,10 +181,10 @@ def assign_editor(request, id=None):
                 manu_editor_group.user_set.add(u)
 
                 ### Messaging ###
-                msg = _("user_addAsRoleToManuscript_banner").format(role="editor", email=u.email, manuscript_title=manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="editor", email=u.email, manuscript_title=manuscript.get_display_title())
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="editor", email=request.user.email, manuscript_title=manuscript.title)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="editor", email=request.user.email, manuscript_title=manuscript.get_display_title())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
@@ -193,7 +193,7 @@ def assign_editor(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_title': manuscript.get_display_title(), 'page_title': page_title})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -234,10 +234,10 @@ def assign_curator(request, id=None):
                 manu_curator_group.user_set.add(u)
 
                 ### Messaging ###
-                msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_title=manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_title=manuscript.get_display_title())
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="curator", email=request.user.email, manuscript_title=manuscript.title)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="curator", email=request.user.email, manuscript_title=manuscript.get_display_title())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
@@ -246,7 +246,7 @@ def assign_curator(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
-        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_title': manuscript.get_display_title(), 'page_title': page_title})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -286,10 +286,10 @@ def assign_verifier(request, id=None):
                 manu_verifier_group.user_set.add(u)
 
                 ### Messaging ###
-                msg = _("user_addAsRoleToManuscript_banner").format(role="verifier", email=u.email, manuscript_title=manuscript.title)
+                msg = _("user_addAsRoleToManuscript_banner").format(role="verifier", email=u.email, manuscript_title=manuscript.get_display_title())
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="verifier", email=request.user.email, manuscript_title=manuscript.title)
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="verifier", email=request.user.email, manuscript_title=manuscript.get_display_title())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
@@ -298,7 +298,7 @@ def assign_verifier(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
-        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_title': manuscript.title, 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_title': manuscript.get_display_title(), 'page_title': page_title})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required

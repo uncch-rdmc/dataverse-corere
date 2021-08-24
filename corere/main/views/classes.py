@@ -75,9 +75,9 @@ class GenericCorereObjectView(View):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            manuscript_title = self.object.title
+            manuscript_title = self.object. get_display_title()
         else:
-            manuscript_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript. get_display_title()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title}
@@ -87,9 +87,9 @@ class GenericCorereObjectView(View):
     def post(self, request, *args, **kwargs):
         print(self.redirect)
         if(isinstance(self.object, m.Manuscript)):
-            manuscript_title = self.object.title
+            manuscript_title = self.object. get_display_title()
         else:
-            manuscript_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript. get_display_title()
 
         if self.form.is_valid():
             if not self.read_only:
@@ -228,9 +228,9 @@ class GenericManuscriptView(GenericCorereObjectView):
 
     def get(self, request, *args, **kwargs):
         if(isinstance(self.object, m.Manuscript)):
-            manuscript_title = self.object.title
+            manuscript_title = self.object. get_display_title()
         else:
-            manuscript_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript. get_display_title()
 
         #print(self.from_submission)
         if(self.from_submission):
@@ -270,9 +270,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
 
         if(isinstance(self.object, m.Manuscript)):
-            manuscript_title = self.object.title
+            manuscript_title = self.object. get_display_title()
         else:
-            manuscript_title = self.object.manuscript.title
+            manuscript_title = self.object.manuscript. get_display_title()
 
         if not self.read_only and self.form.is_valid() \
             and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
@@ -373,7 +373,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-            'manuscript_title': self.object.title, 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+            'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': list(self.repo_dict_gen), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
             })
 
@@ -389,7 +389,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
 
                 return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-                    'manuscript_title': self.object.title, 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
+                    'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
                     'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('manuscript_noFiles_error')
                     })
 
@@ -440,7 +440,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
+            'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
@@ -451,7 +451,7 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'manuscript_title': self.object.title, 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+            'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -472,7 +472,7 @@ class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
         except (TransitionNotAllowed):
             ### Messaging ###
-            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.title)
+            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object. get_display_title())
             messages.add_message(request, messages.ERROR, self.msg)
             ### End Messaging ###
         return redirect('/manuscript/'+str(self.object.id))
@@ -606,7 +606,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        manuscript_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript. get_display_title()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_title': manuscript_title, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
@@ -660,7 +660,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def post(self, request, *args, **kwargs):
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
-        manuscript_title = self.object.manuscript.title
+        manuscript_title = self.object.manuscript. get_display_title()
 
         if(self.note_formset):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -790,14 +790,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         if(status == m.Submission.Status.IN_PROGRESS_CURATION):
                             #Send message/notification to curators that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
                                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                         elif(status == m.Submission.Status.IN_PROGRESS_VERIFICATION):
                             #Send message/notification to verifiers that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
-                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
                                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
@@ -942,7 +942,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
         formset = self.form
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
             'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
@@ -977,11 +977,11 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
                     self.object.save()
 
                     ## Messaging ###
-                    self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                    self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
                     messages.add_message(request, messages.SUCCESS, self.msg)
                     logger.info(self.msg)
                     recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                    notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                    notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
                     notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                     for u in recipients: #We have to loop to get the user model fields
                         send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
@@ -997,7 +997,7 @@ class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObject
             logger.debug(formset.errors)
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
             'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
@@ -1048,7 +1048,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def get(self, request, *args, **kwargs):
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
+            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text }
 
@@ -1093,7 +1093,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return redirect(container_flow_address)
                 else:
                     context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-                        'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': [], 's_status':self.object._status,
+                        'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': [], 's_status':self.object._status,
                         'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                         "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error')}
                     
@@ -1226,7 +1226,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript.title, 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
+            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
@@ -1256,7 +1256,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 raise
 
         except (TransitionNotAllowed):
-            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1278,10 +1278,10 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
-            self.msg= _("submission_objectTransferEditorReturnSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            self.msg= _("submission_objectTransferEditorReturnSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
             messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
-            self.msg= _("submission_objectTransferEditorReturnFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            self.msg= _("submission_objectTransferEditorReturnFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1308,19 +1308,19 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                     print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
                     if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
                         #If completed, send message to... editor and authors?
-                        self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
                             send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     else:
                         #If not complete, send message to author about submitting again
-                        self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+                        self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.title, object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
                             send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
@@ -1332,7 +1332,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
 
         except (TransitionNotAllowed):
-            self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript.title)
+            self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1369,7 +1369,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'repo_dict_gen': self.repo_dict_gen, 'file_delete_url': self.file_delete_url, 'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_title': self.object.manuscript.title, 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+            'manuscript_title': self.object.manuscript. get_display_title(), 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
         
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
