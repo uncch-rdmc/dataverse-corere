@@ -599,7 +599,7 @@ class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new', 'New'
         AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
-        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Resubmission'
+        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Author Resubmission'
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
@@ -863,8 +863,8 @@ class GitFile(AbstractCreateUpdateModel):
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
     date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, choices=FileTag.choices, verbose_name='file type')
-    description = models.CharField(max_length=1024, default="", verbose_name='file description')
+    tag = models.CharField(max_length=14, null=True, blank=True, choices=FileTag.choices, verbose_name='file type')
+    description = models.CharField(max_length=1024, null=True, blank=True, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='submission_files')

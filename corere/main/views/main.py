@@ -17,7 +17,6 @@ from corere.main.templatetags.auth_extras import has_group
 from django.utils.translation import gettext as _
 from django.contrib.auth.decorators import user_passes_test
 
-
 logger = logging.getLogger(__name__)
 
 def index(request):
@@ -65,6 +64,14 @@ def manuscript_landing(request, id=None):
     if(has_transition_perm(manuscript.add_submission_noop, request.user)):
         manuscript_avail_buttons.append('createSubmission')
 
+    manuscript_author_account_completed = False
+    #this logic is a tad confusing. We only populate the completed checkmark if there is one author and they have logged in before
+    author_user_set = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id)).user_set.all()
+    if(len(author_user_set) == 1):
+        for user in author_user_set: #this loop only happens once
+            if(user.last_login):
+                manuscript_author_account_completed = True
+        
     manuscript_authors = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(manuscript.id))
     manuscript_editors = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(manuscript.id))
     manuscript_curators = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
@@ -75,6 +82,7 @@ def manuscript_landing(request, id=None):
             "submission_count": manuscript.manuscript_submissions.count(),
             "manuscript_title": manuscript. get_display_title(),
             "manuscript_authors": manuscript_authors,
+            "manuscript_author_account_completed": manuscript_author_account_completed,
             "manuscript_editors": manuscript_editors,
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,

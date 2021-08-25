@@ -10,6 +10,11 @@
 
 // }
 
+//makes file metadata description the correct height for formsets. Needed to override our new default textarea
+textarea.shortarea {
+    height: 38px;
+}
+
 table.filestable {
     td.filespath {
         padding-left: 10px;
@@ -67,14 +72,14 @@ div.layout {
 
 div.fixed {
     max-width: 1140px;
-    min-width: 900px;
+    min-width: 910px;
     margin: 0 auto;
     padding: 0px 10px 10px 10px;
 }
 
 div.full {
     padding: 0px 15px 15px 15px;
-    min-width: 900px;
+    min-width: 910px;
 }
 
 html, body {

@@ -321,7 +321,7 @@
 
     <p class="my-2"> 
         <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
-        Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} <br>
+        Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>
         Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
             <br> 

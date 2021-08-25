@@ -781,7 +781,7 @@ GitFileFormSet = inlineformset_factory(
     can_delete=False,
     widgets={
         'name': DownloadGitFileWidget(),
-        'description': Textarea(attrs={'rows':1}) }
+        'description': Textarea(attrs={'rows':1, 'class': 'shortarea'}) }
 )
 
 GitFileReadOnlyFileFormSet = inlineformset_factory(
@@ -793,7 +793,7 @@ GitFileReadOnlyFileFormSet = inlineformset_factory(
     can_delete=False,
     widgets={
         'name': DownloadGitFileWidget(),
-        'description': Textarea(attrs={'rows':1})}
+        'description': Textarea(attrs={'rows':1, 'class': 'shortarea'})}
 )
 
 class GitFileFormSetHelper(FormHelper):

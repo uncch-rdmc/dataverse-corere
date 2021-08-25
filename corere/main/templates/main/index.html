@@ -19,6 +19,7 @@
                 var select_timeout;
                 var table = $('#manuscript_table').DataTable({
                     lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+                    iDisplayLength: 10,
                     searching: true,
                     processing: true,
                     stateSave: true,
@@ -60,7 +61,7 @@
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 4 ).search( "" ).draw();
+                                    table.columns( 4 ).search( "Completed" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
