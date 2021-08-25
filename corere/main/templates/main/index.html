@@ -163,7 +163,6 @@
     function constructTableM(columns) {
         var columns_config = [];
         var button_index;
-        console.log("HELLO")
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
@@ -173,9 +172,14 @@
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
             } 
-            else if(columns[c][0] === 'users') {
-                console.log("hello3")
+            else if(columns[c][0] === 'users' || columns[c][0] === 'id') {
                 column_settings.visible = false;
+            } else if(columns[c][0] === 'pub_name') {
+                column_settings.render = function ( data, type, row ) {
+                    return type === 'display' && data.length > 25 ?
+                        data.substr( 0, 25 ) +'…' :
+                        data;
+                }
             }
             console.log(columns[c][0])
             columns_config[c] = column_settings

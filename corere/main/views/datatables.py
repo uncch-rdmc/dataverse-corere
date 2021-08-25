@@ -87,7 +87,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = [['selected',''],['id','ID'],['pub_name','Pub Name'],['pub_id','Pub ID'],['_status','Status']]
+    columns = [['selected',''],['id','ID'],['pub_id','Pub ID'],['pub_name','Pub Name'],['_status','Status']]
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
         columns.append(['users', "Users"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
