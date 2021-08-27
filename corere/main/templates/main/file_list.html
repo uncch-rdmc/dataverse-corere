@@ -27,9 +27,9 @@
         {% endfor %}
     </table>
 
-    {% if obj_type == "submission" and repo_dict_gen%}
+    {% if obj_type == "submission"%}
         <br>
-        <button id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
+        <button {% if not repo_dict_gen %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
     {% endif %}
     <br>
    

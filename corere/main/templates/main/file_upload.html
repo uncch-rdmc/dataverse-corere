@@ -64,6 +64,8 @@
                     
                     // console.log(encode_full_name)
 
+                    document.getElementById("filesHeaderDiv").style.visibility = 'visible';
+
                     $("#filestable").append(`<tr>
                         <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('../downloadfile/?file_path=`+encode_full_name+`')"><span class="fas fa-file-download"></span></button></td>
                         <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this, '`+encode_full_name+`')"><span class="far fa-trash-alt"></span></button></td>
@@ -77,12 +79,17 @@
                 });
                 this.on("processing", function(file, xhr, data) {
                     var deleteallbutton = document.getElementById("deleteallbutton");
-                    deleteallbutton.disabled = true;
+                    if(deleteallbutton) {
+                        deleteallbutton.disabled = true;
+                    }
                     //deleteallbutton.style.display = "none";
                 });
                 this.on("queuecomplete", function(file, xhr, data) {
                     var deleteallbutton = document.getElementById("deleteallbutton");
-                    deleteallbutton.disabled = false;
+                    if(deleteallbutton) {
+                        deleteallbutton.disabled = false;
+                        deleteallbutton.style.visibility = 'visible';
+                    }
                     //deleteallbutton.style.display = "block"; 
                 });
                 this.on("sending", function(file, xhr, data) {
