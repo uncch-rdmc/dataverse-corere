@@ -24,6 +24,7 @@ from django.utils.translation import gettext as _
 from notifications.signals import notify
 from templated_email import send_templated_mail
 from django.utils.datastructures import MultiValueDictKeyError
+import base64
 
 logger = logging.getLogger(__name__)  
 
@@ -1215,6 +1216,7 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
 
 #Used for ajax refreshing in EditFiles
+#TODO: Probably no longer be needed with list rewrite
 class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     template = 'main/file_list.html'
     transition_method_name = 'edit_noop'
@@ -1228,6 +1230,47 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
         return render(request, self.template, {'read_only': self.read_only, 
             'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
+
+class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    template = 'main/file_list.html'
+    transition_method_name = 'edit_noop'
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+
+    #window.open('/submission/79/downloadfile/?file_path=%2Fselect2.full.min.js')
+    #file_path = request.GET.get('file_path')
+
+    def get(self, request, *args, **kwargs):
+        file_path = request.GET.get('file_path')
+        if(not file_path):
+            raise Http404()
+        folder_path, file_name = file_path.rsplit('/',1)
+        folder_path = folder_path + '/'
+        try:
+            new_md5 = m.GitFile.objects.values_list('md5').get(parent_submission=self.object, path=folder_path, name=file_name)
+        except m.GitFile.DoesNotExist:
+            pass
+            raise Http404()
+
+        if(self.object.version_id > 1):
+            prev_sub = m.Submission.objects.get(manuscript=self.object.manuscript, version_id=self.object.version_id - 1)
+            try:
+                old_md5 = m.GitFile.objects.values_list('md5').get(parent_submission=prev_sub, path=folder_path, name=file_name)
+                print(old_md5)
+                print(new_md5)
+                if(old_md5 == new_md5):
+                    #return HttpResponse("NOT NEW")
+                    image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAA5hJREFUeJzt0ztuVEEQQNGSyGwBmwEW4G2R8su8GRISIDJI7IMUEkQIgT1ijKb9ZuZ9urv6HKny6s+NAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmOVR7QVgwsuI+B0R32svAq15FRF/IuJHRDyrvAs0ZRfHbkQCd/6PQyRwpxSHSBjeVBz7kTyvtCNUcWwcImE4p8YhEoZxbhwiIb25cYiEtJaKYzc/QyQksXQcIiGNteIQCd1bOw6R0K2t4hAJ3dk6DpHQjVpx7EfyYvVTwhlqxyESmtVKHCKhOa3FIRKa0WocIqG61uPYzYe1LgBKeonja0Q8XekO4KDXUf/ji4MmiQMKxAEF4oACcUCBOKBAHFAgDigQBxSIAwrEAQXigAJxQIE4oEAcUCAOKBAHFIgDCsQBBeKAAnFAgTigQBxQIA4oeBP1P744aJI4oEAcUCAOKBAHFIgjiauIeFd7iWTEkcRVRPyK28u6rrxLFuJIYj+O3YhkHnEkcSgOkcwjjiQeikMk5xFHEsfEIZLTiCOJU+IQyXHEkcQ5cYjkYeJIYk4cIjlMHEksEYdI7hNHEkvGIZJb4khijThGj0QcSawZx6iRiCOJLeIYLRJxJLFlHKNEIo4kasSRPRJxJFEzjqyRiCOJFuLIFok4kmgpjiyRvI36dyiOBbQYR++RiCOJluPoNRJxJPI+6j9UpkjEkcxFRHyM+g+WIRJxJCWS+cSRnEjOJ45BiOR04hiMSI4njkGJZJo4BieSMnEQESI5RBzcI5J/xMFBIhEHEy4i4lPU/wA1IhEHRxkxEnFwkpEiEQdnGSEScTBL5kjEwSIyRiIOFpUpEnGwigyRiINV9RyJONhEj5GIg031FMm3BnYQx4AuIuJz1P9YGUYcSYlEHEwQiTiYIBJxMEEk4mCCSMTBBJGIgwkiEQcTRCIOJohEHEwYORJxcJTLGC8ScXCSkSIRB2cZIRJxMEvmSMTBIjJGIg4WlSkScbCKDJGIg1X1HIk42ESPkYiDTfUUiTiooodIvkbEk5XOD5NajkQcNKHFSMRBU1qKRBw0qYVIvoQ4aFjNSMRBF2pEIg66smUk4qBLW0QiDrq2ZiTiIIU1IrkJcZDIkpGIg5SWiEQcpDYnEnEwhHMiEQdDOSWSm4h4XGVLqOiYSMTB0B6KRBwQhyMRB+zZj0QccMBlRFyHOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADjdX8jkMLWVgjuDAAAAAElFTkSuQmCC"
+                    return HttpResponse(base64.b64decode(image_base64), content_type='image/png')
+            except m.GitFile.DoesNotExist:
+                pass
+
+        image_base64 = "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"
+        return HttpResponse(base64.b64decode(image_base64), content_type='image/png')
+
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch

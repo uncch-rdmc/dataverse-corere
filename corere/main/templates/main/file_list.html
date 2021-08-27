@@ -11,7 +11,7 @@
         <h5 class="cblue">Uploaded Files:</h5>
     </div>
 
-    <table class="filestable">
+    <table id="filestable" class="filestable">
         {% for path in repo_dict_gen %}
         <tr>
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
@@ -19,9 +19,11 @@
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td>
             {% endif %}
             <td class="filespath">{{ path }} </td>
+            <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path={{ path|always_escape }}"/></td>
         </tr>
         {% endfor %}
     </table>
+
     {% if obj_type == "submission" and repo_dict_gen%}
         <br>
         <button class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
