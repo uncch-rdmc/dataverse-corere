@@ -75,6 +75,16 @@
                     
                     this.removeFile(file);
                 });
+                this.on("processing", function(file, xhr, data) {
+                    var deleteallbutton = document.getElementById("deleteallbutton");
+                    deleteallbutton.disabled = true;
+                    //deleteallbutton.style.display = "none";
+                });
+                this.on("queuecomplete", function(file, xhr, data) {
+                    var deleteallbutton = document.getElementById("deleteallbutton");
+                    deleteallbutton.disabled = false;
+                    //deleteallbutton.style.display = "block"; 
+                });
                 this.on("sending", function(file, xhr, data) {
                     // if file is actually a folder
                     if(file.fullPath){
