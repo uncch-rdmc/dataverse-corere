@@ -11,21 +11,25 @@
         <h5 class="cblue">Uploaded Files:</h5>
     </div>
 
-    <table id="filestable" class="filestable">
-        {% for path in repo_dict_gen %}
-        <tr>
-            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
-            {% if not read_only %}
-            <!-- <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td> -->
-            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this,'{{ path|always_escape }}')"><span class="far fa-trash-alt"></span></button></td>
-            {% endif %}
-            <td class="filespath">{{ path }} </td>
-            {% if obj_type == "submission" %}
-            <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path={{ path|always_escape }}"/></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
+    <form action="" method="post">
+        {% csrf_token %}
+        <table id="filestable" class="filestable">
+            {% for path in repo_dict_gen %}
+                <tr>
+                    <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
+                    {% if not read_only %}
+                    <!-- <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td> -->
+                    <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this,'{{ path|always_escape }}')"><span class="far fa-trash-alt"></span></button></td>
+                    {% endif %}
+                    <td class="filespath"><input name="file:{{ path }}" type="text" style="width:500px" value='{{ path }}'> </td>
+                    {% if obj_type == "submission" %}
+                    <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path={{ path|always_escape }}"/></td>
+                    {% endif %}
+                </tr> 
+            {% endfor %}
+        </table>
+        <input type="submit" name="submit" value="Submit">
+    </form>
 
     {% if obj_type == "submission"%}
         <br>

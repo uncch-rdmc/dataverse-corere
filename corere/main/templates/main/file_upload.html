@@ -69,7 +69,7 @@
                     $("#filestable").append(`<tr>
                         <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('../downloadfile/?file_path=`+encode_full_name+`')"><span class="fas fa-file-download"></span></button></td>
                         <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this, '`+encode_full_name+`')"><span class="far fa-trash-alt"></span></button></td>
-                        <td class="filespath">`+full_name+`</td>
+                        <td class="filespath"><input name="file:`+full_name+`" type="text" style="width:500px" value='`+full_name+`'> </td>
                         {% if obj_type == "submission" %}
                         <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path=`+encode_full_name+`"/></td>
                         {% endif %}
