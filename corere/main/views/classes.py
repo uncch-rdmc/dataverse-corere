@@ -1067,35 +1067,43 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def post(self, request, *args, **kwargs):
         if not self.read_only:
             if request.POST.get('submit'): #TODO: Rename submit?
-                #What are we doing in here?
-                # - writing changed filenames
                 #TODO: We should also do this for submit_continue?
-                #with transaction.atomic(): #to ensure we only save if there are no errors
-                for key, value in request.POST.items():
-                    if(key.startswith("file:")):
-                        skey = key.removeprefix("file:")
-                        print(skey)
-                        print(value)
-                        print("------------------------------")
-                        if(skey != value):
-                            before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                            before_path = "/"+before_path
-                            print(str(len(before_path)))
-                            print(before_path)
-                            print(str(len(before_name)))
-                            print(before_name)
-                            gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
-                            after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                            after_path = "/" + after_path                      
-                            print(str(len(after_path)))
-                            print(str(len(after_name)))
-                            gfile.name=after_name
-                            gfile.path=after_path
-                            gfile.save()
-                        
-                        #see separate todo file
+                
+                changes_for_git = []
+                try: 
+                    with transaction.atomic(): #to ensure we only save if there are no errors
+                        for key, value in request.POST.items():
+                            if(key.startswith("file:")):
+                                skey = key.removeprefix("file:")
+                                print(skey)
+                                print(value)
+                                print("------------------------------")
+                                if(skey != value):
+                                    if(value.find('..')): #.. path not allowed
+                                        raise ValueError('File name with .. not allowed.')
+                                    before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+                                    before_path = "/"+before_path
+                                    print(str(len(before_path)))
+                                    print(before_path)
+                                    print(str(len(before_name)))
+                                    print(before_name)
+                                    gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
+                                    after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+                                    after_path = "/" + after_path                      
+                                    print(str(len(after_path)))
+                                    print(str(len(after_name)))
+                                    gfile.name=after_name
+                                    gfile.path=after_path
+                                    gfile.save()
+                                    changes_for_git.append({"old":skey, "new":value})
+                except ValueError as e:
+                    #TODO: handle this better, also log
+                    print("VALUE ERROR")
+                    pass
 
-                #TODO: Add transactions.rollback() if there are errors in any of the saves?
+                g.rename_submission_files(self.object.manuscript, changes_for_git)
+
+                # #TODO: Add transactions.rollback() if there are errors in any of the saves?
 
                 pass
             print(request.POST)
