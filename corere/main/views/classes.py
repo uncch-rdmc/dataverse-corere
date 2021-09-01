@@ -380,20 +380,52 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             })
 
     def post(self, request, *args, **kwargs):
-         if request.POST.get('submit_continue'):
-            if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
-                return redirect('manuscript_addauthor', id=self.object.id)
-            else:
-                # self.msg = _('manuscript_noFiles_banner')
-                # messages.add_message(request, messages.ERROR, self.msg)
+        if not self.read_only:
+            error = ''
+            changes_for_git = []
+            try: 
+                with transaction.atomic(): #to ensure we only save if there are no errors
+                    for key, value in request.POST.items():
+                        if(key.startswith("file:")):
+                            skey = key.removeprefix("file:")
+                            if(skey != value):
+                                if(value.find('..') != -1): #.. path not allowed
+                                    raise ValueError('File name with .. not allowed.')
+                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+                                before_path = "/"+before_path
+                                gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
+                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+                                after_path = "/" + after_path                      
+                                gfile.name=after_name
+                                gfile.path=after_path
+                                gfile.save()
+                                changes_for_git.append({"old":skey, "new":value})
+            except ValueError as e:
+                error = str(e)
+                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-                progress_list = c.progress_list_manuscript
-                progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+            g.rename_manuscript_files(self.object, changes_for_git)
 
-                return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
-                    'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': [], 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
-                    'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('manuscript_noFiles_error')
-                    })
+            if request.POST.get('submit_continue'):
+                if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
+                    return redirect('manuscript_addauthor', id=self.object.id)
+                else:
+                    error = _('manuscript_noFiles_error')
+                
+
+            progress_list = c.progress_list_manuscript
+            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+
+            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
+                'manuscript_title': self.object. get_display_title(), 'repo_dict_gen': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
+                'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
+                }
+
+            if(error):
+                context['error']= error
+
+            return render(request, self.template, context)
 
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     transition_method_name = 'edit_noop'
@@ -404,8 +436,25 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         if not self.read_only:
             file = request.FILES.get('file')
             fullPath = request.POST.get('fullPath','')
-            path = fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-            g.store_manuscript_file(self.object, file, path)
+            path = '/'+fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+
+            if m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
+                return HttpResponse('File already exists', status=409)
+            md5 = g.store_manuscript_file(self.object, file, path)
+            #Create new GitFile for uploaded manuscript file
+            git_file = m.GitFile()
+            #git_file.git_hash = '' #we don't store this currently
+            git_file.md5 = md5
+            git_file.name = file.name
+            git_file.path = path
+            git_file.size = file.size
+            git_file.parent_manuscript = self.object
+            git_file.save(force_insert=True)
+
+            #TODO: maybe centralize this flag setting to happen by the GitFile model
+            self.object.files_changed = True
+            self.object.save()
+            
             return HttpResponse(status=200)
 
 class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
@@ -1031,7 +1080,6 @@ class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
 
-#We just leverage the existing form infrastructure for perm checks etc
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
@@ -1066,47 +1114,32 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            if request.POST.get('submit'): #TODO: Rename submit?
-                #TODO: We should also do this for submit_continue?
-                
-                changes_for_git = []
-                try: 
-                    with transaction.atomic(): #to ensure we only save if there are no errors
-                        for key, value in request.POST.items():
-                            if(key.startswith("file:")):
-                                skey = key.removeprefix("file:")
-                                print(skey)
-                                print(value)
-                                print("------------------------------")
-                                if(skey != value):
-                                    if(value.find('..')): #.. path not allowed
-                                        raise ValueError('File name with .. not allowed.')
-                                    before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                    before_path = "/"+before_path
-                                    print(str(len(before_path)))
-                                    print(before_path)
-                                    print(str(len(before_name)))
-                                    print(before_name)
-                                    gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
-                                    after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                    after_path = "/" + after_path                      
-                                    print(str(len(after_path)))
-                                    print(str(len(after_name)))
-                                    gfile.name=after_name
-                                    gfile.path=after_path
-                                    gfile.save()
-                                    changes_for_git.append({"old":skey, "new":value})
-                except ValueError as e:
-                    #TODO: handle this better, also log
-                    print("VALUE ERROR")
-                    pass
+            error = ''
+            changes_for_git = []
+            try: 
+                with transaction.atomic(): #to ensure we only save if there are no errors
+                    for key, value in request.POST.items():
+                        if(key.startswith("file:")):
+                            skey = key.removeprefix("file:")
+                            if(skey != value):
+                                if(value.find('..') != -1): #.. path not allowed
+                                    raise ValueError('File name with .. not allowed.')
+                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+                                before_path = "/"+before_path
+                                gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
+                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+                                after_path = "/" + after_path                      
+                                gfile.name=after_name
+                                gfile.path=after_path
+                                gfile.save()
+                                changes_for_git.append({"old":skey, "new":value})
+            except ValueError as e:
+                error = str(e)
+                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-                g.rename_submission_files(self.object.manuscript, changes_for_git)
+            g.rename_submission_files(self.object.manuscript, changes_for_git)
 
-                # #TODO: Add transactions.rollback() if there are errors in any of the saves?
-
-                pass
-            print(request.POST)
             if request.POST.get('submit_continue'):
                 if (settings.SKIP_DOCKER):
                     self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
@@ -1133,21 +1166,27 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
-                else:
-                    context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-                        'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': [], 's_status':self.object._status,
-                        'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                        "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'error': _('submission_noFiles_error')}
-                    
-                    if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-                        if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                            progress_list = c.progress_list_submission_first
-                        else:
-                            progress_list = c.progress_list_submission_subsequent
-                        progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-                        context['progress_bar_html'] = progress_bar_html
 
-                    return render(request, self.template, context)
+                error = _('submission_noFiles_error')
+            
+            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+                'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
+                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
+                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+
+            if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+                if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
+                    progress_list = c.progress_list_submission_first
+                else:
+                    progress_list = c.progress_list_submission_subsequent
+                progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+                context['progress_bar_html'] = progress_bar_html
+
+            if(error):
+                context['error']= error
+
+            return render(request, self.template, context)
+
 
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
@@ -1160,27 +1199,28 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')
-        fullRelPath = request.POST.get('fullPath','')
-        path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-        if m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
-            return HttpResponse('File already exists', status=409)
-        md5 = g.store_submission_file(self.object.manuscript, file, path)
-        #Create new GitFile for uploaded submission file
-        git_file = m.GitFile()
-        #git_file.git_hash = '' #we don't store this currently
-        git_file.md5 = md5
-        git_file.name = file.name
-        git_file.path = path
-        git_file.size = file.size
-        git_file.parent_submission = self.object
-        git_file.save(force_insert=True)
+        if not self.read_only:
+            file = request.FILES.get('file')
+            fullRelPath = request.POST.get('fullPath','')
+            path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+            if m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
+                return HttpResponse('File already exists', status=409)
+            md5 = g.store_submission_file(self.object.manuscript, file, path)
+            #Create new GitFile for uploaded submission file
+            git_file = m.GitFile()
+            #git_file.git_hash = '' #we don't store this currently
+            git_file.md5 = md5
+            git_file.name = file.name
+            git_file.path = path
+            git_file.size = file.size
+            git_file.parent_submission = self.object
+            git_file.save(force_insert=True)
 
-        #TODO: maybe centralize this flag setting to happen by the GitFile model
-        self.object.files_changed = True
-        self.object.save()
+            #TODO: maybe centralize this flag setting to happen by the GitFile model
+            self.object.files_changed = True
+            self.object.save()
 
-        return HttpResponse(status=200)
+            return HttpResponse(status=200)
 
 class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']

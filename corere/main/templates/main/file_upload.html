@@ -26,9 +26,9 @@
             <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
             {% endif %}
             {% if obj_type == 'submission' %}
-                <input type="submit" name="submit_continue" value="Launch Notebook">
+                <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
             {% else %}
-                <input type="submit" name="submit_continue" value="Continue">
+                <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
             {% endif %}
         {% else %}
             <input type=button value="Home" onClick="location.href='/'">

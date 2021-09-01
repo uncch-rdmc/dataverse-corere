@@ -720,7 +720,7 @@ class Manuscript(AbstractCreateUpdateModel):
             return self.pub_name
 
     def get_gitfiles_pathname(self, combine=False):
-        values_list = GitFile.objects.values('path','name').filter(parent_manuscript=self)        
+        values_list = GitFile.objects.values('path','name').filter(parent_manuscript=self) 
         if(combine):
             combine_list = []
             for v in values_list:
@@ -863,7 +863,7 @@ class ContainerInfo(models.Model):
 ####################################################
 
 # Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
-# Even thought is code supports parent manuscript, it is not used
+# Even thought is code supports parent manuscript
 class GitFile(AbstractCreateUpdateModel):
     #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
