@@ -381,37 +381,38 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            error = ''
+            errors = []
             changes_for_git = []
             try: 
                 with transaction.atomic(): #to ensure we only save if there are no errors
                     for key, value in request.POST.items():
                         if(key.startswith("file:")):
                             skey = key.removeprefix("file:")
+                            error_text = _helper_sanitary_file_check(value)
+                            if(error_text):
+                                raise ValueError(error_text)
                             if(skey != value):
-                                if(value.find('..') != -1): #.. path not allowed
-                                    raise ValueError('File name with .. not allowed.')
                                 before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
                                 before_path = "/"+before_path
                                 gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
                                 after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path                      
+                                after_path = "/" + after_path           
                                 gfile.name=after_name
                                 gfile.path=after_path
                                 gfile.save()
                                 changes_for_git.append({"old":skey, "new":value})
             except ValueError as e:
-                error = str(e)
+                errors.append(str(e))
                 #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
                 logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
             g.rename_manuscript_files(self.object, changes_for_git)
 
-            if request.POST.get('submit_continue'):
-                if list(self.files_dict_list): #this is hacky because you can only read a generator once.
+            if not errors and request.POST.get('submit_continue'):
+                if list(self.files_dict_list):
                     return redirect('manuscript_addauthor', id=self.object.id)
                 else:
-                    error = _('manuscript_noFiles_error')
+                    errors.append(_('manuscript_noFiles_error'))
                 
 
             progress_list = c.progress_list_manuscript
@@ -422,8 +423,9 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
                 }
 
-            if(error):
-                context['error']= error
+            if(errors):
+                print(errors)
+                context['errors']= errors
 
             return render(request, self.template, context)
 
@@ -1118,7 +1120,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            error = ''
+            errors = []
             changes_for_git = []
             try: 
                 with transaction.atomic(): #to ensure we only save if there are no errors
@@ -1126,8 +1128,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         if(key.startswith("file:")):
                             skey = key.removeprefix("file:")
                             if(skey != value):
-                                if(value.find('..') != -1): #.. path not allowed
-                                    raise ValueError('File name with .. not allowed.')
+                                error_text = _helper_sanitary_file_check(value)
+                                if(error_text):
+                                    raise ValueError(error_text)
                                 before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
                                 before_path = "/"+before_path
                                 gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
@@ -1138,20 +1141,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                                 gfile.save()
                                 changes_for_git.append({"old":skey, "new":value})
             except ValueError as e:
-                error = str(e)
+                errors.append(str(e))
                 #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
                 logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
             g.rename_submission_files(self.object.manuscript, changes_for_git)
 
-            if request.POST.get('submit_continue'):
+            if not errors and request.POST.get('submit_continue'):
                 if (settings.SKIP_DOCKER):
                     self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
                     messages.add_message(request, messages.INFO, self.msg)
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
-                if list(self.files_dict_list): #this is hacky because you can only read a generator once.
+                if list(self.files_dict_list):
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
                         if self.object.manuscript.manuscript_containerinfo.build_in_progress:
                             while self.object.manuscript.manuscript_containerinfo.build_in_progress:
@@ -1172,7 +1175,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     container_flow_address = _helper_get_oauth_url(request, self.object)
                     return redirect(container_flow_address)
 
-                error = _('submission_noFiles_error')
+                errors.append(_('submission_noFiles_error'))
             
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                 'manuscript_title': self.object.manuscript. get_display_title(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
@@ -1187,8 +1190,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
                 context['progress_bar_html'] = progress_bar_html
 
-            if(error):
-                context['error']= error
+            if(errors):
+                context['errors']= errors
 
             return render(request, self.template, context)
 
@@ -1569,3 +1572,13 @@ def _helper_submit_submission_and_redirect(request, submission):
         #TODO: Add different message here?
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect('manuscript_landing', id=submission.manuscript.id)
+
+#TODO: The error validation calling this could use refinement. It'll bail out after the first error and doesn't attach errors to file names.
+def _helper_sanitary_file_check(path):
+    if(path.find('..') != -1): 
+        return 'File name with .. not allowed.'
+    if(path.strip() == '' or (path.rsplit('/',1) and path.rsplit('/',1)[1].strip() == '')):
+        return 'File name must include a character other than just spaces.'
+    if(len(path) > 260):
+        return 'File paths + cannot be longer than 260 characters.'    
+    #TODO: Maybe include slugify check. Not using right now because that'll remove spaces among other things.

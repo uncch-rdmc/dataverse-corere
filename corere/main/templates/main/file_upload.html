@@ -2,11 +2,13 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.0/min/dropzone.min.js"></script>
 {% if not read_only %}
-    {% if error %}
+    {% if errors %}
     <ul id="fileserrorlist" class="errorlist">
-        <li>
-            {{error}}
-        </li>
+        {% for error in errors %}
+            <li>
+                {{error}}
+            </li>
+        {% endfor %}
     </ul>
     {% endif %}
     <form class="dropzone" action="." style="margin-bottom:10px" method="post" enctype="multipart/form-data" id="dropform">
