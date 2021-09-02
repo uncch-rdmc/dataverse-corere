@@ -1,7 +1,7 @@
 {% load always_escape %}
 <div id="filesWithHeader">    
     <div id="filesHeaderDiv" 
-        {% if not repo_dict_gen %}
+        {% if not files_dict_list %}
             style="visibility:hidden;"
         {% endif %}> 
         {% comment %} {% if not read_only %}
@@ -14,7 +14,7 @@
     <form action="" method="post">
         {% csrf_token %}
         <table id="filestable" class="filestable">
-            {% for path in repo_dict_gen %}
+            {% for path in files_dict_list %}
                 <tr>
                     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
                     {% if not read_only %}
@@ -34,7 +34,7 @@
 
     {% if obj_type == "submission"%}
         <br>
-        <button {% if not repo_dict_gen %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
+        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
     {% endif %}
     <br>
    
