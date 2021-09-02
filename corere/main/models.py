@@ -862,8 +862,7 @@ class ContainerInfo(models.Model):
 
 ####################################################
 
-# Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
-# Even thought is code supports parent manuscript
+# Stores info about all the files in git, as well as metadata about the files
 class GitFile(AbstractCreateUpdateModel):
     #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):

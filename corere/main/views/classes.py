@@ -977,108 +977,112 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
         self.page_title = _("submission_view_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
 
+
+##### THESE FILE METADATA COLLECTING CLASSES ARE DISABLED FOR NOW. WE MAY WANT THEM EVENTUALLY TO COLLECT DESCRIPTION/TAGS FOR DATAVERSE ###
+
 # TODO: Do we need all the parameters being passed? Especially for read?
 # TODO: I'm a bit surprised this doesn't blow up when posting with invalid data. The root post is used (I think). Maybe the get is called after to render the page?
-class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
-    template = 'main/form_edit_files.html'
-    helper=f.GitFileFormSetHelper()
-    parent_reference_name = 'manuscript'
-    parent_id_name = "manuscript_id"
-    parent_model = m.Manuscript
-    object_friendly_name = 'submission'
-    model = m.Submission
+# class GenericSubmissionFilesMetadataView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+#     template = 'main/form_edit_files.html'
+#     helper=f.GitFileFormSetHelper()
+#     parent_reference_name = 'manuscript'
+#     parent_id_name = "manuscript_id"
+#     parent_model = m.Manuscript
+#     object_friendly_name = 'submission'
+#     model = m.Submission
 
-    def get(self, request, *args, **kwargs):
-        #TODO: Can we just refer to form for everything and delete a bunch of stuff?
-        formset = self.form
+#     def get(self, request, *args, **kwargs):
+#         #TODO: Can we just refer to form for everything and delete a bunch of stuff?
+#         formset = self.form
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+#         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+#             'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+#             'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
-            context['progress_bar_html'] = progress_bar_html
+#         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+#             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
+#                 progress_list = c.progress_list_submission_first
+#             else:
+#                 progress_list = c.progress_list_submission_subsequent
+#             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
+#             context['progress_bar_html'] = progress_bar_html
 
-        return render(request, self.template, context)
+#         return render(request, self.template, context)
 
-    #Originally copied from GenericCorereObjectView
-    def post(self, request, *args, **kwargs):
-        formset = self.form
-        if formset.is_valid():
-            if not self.read_only:
-                formset.save() #Note: this is what saves a newly created model instance
-                if request.POST.get('back_save'):
-                    if (settings.SKIP_DOCKER):
-                        self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
-                        messages.add_message(request, messages.INFO, self.msg)
-                        return redirect('submission_uploadfiles', id=self.object.id)
-                    container_flow_address = _helper_get_oauth_url(request, self.object)
-                    return redirect(container_flow_address)
-                elif self.object._status == self.object.Status.NEW or self.object._status == self.object.Status.REJECTED_EDITOR:
-                    if not fsm_check_transition_perm(self.object.submit, request.user): 
-                        logger.debug("PermissionDenied")
-                        raise Http404()
-                    self.object.submit(request.user)
-                    self.object.save()
+#     #Originally copied from GenericCorereObjectView
+#     def post(self, request, *args, **kwargs):
+#         formset = self.form
+#         if formset.is_valid():
+#             if not self.read_only:
+#                 formset.save() #Note: this is what saves a newly created model instance
+#                 if request.POST.get('back_save'):
+#                     if (settings.SKIP_DOCKER):
+#                         self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+#                         messages.add_message(request, messages.INFO, self.msg)
+#                         return redirect('submission_uploadfiles', id=self.object.id)
+#                     container_flow_address = _helper_get_oauth_url(request, self.object)
+#                     return redirect(container_flow_address)
+#                 #NOTE: This logic has been extracted into a helper method in this file
+#                 elif self.object._status == self.object.Status.NEW or self.object._status == self.object.Status.REJECTED_EDITOR:
+#                     if not fsm_check_transition_perm(self.object.submit, request.user): 
+#                         logger.debug("PermissionDenied")
+#                         raise Http404()
+#                     self.object.submit(request.user)
+#                     self.object.save()
 
-                    ## Messaging ###
-                    self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
-                    messages.add_message(request, messages.SUCCESS, self.msg)
-                    logger.info(self.msg)
-                    recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                    notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
-                    notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
-                    for u in recipients: #We have to loop to get the user model fields
-                        send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
-                    ## End Messaging ###
+#                     ## Messaging ###
+#                     self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_title=self.object.manuscript. get_display_title())
+#                     messages.add_message(request, messages.SUCCESS, self.msg)
+#                     logger.info(self.msg)
+#                     recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
+#                     notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript. get_display_title(), object_url=self.object.manuscript.get_landing_url())
+#                     notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+#                     for u in recipients: #We have to loop to get the user model fields
+#                         send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+#                     ## End Messaging ###
 
-                    # self.msg = _("submission_submitted_banner")
-                    # messages.add_message(request, messages.SUCCESS, self.msg)
-                    return redirect('manuscript_landing', id=self.object.manuscript.id)
-                else:
-                    messages.add_message(request, messages.SUCCESS, self.msg)
-                    return redirect('manuscript_landing', id=self.object.manuscript.id)
-        else:
-            logger.debug(formset.errors)
+#                     # self.msg = _("submission_submitted_banner")
+#                     # messages.add_message(request, messages.SUCCESS, self.msg)
+#                     return redirect('manuscript_landing', id=self.object.manuscript.id)
+#                 else:
+#                     messages.add_message(request, messages.SUCCESS, self.msg)
+#                     return redirect('manuscript_landing', id=self.object.manuscript.id)
+#         else:
+#             logger.debug(formset.errors)
 
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
-            'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+#         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+#             'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': self.repo_dict_gen, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
+#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+#             'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
-            context['progress_bar_html'] = progress_bar_html
+#         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+#             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
+#                 progress_list = c.progress_list_submission_first
+#             else:
+#                 progress_list = c.progress_list_submission_subsequent
+#             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
+#             context['progress_bar_html'] = progress_bar_html
 
-        return render(request, self.template, context)
+#         return render(request, self.template, context)
 
-class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
-    transition_method_name = 'edit_noop'
-    page_help_text = _("submission_editFilesMetadata_helpText")
-    form = f.GitFileFormSet
+# class SubmissionEditFilesView(GenericSubmissionFilesMetadataView):
+#     transition_method_name = 'edit_noop'
+#     page_help_text = _("submission_editFilesMetadata_helpText")
+#     form = f.GitFileFormSet
 
-    def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_editFilesMetadata_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+#     def dispatch(self, request, *args, **kwargs):
+#         self.page_title = _("submission_editFilesMetadata_pageTitle").format(submission_version=self.object.version_id)
+#         return super().dispatch(request, *args, **kwargs)
 
-class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
-    transition_method_name = 'view_noop'
-    form = f.GitFileReadOnlyFileFormSet
-    read_only = True
+# class SubmissionReadFilesView(GenericSubmissionFilesMetadataView):
+#     transition_method_name = 'view_noop'
+#     form = f.GitFileReadOnlyFileFormSet
+#     read_only = True
 
-    def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+#     def dispatch(self, request, *args, **kwargs):
+#         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
+#         return super().dispatch(request, *args, **kwargs)
 
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
@@ -1100,7 +1104,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': list(self.repo_dict_gen), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text }
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -1144,7 +1148,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 if (settings.SKIP_DOCKER):
                     self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
                     messages.add_message(request, messages.INFO, self.msg)
-                    return redirect('submission_editfiles', id=self.object.id)
+
+                    return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.repo_dict_gen): #this is hacky because you can only read a generator once.
                     if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
@@ -1172,7 +1177,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
                 'manuscript_title': self.object.manuscript. get_display_title(), 'repo_dict_gen': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text}
+                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
 
             if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
                 if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -1511,7 +1516,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
     def post(self, request, *args, **kwargs):
         if request.POST.get('submit'):
-            return redirect('submission_editfiles', id=self.object.id)
+            return _helper_submit_submission_and_redirect(request, self.object)
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
         pass
@@ -1537,3 +1542,30 @@ def _helper_get_oauth_url(request, submission):
         container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address
+
+def _helper_submit_submission_and_redirect(request, submission):
+    if submission._status == submission.Status.NEW or submission._status == submission.Status.REJECTED_EDITOR:
+        if not fsm_check_transition_perm(submission.submit, request.user): 
+            logger.debug("PermissionDenied")
+            raise Http404()
+        submission.submit(request.user)
+        submission.save()
+
+        ## Messaging ###
+        msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_title=submission.manuscript. get_display_title())
+        messages.add_message(request, messages.SUCCESS, msg)
+        logger.info(msg)
+        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id)) 
+        notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=submission.manuscript.id, object_title=submission.manuscript. get_display_title(), object_url=submission.manuscript.get_landing_url())
+        notify.send(request.user, verb='passed', recipient=recipients, target=submission.manuscript, public=False, description=notification_msg)
+        for u in recipients: #We have to loop to get the user model fields
+            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+        ## End Messaging ###
+
+        # self.msg = _("submission_submitted_banner")
+        # messages.add_message(request, messages.SUCCESS, self.msg)
+        return redirect('manuscript_landing', id=submission.manuscript.id)
+    else:
+        #TODO: Add different message here?
+        # messages.add_message(request, messages.SUCCESS, self.msg)
+        return redirect('manuscript_landing', id=submission.manuscript.id)

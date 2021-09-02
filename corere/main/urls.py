@@ -35,12 +35,12 @@ urlpatterns = [
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
-    path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
+    #path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path('submission/<int:id>/uploader/', classes.SubmissionUploaderView.as_view(), name="submission_uploader"),
     path('submission/<int:id>/fileslist/', classes.SubmissionFilesListAjaxView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view/', classes.SubmissionReadView.as_view(), name="submission_read"),
-    path('submission/<int:id>/viewfiles/', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
+    #path('submission/<int:id>/viewfiles/', classes.SubmissionReadFilesView.as_view(), name="submission_readfiles"),
     path('submission/<int:id>/deletefile/', classes.SubmissionDeleteFileView.as_view(), name="submission_deletefile"),
     path('submission/<int:id>/deleteallfiles/', classes.SubmissionDeleteAllFilesView.as_view(), name="submission_deleteallfiles"),
     path('submission/<int:id>/downloadfile/', classes.SubmissionDownloadFileView.as_view(), name="submission_downloadfile"),

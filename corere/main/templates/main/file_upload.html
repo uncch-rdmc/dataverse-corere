@@ -26,7 +26,12 @@
             <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
             {% endif %}
             {% if obj_type == 'submission' %}
-                <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
+                {% if skip_docker %}
+                    <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
+                {% else %}
+                    <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
+                {% endif %}
+                
             {% else %}
                 <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
             {% endif %}

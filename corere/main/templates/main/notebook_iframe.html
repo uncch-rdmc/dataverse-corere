@@ -9,11 +9,12 @@
     {% csrf_token %}
         <input type="submit" name="back" value="Back">
         <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
-        <input type="submit" name="submit" value="Continue">
+        <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
+        
 </form>
 
 {% endblock content %}
 
 {% comment %} 
-    <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
+    <input type="submit" name="submit" value="Continue">
 {% endcomment %}
