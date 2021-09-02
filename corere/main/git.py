@@ -61,6 +61,29 @@ def _store_file(repo_path, subdir, file):
     repo.index.commit("store file: " + full_path + file.name)
     return hash_md5.hexdigest()
 
+def rename_manuscript_files(manuscript, files_dict_list):
+    repo_path = get_manuscript_repo_path(manuscript)
+    return _rename_files(repo_path, files_dict_list)
+
+def rename_submission_files(manuscript, files_dict_list):
+    repo_path = get_submission_repo_path(manuscript)
+    return _rename_files(repo_path, files_dict_list)
+ 
+def _rename_files(repo_path, files_dict_list):
+    repo = git.Repo(repo_path)
+    
+    #TODO: This doesn't handle name collisions that may happen during rename    
+    for d in files_dict_list:
+        old_path = d.get("old")
+        new_path = d.get("new")
+        try:
+            os.rename(repo_path+old_path, repo_path+new_path)
+            repo.index.add(repo_path+new_path)
+            repo.index.commit("Files renamed")
+        except OSError as e:
+            logger.error("Error renaming files. Likely due to name collision. Repo path: " + repo_path + " . Current file old path: " + old_path + " . New path: " + new_path + " . Error " + str(e) )
+            raise
+
 def delete_submission_file(manuscript, file_path):
     repo_path = get_submission_repo_path(manuscript)
     if(not file_path == '/.git'):
@@ -162,7 +185,6 @@ def get_manuscript_repo_path(manuscript):
 
 def get_submission_repo_path(manuscript):
     return settings.GIT_ROOT+"/" + get_submission_repo_name(manuscript) + "/"
-
 
 def create_submission_branch(submission):
     repo = git.Repo(get_submission_repo_path(submission.manuscript))

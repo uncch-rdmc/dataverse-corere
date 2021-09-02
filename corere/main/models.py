@@ -355,6 +355,15 @@ class Submission(AbstractCreateUpdateModel):
                 public_notes.append(note)
         return public_notes
 
+    def get_gitfiles_pathname(self, combine=False):
+        values_list = GitFile.objects.values('path','name').filter(parent_submission=self)        
+        if(combine):
+            combine_list = []
+            for v in values_list:
+                combine_list.append(v.get('path')+v.get('name'))
+            return combine_list
+        else:
+            return values_list
 
     ##### django-fsm (workflow) related functions #####
 
@@ -710,6 +719,15 @@ class Manuscript(AbstractCreateUpdateModel):
         except TypeError:
             return self.pub_name
 
+    def get_gitfiles_pathname(self, combine=False):
+        values_list = GitFile.objects.values('path','name').filter(parent_manuscript=self) 
+        if(combine):
+            combine_list = []
+            for v in values_list:
+                combine_list.append(v.get('path')+v.get('name'))
+            return combine_list
+        else:
+            return values_list
 
     # def __str__(self):
     #     return '{0}: {1}'.format(self.id, self.title)
@@ -844,8 +862,7 @@ class ContainerInfo(models.Model):
 
 ####################################################
 
-# Stores info about all the files in git. Needed for tag/description, but also useful to have other info on-hand
-# Even thought is code supports parent manuscript, it is not used
+# Stores info about all the files in git, as well as metadata about the files
 class GitFile(AbstractCreateUpdateModel):
     #this is also referenced in Note.ref_file_type
     class FileTag(models.TextChoices):
@@ -885,6 +902,10 @@ class GitFile(AbstractCreateUpdateModel):
         if self.parent_manuscript_id != None:
             return self.parent_submission
         raise AssertionError("Neither 'parent_submission' or 'parent_manuscript' is set")
+
+    @property
+    def full_path(self):
+        return self.path + self.name
 
     def save(self, *args, **kwargs):
         parents = 0
