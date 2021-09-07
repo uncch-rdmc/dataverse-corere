@@ -1327,9 +1327,6 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     object_friendly_name = 'submission'
     model = m.Submission
 
-    #window.open('/submission/79/downloadfile/?file_path=%2Fselect2.full.min.js')
-    #file_path = request.GET.get('file_path')
-
     def get(self, request, *args, **kwargs):
         file_path = request.GET.get('file_path')
         if(not file_path):

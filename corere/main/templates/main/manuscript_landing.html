@@ -58,6 +58,19 @@
         }
     }
 
+    function files_list_visibility(visibility) {
+        if(visibility) { //show
+            document.getElementById('files_list_holder').style.display='block';
+            document.getElementById('show_files_list_rule').style.display='none';
+            document.getElementById('hide_files_list_rule').style.display='block';
+        } else {
+            document.getElementById('files_list_holder').style.display='none';            
+            document.getElementById('show_files_list_rule').style.display='block';
+            document.getElementById('hide_files_list_rule').style.display='none';
+        }
+    }
+
+
     $(document).ready(function() {
         console.log("Create sub outside")
         $.ajax({
@@ -290,8 +303,11 @@
 </script>
 
 {% include "main/page_title.html" with no_hr=True %}
-    <p class="my-2"> 
+    <p id="manuscript_overview" class="my-2"> 
         <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
+        Title: {{manuscript_pub_name}}<br>
+        QDR Review: {{manuscript_qdr_review}}<br>
+        Corresponding Author: {{manuscript_corresponding_author}}<br>
         Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>
         Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
@@ -339,6 +355,21 @@
     </div>
 
     <br><br>
+
+    <div id="show_files_list_rule" class="sectional">
+        <button id="show_files_list_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="files_list_visibility(true)">Manuscript Files &#9650;</button>
+    </div>
+
+    <div id="hide_files_list_rule" class="sectional" style="display:none; ">
+        <button id="hide_files_list_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="files_list_visibility(false)">Manuscript Files &#9660;</button>
+    </div>
+    
+    <div id="files_list_holder" style="display:none;">
+    Manuscript Files:
+    {% include "main/file_list.html" with landing_page=True read_only=True file_download_url='downloadfile/?file_path=' %}
+    </div>
+
+    <br>
 
     <div id="show_table_rule" class="sectional">
         <button id="show_table_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="sub_table_visibility(true)">Submission Table &#9650;</button>
