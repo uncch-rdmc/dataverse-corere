@@ -80,7 +80,7 @@ def manuscript_landing(request, id=None):
     args = {'user':     request.user, 
             "manuscript_id": id,
             "submission_count": manuscript.manuscript_submissions.count(),
-            "manuscript_title": manuscript. get_display_title(),
+            "manuscript_display_name": manuscript. get_display_name(),
             "manuscript_authors": manuscript_authors,
             "manuscript_author_account_completed": manuscript_author_account_completed,
             "manuscript_editors": manuscript_editors,

@@ -202,7 +202,7 @@ def start_oauthproxy_container(manuscript, request):
             + "--cookie-expire=" + "'168h'" + " " \
             + "--authenticated-emails-file=" + "'" + emails_file_path + "'" + " " \
             + "--custom-templates-dir='" + template_files_path + "' " \
-            + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript. get_display_title() + "'" + " " \
+            + "--banner=" + "'" + "Please re-authenticate to access the environment for Manuscript: " + manuscript. get_display_name() + "'" + " " \
             + "--footer=" + "'" + settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "'" + " " \
             + "--whitelist-domain=" + "'" + settings.SERVER_ADDRESS + "'" + " "
 
