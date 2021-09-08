@@ -46,30 +46,6 @@
         });
     }
 
-    function sub_table_visibility(visibility) {
-        if(visibility) { //show
-            document.getElementById('submission_table_holder').style.display='block';
-            document.getElementById('show_table_rule').style.display='none';
-            document.getElementById('hide_table_rule').style.display='block';
-        } else {
-            document.getElementById('submission_table_holder').style.display='none';            
-            document.getElementById('show_table_rule').style.display='block';
-            document.getElementById('hide_table_rule').style.display='none';
-        }
-    }
-
-    function files_list_visibility(visibility) {
-        if(visibility) { //show
-            document.getElementById('files_list_holder').style.display='block';
-            document.getElementById('show_files_list_rule').style.display='none';
-            document.getElementById('hide_files_list_rule').style.display='block';
-        } else {
-            document.getElementById('files_list_holder').style.display='none';            
-            document.getElementById('show_files_list_rule').style.display='block';
-            document.getElementById('hide_files_list_rule').style.display='none';
-        }
-    }
-
 
     $(document).ready(function() {
         console.log("Create sub outside")
@@ -303,97 +279,118 @@
 </script>
 
 {% include "main/page_title.html" with no_hr=True %}
-    <p id="manuscript_overview" class="my-2"> 
-        <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
-        Title: {{manuscript_pub_name}}<br>
-        QDR Review: {{manuscript_qdr_review}}<br>
-        Corresponding Author: {{manuscript_corresponding_author}}<br>
-        Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>
-        Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
-        {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
-            <br> 
-            Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
-            Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
-        {% endif %}
-    </p>
+<br>
 
-    <div class="my-1 dt-buttons btn-group flex-wrap">    
-        {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
-        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
-        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
-        {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
-
-        {% if m_edit_flag %} 
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
-        {% elif m_view_flag %}
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
-        {% endif %}
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
-        {% if manuscript_has_submissions %}
-            <button type="button" class="btn btn-secondary buttons-collection" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Notebook</button>
-        {% endif %}
-        {% comment %} {% if m_begin_flag %}  {% endcomment %}
-            {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
-            {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
-        {% comment %} {% endif %} {% endcomment %}
-        {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-            <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
-            <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">
-                {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %}  {% endcomment %}
-                {% if request.user|has_group:GROUP_ROLE_CURATOR %}
-                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a>
-                {% endif %}
-                {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a>
-                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a>
-                    <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a>
-                {% endif %}
+    <div class="accordion" id="accordionExample">
+        <div class="card">
+          <div class="card-header" id="headingOne">
+            <h5 class="mb-0">
+              <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                Manuscript Info
+              </button>
+            </h5>
+          </div>
+      
+          <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+            <div class="card-body">
+                <p id="manuscript_overview"> 
+                    <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
+                    Title: {{manuscript_pub_name}}<br>
+                    QDR Review: {{manuscript_qdr_review}}<br>
+                    Corresponding Author: {{manuscript_corresponding_author}}<br>
+                    Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>
+                    Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+                        <br> 
+                        Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
+                        Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+                    {% endif %}
+                </p>
+            
+                <div class="my-1 dt-buttons btn-group flex-wrap">    
+                    {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
+                    {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
+                    {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
+                    {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
+            
+                    {% if m_edit_flag %} 
+                        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
+                        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
+                    {% elif m_view_flag %}
+                        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
+                        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
+                    {% endif %}
+                    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
+                    {% if manuscript_has_submissions %}
+                        <button type="button" class="btn btn-secondary buttons-collection" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Notebook</button>
+                    {% endif %}
+                    {% comment %} {% if m_begin_flag %}  {% endcomment %}
+                        {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
+                        {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
+                    {% comment %} {% endif %} {% endcomment %}
+                    {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                        <button type="button" class="btn btn-secondary buttons-collection dropdown-toggle" id="dropdownMenuButtonManuscriptMembers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Manuscript Access</button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonManuscriptMembers">
+                            {% comment %} {% if request.user|has_group:GROUP_ROLE_AUTHOR or request.user|has_group:GROUP_ROLE_EDITOR %}  {% endcomment %}
+                            {% if request.user|has_group:GROUP_ROLE_CURATOR %}
+                                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a>
+                            {% endif %}
+                            {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
+                                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a>
+                                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a>
+                                <a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>    
             </div>
-        {% endif %}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header" id="headingTwo">
+            <h5 class="mb-0">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                Manuscript Files
+              </button>
+            </h5>
+          </div>
+          <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+            <div class="card-body">
+                <div id="files_list_holder">
+                    Manuscript Files:
+                    {% include "main/file_list.html" with landing_page=True read_only=True file_download_url='downloadfile/?file_path=' %}
+                </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header" id="headingThree">
+            <h5 class="mb-0">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                Submissions
+              </button>
+            </h5>
+          </div>
+          <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+            <div class="card-body">
+                <div id="submission_table_holder">
+                    <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
+                        <div>
+                            <h5 class="cblue"> Submissions </h5>
+                        </div> 
+                        <thead>
+                            {% for field in submission_columns %}
+                                <th>{{ field }}</th>
+                            {% endfor %}
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div >
+            </div>
+          </div>
+        </div>
     </div>
 
-    <br><br>
-
-    <div id="show_files_list_rule" class="sectional">
-        <button id="show_files_list_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="files_list_visibility(true)">Manuscript Files &#9650;</button>
-    </div>
-
-    <div id="hide_files_list_rule" class="sectional" style="display:none; ">
-        <button id="hide_files_list_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="files_list_visibility(false)">Manuscript Files &#9660;</button>
-    </div>
-    
-    <div id="files_list_holder" style="display:none;">
-    Manuscript Files:
-    {% include "main/file_list.html" with landing_page=True read_only=True file_download_url='downloadfile/?file_path=' %}
-    </div>
-
-    <br>
-
-    <div id="show_table_rule" class="sectional">
-        <button id="show_table_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="sub_table_visibility(true)">Submission Table &#9650;</button>
-    </div>
-
-    <div id="hide_table_rule" class="sectional" style="display:none; ">
-        <button id="hide_table_button" type="button" class="sectional btn btn-secondary buttons-collection" onclick="sub_table_visibility(false)">Submission Table &#9660;</button>
-    </div>
-
-    <br>
-
-    <div id="submission_table_holder" style="display:none;">
-        <table id="submission_table" class="table table-striped table-bordered" cellspacing="0" style="width:100%">
-            <div>
-                <h5 class="cblue"> Submissions </h5>
-            </div> 
-            <thead>
-                {% for field in submission_columns %}
-                    <th>{{ field }}</th>
-                {% endfor %}
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
-    </div >
 </div>
 {% endblock %}
