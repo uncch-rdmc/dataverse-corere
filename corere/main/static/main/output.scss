@@ -305,6 +305,32 @@ button.sectional {
     border-color:#FFFFFF;
 }
 
+#submission_table_holder {
+    padding: 15px;
+}
+
+div.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    margin-bottom: .5rem;
+}
+
+.table>:not(:last-child)>:last-child>* {
+    border-bottom-color: rgba(0, 0, 0, 0.2);
+}
+
+//returns the dropdown arrow to the forms. 
+//I think I need to update my forms to use form-select instead of form-control
+//Or try out the https://github.com/django-crispy-forms/crispy-bootstrap5 again
+select.form-control {
+    -webkit-appearance: listbox;
+    -moz-appearance: listbox;
+    appearance: listbox;
+    padding: .5rem ;
+}
+
 /* Datatables OLD */
 
 // body {
