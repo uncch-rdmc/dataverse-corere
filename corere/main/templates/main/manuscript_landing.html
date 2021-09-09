@@ -304,21 +304,23 @@
     {% if m_edit_flag %} 
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
-    {% elif m_view_flag %}
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/view/'">View</button>
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/viewfiles/'">View Files</button>
     {% endif %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/report/'">View Report</button>
-    {% if manuscript_has_submissions %}
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Notebook</button>
-    {% endif %}
-    {% comment %} {% if m_begin_flag %}  {% endcomment %}
-        {% comment %} This should be a post. But are we going to move the control inside of manuscript or something? {% endcomment %}
-        {% comment %} <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/progress/'">Hand-off to Authors</button> {% endcomment %}
-    {% comment %} {% endif %} {% endcomment %}
+    <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+        Details
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+        {% comment %} Maybe make view not show up when you can edit? {% endcomment %}
+        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
+        <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
+        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/report/">View Report</a></li>
+        {% if manuscript_has_submissions %}
+        <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
+        {% endif %}
+    </ul>
+
     {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
         <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-            Manuscript Access
+            Access
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
             <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a></li> 
