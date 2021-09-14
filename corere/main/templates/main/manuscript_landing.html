@@ -46,6 +46,20 @@
         });
     }
 
+    function postToSubUrl(endpoint) {
+        console.log('/submission/{{latest_submission_id}}/'+endpoint+'/')
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch('/submission/{{latest_submission_id}}/'+endpoint+'/', {
+            method: 'POST',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        })
+    }
 
     $(document).ready(function() {
         console.log("Create sub outside")
@@ -264,11 +278,11 @@
                 
                 sub_table_callback(table)
 
-                manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
-                for(var i in manuscript_avail_buttons) {
-                    table.button(manuscript_avail_buttons[i]+':name').enable(true);
-                    table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
-                }
+                // manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
+                // for(var i in manuscript_avail_buttons) {
+                //     table.button(manuscript_avail_buttons[i]+':name').enable(true);
+                //     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
+                // }
 
                 fixButtonGroupCurve();
             }
@@ -301,10 +315,40 @@
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
-    {% if m_edit_flag %} 
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit/Progress</button>
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Files</button>
+    {% if createFirstSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/complete/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
+    {% elif createLaterSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/createsubmission/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
+
+    {% if editSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Edit Submission</button>    
+    {% endif %}
+
+    {% comment %} 
+    
+    which buttons were post before?
+    - /progress/ (unused?)
+    - /generatereport/
+    - /finish/
+    {% endcomment %}
+
+    {% if reviewSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Review Submission</button>    
+    {% endif %}
+    {% if generateReportButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('generatereport')">Generate Report</button>    
+    {% endif %}
+    {% if returnSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
+    {% endif %}
+
+
+    {% if m_edit_flag %} 
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
+        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
+    {% endif %}
+
     <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
         Details
     </button>

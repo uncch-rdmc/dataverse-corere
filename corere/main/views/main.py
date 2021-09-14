@@ -39,30 +39,30 @@ def index(request):
 @login_required
 def manuscript_landing(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
-    manuscript_avail_buttons = []
-    if(has_transition_perm(manuscript.edit_noop, request.user)):
-        manuscript_avail_buttons.append('editManuscript')
-        manuscript_avail_buttons.append('editManuscriptFiles')
-    elif(has_transition_perm(manuscript.view_noop, request.user)):
-        manuscript_avail_buttons.append('viewManuscript')
-        manuscript_avail_buttons.append('viewManuscriptFiles')
-    else:
-        raise Http404()
-    if(has_transition_perm(manuscript.begin, request.user)):
-        manuscript_avail_buttons.append('progressManuscript')
-    #TODO: add launchNotebook once integration is better
-    # MAD: Should we change these to be transitions?
-    if(not manuscript.is_complete()):
-        if(request.user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
-            manuscript_avail_buttons.append('inviteassignauthor')
-        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
-            manuscript_avail_buttons.append('assigneditor')
-        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
-            manuscript_avail_buttons.append('assigncurator')
-        if(request.user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
-            manuscript_avail_buttons.append('assignverifier')
-    if(has_transition_perm(manuscript.add_submission_noop, request.user)):
-        manuscript_avail_buttons.append('createSubmission')
+    # manuscript_avail_buttons = []
+    # if(has_transition_perm(manuscript.edit_noop, request.user)):
+    #     manuscript_avail_buttons.append('editManuscript')
+    #     manuscript_avail_buttons.append('editManuscriptFiles')
+    # elif(has_transition_perm(manuscript.view_noop, request.user)):
+    #     manuscript_avail_buttons.append('viewManuscript')
+    #     manuscript_avail_buttons.append('viewManuscriptFiles')
+    # else:
+    #     raise Http404()
+    # if(has_transition_perm(manuscript.begin, request.user)):
+    #     manuscript_avail_buttons.append('progressManuscript')
+    # #TODO: add launchNotebook once integration is better
+    # # MAD: Should we change these to be transitions?
+    # if(not manuscript.is_complete()):
+    #     if(request.user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
+    #         manuscript_avail_buttons.append('inviteassignauthor')
+    #     if(request.user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
+    #         manuscript_avail_buttons.append('assigneditor')
+    #     if(request.user.has_any_perm(c.PERM_MANU_MANAGE_CURATORS, manuscript)):
+    #         manuscript_avail_buttons.append('assigncurator')
+    #     if(request.user.has_any_perm(c.PERM_MANU_MANAGE_VERIFIERS, manuscript)):
+    #         manuscript_avail_buttons.append('assignverifier')
+    # if(has_transition_perm(manuscript.add_submission_noop, request.user)):
+    #     manuscript_avail_buttons.append('createSubmission')
 
     manuscript_author_account_completed = False
     #this logic is a tad confusing. We only populate the completed checkmark if there is one author and they have logged in before
@@ -77,9 +77,64 @@ def manuscript_landing(request, id=None):
     manuscript_curators = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(manuscript.id))
     manuscript_verifiers = get_pretty_user_list_by_group_prefix(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id))
 
+    #Submission button logic in top button row. Original from datatables.py
+
+    editSubmissionButton = False
+    reviewSubmissionButton = False
+    generateReportButton = False
+    returnSubmissionButton = False
+    latest_submission_id = None
+    createFirstSubmissionButton = False
+    createLaterSubmissionButton = False
+    submission_count = manuscript.manuscript_submissions.count()
+
+    if(has_transition_perm(manuscript.add_submission_noop, request.user)):
+        if(submission_count < 1):
+            createFirstSubmissionButton = True
+        else:
+            createLaterSubmissionButton = True
+    else:
+        try:
+            latestSubmission = manuscript.get_latest_submission()
+            latest_submission_id = latestSubmission.id
+
+            #TODO: I want a different label for edit/review even if they are the same page in the end
+
+            if(has_transition_perm(latestSubmission.add_edition_noop, request.user)
+                or has_transition_perm(latestSubmission.add_curation_noop, request.user)
+                or has_transition_perm(latestSubmission.add_verification_noop, request.user) ):
+                reviewSubmissionButton = True
+            else:
+                try:
+                    if(has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user)):
+                        reviewSubmissionButton = True
+                except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if(has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user)):
+                        reviewSubmissionButton = True
+                except m.Submission.submission_curation.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if(has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user)):
+                        reviewSubmissionButton = True
+                except m.Submission.submission_verification.RelatedObjectDoesNotExist:
+                    pass
+            if(not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user)):
+                editSubmissionButton = True
+            if(has_transition_perm(latestSubmission.send_report, request.user)):
+                generateReportButton = True
+            if(has_transition_perm(latestSubmission.finish_submission, request.user)):
+                returnSubmissionButton = True
+        except m.Submission.DoesNotExist:
+            pass
+
     args = {'user':     request.user, 
+            "latest_submission_id": latest_submission_id, #Will be None if no submissions
             "manuscript_id": id,
-            "submission_count": manuscript.manuscript_submissions.count(),
+            "submission_count": submission_count,
             "manuscript_display_name": manuscript.get_display_name(),
             "manuscript_pub_name": manuscript.pub_name,
             "manuscript_qdr_review": str(manuscript.qdr_review),
@@ -98,11 +153,19 @@ def manuscript_landing(request, id=None):
             'GROUP_ROLE_AUTHOR': c.GROUP_ROLE_AUTHOR,
             'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
             'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
-            'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
+            # 'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
             'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
             'page_title': _("manuscript_landing_pageTitle"),
-            'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower
+            'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
+            'editSubmissionButton': editSubmissionButton,
+            'reviewSubmissionButton': reviewSubmissionButton,
+            'generateReportButton': generateReportButton,
+            'returnSubmissionButton': returnSubmissionButton,
+            'createFirstSubmissionButton': createFirstSubmissionButton,
+            'createLaterSubmissionButton': createLaterSubmissionButton
             }
+
+        
     return render(request, "main/manuscript_landing.html", args)
 
 @login_required

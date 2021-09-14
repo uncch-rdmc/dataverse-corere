@@ -509,6 +509,8 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
 #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
 class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+    http_method_names = ['post']
+
     def post(self, request, *args, **kwargs):
         try:
             if not fsm_check_transition_perm(self.object.begin, request.user): 
@@ -1203,6 +1205,7 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     parent_model = m.Manuscript
     model = m.Submission
     object_friendly_name = 'submission'
+    http_method_names = ['post']
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
@@ -1312,6 +1315,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 
@@ -1326,6 +1330,7 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
         file_path = request.GET.get('file_path')
@@ -1371,6 +1376,7 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     model = m.Submission
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
+    http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
         print("SUBMISSION PROGRESS")
@@ -1398,6 +1404,7 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
         try:
@@ -1424,13 +1431,17 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        print("YAY1")
         try:
             if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
+                print("BAD")
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
+                print("YAY2")
                 self.object.finish_submission()
                 self.object.save()
 
@@ -1479,6 +1490,7 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
     model = m.Submission
     transition_method_name = 'edit_noop'
     template = 'main/notebook_redirect.html'
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
         if 'postauth' in request.GET:
