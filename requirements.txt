@@ -48,5 +48,5 @@ six==1.16.0
 sseclient-py==1.7
 social-auth-app-django==4.0.0
 social-auth-core==4.1.0
-sqlparse==0.4.1
+sqlparse==0.4.2
 urllib3==1.26.6
