@@ -646,7 +646,7 @@ class Manuscript(AbstractCreateUpdateModel):
      
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
-    slug = AutoSlugField(populate_from='get_display_title') #TODO: make this based off other things?
+    slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
 
     class Meta:
         permissions = [
@@ -713,7 +713,7 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_landing_url(self):
         return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
-    def get_display_title(self):
+    def get_display_name(self):
         try:
             return self.pub_id + " (" + self.contact_last_name + ")"
         except TypeError:

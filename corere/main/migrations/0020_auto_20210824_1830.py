@@ -54,6 +54,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='manuscript',
             name='slug',
-            field=autoslug.fields.AutoSlugField(editable=False, populate_from='get_display_title'),
+            field=autoslug.fields.AutoSlugField(editable=False, populate_from='get_display_name'),
         ),
     ]
