@@ -240,8 +240,10 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission,
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 'helper': self.helper }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper }#'role_name': self.role_name, 
 
+        if not self.create:
+            context['manuscript_display_name'] = manuscript_display_name
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
@@ -306,7 +308,10 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.keyword_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 'helper': self.helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
+
+        if not self.create:
+            context['manuscript_display_name'] = manuscript_display_name
 
         if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
