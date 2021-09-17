@@ -35,6 +35,8 @@
 
     </form>
     <script type="text/javascript">
+        history.replaceState(null, document.title, location.href); //{%comment%}clears post body on refresh, was causing issues with my custom formness {%endcomment%}
+
         obj_type = "{{obj_type}}"
         obj_id = {{ obj_id }}
         Dropzone.options.dropform = {
