@@ -1289,6 +1289,7 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
+        #print(list(g.get_submission_files_list(self.object.manuscript)))
         for b in g.get_submission_files_list(self.object.manuscript):
             g.delete_submission_file(self.object.manuscript, b)
 
