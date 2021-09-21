@@ -79,7 +79,8 @@ def _rename_files(repo_path, files_dict_list):
         try:
             os.rename(repo_path+old_path, repo_path+new_path)
             repo.index.add(repo_path+new_path)
-            repo.index.commit("Files renamed")
+            repo.index.remove(repo_path+old_path)
+            repo.index.commit("File "+repo_path+old_path+" renamed to " + repo_path+new_path)
         except OSError as e:
             logger.error("Error renaming files. Likely due to name collision. Repo path: " + repo_path + " . Current file old path: " + old_path + " . New path: " + new_path + " . Error " + str(e) )
             raise

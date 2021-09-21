@@ -36,14 +36,13 @@
                 </tr> 
             {% endfor %}
         </table>
-        <input type="submit" {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="submit_fileslist" name="submit" value="Submit">
+        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="downloadallbutton" class="btn btn-secondary btn-sm" type="button" onClick="window.location.href = '../downloadall/';"><span class="fas fa-file-download"></span> Download All</button>
+
+        {% if obj_type == "submission"%}
+        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
+        {% endif %}
+        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="submit_fileslist" class="btn btn-secondary btn-sm" type="submit">Save Names</button>
+
         <input type="submit" id="submit_continue_fileslist" name="submit_continue" value="Submit" style="visibility:hidden;"> {% comment %}This button is always hidden but can be clicked by other buttons outside the form {% endcomment %}
     </form>
-
-    {% if obj_type == "submission"%}
-        <br>
-        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
-    {% endif %}
-    <br>
-   
     </div>

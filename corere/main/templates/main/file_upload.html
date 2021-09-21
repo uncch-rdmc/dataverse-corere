@@ -19,14 +19,6 @@
         
         {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" %}
             <input type=button value="Back" onclick="location.href='../edit/'">
-            {% if obj_type == "submission" %}
-            <!-- <button type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download">Download submission</span></button> -->
-            <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
-            {% else %}
-            <!-- <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download"></span>Download manuscript</button> -->
-        
-            <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
-            {% endif %}
             {% if obj_type == 'submission' %}
                 {% if skip_docker %}
                     <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
@@ -39,18 +31,12 @@
             {% endif %}
         {% else %}
             <input type=button value="Home" onClick="location.href='/'">
-            {% if obj_type == "submission" %}
-            <!-- <button type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download">Download submission</span></button> -->
-            <input type="button" name="downloadall" value="Download submission" onClick="window.location.href = '../downloadall/';">
-            {% else %}
-            <!-- <button class="btn btn-secondary btn-sm" type="button" onclick="window.location.href = '../downloadall/'"><span class="fas fa-file-download"></span>Download manuscript</button> -->
-        
-            <input type="button" name="downloadall" value="Download manuscript" onClick="window.location.href = '../downloadall/';">
-            {% endif %}
         {% endif %}
 
     </form>
     <script type="text/javascript">
+        history.replaceState(null, document.title, location.href); //{%comment%}clears post body on refresh, was causing issues with my custom formness {%endcomment%}
+
         obj_type = "{{obj_type}}"
         obj_id = {{ obj_id }}
         Dropzone.options.dropform = {
@@ -89,6 +75,10 @@
                     if(deleteallbutton) {
                         deleteallbutton.disabled = true;
                     }
+                    var downloadallbutton = document.getElementById("downloadallbutton");
+                    if(downloadallbutton) {
+                        downloadallbutton.disabled = true;
+                    }
                     var submitbutton = document.getElementById("submit_fileslist");
                     if(submitbutton) {
                         submitbutton.disabled = true;
@@ -101,6 +91,11 @@
                     if(deleteallbutton) {
                         deleteallbutton.disabled = false;
                         deleteallbutton.style.visibility = 'visible';
+                    }
+                    var downloadallbutton = document.getElementById("downloadallbutton");
+                    if(downloadallbutton) {
+                        downloadallbutton.disabled = false;
+                        downloadallbutton.style.visibility = 'visible';
                     }
                     var submitbutton = document.getElementById("submit_fileslist");
                     if(submitbutton) {
