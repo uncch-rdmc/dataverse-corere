@@ -99,6 +99,21 @@ class UserByRoleAddFormHelper(FormHelper):
             'email'
         )
 
+class UserDetailsFormHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            Div(
+                Div('first_name',css_class='col-md-6',),
+                Div('last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'username',
+            'email'
+        )
+
 #For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
     first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)

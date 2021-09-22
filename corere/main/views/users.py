@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User, CorereInvitation
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
@@ -330,6 +330,7 @@ def account_associate_oauth(request, key=None):
 
 @login_required()
 def account_user_details(request):
+    helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
     if(request.user.invite_key):
         #we clear out the invite_key now that we can associate the user
@@ -340,14 +341,16 @@ def account_user_details(request):
     form = EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':
+        print("POST")
         if form.is_valid():
             user = form.save()
             msg = _("user_infoUpdated_banner")
             messages.add_message(request, messages.SUCCESS, msg)
             return redirect('/')
         else:
+            print(form.errors)
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title})
+    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
 
 def logout_view(request):
     logout(request)
