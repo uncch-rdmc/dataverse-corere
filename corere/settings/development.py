@@ -30,3 +30,6 @@ CONTAINER_PROTOCOL = 'http'
 CONTAINER_TO_CORERE_ADDRESS = 'host.docker.internal:8000' #when deployed locally we need to use this address to connect from oauth2proxy to our host machine
 
 SKIP_DOCKER = True
+
+#CONTAINER_DRIVER = 'local-docker'
+CONTAINER_DRIVER = 'wholetale'

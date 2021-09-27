@@ -328,6 +328,21 @@ def account_associate_oauth(request, key=None):
 
     return render(request, 'main/new_user_oauth.html')
 
+#If Whole Tale is enabled, redirect user to the Whole Tale Globus authorization. Otherwise just continue to account_user_details
+#TODO: Should we restrict at all when this page is accessed?
+@login_required()
+def account_complete_oauth(request):
+    if settings.CONTAINER_DRIVER == "wholetale":
+        #TODO SOON: We need to procure the correct globus authorization url (from whole tale?) and send users there.
+        #           This url needs to correctly redirect back to corere after authorization, not whole tale.
+        #
+        #           I'm not sure if there is any additional information we need from whole tale as part of this process,
+        #           maybe nothing if we have an "admin" account that does much of the management.
+        return redirect('/account_user_details/')
+    else:
+        return redirect('/account_user_details/')
+
+
 @login_required()
 def account_user_details(request):
     helper = UserDetailsFormHelper()
@@ -338,6 +353,7 @@ def account_user_details(request):
         #This is somewhat a hack to get around having to serve this page with and without header content
         request.user.invite_key = "" 
         request.user.save()
+
     form = EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':
