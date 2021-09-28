@@ -20,3 +20,6 @@ export ALLOWED_HOSTS=*
 #NOTE: Container address does not include the port, server address does (if needed)
 export CONTAINER_ADDRESS="localhost"
 export SERVER_ADDRESS="localhost:8000"
+
+#Only required if using wholetale
+export WHOLETALE_BASE_URL="wholetale.org"

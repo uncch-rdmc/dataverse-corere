@@ -59,6 +59,7 @@ INSTALLED_APPS_DEBUG = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
     'django_extensions',
     'debug_toolbar',
+    'sslserver',
 ]
 
 # Note that middleware order matters https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#enabling-middleware
@@ -250,3 +251,5 @@ OAUTHPROXY_COOKIE_SECRET = os.environ["OAUTHPROXY_COOKIE_SECRET"]
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 SIMPLE_HISTORY_REVERT_DISABLED=True
+
+WHOLETALE_BASE_URL = os.environ["WHOLETALE_BASE_URL"]

@@ -50,6 +50,8 @@ You will need to collect static files before running (and after updating these f
 
 ### First Run
 
+Run the application for development with `python manage.py runserver`. Or if you need (self-signed) ssl use `python manage.py runsslserver`. You should not use these development webservers for production.
+
 Once the app is up and running, go to the Sites section of the admin console and change the names to match your current site. This is used mainly for email formatting.
 
 Upon running the application for the first time, you will also want to set up an admin user. Use `manage.py createsuperuser` and then log in through `youraddress:yourport/admin` . You’ll need to use the admin console though to add these roles to the user so they can access all parts of the workflow. From the admin main page, go to “Users” and select your admin user. Then add these 4 roles: “Role Editor”, “Role Author”, “Role Curator”, “Role Verifier”.

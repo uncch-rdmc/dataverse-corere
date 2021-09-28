@@ -1,4 +1,4 @@
-import logging
+import logging, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
@@ -13,7 +13,7 @@ from corere.main import constants as c
 from django.contrib.auth import login, logout
 from django.conf import settings
 from notifications.signals import notify
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_html
 from django.utils.translation import gettext as _
@@ -333,12 +333,14 @@ def account_associate_oauth(request, key=None):
 @login_required()
 def account_complete_oauth(request):
     if settings.CONTAINER_DRIVER == "wholetale":
-        #TODO SOON: We need to procure the correct globus authorization url (from whole tale?) and send users there.
-        #           This url needs to correctly redirect back to corere after authorization, not whole tale.
-        #
-        #           I'm not sure if there is any additional information we need from whole tale as part of this process,
-        #           maybe nothing if we have an "admin" account that does much of the management.
-        return redirect('/account_user_details/')
+        #Someday, we may need to get the girder token here for our uses.
+        r = requests.get(
+            "https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1/oauth/provider",
+            params={"redirect": "https://localhost:8000/"}
+        )
+        resp =  HttpResponse(content="", status=303)
+        resp["Location"] = r.json()["Globus"]
+        return resp
     else:
         return redirect('/account_user_details/')
 
