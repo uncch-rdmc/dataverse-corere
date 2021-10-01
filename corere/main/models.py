@@ -21,6 +21,7 @@ from simple_history.utils import update_change_reason
 from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
+from corere.main import wholetale as w
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
@@ -303,15 +304,25 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = 1
             else:
                 self.version_id = prev_max_version_id + 1
-
+             
         super(Submission, self).save(*args, **kwargs)
-        if(first_save and self.version_id > 1):
-            prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
-            for gfile in prev_submission.submission_files.all():
-                new_gfile = gfile
-                new_gfile.parent_submission = self
-                new_gfile.id = None
-                new_gfile.save()
+
+        if(first_save):
+            if(settings.CONTAINER_DRIVER == "wholetale"):
+                #TODO: Here we need to create the tale if wholetale is enabled
+                wtc = w.WholeTale()
+                tale = wtc.create_tale("Jupyter") #TODO: Replace with the selected image
+                ti = TaleInfo()
+                ti.submission = self
+                ti.tale_id = tale["_id"]
+                ti.save()   
+            if(self.version_id > 1):
+                prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
+                for gfile in prev_submission.submission_files.all():
+                    new_gfile = gfile
+                    new_gfile.parent_submission = self
+                    new_gfile.id = None
+                    new_gfile.save()
 
     ##### Queries #####
 
@@ -830,6 +841,7 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
+#Class related to locally hosted docker containers
 class ContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
     proxy_image_name = models.CharField(max_length=128, blank=True, null=True)
@@ -859,6 +871,14 @@ class ContainerInfo(models.Model):
 
     # def proxy_image_name(self):
     #     return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
+
+#Information related to a specific tale remotely hosted in WholeTale
+class TaleInfo(models.Model):
+    tale_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Tale ID in Whole Tale')
+    binder_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Instance ID for container in Whole Tale')
+    binder_url = models.URLField(max_length=500, default="", blank=True, null=True, verbose_name='Binder URL')
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleinfo")
+
 
 ####################################################
 
@@ -1021,6 +1041,7 @@ class VerificationMetadata(AbstractCreateUpdateModel):
 class CorereInvitation(Invitation):
     first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
     last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
+    #TODO: connect submission here and cascade on delete
 
     @classmethod
     def create(cls, email, first_name, last_name, inviter=None, **kwargs):

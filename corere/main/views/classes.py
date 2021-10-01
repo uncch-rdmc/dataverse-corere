@@ -4,8 +4,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
-from .. import constants as c 
 from corere.main import docker as d
+from corere.main import wholetale as w
+from corere.main import git as g
+from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
@@ -1161,25 +1163,43 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.files_dict_list):
-                    if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        if self.object.manuscript.manuscript_containerinfo.build_in_progress:
-                            while self.object.manuscript.manuscript_containerinfo.build_in_progress:
-                                time.sleep(.1)
-                                self.object.manuscript.manuscript_containerinfo.refresh_from_db()
-                        
-                        elif(self.object.files_changed):
-                            logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
-                            d.refresh_notebook_stack(self.object.manuscript)
+                    if(settings.CONTAINER_DRIVER == 'wholetale'):
+                        #TODO: I should be checking for file changes and only uploading new files if there are?
+                        #      How do I even check if there are file changes between my local files and the ones on Whole Tale?
+
+                        wtc = w.WholeTale()
+                        tale_id = self.object.submission_taleinfo.tale_id
+                        wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
+                        binder = wtc.run(tale_id) #this may take a long time
+                        self.object.submission_taleinfo.binder_id = binder['_id']
+                        self.object.submission_taleinfo.binder_url = binder['url']
+                        print(binder['url'])
+                        self.object.submission_taleinfo.save()
+
+                        return redirect('submission_notebook', id=self.object.id)
+
+                    else:
+                        if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
+                            if self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                                while self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                                    time.sleep(.1)
+                                    self.object.manuscript.manuscript_containerinfo.refresh_from_db()
+                            
+                            elif(self.object.files_changed):
+                                logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
+                                d.refresh_notebook_stack(self.object.manuscript)
+                                self.object.files_changed = False
+                                self.object.save()
+                        else:
+                            logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
+                            d.build_manuscript_docker_stack(self.object.manuscript, request)
                             self.object.files_changed = False
                             self.object.save()
-                    else:
-                        logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
-                        d.build_manuscript_docker_stack(self.object.manuscript, request)
-                        self.object.files_changed = False
-                        self.object.save()
 
-                    container_flow_address = _helper_get_oauth_url(request, self.object)
-                    return redirect(container_flow_address)
+                        container_flow_address = _helper_get_oauth_url(request, self.object)
+
+                        #Note: We redirect to the oauth page not in an iframe. When that it done it redirects back to our UIs iframe.
+                        return redirect(container_flow_address)
 
                 errors.append(_('submission_noFiles_error'))
             
@@ -1515,7 +1535,10 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
-        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            notebook_url = self.object.submission_taleinfo.binder_url
+        else:
+            notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  

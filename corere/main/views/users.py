@@ -344,7 +344,6 @@ def account_complete_oauth(request):
     else:
         return redirect('/account_user_details/')
 
-
 @login_required()
 def account_user_details(request):
     helper = UserDetailsFormHelper()

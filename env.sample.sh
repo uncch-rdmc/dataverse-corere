@@ -21,5 +21,5 @@ export ALLOWED_HOSTS=*
 export CONTAINER_ADDRESS="localhost"
 export SERVER_ADDRESS="localhost:8000"
 
-#Only required if using wholetale
+#Only used if using wholetale
 export WHOLETALE_BASE_URL="wholetale.org"
