@@ -170,6 +170,8 @@ def manuscript_landing(request, id=None):
 
 @login_required
 def open_notebook(request, id=None):
+    #TODO: This needs to be completely rethought. With WholeTale we are allowing previous versions and this doesn't think about that
+
     manuscript = get_object_or_404(m.Manuscript, id=id)
     if(has_transition_perm(manuscript.edit_noop, request.user)):
         if(not manuscript.get_max_submission_version_id()):

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from corere.main import models as m
+from django.conf import settings
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin
@@ -58,7 +59,13 @@ admin.site.register(m.User, UserAdmin)
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
-admin.site.register(m.ContainerInfo)
+if(settings.CONTAINER_DRIVER == 'wholetale'):
+    admin.site.register(m.TaleInfo)
+    admin.site.register(m.TaleImageChoice)
+else:
+    admin.site.register(m.ContainerInfo)
+
+
 
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
 admin.site.register(m.HistoricalSubmission, HistoryAdmin)
@@ -71,3 +78,7 @@ admin.site.register(m.HistoricalVerificationMetadata, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataSoftware, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataBadge, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataAudit, HistoryAdmin)
+
+
+
+

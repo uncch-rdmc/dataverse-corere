@@ -311,7 +311,8 @@ class Submission(AbstractCreateUpdateModel):
             if(settings.CONTAINER_DRIVER == "wholetale"):
                 #TODO: Here we need to create the tale if wholetale is enabled
                 wtc = w.WholeTale()
-                tale = wtc.create_tale("Jupyter") #TODO: Replace with the selected image
+                tale_title = self.manuscript.get_display_name() + " - " + str(self.version_id)
+                tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env) #TODO: Replace with the selected image
                 ti = TaleInfo()
                 ti.submission = self
                 ti.tale_id = tale["_id"]
@@ -654,7 +655,8 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-     
+    wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
@@ -878,7 +880,14 @@ class TaleInfo(models.Model):
     binder_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Instance ID for container in Whole Tale')
     binder_url = models.URLField(max_length=500, default="", blank=True, null=True, verbose_name='Binder URL')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleinfo")
+    #We store the imame selected for the submissions in the manuscript
 
+class TaleImageChoice(models.Model):
+    wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
+    name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')
+
+    def __str__(self):
+        return self.name
 
 ####################################################
 
