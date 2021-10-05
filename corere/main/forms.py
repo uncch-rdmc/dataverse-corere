@@ -130,7 +130,8 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 
 #For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
-    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
+    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
     email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
     users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
@@ -236,7 +237,7 @@ class ManuscriptBaseForm(forms.ModelForm):
             wt_id = self.data.get('wt_compute_env')
             print(wt_id)        
         #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
-        #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This is probably an unnessecary step though.
+        #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
         if not re.match("^[\w\d]*$", wt_id):
             logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
             raise Http404()

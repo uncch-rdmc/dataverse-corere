@@ -46,12 +46,15 @@ def invite_assign_author(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
             users = list(form.cleaned_data['users_to_add']) 
             new_user = ''
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 try:
-                    new_user = helper_create_user_and_invite(request, email, author_role)
+                    #def helper_create_user_and_invite(request, email, first_name, last_name, role):
+                    new_user = helper_create_user_and_invite(request, email, first_name, last_name, author_role)
                     # msg = _("user_inviteRole_banner").format(email=email, role="author")
                     # messages.add_message(request, messages.INFO, msg)
                     users.append(new_user) #add new new_user to the other users provided
@@ -333,12 +336,16 @@ def account_associate_oauth(request, key=None):
 @login_required()
 def account_complete_oauth(request):
     if settings.CONTAINER_DRIVER == "wholetale":
-        #Someday, we may need to get the girder token here for our uses.
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        
         r = requests.get(
             "https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1/oauth/provider",
-            params={"redirect": "https://localhost:8000/"}
+            params={"redirect": protocol + "://"+settings.SERVER_ADDRESS+"/account_user_details/?girderToken={girderToken}"} #This is not an f string. The {girderToken} indicates to girder to pass the token back
         )
-        resp =  HttpResponse(content="", status=303)
+        resp = HttpResponse(content="", status=303)
         resp["Location"] = r.json()["Globus"]
         return resp
     else:
@@ -349,6 +356,8 @@ def account_user_details(request):
     helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
     if(request.user.invite_key):
+        #TODO: With the globus flow I don't think this correctly clears the key
+
         #we clear out the invite_key now that we can associate the user
         #we do it regardless incase a new user clicks out of the page.
         #This is somewhat a hack to get around having to serve this page with and without header content
@@ -356,9 +365,8 @@ def account_user_details(request):
         request.user.save()
 
     form = EditUserForm(request.POST or None, instance=request.user)
-
+    
     if request.method == 'POST':
-        print("POST")
         if form.is_valid():
             user = form.save()
             msg = _("user_infoUpdated_banner")
@@ -367,7 +375,14 @@ def account_user_details(request):
         else:
             print(form.errors)
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
+    
+    response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
+    girderToken = request.GET.get("girderToken", None)
+    # print("GIRDER TOKEN")
+    # print(girderToken)
+    if girderToken:
+        response.set_cookie(key="girderToken", value=girderToken)
+    return response
 
 def logout_view(request):
     logout(request)

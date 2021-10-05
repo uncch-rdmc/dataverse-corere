@@ -48,6 +48,8 @@ Register your application with Globus for auth (https://auth.globus.org/v2/web/d
 
 You will need to collect static files before running (and after updating these files) See https://docs.djangoproject.com/en/3.2/howto/static-files/ for more info.
 
+If using Whole Tale, you will need to run `python manange.py populate-wt-info` to collect one-time info from your targeted Whole Tale server.
+
 ### First Run
 
 Run the application for development with `python manage.py runserver`. Or if you need (self-signed) ssl use `python manage.py runsslserver`. You should not use these development webservers for production.

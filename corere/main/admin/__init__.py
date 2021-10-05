@@ -65,8 +65,6 @@ if(settings.CONTAINER_DRIVER == 'wholetale'):
 else:
     admin.site.register(m.ContainerInfo)
 
-
-
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
 admin.site.register(m.HistoricalSubmission, HistoryAdmin)
 admin.site.register(m.HistoricalEdition, HistoryAdmin)
