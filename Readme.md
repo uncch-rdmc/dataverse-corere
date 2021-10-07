@@ -12,7 +12,7 @@ The main goal of the project is to make these verification tools cost-effective 
 * [License](#License)
 
 ## Requirements:
-Python 3.7+ required
+Python 3.9+ required
 
 Docker is needed for deployment of notebook and proxy containers. It can be bypassed for development purposes.
 
@@ -28,15 +28,110 @@ CentOS or RHEL is preferred, but is not required. Corere should also run on macO
 
 ### Bare Minimum:
 
-Clone or download this repository. Customize the settings files as needed. If you are not using an email server, use the commented out line in `development.py` to set your emails to print to console. If you do not wish to launch docker containers, ensure `SKIP_DOCKER = True` is enabled in your environment config. You may also need to update your static files path in `base.py`.
+Clone this repository:
 
-Copy the sample env files and fill out there required attributes. 
+```
+git clone https://github.com/OdumInstitute/dataverse-corere
+cd dataverse-corere
+```
 
-You will probably want to run corere inside a virtual environment. See https://docs.python.org/3/library/venv.html for more info.
+Create and activate a Python virtual environment:
+```
+python3 -m pip install virtualenv
+virtualenv venv  
+. ./venv/bin/activate
+```
 
-You should update your PYTHONPATH with the project folder so django-admin runs as expected: `export PYTHONPATH="/absolute/path/to/dataverse-corere:$PYTHONPATH"`
+Install dependencies:
+```
+pip install -r requirements.txt -r requirements-dev.txt
+```
 
-You will need git installed and will need to create a local folder to point corere towards via the env files. This will be where corere manages file uploads.
+For development, print emails to console by editing  `corere/settings/development.py`:
+```
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+```
+
+Edit `env.sample.sh` to setup application folders.  For example:
+```
+export DJANGO_LOG_DIRECTORY=/tmp/corere/logs
+export CORERE_GIT_FOLDER=/temp/corere/git
+export WHOLETALE_BASE_URL=stage.wholetale.org
+```
+
+Then create the directories:
+```
+mkdir -p /tmp/corere/logs /tmp/corere/git 
+```
+
+Edit `env.secret.sample.sh` to configure  
+```
+pen
+export DJANGO_SECRET_KEY=<random key>
+export SOCIAL_AUTH_GLOBUS_OAUTH2_KEY=<globus client id>
+export SOCIAL_AUTH_GLOBUS_OAUTH2_SECRET=<globus secret>
+export POSTGRES_USER=corere
+export POSTGRES_PASSWORD=<postgres password>
+
+export DJANGO_SUPERUSER_USERNAME=admin
+export DJANGO_SUPERUSER_EMAIL=<your email>
+export DJANGO_SUPERUSER_PASSWORD=<admin password>
+
+export WHOLETALE_ADMIN_GIRDER_API_KEY=<your API key>
+```
+
+Optionally, run Postgres via Docker:
+```
+docker run -p 5432:5432 -e POSTGRES_USER=corere -e POSTGRES_PASSWORD=<postgres password> -d postgres
+```
+
+Source the config files:
+```
+. ./env.sample.sh
+. ./env.secret.sample.sh
+```
+
+```
+python3 manage.py migrate
+python3 manage.py createsuperuser --noinput
+python3 manage.py populate-wt-info
+```
+
+Start Django server
+```
+python3 manage.py runsslserver
+```
+
+Configure CORE2 roles for the admin user:
+* Goto https://localhost:8000/admin
+* Select Users 
+* Select admin
+* Add all four roles
+
+Invite yourself as a Curator:
+* Goto https://localhost:8000/
+* Select admin menu > Site Actions  > Invite Curator
+* Look for link in logs (since email not configured)
+
+In separate browser/private session:
+* Open link
+* Select "Register with Globus"
+
+As admin user:
+* Goto https://localhost:8000/admin
+* Add all four roles to newly added user
+* Check "Superuser status" 
+* Save
+
+As your user:
+* Create a manuscript
+* Upload manuscript files
+* Create submission
+* Upload submission files (e.g., scripts/data)
+* Launch Notebook
+* Optionally open dashboard.stage.wholetale.org to view progress
+
 
 ### Additional Functionality:
 
@@ -48,11 +143,7 @@ Register your application with Globus for auth (https://auth.globus.org/v2/web/d
 
 You will need to collect static files before running (and after updating these files) See https://docs.djangoproject.com/en/3.2/howto/static-files/ for more info.
 
-If using Whole Tale, you will need to run `python manange.py populate-wt-info` to collect one-time info from your targeted Whole Tale server.
-
 ### First Run
-
-Run the application for development with `python manage.py runserver`. Or if you need (self-signed) ssl use `python manage.py runsslserver`. You should not use these development webservers for production.
 
 Once the app is up and running, go to the Sites section of the admin console and change the names to match your current site. This is used mainly for email formatting.
 
