@@ -2,6 +2,7 @@ import sseclient
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
+import time
 
 #Some code taken from https://github.com/whole-tale/corere-mock
 
