@@ -3,18 +3,47 @@
 {% comment %} sandbox="allow-scripts allow-forms allow-top-navigation allow-same-origin"  height="1000px"  {% endcomment %}
 
 
-<iframe src="{{notebook_url}}" title="notebook"></iframe>
+<iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" style="display:none;"></iframe>
 
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-        <input type="submit" name="back" value="Back">
-        <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
-        <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
-        
+    <input type="submit" name="back" value="Back">
+    <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
+    <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
 </form>
 
-{% endblock content %}
+<div id="logdiv">
 
-{% comment %} 
-    <input type="submit" name="submit" value="Continue">
-{% endcomment %}
+</div>
+
+<script type="text/javascript">
+    var last_response_len = false;
+    $.ajax('../wtstream/', {
+        xhrFields: {
+            onprogress: function(e)
+            {                
+                $('#logdiv').html(e.currentTarget.response)
+            }
+        }
+    })
+    .done(function(data)
+    {
+        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder_Url: ')+1)
+        console.log(binder_url)
+
+
+        //TODO: Probably need to hide/show buttons as well?
+        var notebookiframe = document.getElementById("notebook_iframe");
+        if(notebookiframe) {
+            notebookiframe.src = binder_url
+            notebookiframe.style.display = 'block';
+        }
+    })
+    .fail(function(data)
+    {
+        console.log('Error: ', data);
+    });
+    console.log('Request Sent');
+    </script>
+
+{% endblock content %}

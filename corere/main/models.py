@@ -877,6 +877,7 @@ class ContainerInfo(models.Model):
 #Information related to a specific tale remotely hosted in WholeTale
 class TaleInfo(models.Model):
     tale_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Tale ID in Whole Tale')
+    #Instead of naming these binder_, maybe use instance_?
     binder_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Instance ID for container in Whole Tale')
     binder_url = models.URLField(max_length=500, default="", blank=True, null=True, verbose_name='Binder URL')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleinfo")

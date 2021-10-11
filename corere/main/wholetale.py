@@ -1,8 +1,7 @@
-import sseclient
+import time, datetime, sseclient, threading #, json
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
-import time
 
 #Some code taken from https://github.com/whole-tale/corere-mock
 
@@ -12,22 +11,25 @@ class WholeTale:
         RUNNING = 1
         ERROR = 2
 
-    def __init__(self):
+    def __init__(self):#, event_thread=False):
         self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
         self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
-        # self.tale = self.create_tale()
-        # self.sse_handler = threading.Thread(
-        #     target=event_listener, args=(self.gc,), daemon=False
-        # )
-        # self.sse_handler.start()
+
+    def get_event_stream(self):
+        stream = self.gc.sendRestRequest(
+            "GET",
+            "/notification/stream",
+            stream=True,
+            headers={"Accept": "text/event-stream"},
+            jsonResp=False,
+            parameters={"since": int(datetime.datetime.now().timestamp())},
+        )
+        return stream
 
     #This should be run on submission start before uploading files
     #We create a new tale for each submission for access control reasons.
     #The alternative would be to create a version for each submission, there is not version-level access control.
     def create_tale(self, title, image_id):
-        #image = self.gc.get("/image", parameters={"text": image_name})
-#        print(image)
-#        print(image[0].get("_id"))
         tale = self.gc.post("/tale", json={"title": title, "imageId": image_id, "dataSet": []})
         return tale
 
@@ -42,17 +44,20 @@ class WholeTale:
         glob_path = str_path + "*"
         self.gc.upload(glob_path, tale["workspaceId"])
 
-    def run(self, tale_id):
-        # if submissionId is not None:
-        #     print("We would revert to that version. Pass now")
-        print("RUN")
+    #TODO: Do we need the completed instance? Probably yes for the url?
+    def run(self, tale_id, wait_for_complete=False):
         tale = self.gc.get(f"/tale/{tale_id}")
         instance = self.gc.post("/instance", parameters={"taleId": tale["_id"]})
-        print(instance)
-        while instance["status"] == self.InstanceStatus.LAUNCHING:
-            time.sleep(2)
-            instance = self.gc.get(f"/instance/{instance['_id']}")
+        
+        if(wait_for_complete):
+            while instance["status"] == self.InstanceStatus.LAUNCHING:
+                time.sleep(2)
+                instance = get_instance(instance['_id'])
+        
         return instance
+
+    def get_instance(self, instance_id):
+        return self.gc.get(f"/instance/{instance_id}")
 
     def stop(self, instance):
         self.gc.delete(f"/instance/{instance['_id']}")
@@ -65,3 +70,4 @@ class WholeTale:
 
     def get_images(self):
         return self.gc.get("/image")
+

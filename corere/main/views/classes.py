@@ -1,4 +1,4 @@
-import logging, os, requests, urllib, time, git
+import logging, os, requests, urllib, time, git, sseclient, threading, base64, json
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -18,7 +18,7 @@ from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -27,7 +27,6 @@ from notifications.signals import notify
 from templated_email import send_templated_mail
 from django.utils.datastructures import MultiValueDictKeyError
 from django.db import transaction
-import base64
 
 logger = logging.getLogger(__name__)  
 
@@ -1166,16 +1165,17 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     if(settings.CONTAINER_DRIVER == 'wholetale'):
                         #TODO: I should be checking for file changes and only uploading new files if there are?
                         #      How do I even check if there are file changes between my local files and the ones on Whole Tale?
+                        #      If there are no file changes we shouldn't create a new instance with wtc.run()
 
                         wtc = w.WholeTale()
                         tale_id = self.object.submission_taleinfo.tale_id
                         wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
                         binder = wtc.run(tale_id) #this may take a long time
-                        self.object.submission_taleinfo.binder_id = binder['_id']
-                        self.object.submission_taleinfo.binder_url = binder['url']
-                        print(binder['url'])
-                        self.object.submission_taleinfo.save()
 
+                        self.object.submission_taleinfo.binder_id = binder['_id']
+
+                        self.object.submission_taleinfo.save()
+                        
                         return redirect('submission_notebook', id=self.object.id)
 
                     else:
@@ -1460,21 +1460,18 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
-        print("YAY1")
         try:
             if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
-                print("BAD")
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                print("YAY2")
                 self.object.finish_submission()
                 self.object.save()
 
                 ### Messaging ###
-                print("SUBMISSION STATUS: " + self.object._status)
+                # print("SUBMISSION STATUS: " + self.object._status)
                 if(self.object._status == m.Submission.Status.RETURNED):
-                    print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
+                    # print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
                     if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
@@ -1561,6 +1558,63 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             return redirect('submission_uploadfiles', id=self.object.id)
         pass
 
+#TODO: how are we detecting the end? I guess detecting a certain yeild reponse and ending the connection?
+#TODO: we'll need to ensure only the correct messages for the user/tale are returned
+class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    transition_method_name = 'edit_noop'
+    http_method_names = ['get']
+
+    def get(self, request, *args, **kwargs):
+        if(settings.CONTAINER_DRIVER != 'wholetale'):
+            return Http404()
+
+        wtc = w.WholeTale()
+        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object))
+        #return StreamingHttpResponse(_helper_fake_stream(wtc))
+        
+def _helper_generate_whole_tale_stream_contents(wtc, submission):
+    stream = wtc.get_event_stream()
+    client = sseclient.SSEClient(stream)
+    for event in client.events():
+        data = json.loads(event.data)
+        if data["type"] == "wt_progress":
+            progress = int(data["data"]["current"] / data["data"]["total"] * 100.0)
+            msg = (
+                "  -> event received:"
+                f" msg = {data['data']['message']}"
+                f" status = {data['data']['state']}"
+                f" progress = {progress}%"
+            )
+            yield(msg+"<br>")
+            if(progress == 100):
+                #In case things re still happening after the ending status message
+
+                #For some reason this code does not work. I try getting the updated instnace but supposedly it doesn't exist? Probably a simple bug on my end
+                instance = wtc.get_instance(submission.submission_taleinfo.binder_id)
+                while instance["status"] == wtc.InstanceStatus.LAUNCHING:
+                    time.sleep(1)
+                    instance = wtc.get_instance(instance['_id'])
+                
+                # submission.submission_taleinfo.binder_id = binder['_id']
+                submission.submission_taleinfo.binder_url = binder['url']
+                submission.submission_taleinfo.save()
+
+                #TODO: here we should yield one more message that is just the instance url. Maybe it'll work in return?
+                yield(f"Binder_Url: {binder['url']}")
+                return 
+
+#TODO: delete
+def _helper_fake_stream(wtc):
+    for x in range(3):
+        yield(f"This is message {x} from the emergency broadcast system.<br>")
+        time.sleep(1)
+    yield("Binder_Url: https://google.com")
+    return
 
 def _helper_get_oauth_url(request, submission):
     # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))

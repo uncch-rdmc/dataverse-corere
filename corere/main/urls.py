@@ -51,7 +51,8 @@ urlpatterns = [
     path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
     path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebooklogin"), #Technically this page is more than login, but login is a good user facing name
     path('submission/<int:id>/newfilecheck/', classes.SubmissionFilesCheckNewness.as_view(), name="submission_checkfilenewness"),
-
+    path('submission/<int:id>/wtstream/', classes.SubmissionWholeTaleEventStreamView.as_view(), name="submission_wholetalestream"),
+    
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
     path('account_user_details/', users.account_user_details, name="account_user_details"),
