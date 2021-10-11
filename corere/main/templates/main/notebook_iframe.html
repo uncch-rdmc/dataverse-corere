@@ -1,9 +1,7 @@
 {% extends "main/layout_full.html" %}
 {% block content %}
-{% comment %} sandbox="allow-scripts allow-forms allow-top-navigation allow-same-origin"  height="1000px"  {% endcomment %}
-
-
-<iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" style="display:none;"></iframe>
+{% comment %} This way of showing the notebook may fail if the notebook finishes at the same time this page is loaded {% endcomment %}
+<iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" {% if wt_launching %} style="display:none;" {% endif %}></iframe>
 
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -12,6 +10,7 @@
     <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
 </form>
 
+{% if wt_launching %}
 <div id="logdiv">
 
 </div>
@@ -28,9 +27,10 @@
     })
     .done(function(data)
     {
-        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder_Url: ')+1)
+        //TODO: This isn't actually getting the right url. Sample:
+        //inder_Url: https:/tmp-uwewoviafcaj.stage.wholetale.org/?token=0d9d54f95c894035bb31d1d3131c815d
+        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder_Url: ')+12)
         console.log(binder_url)
-
 
         //TODO: Probably need to hide/show buttons as well?
         var notebookiframe = document.getElementById("notebook_iframe");
@@ -44,6 +44,7 @@
         console.log('Error: ', data);
     });
     console.log('Request Sent');
-    </script>
+</script>
+{% endif %}
 
 {% endblock content %}

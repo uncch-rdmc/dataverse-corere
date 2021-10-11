@@ -1129,7 +1129,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             errors = []
             changes_for_git = []
-            try: 
+            try: #File Renaming
                 with transaction.atomic(): #to ensure we only save if there are no errors
                     for key, value in request.POST.items():
                         if(key.startswith("file:")):
@@ -1147,6 +1147,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                                 gfile.path=after_path
                                 gfile.save()
                                 changes_for_git.append({"old":skey, "new":value})
+                                self.object.files_changed = True
+                                self.object.save()
             except ValueError as e:
                 errors.append(str(e))
                 #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
@@ -1166,15 +1168,16 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         #TODO: I should be checking for file changes and only uploading new files if there are?
                         #      How do I even check if there are file changes between my local files and the ones on Whole Tale?
                         #      If there are no file changes we shouldn't create a new instance with wtc.run()
+                        if(self.object.files_changed):
+                            wtc = w.WholeTale()
+                            tale_id = self.object.submission_taleinfo.tale_id
+                            wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
+                            binder = wtc.run(tale_id) #this may take a long time
+                            self.object.submission_taleinfo.binder_id = binder['_id']
+                            self.object.submission_taleinfo.save()
 
-                        wtc = w.WholeTale()
-                        tale_id = self.object.submission_taleinfo.tale_id
-                        wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
-                        binder = wtc.run(tale_id) #this may take a long time
-
-                        self.object.submission_taleinfo.binder_id = binder['_id']
-
-                        self.object.submission_taleinfo.save()
+                            self.object.files_changed = False
+                            self.object.save()
                         
                         return redirect('submission_notebook', id=self.object.id)
 
@@ -1405,9 +1408,6 @@ class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
-        print("SUBMISSION PROGRESS")
-        print(self.__dict__)
-        print(request.__dict__)
         try:
             if not fsm_check_transition_perm(self.object.submit, request.user): 
                 logger.debug("PermissionDenied")
@@ -1532,15 +1532,21 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     template = 'main/notebook_iframe.html'
 
     def get(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
-            notebook_url = self.object.submission_taleinfo.binder_url
-        else:
-            notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
-
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_display_name': self.object.manuscript.get_display_name(), 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
+            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
         
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            context['notebook_url'] = self.object.submission_taleinfo.binder_url
+            wtc = w.WholeTale()
+            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id)
+            if instance["status"] == wtc.InstanceStatus.LAUNCHING:
+                context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
+            else:
+                context['wt_launching'] = False                
+        else:
+            context['notebook_url'] = self.object.manuscript.manuscript_containerinfo.container_public_address()
+
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
@@ -1592,20 +1598,17 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission):
             )
             yield(msg+"<br>")
             if(progress == 100):
-                #In case things re still happening after the ending status message
+                #In case things are still happening after the ending status message
 
-                #For some reason this code does not work. I try getting the updated instnace but supposedly it doesn't exist? Probably a simple bug on my end
                 instance = wtc.get_instance(submission.submission_taleinfo.binder_id)
                 while instance["status"] == wtc.InstanceStatus.LAUNCHING:
                     time.sleep(1)
                     instance = wtc.get_instance(instance['_id'])
                 
-                # submission.submission_taleinfo.binder_id = binder['_id']
-                submission.submission_taleinfo.binder_url = binder['url']
+                submission.submission_taleinfo.binder_url = instance['url']
                 submission.submission_taleinfo.save()
 
-                #TODO: here we should yield one more message that is just the instance url. Maybe it'll work in return?
-                yield(f"Binder_Url: {binder['url']}")
+                yield(f"Binder_Url: {instance['url']}")
                 return 
 
 #TODO: delete
