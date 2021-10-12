@@ -1608,15 +1608,15 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission):
                 submission.submission_taleinfo.binder_url = instance['url']
                 submission.submission_taleinfo.save()
 
-                yield(f"Binder_Url: {instance['url']}")
+                yield(f"Binder URL: {instance['url']}")
                 return 
 
 #TODO: delete
 def _helper_fake_stream(wtc):
-    for x in range(3):
+    for x in range(10):
         yield(f"This is message {x} from the emergency broadcast system.<br>")
-        time.sleep(1)
-    yield("Binder_Url: https://google.com")
+        time.sleep(.05)
+    yield("Binder URL: https://google.com")
     return
 
 def _helper_get_oauth_url(request, submission):

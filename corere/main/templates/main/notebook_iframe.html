@@ -1,9 +1,11 @@
 {% extends "main/layout_full.html" %}
 {% block content %}
 {% comment %} This way of showing the notebook may fail if the notebook finishes at the same time this page is loaded {% endcomment %}
-<iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" {% if wt_launching %} style="display:none;" {% endif %}></iframe>
 
-<form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
+{%comment%} Don't forget to re-add the removed wt_loaded bits. Also the correct wtstream. {% endcomment %}
+<iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" {% if wt_launching %} style="display:none;" {% endif %} ></iframe>
+
+<form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data" style="display:none;">
     {% csrf_token %}
     <input type="submit" name="back" value="Back">
     <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
@@ -11,32 +13,36 @@
 </form>
 
 {% if wt_launching %}
-<div id="logdiv">
+<div id="logandbuttondiv" class="rounded border" style="padding:10px; height: 338px; ">
+    <h5>Binder Launch Status:</h5>
+    <div id="logdiv" class="rounded border" style="height:240px; overflow: scroll; ">
 
+    </div>
+    <form><button id="show_notebook_button" type="button" class="button btn-secondary btn-sm" onclick="show_iframe()" style="display:none; margin-top:10px;">Display Notebook</button></form>       
 </div>
 
 <script type="text/javascript">
     var last_response_len = false;
+    binder_url = "";
     $.ajax('../wtstream/', {
         xhrFields: {
             onprogress: function(e)
-            {                
-                $('#logdiv').html(e.currentTarget.response)
+            {          
+                var logdiv = $('#logdiv');      
+                logdiv.html(e.currentTarget.response);
+                logdiv.scrollTop(logdiv[0].scrollHeight);
+                //{% comment %}could detect scrolled https://stackoverflow.com/questions/18614301/ {% endcomment %}
             }
         }
     })
     .done(function(data)
     {
-        //TODO: This isn't actually getting the right url. Sample:
-        //inder_Url: https:/tmp-uwewoviafcaj.stage.wholetale.org/?token=0d9d54f95c894035bb31d1d3131c815d
-        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder_Url: ')+12)
+        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder URL: ')+12)
         console.log(binder_url)
 
-        //TODO: Probably need to hide/show buttons as well?
-        var notebookiframe = document.getElementById("notebook_iframe");
-        if(notebookiframe) {
-            notebookiframe.src = binder_url
-            notebookiframe.style.display = 'block';
+        var show_notebook_button = document.getElementById("show_notebook_button");
+        if(show_notebook_button) {
+            show_notebook_button.style.display = 'block';
         }
     })
     .fail(function(data)
@@ -44,6 +50,22 @@
         console.log('Error: ', data);
     });
     console.log('Request Sent');
+
+    function show_iframe() {
+        var notebookiframe = document.getElementById("notebook_iframe");
+        if(notebookiframe) {
+            notebookiframe.src = binder_url
+            notebookiframe.style.display = 'block';
+        }
+        var formbuttons = document.getElementById("file_note_nested_form");
+        if(formbuttons) {
+            formbuttons.style.display = 'block';
+        }
+        var logandbuttondiv = document.getElementById("logandbuttondiv");
+        if(logandbuttondiv) {
+            logandbuttondiv.style.display = 'none';
+        }
+    }
 </script>
 {% endif %}
 
