@@ -305,12 +305,13 @@ class Submission(AbstractCreateUpdateModel):
             else:
                 self.version_id = prev_max_version_id + 1
              
+        girderToken = kwargs.pop('girderToken', None)
         super(Submission, self).save(*args, **kwargs)
 
         if(first_save):
             if(settings.CONTAINER_DRIVER == "wholetale"):
                 #TODO: Here we need to create the tale if wholetale is enabled
-                wtc = w.WholeTale()
+                wtc = w.WholeTale(girderToken)
                 tale_title = self.manuscript.get_display_name() + " - " + str(self.version_id)
                 tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env) #TODO: Replace with the selected image
                 ti = TaleInfo()

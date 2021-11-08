@@ -11,9 +11,10 @@ class WholeTale:
         RUNNING = 1
         ERROR = 2
 
-    def __init__(self):#, event_thread=False):
+    def __init__(self, token):#, event_thread=False):
         self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
-        self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
+        self.gc.setToken(token)
+        #self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
 
     def get_event_stream(self):
         stream = self.gc.sendRestRequest(

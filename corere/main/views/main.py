@@ -25,7 +25,7 @@ def index(request):
             girderToken = request.GET.get("girderToken", None) #provided by wt ouath redirect
 
             #If no girderToken, we send the user to Whole Tale / Globus to get it.
-            if not (girderToken and request.COOKIES.get('girderToken')):
+            if not (girderToken or request.COOKIES.get('girderToken')):
                 if request.is_secure():
                     protocol = "https"
                 else:
@@ -53,7 +53,7 @@ def index(request):
                 }
         response = render(request, "main/index.html", args)
         if girderToken:
-            response.set_cookie(key="girderToken", value=girderToken) #TODO: This isn't connected to an actual response!
+            response.set_cookie(key="girderToken", value=girderToken)
         return response
     else:
         return render(request, "main/login.html")

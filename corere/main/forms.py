@@ -873,6 +873,9 @@ class SubmissionBaseForm(forms.ModelForm):
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
         labels = label_gen(model, fields)
 
+    def save(self, *args, **kwargs):
+        self.instance.save(girderToken=kwargs.pop('girderToken', None))
+
 class SubmissionForm_Admin(SubmissionBaseForm):
     pass
 

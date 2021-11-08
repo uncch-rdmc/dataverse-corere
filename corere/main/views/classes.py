@@ -769,7 +769,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
                 and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
-                self.form.save() #Note: this is what saves a newly created model instance
+                self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
@@ -1539,7 +1539,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         if(settings.CONTAINER_DRIVER == 'wholetale'):
             context['notebook_url'] = self.object.submission_taleinfo.binder_url
             wtc = w.WholeTale()
-            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id)
+            print(request.COOKIES.get('girderToken'))
+            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id, request.COOKIES.get('girderToken'))
             if instance["status"] == wtc.InstanceStatus.LAUNCHING:
                 context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
             else:
