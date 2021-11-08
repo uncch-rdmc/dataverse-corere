@@ -883,7 +883,6 @@ class TaleInfo(models.Model):
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleinfo")
     #We store the imae selected for the submissions in the manuscript
 
-
 class TaleImageChoice(models.Model):
     wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
     name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')

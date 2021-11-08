@@ -1,4 +1,4 @@
-import logging, json, time
+import logging, json, time, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -21,6 +21,25 @@ logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
+        if settings.CONTAINER_DRIVER == "wholetale":
+            girderToken = request.GET.get("girderToken", None) #provided by wt ouath redirect
+
+            #If no girderToken, we send the user to Whole Tale / Globus to get it.
+            if not (girderToken and request.COOKIES.get('girderToken')):
+                if request.is_secure():
+                    protocol = "https"
+                else:
+                    protocol = "http"
+                    
+                r = requests.get(
+                    "https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1/oauth/provider",
+                    params={"redirect": protocol + "://"+settings.SERVER_ADDRESS+"/?girderToken={girderToken}"} #This is not an f string. The {girderToken} indicates to girder to pass the token back
+                )
+
+                response = HttpResponse(content="", status=303)
+                response["Location"] = r.json()["Globus"]
+                return response
+
         args = {'user':     request.user, 
                 'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
@@ -32,7 +51,10 @@ def index(request):
                 'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
                 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
                 }
-        return render(request, "main/index.html", args)
+        response = render(request, "main/index.html", args)
+        if girderToken:
+            response.set_cookie(key="girderToken", value=girderToken) #TODO: This isn't connected to an actual response!
+        return response
     else:
         return render(request, "main/login.html")
 
