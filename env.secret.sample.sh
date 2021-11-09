@@ -18,3 +18,6 @@ export DJANGO_SUPERUSER_EMAIL=
 export DJANGO_SUPERUSER_PASSWORD=
 
 export OAUTHPROXY_COOKIE_SECRET=
+
+#Only used if using wholetale, for administrative tasks
+export WHOLETALE_ADMIN_GIRDER_API_KEY=""

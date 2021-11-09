@@ -1169,7 +1169,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         #      How do I even check if there are file changes between my local files and the ones on Whole Tale?
                         #      If there are no file changes we shouldn't create a new instance with wtc.run()
                         if(self.object.files_changed):
-                            wtc = w.WholeTale()
+                            wtc = w.WholeTale(request.COOKIES.get('girderToken'))
                             tale_id = self.object.submission_taleinfo.tale_id
                             wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
                             binder = wtc.run(tale_id) #this may take a long time
@@ -1538,9 +1538,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         
         if(settings.CONTAINER_DRIVER == 'wholetale'):
             context['notebook_url'] = self.object.submission_taleinfo.binder_url
-            wtc = w.WholeTale()
-            print(request.COOKIES.get('girderToken'))
-            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id, request.COOKIES.get('girderToken'))
+            wtc = w.WholeTale(request.COOKIES.get('girderToken'))
+            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id)
             if instance["status"] == wtc.InstanceStatus.LAUNCHING:
                 context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
             else:
@@ -1580,7 +1579,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         if(settings.CONTAINER_DRIVER != 'wholetale'):
             return Http404()
 
-        wtc = w.WholeTale()
+        wtc = w.WholeTale(request.COOKIES.get('girderToken'))
         return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
         

@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         print("Pulling images from Whole Tale")
-        images = w.WholeTale().get_images() #this will error out if no connection, which is fine as an admin command
+        images = w.WholeTale(admin=True).get_images() #this will error out if no connection, which is fine as an admin command
         
         m.TaleImageChoice.objects.all().delete()
         

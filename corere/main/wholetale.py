@@ -11,10 +11,14 @@ class WholeTale:
         RUNNING = 1
         ERROR = 2
 
-    def __init__(self, token):#, event_thread=False):
+    def __init__(self, token=None, admin=False):#, event_thread=False):
         self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
-        self.gc.setToken(token)
-        #self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
+        if admin:
+            self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
+        elif token:
+            self.gc.setToken(token)
+        else:
+            raise ValueError("A Whole Tale connection must be provided a girder token or run as an admin.")
 
     def get_event_stream(self):
         stream = self.gc.sendRestRequest(
