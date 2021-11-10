@@ -1351,16 +1351,6 @@ for role_str in list_of_roles:
     except AttributeError:
         pass #If no form for role we should never show the form, so pass
 
-
-# VMetadataAuditVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataAudit,  
-#     extra=1,
-#     form=VMetadataAuditForm,
-#     fields=("name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"),
-#     can_delete = True,
-# )
-
 class ReadOnlyVMetadataAuditForm(ReadOnlyFormMixin, VMetadataAuditBaseForm):
     pass
 
@@ -1371,91 +1361,3 @@ ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
     form=ReadOnlyVMetadataAuditForm,
     can_delete = False,
 )
-
-
-
-
-
-
-
-
-#OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
-#The next question becomes whether its really worth it?
-#... well, we can use the "non-dynamic" forms for admin and just generate one for each of the four roles
-#... meh, I think its actually better to just re-define the form for admin with no changes
-#... This also scales ok because it preserves any other configuration done in the base form
-#... ... Well except for the formset_factory which is defined twice currently. Maybe I can use type() to subclass it as well.
-#... ... Doesn't seem to work as expected. I don't understand factory functions
-
-# What is my plan?
-# Define all forms manually, using inheritance
-# Define formsets programatically, using type?
-
-
-
-
-
-
-##### SEMI WORKING TEST
-
-# testfactorydict = {}
-# for x in range(5):
-#     afield = VMetadataForm.base_fields['operating_system']
-#     afield.disabled = True
-#     field_defs = {
-#         'operating_system': afield
-#         }
-#     DynamicFormClass = type("DynamicForm"+str(x), (VMetadataForm,), field_defs)
-
-#     # formset_defs = {
-#     #     'form': DynamicFormClass
-#     #     }
-#     # testfactorydict[str(x)] = type("DynamicFormset"+str(x), (VMetadataSubmissionFormset,), formset_defs)
-#     testfactorydict[str(x)] = inlineformset_factory(
-#         m.Submission,
-#         m.VerificationMetadata,  
-#         extra=1,
-#         form=VMetadataForm,
-#         fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-#         can_delete = True,
-#     )
-
-
-##### NOT WORKING JUNK
-
-#Input: takes your inlineformset_factory, a list of disabled fields, a list of fields to remove
-#Output: a new inlineformset_factory with these fields changed
-# def inlineformset_factory_restrictor(if_factory, disable_fields, remove_fields):
-#     altered_if_factory = copy.deepcopy(if_factory)
-#     altered_if_form = copy.deepcopy(altered_if_factory.form)
-#     #print(altered_if_factory.form.base_fields)
-#     altered_if_factory.form = altered_if_form
-#     #altered_if_factory.form.base_fields['host_url'].disabled = True
-#     return altered_if_factory  
-
-#VMetadataSubmissionFormsetRestrictTest = inlineformset_factory_restrictor(VMetadataSubmissionFormset, [], [])
-
-    #testfactorydict[str(x)] = VMetadataSubmissionFormset
-
-    # testfactorydict[str(x)] = inlineformset_factory(
-    #     m.Submission,
-    #     m.VerificationMetadata,  
-    #     extra=1,
-    #     form=DynamicFormClass,
-    #     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-    #     can_delete = True,
-    # )
-
-
-# class GitFileForm(forms.ModelForm):
-#     class Meta:
-#         model = m.GitFile
-#         fields = ['path']
-
-#     def __init__ (self, *args, **kwargs):
-#         super(GitFileForm, self).__init__(*args, **kwargs)
-#         self.fields['path'].widget.object_instance = self.instance
-#         self.fields['path'].disabled = True
-#         self.fields['md5'].disabled = True
-#         self.fields['size'].disabled = True
-#         self.fields['date'].disabled = True

@@ -365,6 +365,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     http_method_names = ['get']
     read_only = True
 
+#This is for the upload files page. The ajax uploader uses a different class
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
@@ -434,6 +435,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             return render(request, self.template, context)
 
+#Supports the ajax uploader performing file uploads
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     transition_method_name = 'edit_noop'
     http_method_names = ['post']
@@ -1093,6 +1095,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
 #         return super().dispatch(request, *args, **kwargs)
 
+#This is for the upload files page. The ajax uploader uses a different class
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
@@ -1224,7 +1227,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             return render(request, self.template, context)
 
-
+#Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
     transition_method_name = 'edit_noop'
@@ -1333,7 +1336,6 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
         return HttpResponse(status=200)
 
-
 #Used for ajax refreshing in EditFiles
 #TODO: Probably no longer be needed with list rewrite
 class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1352,7 +1354,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
-    template = 'main/file_list.html'
+    template = 'main/file_list.html' #I think this is not actually used here
     transition_method_name = 'edit_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1394,6 +1396,31 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             return HttpResponse(base64.b64decode(image_base64), content_type='image/png')
             #return image is new
 
+#This gets the list of files from the running container and compares it to our local list. The differences are presented to the author to approve.
+class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+    #TODO: Maybe don't need some of these, after creating uploader
+    # form = f.SubmissionUploadFilesForm
+    # template = 'main/not_form_upload_files.html'
+    transition_method_name = 'edit_noop'
+    page_help_text = _("submission_reconcileFiles_helpText")
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_reconcileFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        #here we need to get the list of files from WT, compare them to our files_dict_list, and return back the differences.
+        #... or well maybe the info about the differences can be done with SubmissionFilesCheckNewness (probably will require expanding that method)
+
+        pass
+
+    def post(self, request, *args, **kwargs):
+        pass
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
