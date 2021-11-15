@@ -5,7 +5,7 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
-from corere.main import wholetale as w
+from corere.apps.wholetale import wholetale as w
 from corere.main import git as g
 from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms

@@ -9,7 +9,7 @@ from invitations.utils import get_invitation_model
 from django.conf import settings
 from . import constants as c
 from corere.main import models as m
-from corere.main import wholetale as w
+from corere.apps.wholetale import wholetale as w
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -18,6 +18,7 @@ from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 from django.http import Http404
+from corere.apps.wholetale import models as wtm
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -226,7 +227,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    wt_compute_env = forms.ModelChoiceField(queryset=m.TaleImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
+    wt_compute_env = forms.ModelChoiceField(queryset=wtm.TaleImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
 
     #This whole save is being called to force the correct value into wt_compute_env
     #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want

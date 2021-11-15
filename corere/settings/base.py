@@ -33,6 +33,7 @@ DOCKER_BUILD_FOLDER = "/tmp"
 
 # Application definition
 INSTALLED_APPS = [
+    'corere.apps.wholetale',
     'django.forms',
     'django.contrib.admin',
     'django.contrib.auth',

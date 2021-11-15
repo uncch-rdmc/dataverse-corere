@@ -59,11 +59,9 @@ admin.site.register(m.User, UserAdmin)
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
-if(settings.CONTAINER_DRIVER == 'wholetale'):
-    admin.site.register(m.Tale)
-    admin.site.register(m.TaleVersion)
-    admin.site.register(m.TaleImageChoice)
-else:
+
+#TODO: If we make the local implementation an app, then this should move
+if(settings.CONTAINER_DRIVER != 'wholetale'):
     admin.site.register(m.ContainerInfo)
 
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
