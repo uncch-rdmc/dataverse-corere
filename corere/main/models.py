@@ -78,6 +78,9 @@ class User(AbstractUser):
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     email = models.EmailField(unique=True, blank=False)
+
+    wt_id = models.CharField(max_length=24, blank=True, null=True, verbose_name='User ID in Whole Tale')
+
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
     #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
     #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
@@ -304,20 +307,22 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = 1
             else:
                 self.version_id = prev_max_version_id + 1
-             
-        girderToken = kwargs.pop('girderToken', None)
-        super(Submission, self).save(*args, **kwargs)
+
+        #TODO: Maybe remove girder token being passed in. Though we may use it when we create a version     
+        
+        # girderToken = kwargs.pop('girderToken', None)
+        # super(Submission, self).save(*args, **kwargs)
 
         if(first_save):
-            if(settings.CONTAINER_DRIVER == "wholetale"):
-                #TODO: Here we need to create the tale if wholetale is enabled
-                wtc = w.WholeTale(girderToken)
-                tale_title = self.manuscript.get_display_name() + " - " + str(self.version_id)
-                tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env) #TODO: Replace with the selected image
-                ti = TaleInfo()
-                ti.submission = self
-                ti.tale_id = tale["_id"]
-                ti.save()   
+        #     if(settings.CONTAINER_DRIVER == "wholetale"):
+        #         #TODO: Here we need to create the tale if wholetale is enabled
+        #         wtc = w.WholeTale(girderToken)
+        #         tale_title = self.manuscript.get_display_name() + " - " + str(self.version_id)
+        #         tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env) #TODO: Replace with the selected image
+        #         ti = TaleInfo()
+        #         ti.submission = self
+        #         ti.tale_id = tale["_id"]
+        #         ti.save()   
             if(self.version_id > 1):
                 prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
                 for gfile in prev_submission.submission_files.all():
@@ -687,25 +692,29 @@ class Manuscript(AbstractCreateUpdateModel):
         if first_save:
             # Note these works alongside global permissions defined in signals.py
             # TODO: Make this concatenation standardized
-            group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id))
+            editor_group_name = c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id)
+            group_manuscript_editor, created = Group.objects.get_or_create(name=editor_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_APPROVE, group_manuscript_editor, self)
 
-            group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
+            author_group_name = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id)
+            group_manuscript_author, created = Group.objects.get_or_create(name=author_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_author, self) 
             #assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
             assign_perm(c.PERM_MANU_ADD_SUBMISSION, group_manuscript_author, self) 
 
-            group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
+            curator_group_name = c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id)
+            group_manuscript_curator, created = Group.objects.get_or_create(name=curator_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_CURATE, group_manuscript_curator, self) 
 
-            group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
+            verifier_group_name = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id)
+            group_manuscript_verifier, created = Group.objects.get_or_create(name=verifier_group_name)
             #assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_verifier, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_verifier, self) 
             assign_perm(c.PERM_MANU_VERIFY, group_manuscript_verifier, self) 
@@ -714,6 +723,38 @@ class Manuscript(AbstractCreateUpdateModel):
 
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
+
+            if(settings.CONTAINER_DRIVER == "wholetale"):
+                wtc = w.WholeTale(admin=True)
+                tale_title = self.manuscript.get_display_name()
+                wtc_tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env)
+                tale_info = Tale()
+                tale_info.manuscript = self
+                tale_info.tale_id = wtc_tale["_id"]
+                tale_info.save()
+
+                #Create 5 WT groups for the Tale (4 roles and admin)
+                wt_group_editor = wtc.create_group(editor_group_name)
+                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_editor)
+
+                wt_group_author = wtc.create_group(author_group_name)
+                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_author)
+
+                wt_group_curator = wtc.create_group(curator_group_name)
+                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_curator)
+
+                wt_group_verifier = wtc.create_group(verifier_group_name)
+                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_verifier)
+
+                wt_group_admin = wtc.create_group(GROUP_MANUSCRIPT_ADMIN_PREFIX + " " + str(self.id))
+                wtc.set_access(tale_info.tale_id, wtc.AccessType.ADMIN, group=wt_group_admin)
+
+                #TODO: at what point do the users get added to thse groups? 
+                # Well.... as assignment happens? We gotta make sure whenever assignment happens we also assign to WT
+
+                #TODO: Need to assign user as editor?
+                
+
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
@@ -844,6 +885,8 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
+    #TODO-WT: Should we tap into this for deleting WT stuff as well 
+
 #Class related to locally hosted docker containers
 class ContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
@@ -856,7 +899,7 @@ class ContainerInfo(models.Model):
     proxy_container_port = models.IntegerField(blank=True, null=True, unique=True)
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
-    submission_version = models.IntegerField(blank=True, null=True)
+    submission_version = models.IntegerField(blank=True, null=True) #Why didn't I just use submission???
     manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
     build_in_progress = models.BooleanField(default=False)
 
@@ -876,16 +919,26 @@ class ContainerInfo(models.Model):
     #     return ("oauthproxy-" + str(self.manuscript.id) + "-" + self.manuscript.slug)[:128] + ":" + settings.DOCKER_GEN_TAG
 
 #Information related to a specific tale remotely hosted in WholeTale
-class TaleInfo(models.Model):
-    tale_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Tale ID in Whole Tale')
-    #Instead of naming these binder_, maybe use instance_?
-    binder_id = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Instance ID for container in Whole Tale')
-    binder_url = models.URLField(max_length=500, default="", blank=True, null=True, verbose_name='Binder URL')
-    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleinfo")
-    #We store the imae selected for the submissions in the manuscript
+class Tale(models.Model):
+    #TODO-WT: this id is probably too long
+    tale_id = models.CharField(max_length=24, verbose_name='Tale ID in Whole Tale')
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_tale")
 
+class TaleVersion(models.Model):
+    tale = models.ForeignKey('Tale', on_delete=models.CASCADE, related_name="tale_versions")
+    #TODO-WT: this id is probably too long
+    container_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
+    container_url = models.URLField(max_length=500, verbose_name='Container URL')
+    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_taleversion")
+    #TODO: probably add an attribute for the version of the tale in WT
+
+class TaleGroup(models.Model):
+    corere_group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="tale_groups")
+    wt_group_id = models.CharField(max_length=24, primary_key=True, verbose_name='Group ID in Whole Tale') 
+
+#Global image choices pulled from WT via a manually called admin command
 class TaleImageChoice(models.Model):
-    wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
+    choice_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
     name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')
 
     def __str__(self):

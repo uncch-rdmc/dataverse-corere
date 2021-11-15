@@ -365,10 +365,10 @@ def account_user_details(request):
         request.user.save()
 
     form = EditUserForm(request.POST or None, instance=request.user)
-    
+
     if request.method == 'POST':
         if form.is_valid():
-            user = form.save()
+            form.save()
             msg = _("user_infoUpdated_banner")
             messages.add_message(request, messages.SUCCESS, msg)
             return redirect('/')
@@ -377,11 +377,16 @@ def account_user_details(request):
             logger.debug(form.errors) #TODO: DO MORE?
     
     response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
-    girderToken = request.GET.get("girderToken", None)
-    # print("GIRDER TOKEN")
-    # print(girderToken)
-    if girderToken:
-        response.set_cookie(key="girderToken", value=girderToken)
+
+    if request.method == 'GET':
+        girderToken = request.GET.get("girderToken", None)
+        if girderToken:
+            response.set_cookie(key="girderToken", value=girderToken)
+            #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
+            wt_user = w.WholeTale(girderToken).get_logged_in_user()
+            request.user.wt_id = wt_user.get("id")
+            request.user.save()
+
     return response
 
 def logout_view(request):

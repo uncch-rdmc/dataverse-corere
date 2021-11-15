@@ -60,7 +60,8 @@ admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
 if(settings.CONTAINER_DRIVER == 'wholetale'):
-    admin.site.register(m.TaleInfo)
+    admin.site.register(m.Tale)
+    admin.site.register(m.TaleVersion)
     admin.site.register(m.TaleImageChoice)
 else:
     admin.site.register(m.ContainerInfo)

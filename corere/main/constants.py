@@ -8,6 +8,7 @@ GROUP_MANUSCRIPT_EDITOR_PREFIX = "Editor Manuscript"
 GROUP_MANUSCRIPT_AUTHOR_PREFIX = "Author Manuscript"
 GROUP_MANUSCRIPT_VERIFIER_PREFIX = "Verifier Manuscript"
 GROUP_MANUSCRIPT_CURATOR_PREFIX = "Curator Manuscript"
+GROUP_MANUSCRIPT_ADMIN_PREFIX = "Admin Manuscript" #Only used currently for Whole Tale groups
 GROUP_COMPLETED_SUFFIX = "Completed"
 
 def get_roles():
