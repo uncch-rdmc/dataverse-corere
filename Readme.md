@@ -96,6 +96,7 @@ Source the config files:
 python3 manage.py migrate
 python3 manage.py createsuperuser --noinput
 python3 manage.py populate-wt-info
+python3 manage.py initialize-wt --createlocal
 ```
 
 Start Django server

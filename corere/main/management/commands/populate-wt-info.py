@@ -8,6 +8,7 @@ from corere.main import models as m
 # from corere.main.models import User
 # from django.contrib.auth.models import Group
 
+#TODO: Maybe move over the the WholeTale app?
 class Command(BaseCommand):
     help = "Pulls info from Whole Tale to populate system models. Currently only used to populate WholeTale image choices."
 
@@ -15,7 +16,7 @@ class Command(BaseCommand):
         print("Pulling images from Whole Tale")
         images = w.WholeTale(admin=True).get_images() #this will error out if no connection, which is fine as an admin command
         
-        wtm.TaleImageChoice.objects.all().delete()
+        wtm.ImageChoice.objects.all().delete()
         
         wt_compute_env_choices = []
         for image in images:

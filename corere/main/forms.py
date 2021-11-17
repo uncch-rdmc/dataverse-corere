@@ -227,7 +227,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    wt_compute_env = forms.ModelChoiceField(queryset=wtm.TaleImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
+    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
 
     #This whole save is being called to force the correct value into wt_compute_env
     #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want

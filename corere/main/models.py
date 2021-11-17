@@ -22,6 +22,7 @@ from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
 from corere.apps.wholetale import wholetale as w
+from corere.apps.wholetale import models as wtm
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
@@ -92,6 +93,20 @@ class User(AbstractUser):
     def has_any_perm(self, perm_string, obj):
         return self.has_perm(c.perm_path(perm_string)) or self.has_perm(perm_string, obj)
 
+    def save(self, *args, **kwargs):
+        if settings.CONTAINER_DRIVER == "wholetale" and self.pk is not None:
+            orig = User.objects.get(pk=self.pk)
+            if orig.is_superuser != self.is_superuser: #If change in superuser status
+                admin_wtm_group = wtm.Group.objects.get(is_admins=True)
+                wtc = w.WholeTale(admin=True)
+                if self.is_superuser:
+                    wtc.invite_user_to_group(self.wt_id , admin_wtm_group.group_id)
+                else:
+                    wtc.remove_user_from_group(self.wt_id , admin_wtm_group.group_id)
+
+        super(User, self).save(*args, **kwargs)
+
+
 ####################################################
 
 class Edition(AbstractCreateUpdateModel):
@@ -113,7 +128,7 @@ class Edition(AbstractCreateUpdateModel):
         try:
             if(not self.pk and self.submission._status != Submission.Status.IN_PROGRESS_EDITION):
                 raise FieldError('A edition cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_EDITION)
-        except Edition.submission.RelatedObjectDoesNotExist:
+        except Edition.submission.RelatedObject:
             pass #this is caught in super
         try:
             self.manuscript #to see if not set
@@ -684,6 +699,7 @@ class Manuscript(AbstractCreateUpdateModel):
             (c.PERM_MANU_VERIFY, 'Can verify manuscript/submission'),
         ]
 
+    #There are 3 types of groups in this code. Django groups, Whole Tale groups stored in Whole Tale, and wholetale app groups connecting the two and storing the info locally
     def save(self, *args, **kwargs):
         first_save = False
         if not self.pk:
@@ -725,6 +741,12 @@ class Manuscript(AbstractCreateUpdateModel):
             g.create_submission_repo(self)
 
             if(settings.CONTAINER_DRIVER == "wholetale"):
+
+                # wtm.Group.objects.create(corere_group=)
+                # corere_group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="tale_groups")
+                # group_id = models.CharField(max_length=24, primary_key=True, verbose_name='Group ID in Whole Tale') 
+                # group_name = models.CharField(max_length=1024, verbose_name='Group Name in Whole Tale') #We store this for ACLs mostly
+
                 wtc = w.WholeTale(admin=True)
                 tale_title = self.manuscript.get_display_name()
                 wtc_tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env)
@@ -735,24 +757,30 @@ class Manuscript(AbstractCreateUpdateModel):
 
                 #Create 5 WT groups for the Tale (4 roles and admin)
                 wt_group_editor = wtc.create_group(editor_group_name)
+                wtm.Group.objects.create(corere_group=group_manuscript_editor, group_id=wt_group_editor.id, group_name=wt_group_editor.name)
                 wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_editor)
 
                 wt_group_author = wtc.create_group(author_group_name)
+                wtm.Group.objects.create(corere_group=group_manuscript_author, group_id=wt_group_author.id, group_name=wt_group_author.name)
                 wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_author)
 
                 wt_group_curator = wtc.create_group(curator_group_name)
+                wtm.Group.objects.create(corere_group=group_manuscript_curator, group_id=wt_group_curator.id, group_name=wt_group_curator.name)
                 wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_curator)
 
                 wt_group_verifier = wtc.create_group(verifier_group_name)
+                wtm.Group.objects.create(corere_group=group_manuscript_verifier, group_id=wt_group_verifier.id, group_name=wt_group_verifier.name)
                 wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_verifier)
 
-                wt_group_admin = wtc.create_group(GROUP_MANUSCRIPT_ADMIN_PREFIX + " " + str(self.id))
-                wtc.set_access(tale_info.tale_id, wtc.AccessType.ADMIN, group=wt_group_admin)
+                # wt_group_admin = wtc.create_group(GROUP_MANUSCRIPT_ADMIN_PREFIX + " " + str(self.id))
+                # wtm.Group.objects.create(group_id=wt_group_admin.id, group_name=wt_group_admin.name, is_admins=True)
+                # wtc.set_access(tale_info.tale_id, wtc.AccessType.ADMIN, group=wt_group_admin)
 
                 #TODO: at what point do the users get added to thse groups? 
                 # Well.... as assignment happens? We gotta make sure whenever assignment happens we also assign to WT
 
                 #TODO: Need to assign user as editor?
+                #wtc.invite_user_to_group(user_id, group_name)
                 
 
 
@@ -1005,7 +1033,7 @@ class Note(AbstractCreateUpdateModel):
     def save(self, *args, **kwargs):
         refs = 0
         refs += (self.ref_file is not None)
-        refs += (self.ref_file_type is not '')
+        refs += (self.ref_file_type != '')
         if(refs > 1):
             raise AssertionError("Multiple References set")
             

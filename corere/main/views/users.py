@@ -10,6 +10,7 @@ from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
+from corere.apps.wholetale import wholetale as w
 from django.contrib.auth import login, logout
 from django.conf import settings
 from notifications.signals import notify
@@ -384,7 +385,7 @@ def account_user_details(request):
             response.set_cookie(key="girderToken", value=girderToken)
             #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
             wt_user = w.WholeTale(girderToken).get_logged_in_user()
-            request.user.wt_id = wt_user.get("id")
+            request.user.wt_id = wt_user.get("_id")
             request.user.save()
 
     return response
