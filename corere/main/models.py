@@ -30,6 +30,7 @@ from django.contrib.postgres.fields import ArrayField
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
 from datetime import date, datetime
+from django.db.models.signals import m2m_changed
 
 #for custom invitation class
 from invitations import signals
@@ -97,7 +98,7 @@ class User(AbstractUser):
         if settings.CONTAINER_DRIVER == "wholetale" and self.pk is not None:
             orig = User.objects.get(pk=self.pk)
             if orig.is_superuser != self.is_superuser: #If change in superuser status
-                admin_wtm_group = wtm.Group.objects.get(is_admins=True)
+                admin_wtm_group = wtm.GroupConnector.objects.get(is_admins=True)
                 wtc = w.WholeTale(admin=True)
                 if self.is_superuser:
                     wtc.invite_user_to_group(self.wt_id , admin_wtm_group.group_id)
@@ -106,6 +107,25 @@ class User(AbstractUser):
 
         super(User, self).save(*args, **kwargs)
 
+#detect if user no longer has an invite key and also has a wt_id.
+#TODO: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
+def update_wholetale_on_user_group_changes(sender, instance, action, pk_set, **kwargs):
+    if settings.CONTAINER_DRIVER == 'wholetale' and instance.wt_id and not instance.invite_key:
+        wtc = w.WholeTale(admin=True)
+        if action == 'post_add':
+#            print("add")
+            for pk in pk_set:
+                wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
+#                print(f'add {pk}')
+        elif action == 'post_remove':
+#            print("remove")
+            for pk in pk_set:
+                wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
+#                print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
+
+m2m_changed.connect(update_wholetale_on_user_group_changes, sender=User.groups.through)
 
 ####################################################
 
@@ -735,54 +755,36 @@ class Manuscript(AbstractCreateUpdateModel):
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_verifier, self) 
             assign_perm(c.PERM_MANU_VERIFY, group_manuscript_verifier, self) 
 
-            group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
-
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
 
             if(settings.CONTAINER_DRIVER == "wholetale"):
-
-                # wtm.Group.objects.create(corere_group=)
-                # corere_group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="tale_groups")
-                # group_id = models.CharField(max_length=24, primary_key=True, verbose_name='Group ID in Whole Tale') 
-                # group_name = models.CharField(max_length=1024, verbose_name='Group Name in Whole Tale') #We store this for ACLs mostly
-
                 wtc = w.WholeTale(admin=True)
-                tale_title = self.manuscript.get_display_name()
-                wtc_tale = wtc.create_tale(tale_title, self.manuscript.wt_compute_env)
-                tale_info = Tale()
+                tale_title = self.get_display_name()
+                wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
+                tale_info = wtm.Tale()
                 tale_info.manuscript = self
                 tale_info.tale_id = wtc_tale["_id"]
                 tale_info.save()
 
-                #Create 5 WT groups for the Tale (4 roles and admin)
-                wt_group_editor = wtc.create_group(editor_group_name)
-                wtm.Group.objects.create(corere_group=group_manuscript_editor, group_id=wt_group_editor.id, group_name=wt_group_editor.name)
-                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_editor)
+                #Create 4 WT groups for the Tale (4 roles). Also the wtm.GroupConnectors that connect corere groups and WT groups
+                wtc_group_editor = wtc.create_group(editor_group_name)
+                wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, group_id=wtc_group_editor['_id'], group_name=wtc_group_editor['name'])
+                wtc.set_group_access(tale_info.tale_id, wtc.AccessType.READ, wtm_group_editor)
 
-                wt_group_author = wtc.create_group(author_group_name)
-                wtm.Group.objects.create(corere_group=group_manuscript_author, group_id=wt_group_author.id, group_name=wt_group_author.name)
-                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_author)
+                wtc_group_author = wtc.create_group(author_group_name)
+                wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, group_id=wtc_group_author['_id'], group_name=wtc_group_author['name'])
+                wtc.set_group_access(tale_info.tale_id, wtc.AccessType.READ, wtm_group_author)
 
-                wt_group_curator = wtc.create_group(curator_group_name)
-                wtm.Group.objects.create(corere_group=group_manuscript_curator, group_id=wt_group_curator.id, group_name=wt_group_curator.name)
-                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_curator)
+                wtc_group_curator = wtc.create_group(curator_group_name)
+                wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, group_id=wtc_group_curator['_id'], group_name=wtc_group_curator['name'])
+                wtc.set_group_access(tale_info.tale_id, wtc.AccessType.READ, wtm_group_curator)
 
-                wt_group_verifier = wtc.create_group(verifier_group_name)
-                wtm.Group.objects.create(corere_group=group_manuscript_verifier, group_id=wt_group_verifier.id, group_name=wt_group_verifier.name)
-                wtc.set_access(tale_info.tale_id, wtc.AccessType.READ, group=wt_group_verifier)
-
-                # wt_group_admin = wtc.create_group(GROUP_MANUSCRIPT_ADMIN_PREFIX + " " + str(self.id))
-                # wtm.Group.objects.create(group_id=wt_group_admin.id, group_name=wt_group_admin.name, is_admins=True)
-                # wtc.set_access(tale_info.tale_id, wtc.AccessType.ADMIN, group=wt_group_admin)
-
-                #TODO: at what point do the users get added to thse groups? 
-                # Well.... as assignment happens? We gotta make sure whenever assignment happens we also assign to WT
-
-                #TODO: Need to assign user as editor?
-                #wtc.invite_user_to_group(user_id, group_name)
+                wtc_group_verifier = wtc.create_group(verifier_group_name)
+                wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, group_id=wtc_group_verifier['_id'], group_name=wtc_group_verifier['name'])
+                wtc.set_group_access(tale_info.tale_id, wtc.AccessType.READ, wtm_group_verifier)
                 
-
+            group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED

@@ -5,4 +5,4 @@ from corere.apps.wholetale import models as wtm
 admin.site.register(wtm.Tale)
 admin.site.register(wtm.TaleVersion)
 admin.site.register(wtm.ImageChoice)
-admin.site.register(wtm.Group)
+admin.site.register(wtm.GroupConnector)

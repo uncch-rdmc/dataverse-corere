@@ -1,4 +1,4 @@
-import time, datetime, sseclient, threading #, json
+import time, datetime, sseclient, threading, json, requests
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
@@ -28,7 +28,7 @@ class WholeTale:
             #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
             wt_user = self.gc.get("/user/me")
             for invite in wt_user['groupInvites']:
-                if(wtm.Group.objects.filter(group_id=invite['groupId']).exists()): #if group is a corere group
+                if(wtm.GroupConnector.objects.filter(group_id=invite['groupId']).exists()): #if group is a corere group
                     self.gc.post("group/{}/member".format(invite['groupId'])) #accept invite
         else:
             raise ValueError("A Whole Tale connection must be provided a girder token or run as an admin.")
@@ -96,7 +96,7 @@ class WholeTale:
         return self.gc.get("/tale/{}/access".format(tale_id))
     
     def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
-        acls = get_access(tale_id)
+        acls = self.gc.get("/tale/{}/access".format(tale_id))
 
         existing_index = next((i for i, item in enumerate(acls['groups']) if item["id"] == wtm_group.group_id), None)
         if existing_index:
@@ -133,12 +133,21 @@ class WholeTale:
     #They are kept separate as the invite will be called as the group admin, while the accept will be called as the user
 
     def invite_user_to_group(self, user_id, group_id):
-        self.gc.post("group/{}/invitation".format(group_id), parameters={"level": self.AccessType.READ, "quiet": True},
-            data={"userId": user_id})
+        try:
+            self.gc.post("group/{}/invitation".format(group_id), parameters={"level": self.AccessType.READ, "quiet": True},
+                data={"userId": user_id})
+        except requests.HTTPError as e:
+            print(e.__dict__)
+            print(json.loads(e.responseText)['message'])
+            if e.response.status_code == 400 and json.loads(e.responseText)['message'] == "User is already in this group.":
+                logger.warning(f"Whole tale user {user_id} was added to group {group_id}, of which they were already a member.")
+                return
+            raise e
 
     #NOTE: This works on invitations as well.
     def remove_user_from_group(self, user_id, group_id):
-        self.gc.delete("group/{}/member".format(group_id), data={"userId": user_id})
+        #Note: the documentation says formData but using data causes it to error. If this blows up investigate further
+        self.gc.delete("group/{}/member".format(group_id), parameters={"userId": user_id}) #data={"userId": user_id})
 
     def accept_group_invite(self, group_id):
         self.gc.post("group/{}/member".format(group_id))

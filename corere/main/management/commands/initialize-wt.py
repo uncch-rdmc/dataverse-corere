@@ -30,13 +30,13 @@ class Command(BaseCommand):
                 wtc.delete_group(wtc_group["_id"])
                 print(f"Group '{wtc_group['name']}' deleted")
 
-            wtm.Group.objects.all().delete()
+            wtm.GroupConnector.objects.all().delete()
             print("All Whole Tale instance groups and wholetale.Group deleted.")
 
         try:
-            wtm_group = wtm.Group.objects.get(group_name=c.GROUP_MANUSCRIPT_ADMIN)
+            wtm_group = wtm.GroupConnector.objects.get(group_name=c.GROUP_MANUSCRIPT_ADMIN)
             wtc_group = wtc.get_group(group_id=wtm_group.id)
-        except wtm.Group.DoesNotExist:
+        except wtm.GroupConnector.DoesNotExist:
             wtm_group = None
             wtc_group = None
             pass
@@ -49,5 +49,5 @@ class Command(BaseCommand):
             if wtm_group:
                 print("Local wholetale.Group already exists, createlocal skipped.")
             else:
-                wtm.Group.objects.create(is_admins=True, group_id=wtc_group['_id'], group_name=wtc_group['name'])
+                wtm.GroupConnector.objects.create(is_admins=True, group_id=wtc_group['_id'], group_name=wtc_group['name'])
                 print("Local wholetale.Group created")

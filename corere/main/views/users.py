@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 # TODO: We should probably make permissions part of our constants as well
 
-
 @login_required
 # @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 @permission_required_or_404(c.perm_path(c.PERM_MANU_CURATE), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -67,7 +66,7 @@ def invite_assign_author(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form)".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
-                
+                    
                 ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_display_name=manuscript.get_display_name())
                 logger.info(msg)
@@ -352,19 +351,32 @@ def account_complete_oauth(request):
     else:
         return redirect('/account_user_details/')
 
+#This view is the first one the users are sent to after accepting an invite and registering
 @login_required()
 def account_user_details(request):
     helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
-    if(request.user.invite_key):
-        #TODO: With the globus flow I don't think this correctly clears the key
-
+    if(request.user.invite_key): #New User
         #we clear out the invite_key now that we can associate the user
-        #we do it regardless incase a new user clicks out of the page.
-        #This is somewhat a hack to get around having to serve this page with and without header content
         request.user.invite_key = "" 
         request.user.save()
 
+        #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            wtc = w.WholeTale(admin=True)
+            for group in request.user.groups.all():
+                if (group.name.startswith(c.GROUP_MANUSCRIPT_EDITOR_PREFIX) 
+                or group.name.startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) 
+                or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
+                or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
+                    #NOTE: If this blows up its because wholetale_group doesn't seem to work. I assume its because I'm working with the base group model but I'm unsure.
+                    wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.group_id)
+
+            if(request.user.is_superuser):
+                wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).group_id)
+
+            w.WholeTale(girderToken) #connecting as the user detects and accepts outstanding invitations
+            
     form = EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':

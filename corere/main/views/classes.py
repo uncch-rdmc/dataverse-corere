@@ -1603,7 +1603,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER != 'wholetale'):
+        if settings.CONTAINER_DRIVER != 'wholetale':
             return Http404()
 
         wtc = w.WholeTale(request.COOKIES.get('girderToken'))
@@ -1639,12 +1639,12 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission):
                 return 
 
 #TODO: delete
-def _helper_fake_stream(wtc):
-    for x in range(10):
-        yield(f"This is message {x} from the emergency broadcast system.<br>")
-        time.sleep(.05)
-    yield("Binder URL: https://google.com")
-    return
+# def _helper_fake_stream(wtc):
+#     for x in range(10):
+#         yield(f"This is message {x} from the emergency broadcast system.<br>")
+#         time.sleep(.05)
+#     yield("Binder URL: https://google.com")
+#     return
 
 def _helper_get_oauth_url(request, submission):
     # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))

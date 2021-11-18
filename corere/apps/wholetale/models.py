@@ -16,20 +16,20 @@ class TaleVersion(models.Model):
     submission = models.OneToOneField(m.Submission, on_delete=models.CASCADE, related_name="submission_taleversion")
     #TODO: probably add an attribute for the version of the tale in WT
 
-class Group(models.Model):
+class GroupConnector(models.Model):
     corere_group = models.OneToOneField(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="wholetale_group")
     is_admins = models.BooleanField(default=False) #There is no corere group for admins so we just do this.
     group_id = models.CharField(max_length=24, primary_key=True, verbose_name='Group ID in Whole Tale') 
     group_name = models.CharField(max_length=1024, unique=True, verbose_name='Group Name in Whole Tale') #We store this for ACLs mostly
 
     def save(self, *args, **kwargs):
-        super(Group, self).save(*args, **kwargs)
+        super(GroupConnector, self).save(*args, **kwargs)
 
         if self.is_admins:
             if self.corere_group:
                 raise AssertionError("Admin wholetale groups cannot also be connected to corere_group")
 
-            if Group.objects.filter(is_admins=True).exclude(group_id=self.group_id).count() > 0:
+            if GroupConnector.objects.filter(is_admins=True).exclude(group_id=self.group_id).count() > 0:
                 raise AssertionError("Only one admin wholetale group can be created")
 
 #Global image choices pulled from WT via a manually called admin command

@@ -20,7 +20,7 @@ class Command(BaseCommand):
         
         wt_compute_env_choices = []
         for image in images:
-            wtm.TaleImageChoice.objects.create(choice_id=image.get('_id'), name=image.get('name'))
+            wtm.ImageChoice.objects.create(choice_id=image.get('_id'), name=image.get('name'))
             wt_compute_env_choices = wt_compute_env_choices + [image.get('_id'), image.get('name')]
 
         print("Images pulled from Whole Tale:")
