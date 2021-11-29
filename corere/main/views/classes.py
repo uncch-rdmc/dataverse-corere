@@ -1185,11 +1185,11 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         return redirect('submission_notebook', id=self.object.id)
 
                     else:
-                        if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                            if self.object.manuscript.manuscript_containerinfo.build_in_progress:
-                                while self.object.manuscript.manuscript_containerinfo.build_in_progress:
+                        if(hasattr(self.object.manuscript, 'manuscript_localcontainerinfo')):
+                            if self.object.manuscript.manuscript_localcontainerinfo.build_in_progress:
+                                while self.object.manuscript.manuscript_localcontainerinfo.build_in_progress:
                                     time.sleep(.1)
-                                    self.object.manuscript.manuscript_containerinfo.refresh_from_db()
+                                    self.object.manuscript.manuscript_localcontainerinfo.refresh_from_db()
                             
                             elif(self.object.files_changed):
                                 logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
@@ -1572,7 +1572,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             else:
                 context['wt_launching'] = False                
         else:
-            context['notebook_url'] = self.object.manuscript.manuscript_containerinfo.container_public_address()
+            context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -1653,7 +1653,7 @@ def _helper_get_oauth_url(request, submission):
     if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
         #We need to send the user to reauth
         # print("REAUTH")
-        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
+        container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() 
         if(request.is_secure()):
             container_flow_redirect = "https://" + settings.SERVER_ADDRESS
         else:
@@ -1663,7 +1663,7 @@ def _helper_get_oauth_url(request, submission):
     else:
         # print("NO REAUTH")
         #We don't need to send the user to reauth
-        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
+        container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address
 

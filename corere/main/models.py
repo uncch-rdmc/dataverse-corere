@@ -107,23 +107,47 @@ class User(AbstractUser):
 
         super(User, self).save(*args, **kwargs)
 
-#detect if user no longer has an invite key and also has a wt_id.
+#This function is called when a user is removed from a group, as well as a group from a user
+#Depending on the way this is called, the instance and pk_set will differ
 #TODO: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
-def update_wholetale_on_user_group_changes(sender, instance, action, pk_set, **kwargs):
-    if settings.CONTAINER_DRIVER == 'wholetale' and instance.wt_id and not instance.invite_key:
+def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_set, **kwargs):
+    print(instance.__dict__)
+    print(model)
+    
+    if settings.CONTAINER_DRIVER == 'wholetale':
         wtc = w.WholeTale(admin=True)
-        if action == 'post_add':
-#            print("add")
-            for pk in pk_set:
-                wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
-#                print(f'add {pk}')
-        elif action == 'post_remove':
-#            print("remove")
-            for pk in pk_set:
-                wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
-#                print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
+        if model is Group and instance.wt_id and not instance.invite_key:
+            if action == 'post_add':
+                print("add")
+                for pk in pk_set:
+                    wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                    wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
+                    print(f'add {pk}')
+            elif action == 'post_remove':
+                print("remove")
+                for pk in pk_set:
+                    wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                    wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
+                    print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
+
+        if model is User:
+            if action == 'post_add':
+                print("add")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    if user.wt_id and not user.invite_key:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                        wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
+                        print(f'add {instance.id}')
+            elif action == 'post_remove':
+                print("remove")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    if user.wt_id and not user.invite_key:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                        wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
+                        print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_group_id {wtm_group.group_id}')
+
 
 m2m_changed.connect(update_wholetale_on_user_group_changes, sender=User.groups.through)
 
@@ -918,7 +942,7 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     #TODO-WT: Should we tap into this for deleting WT stuff as well 
 
 #Class related to locally hosted docker containers
-class ContainerInfo(models.Model):
+class LocalContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
     proxy_image_name = models.CharField(max_length=128, blank=True, null=True)
     repo_container_id = models.CharField(max_length=64, blank=True, null=True)
@@ -930,7 +954,7 @@ class ContainerInfo(models.Model):
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
     submission_version = models.IntegerField(blank=True, null=True) #Why didn't I just use submission???
-    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_localcontainerinfo")
     build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
@@ -1205,7 +1229,7 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
             [ _, assigned_obj, m_id ] = split_name
             if(assigned_obj == "Manuscript"):
                 manuscript = Manuscript.objects.get(id=m_id)
-                if ((hasattr(manuscript, 'manuscript_containerinfo'))):
+                if ((hasattr(manuscript, 'manuscript_localcontainerinfo'))):
                     logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
                     if (not settings.SKIP_DOCKER):
                         d.update_oauthproxy_container_authenticated_emails(manuscript)

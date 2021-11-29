@@ -8,11 +8,11 @@ from django.contrib.auth.models import Group
 #TODO: If we run into many issues with intermediate failures that end uncleanly, we should probably delete all the resources by tag
 #      This will require improving the tags somewhat, including the manuscript id
 class Command(BaseCommand):
-    help = "Wipe docker stack for a Manuscript (jupyter-notebook, oauthproxy, network), along with its ContainerInfo. Note that this actually prunes all networks, as deleting multiple networks by name does not work."
+    help = "Wipe docker stack for a Manuscript (jupyter-notebook, oauthproxy, network), along with its LocalContainerInfo. Note that this actually prunes all networks, as deleting multiple networks by name does not work."
 
     def add_arguments(self, parser):
         parser.add_argument('manuscript_id', type=int)
-        parser.add_argument('--crude', action='store_true', help='Runs the crude deletion, which does not require an intact ContainerInfo and stack. The only downside to this is currently if you delete the last containers via this method, the creation of your first containers is very slow.')
+        parser.add_argument('--crude', action='store_true', help='Runs the crude deletion, which does not require an intact LocalContainerInfo and stack. The only downside to this is currently if you delete the last containers via this method, the creation of your first containers is very slow.')
 
     def handle(self, *args, **options):
         manuscript = m.Manuscript.objects.get(id=options['manuscript_id'])

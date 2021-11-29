@@ -201,11 +201,11 @@ def open_notebook(request, id=None):
         
         latest_submission = manuscript.get_latest_submission()
 
-        if(hasattr(manuscript, 'manuscript_containerinfo')): 
-            if manuscript.manuscript_containerinfo.build_in_progress:
-                while manuscript.manuscript_containerinfo.build_in_progress:
+        if(hasattr(manuscript, 'manuscript_localcontainerinfo')): 
+            if manuscript.manuscript_localcontainerinfo.build_in_progress:
+                while manuscript.manuscript_localcontainerinfo.build_in_progress:
                     time.sleep(.1)
-                    manuscript.manuscript_containerinfo.refresh_from_db()
+                    manuscript.manuscript_localcontainerinfo.refresh_from_db()
 
             elif(latest_submission.files_changed):
                 logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
@@ -218,8 +218,8 @@ def open_notebook(request, id=None):
             latest_submission.files_changed = False
             latest_submission.save()
 
-        print(manuscript.manuscript_containerinfo.container_public_address())
-        return redirect(manuscript.manuscript_containerinfo.container_public_address())
+        print(manuscript.manuscript_localcontainerinfo.container_public_address())
+        return redirect(manuscript.manuscript_localcontainerinfo.container_public_address())
     else:
         raise Http404()
 

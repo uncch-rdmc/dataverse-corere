@@ -62,7 +62,7 @@ admin.site.register(Permission)
 
 #TODO: If we make the local implementation an app, then this should move
 if settings.CONTAINER_DRIVER != 'wholetale' :
-    admin.site.register(m.ContainerInfo)
+    admin.site.register(m.LocalContainerInfo)
 
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
 admin.site.register(m.HistoricalSubmission, HistoryAdmin)
