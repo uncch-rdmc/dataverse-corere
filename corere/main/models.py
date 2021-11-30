@@ -109,7 +109,8 @@ class User(AbstractUser):
 
 #This function is called when a user is removed from a group, as well as a group from a user
 #Depending on the way this is called, the instance and pk_set will differ
-#TODO: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
+#TODO-WT: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
+#TODO-WT: Remove print statements
 def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_set, **kwargs):
     print(instance.__dict__)
     print(model)
@@ -147,7 +148,6 @@ def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_s
                         wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
                         wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
                         print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_group_id {wtm_group.group_id}')
-
 
 m2m_changed.connect(update_wholetale_on_user_group_changes, sender=User.groups.through)
 
