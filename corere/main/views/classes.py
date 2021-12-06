@@ -1425,32 +1425,32 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
 #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
-    parent_reference_name = 'manuscript'
-    parent_id_name = "manuscript_id"
-    parent_model = m.Manuscript
-    object_friendly_name = 'submission'
-    model = m.Submission
-    note_formset = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
-    http_method_names = ['post']
+# class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#     parent_reference_name = 'manuscript'
+#     parent_id_name = "manuscript_id"
+#     parent_model = m.Manuscript
+#     object_friendly_name = 'submission'
+#     model = m.Submission
+#     note_formset = f.NoteSubmissionFormset
+#     note_helper = f.NoteFormSetHelper()
+#     http_method_names = ['post']
 
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.submit, request.user): 
-                logger.debug("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.submit(request.user)
-                self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             if not fsm_check_transition_perm(self.object.submit, request.user): 
+#                 logger.debug("PermissionDenied")
+#                 raise Http404()
+#             try:
+#                 self.object.submit(request.user)
+#                 self.object.save()
+#             except TransitionNotAllowed as e:
+#                 logger.error("TransitionNotAllowed: " + str(e))
+#                 raise
 
-        except (TransitionNotAllowed):
-            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
-            messages.add_message(request, messages.ERROR, self.msg)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
+#         except (TransitionNotAllowed):
+#             self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+#             messages.add_message(request, messages.ERROR, self.msg)
+#         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
@@ -1495,6 +1495,13 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             try:
                 self.object.finish_submission()
                 self.object.save()
+
+                #Delete all tale copies both locally and in WT. This also deletes running instances.
+                if(settings.CONTAINER_DRIVER == 'wholetale'):
+                    wtc = w.WholeTaleCorere(admin=True)
+                    for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
+                        wtc.delete_tale(wtm_tale.tale_id)
+                        wtm_tale.delete()   
 
                 ### Messaging ###
                 # print("SUBMISSION STATUS: " + self.object._status)
@@ -1565,48 +1572,10 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
         
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-            #TODO-WT: Instead of getting binder_url, we need to know which instance we are launching.
-            #         This is a bit complicated because in some cases a tale will have versions and some cases it will not??
-            #         ... If I am going to allow launching of previous versions of tales I have to track that in the instance. So I gotta use versions?
-            #              ... I could instead add a tale attribute that tracks its version (only set if not an original_tale)?
-            #              ... If I do add versions to tale_copies, this means I have to copy them over as well with the tale?
-            #              ... Either way I need to ALSO think about when these previous version launches will be removed.
-            #              ... Maybe I could just not support launching previous versions for now???
-            #                   ... Would this mean I no longer need TaleVersions at all???
-            #              ... I feel like I may be overthinking this
-            #
-            #         ... What do I actually need versions for?
-            #              ... Tracking the submission a tale is on, for launching instances
-            #                   ... The original_tale will always be on the latest version
-            #                   ... We have to copy tales to run previous versions
-            #         ... So if we got rid of TaleVersion (and instead probably stored a version_id on the submission), how would we revert to a previous
-            #              ... We'd have to get the list of versions, find the one we want based upon name, get its id, and revert.
-            #                   ... Which is not that bad
-
-            ## I need notebook view to work for any instance. How am I ensuring this?
-
-            # ... instead of using original_tale to get the tale, I have to use corere_group via GroupConnector
-            # ... i now run into my issue with multiple groups / admin. I need to decide what to provide in this case
-            # ... if admin, just provide the one group whatever
-            # ... if multiple groups... I guess we'll set up a hierarchy? author > curator > verifier > editor
-            
-
-            #TODO-WT: Incomplete. Tomorrow I need to get the instance here based upon the corere_group. See my new accessor code
-            #Order: group > group_connector > tale > instance?
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = wtc.get_model_instance(request.user, self.object)
 
-            #... wait... isn't the tale already launched at this point... 
-
             #TODO-WT: Think about whether the admin should be served a special container? Make sure we're even giving the corere admins wt admin
-            
-
-            #gc = wtm.GroupConnector.objects.filter(corere_user=request.user, group_name__ends)
-            #tale = self.object.submission_tales.get()
-            #wtm_instance = wtm.Instance.get(tale= , corere_user=request.user)
-            
-            ## ... Where am I launching this instance?
-            ## ... I need to know the user and the tale. I get the tale via the submission
 
             context['notebook_url'] = wtm_instance.get_full_container_url()
             print(wtm_instance.__dict__)
@@ -1697,7 +1666,6 @@ def _helper_get_oauth_url(request, submission):
     #This code is for doing pro-active reauthentication via oauth2. We do this so that the user isn't presented with the oauth2 login inside their iframe (which they can't use).
     if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
         #We need to send the user to reauth
-        # print("REAUTH")
         container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() 
         if(request.is_secure()):
             container_flow_redirect = "https://" + settings.SERVER_ADDRESS
@@ -1706,19 +1674,47 @@ def _helper_get_oauth_url(request, submission):
         container_flow_redirect += "/submission/" + str(submission.id) + "/notebooklogin/?postauth"
         container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
     else:
-        # print("NO REAUTH")
         #We don't need to send the user to reauth
         container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address
+
 
 def _helper_submit_submission_and_redirect(request, submission):
     if submission._status == submission.Status.NEW or submission._status == submission.Status.REJECTED_EDITOR:
         if not fsm_check_transition_perm(submission.submit, request.user): 
             logger.debug("PermissionDenied")
             raise Http404()
+
         submission.submit(request.user)
         submission.save()
+
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            #   - Set the wt author group's access to the root tale as read
+            wtc = w.WholeTaleCorere(admin=True)
+            tale_original = submission.submission_tales.get(original_tale=None)        
+            group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
+            wtc.set_group_access(tale_original.tale_id, wtc.AccessType.READ, group.wholetale_group)
+            
+            #TODO-WT: The code I'm using to generate the tale title should be in one place
+            #   - Create 3 tale copies, one for each role
+            group_editor = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(submission.manuscript.id))
+            editor_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Editor"
+            wtc_tale_copy_editor = wtc.copy_tale(tale_original.tale_id, new_title=editor_tale_title)
+            tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_editor.tale_id, wtc.AccessType.WRITE, group_editor.wholetale_group)
+
+            group_curator = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(submission.manuscript.id))
+            curator_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Curator"
+            wtc_tale_copy_curator = wtc.copy_tale(tale_original.tale_id, new_title=curator_tale_title)
+            tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_curator.tale_id, wtc.AccessType.WRITE, group_curator.wholetale_group)
+
+            group_verifier = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(submission.manuscript.id))
+            verifier_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Verifier"
+            wtc_tale_copy_verifier = wtc.copy_tale(tale_original.tale_id, new_title=verifier_tale_title)
+            tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_verifier.tale_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
 
         ## Messaging ###
         msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_display_name=submission.manuscript.get_display_name())

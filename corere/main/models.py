@@ -824,7 +824,7 @@ class Manuscript(AbstractCreateUpdateModel):
                 print("IN TALE CREATE")
                 print(self.manuscript_tales)
                 wtc = w.WholeTaleCorere(admin=True)
-                tale_title = self.get_display_name()
+                tale_title = f"{self.get_display_name()} - {self.id}"
                 wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
                 tale = wtm.Tale()
                 tale.manuscript = self
@@ -836,7 +836,6 @@ class Manuscript(AbstractCreateUpdateModel):
                 wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_author)
                 wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_curator)
                 wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_verifier)
-
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED

@@ -51,6 +51,23 @@ class WholeTale:
     def create_tale(self, title, image_id):
         return self.gc.post("/tale", json={"title": title, "imageId": image_id, "dataSet": []})
 
+    def copy_tale(self, tale_id, new_title=None):
+        new_tale_json = self.gc.post(f"/tale/{tale_id}/copy")
+        if new_title:
+            # title_json = {'title': new_title}
+            new_tale_json['title'] = new_title
+            new_tale_json = self.update_tale(new_tale_json["_id"], new_tale_json)
+        return new_tale_json
+
+    # #helper method for just changing the title of a tale without having to muck in json
+    # def rename_tale(self, new_title, tale_json):
+    #     tale_json[]
+    #     return update_tale()
+
+    #replace the existing tales fields with the new fields
+    def update_tale(self, tale_id, new_tale_json):
+        return self.gc.put(f"/tale/{tale_id}", json=new_tale_json)
+        
     #Force deletes the instances of the tale
     def delete_tale(tale_id, force=True):
         self.gc.delete(f"/tale/{tale_id}", parameters={"force": force})
