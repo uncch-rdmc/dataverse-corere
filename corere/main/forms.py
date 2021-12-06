@@ -9,7 +9,7 @@ from invitations.utils import get_invitation_model
 from django.conf import settings
 from . import constants as c
 from corere.main import models as m
-from corere.apps.wholetale import wholetale as w
+from corere.main import wholetale_corere as w
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -236,10 +236,10 @@ class ManuscriptBaseForm(forms.ModelForm):
         mf = super(ManuscriptBaseForm, self).save(*args, commit=False, **kwargs)    
         if('wt_compute_env' in self.cleaned_data):
             choice_id = self.data.get('wt_compute_env')
-            print(choice_id)        
+            print(f"choice_id {choice_id}")        
         #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
         #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
-        if not re.match("^[\w\d]*$", choice_id):
+        if choice_id and not re.match("^[\w\d]*$", choice_id):
             logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
             raise Http404()
         setattr(mf, 'wt_compute_env', choice_id)

@@ -2,7 +2,7 @@ import requests
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from corere.main import constants as c
-from corere.apps.wholetale import wholetale as w
+from corere.main import wholetale_corere as w
 from corere.apps.wholetale import models as wtm
 from corere.main import models as m
 # from corere.main.models import User
@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         print("Pulling images from Whole Tale")
-        images = w.WholeTale(admin=True).get_images() #this will error out if no connection, which is fine as an admin command
+        images = w.WholeTaleCorere(admin=True).get_images() #this will error out if no connection, which is fine as an admin command
         
         wtm.ImageChoice.objects.all().delete()
         

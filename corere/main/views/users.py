@@ -10,7 +10,7 @@ from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
-from corere.apps.wholetale import wholetale as w
+from corere.main import wholetale_corere as w
 from django.contrib.auth import login, logout
 from django.conf import settings
 from notifications.signals import notify
@@ -356,27 +356,7 @@ def account_complete_oauth(request):
 def account_user_details(request):
     helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
-    if(request.user.invite_key): #New User
-        #we clear out the invite_key now that we can associate the user
-        request.user.invite_key = "" 
-        request.user.save()
-
-        #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
-            wtc = w.WholeTale(admin=True)
-            for group in request.user.groups.all():
-                if (group.name.startswith(c.GROUP_MANUSCRIPT_EDITOR_PREFIX) 
-                or group.name.startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) 
-                or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
-                or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
-                    #NOTE: If this blows up its because wholetale_group doesn't seem to work. I assume its because I'm working with the base group model but I'm unsure.
-                    wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.group_id)
-
-            if(request.user.is_superuser):
-                wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).group_id)
-
-            w.WholeTale(girderToken) #connecting as the user detects and accepts outstanding invitations
-            
+           
     form = EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':
@@ -392,13 +372,34 @@ def account_user_details(request):
     response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
 
     if request.method == 'GET':
-        girderToken = request.GET.get("girderToken", None)
-        if girderToken:
-            response.set_cookie(key="girderToken", value=girderToken)
-            #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
-            wt_user = w.WholeTale(girderToken).get_logged_in_user()
-            request.user.wt_id = wt_user.get("_id")
+        if(request.user.invite_key): #New User
+            #we clear out the invite_key now that we can associate the user
+            request.user.invite_key = "" 
             request.user.save()
+
+            #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
+            if(settings.CONTAINER_DRIVER == 'wholetale'):
+                girderToken = request.GET.get("girderToken", None)
+                if girderToken:
+                    response.set_cookie(key="girderToken", value=girderToken)
+                    #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
+                    wt_user = w.WholeTaleCorere(girderToken).get_logged_in_user()
+                    request.user.wt_id = wt_user.get("_id")
+                    request.user.save()
+
+                wtc = w.WholeTaleCorere(admin=True)
+                for group in request.user.groups.all():
+                    if (group.name.startswith(c.GROUP_MANUSCRIPT_EDITOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
+                        #NOTE: If this blows up its because wholetale_group doesn't seem to work. I assume its because I'm working with the base group model but I'm unsure.
+                        wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.group_id)
+
+                if(request.user.is_superuser):
+                    wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).group_id)
+
+                w.WholeTaleCorere(girderToken) #connecting as the user detects and accepts outstanding invitations
 
     return response
 

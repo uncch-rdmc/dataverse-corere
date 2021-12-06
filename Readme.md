@@ -95,7 +95,7 @@ Source the config files:
 ```
 python3 manage.py migrate
 python3 manage.py createsuperuser --noinput
-python3 manage.py populate-wt-info
+python3 manage.py populate-info-from-wt
 python3 manage.py initialize-wt --createlocal
 ```
 
@@ -110,10 +110,11 @@ Configure CORE2 roles for the admin user:
 * Select admin
 * Add all four roles
 
-Invite yourself as a Curator:
+Invite yourself as a new Curator user:
 * Goto https://localhost:8000/
 * Select admin menu > Site Actions  > Invite Curator
 * Look for link in logs (since email not configured)
+* Note: we do this because the admin user should not be used for UI actions
 
 In separate browser/private session:
 * Open link

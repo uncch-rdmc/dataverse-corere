@@ -5,7 +5,8 @@ from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
-from corere.apps.wholetale import wholetale as w
+from corere.main import wholetale_corere as w
+from corere.apps.wholetale import models as wtm
 from corere.main import git as g
 from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
@@ -955,7 +956,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         prev_sub._status = m.Submission.Status.NEW
         self.object = prev_sub
 
-
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
@@ -1168,17 +1168,18 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                 if list(self.files_dict_list):
                     if(settings.CONTAINER_DRIVER == 'wholetale'):
-                        #TODO: I should be checking for file changes and only uploading new files if there are?
-                        #      How do I even check if there are file changes between my local files and the ones on Whole Tale?
-                        #      If there are no file changes we shouldn't create a new instance with wtc.run()
                         if(self.object.files_changed):
-                            wtc = w.WholeTale(request.COOKIES.get('girderToken'))
-                            tale_id = self.object.submission_taleinfo.tale_id
-                            wtc.upload_files(tale_id, g.get_submission_repo_path(self.object.manuscript)) #TODO: Replace with the selected image
-                            binder = wtc.run(tale_id) #this may take a long time
-                            self.object.submission_taleinfo.binder_id = binder['_id']
-                            self.object.submission_taleinfo.save()
+                            wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+                            #tale_version = self.object.submission_taleversion
+                            tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
 
+                            #TODO: This is blowing up now. I need to print my groups/accesses and see what's up..
+                            #print(wtc.get_access(tale.tale_id)) 
+
+                            wtc.upload_files(tale.tale_id, g.get_submission_repo_path(self.object.manuscript))
+                            wtc_instance = wtc.run(tale.tale_id) #this may take a long time
+                            print(wtc_instance)
+                            wtm.Instance.objects.create(tale=tale, container_id=wtc_instance['_id'], corere_user=request.user) # container_url=wtc_instance['url'], 
                             self.object.files_changed = False
                             self.object.save()
                         
@@ -1564,10 +1565,53 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
         
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-            context['notebook_url'] = self.object.submission_taleinfo.binder_url
-            wtc = w.WholeTale(request.COOKIES.get('girderToken'))
-            instance = wtc.get_instance(self.object.submission_taleinfo.binder_id)
-            if instance["status"] == wtc.InstanceStatus.LAUNCHING:
+            #TODO-WT: Instead of getting binder_url, we need to know which instance we are launching.
+            #         This is a bit complicated because in some cases a tale will have versions and some cases it will not??
+            #         ... If I am going to allow launching of previous versions of tales I have to track that in the instance. So I gotta use versions?
+            #              ... I could instead add a tale attribute that tracks its version (only set if not an original_tale)?
+            #              ... If I do add versions to tale_copies, this means I have to copy them over as well with the tale?
+            #              ... Either way I need to ALSO think about when these previous version launches will be removed.
+            #              ... Maybe I could just not support launching previous versions for now???
+            #                   ... Would this mean I no longer need TaleVersions at all???
+            #              ... I feel like I may be overthinking this
+            #
+            #         ... What do I actually need versions for?
+            #              ... Tracking the submission a tale is on, for launching instances
+            #                   ... The original_tale will always be on the latest version
+            #                   ... We have to copy tales to run previous versions
+            #         ... So if we got rid of TaleVersion (and instead probably stored a version_id on the submission), how would we revert to a previous
+            #              ... We'd have to get the list of versions, find the one we want based upon name, get its id, and revert.
+            #                   ... Which is not that bad
+
+            ## I need notebook view to work for any instance. How am I ensuring this?
+
+            # ... instead of using original_tale to get the tale, I have to use corere_group via GroupConnector
+            # ... i now run into my issue with multiple groups / admin. I need to decide what to provide in this case
+            # ... if admin, just provide the one group whatever
+            # ... if multiple groups... I guess we'll set up a hierarchy? author > curator > verifier > editor
+            
+
+            #TODO-WT: Incomplete. Tomorrow I need to get the instance here based upon the corere_group. See my new accessor code
+            #Order: group > group_connector > tale > instance?
+            wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+            wtm_instance = wtc.get_model_instance(request.user, self.object)
+
+            #... wait... isn't the tale already launched at this point... 
+
+            #TODO-WT: Think about whether the admin should be served a special container? Make sure we're even giving the corere admins wt admin
+            
+
+            #gc = wtm.GroupConnector.objects.filter(corere_user=request.user, group_name__ends)
+            #tale = self.object.submission_tales.get()
+            #wtm_instance = wtm.Instance.get(tale= , corere_user=request.user)
+            
+            ## ... Where am I launching this instance?
+            ## ... I need to know the user and the tale. I get the tale via the submission
+
+            context['notebook_url'] = wtm_instance.get_full_container_url()
+            print(wtm_instance.__dict__)
+            wtc_instance = wtc.get_instance(wtm_instance.container_id)
+            if wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                 context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
             else:
                 context['wt_launching'] = False                
@@ -1606,11 +1650,11 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         if settings.CONTAINER_DRIVER != 'wholetale':
             return Http404()
 
-        wtc = w.WholeTale(request.COOKIES.get('girderToken'))
-        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object))
+        wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
         
-def _helper_generate_whole_tale_stream_contents(wtc, submission):
+def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
     stream = wtc.get_event_stream()
     client = sseclient.SSEClient(stream)
     for event in client.events():
@@ -1627,15 +1671,16 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission):
             if(progress == 100):
                 #In case things are still happening after the ending status message
 
-                instance = wtc.get_instance(submission.submission_taleinfo.binder_id)
-                while instance["status"] == wtc.InstanceStatus.LAUNCHING:
+                wtm_instance = wtc.get_model_instance(user, submission)
+                wtc_instance = wtc.get_instance(wtm_instance.container_id)
+                while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                     time.sleep(1)
-                    instance = wtc.get_instance(instance['_id'])
+                    wtc_instance = wtc.get_instance(wtc_instance['_id'])
                 
-                submission.submission_taleinfo.binder_url = instance['url']
-                submission.submission_taleinfo.save()
+                wtm_instance.container_url = wtc_instance['url']
+                wtm_instance.save()
 
-                yield(f"Binder URL: {instance['url']}")
+                yield(f"Container URL: {wtc_instance.get_full_container_url()}")
                 return 
 
 #TODO: delete
@@ -1643,7 +1688,7 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission):
 #     for x in range(10):
 #         yield(f"This is message {x} from the emergency broadcast system.<br>")
 #         time.sleep(.05)
-#     yield("Binder URL: https://google.com")
+#     yield("Container URL: https://google.com")
 #     return
 
 def _helper_get_oauth_url(request, submission):

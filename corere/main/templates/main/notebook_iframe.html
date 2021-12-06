@@ -14,7 +14,7 @@
 
 {% if wt_launching %}
 <div id="logandbuttondiv" class="rounded border" style="padding:10px; height: 338px; ">
-    <h5>Binder Launch Status:</h5>
+    <h5>Container Launch Status:</h5>
     <div id="logdiv" class="rounded border" style="height:240px; overflow: scroll; padding-left:10px;">
 
     </div>
@@ -23,7 +23,7 @@
 
 <script type="text/javascript">
     var last_response_len = false;
-    binder_url = "";
+    container_url = "";
     $.ajax('../wtstream/', {
         xhrFields: {
             onprogress: function(e)
@@ -37,8 +37,8 @@
     })
     .done(function(data)
     {
-        binder_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Binder URL: ')+12)
-        console.log(binder_url)
+        container_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Container URL: ')+12)
+        console.log(container_url)
 
         var show_notebook_button = document.getElementById("show_notebook_button");
         if(show_notebook_button) {
@@ -54,7 +54,7 @@
     function show_iframe() {
         var notebookiframe = document.getElementById("notebook_iframe");
         if(notebookiframe) {
-            notebookiframe.src = binder_url
+            notebookiframe.src = container_url
             notebookiframe.style.display = 'block';
         }
         var formbuttons = document.getElementById("file_note_nested_form");

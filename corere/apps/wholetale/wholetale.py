@@ -24,6 +24,7 @@ class WholeTale:
         if admin:
             self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
         elif token:
+            #TODO-WT: This references wtm, should it be in wholetale_corere?
             self.gc.setToken(token)
             #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
             wt_user = self.gc.get("/user/me")
@@ -48,8 +49,27 @@ class WholeTale:
     #We create a new tale for each submission for access control reasons.
     #The alternative would be to create a version for each submission, there is not version-level access control.
     def create_tale(self, title, image_id):
-        tale = self.gc.post("/tale", json={"title": title, "imageId": image_id, "dataSet": []})
-        return tale
+        return self.gc.post("/tale", json={"title": title, "imageId": image_id, "dataSet": []})
+
+    #Force deletes the instances of the tale
+    def delete_tale(tale_id, force=True):
+        self.gc.delete(f"/tale/{tale_id}", parameters={"force": force})
+
+    def create_tale_version(self, tale_id, name, force=True):
+        return self.gc.post("/version", parameters={"taleId": tale_id, "name": name, "force": force})
+
+    #May be unused
+    def get_tale_version(self, version_id):
+        return self.gc.get(f"/version/{version_id}")
+
+    def list_tale_version(self, tale_id):
+        return self.gc.get("/version", parameters={"taleId": tale_id,"limit": 10000})
+
+    def get_tale_version_by_name(self, tale_id, version_name):
+        versions = list_tale_version(tale_id)
+        for version in versions:
+            if version['name'] == version_name:
+                return version
 
     def upload_files(self, tale_id, str_path):
         """
@@ -63,6 +83,7 @@ class WholeTale:
         self.gc.upload(glob_path, tale["workspaceId"])
 
     #TODO: Do we need the completed instance? Probably yes for the url?
+    #Note: Run will launch a container for the user authenticated.
     def run(self, tale_id, wait_for_complete=False):
         tale = self.gc.get(f"/tale/{tale_id}")
         instance = self.gc.post("/instance", parameters={"taleId": tale["_id"]})
@@ -77,7 +98,7 @@ class WholeTale:
     def get_instance(self, instance_id):
         return self.gc.get(f"/instance/{instance_id}")
 
-    def stop(self, instance):
+    def delete_instance(self, instance):
         self.gc.delete(f"/instance/{instance['_id']}")
 
     def download_files(self, path, folder_id=None):
@@ -95,6 +116,7 @@ class WholeTale:
     def get_access(self, tale_id):
         return self.gc.get("/tale/{}/access".format(tale_id))
     
+    #TODO-WT: This references wtm, should it be in wholetale_corere?
     def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
         acls = self.gc.get("/tale/{}/access".format(tale_id))
 
@@ -105,7 +127,7 @@ class WholeTale:
         if(level != self.AccessType.NONE): #If access is none, we need to not add it, instead of setting level as NONE (-1)
             acl = {
                 'id': wtm_group.group_id,
-                'name': wtm_group.group_name,
+                'name': wtm_group.get_wt_group_name(),
                 'flags': [],
                 'level': level
             }
