@@ -54,11 +54,11 @@ class Instance(models.Model):
     tale = models.ForeignKey('Tale', on_delete=models.CASCADE, related_name="tale_instances") #maybe unnessecary with tale_verison
     #tale_version = models.ForeignKey('TaleVersion', on_delete=models.CASCADE, related_name="taleversion_instances")
     
-    container_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
-    container_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='Container URL')
+    instance_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
+    instance_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='Container URL')
     corere_user = models.ForeignKey(m.User, on_delete=models.CASCADE, related_name="user_instances")
     
-    #TODO-WT: Add accessor method to get the FULL container_url
+    #TODO-WT: Add accessor method to get the FULL instance_url
     
     class Meta: #TODO-WT: I think this is the right approach. Each user should only have one instance per tale
         unique_together = ("tale", "corere_user")
@@ -66,7 +66,7 @@ class Instance(models.Model):
     def get_full_container_url(self):
         #TODO-WT: Implement this getting the right info from settings
         #TODO-WT: I may actually be storing the full URL already, WITH the token. Which seems bad.
-        return self.container_url
+        return self.instance_url
 
 class GroupConnector(models.Model):
     corere_group = models.OneToOneField(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="wholetale_group")

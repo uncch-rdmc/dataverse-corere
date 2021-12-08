@@ -122,6 +122,7 @@ def manuscript_landing(request, id=None):
 
             #TODO: I want a different label for edit/review even if they are the same page in the end
 
+
             if(has_transition_perm(latestSubmission.add_edition_noop, request.user)
                 or has_transition_perm(latestSubmission.add_curation_noop, request.user)
                 or has_transition_perm(latestSubmission.add_verification_noop, request.user) ):

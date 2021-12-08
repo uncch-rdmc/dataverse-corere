@@ -101,7 +101,7 @@ class WholeTale:
 
     #TODO: Do we need the completed instance? Probably yes for the url?
     #Note: Run will launch a container for the user authenticated.
-    def run(self, tale_id, wait_for_complete=False):
+    def create_instance(self, tale_id, wait_for_complete=False):
         tale = self.gc.get(f"/tale/{tale_id}")
         instance = self.gc.post("/instance", parameters={"taleId": tale["_id"]})
         
@@ -115,8 +115,8 @@ class WholeTale:
     def get_instance(self, instance_id):
         return self.gc.get(f"/instance/{instance_id}")
 
-    def delete_instance(self, instance):
-        self.gc.delete(f"/instance/{instance['_id']}")
+    def delete_instance(self, instance_id):
+        self.gc.delete(f"/instance/{instance_id}")
 
     def download_files(self, path, folder_id=None):
         if folder_id is None:

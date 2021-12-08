@@ -1170,19 +1170,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     if(settings.CONTAINER_DRIVER == 'wholetale'):
                         if(self.object.files_changed):
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
-                            #tale_version = self.object.submission_taleversion
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
-
-                            #TODO: This is blowing up now. I need to print my groups/accesses and see what's up..
-                            #print(wtc.get_access(tale.tale_id)) 
-
                             wtc.upload_files(tale.tale_id, g.get_submission_repo_path(self.object.manuscript))
-                            wtc_instance = wtc.run(tale.tale_id) #this may take a long time
-                            print(wtc_instance)
-                            wtm.Instance.objects.create(tale=tale, container_id=wtc_instance['_id'], corere_user=request.user) # container_url=wtc_instance['url'], 
+                            wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time
+                            wtm.Instance.objects.create(tale=tale, instance_id=wtc_instance['_id'], corere_user=request.user) # instance_url=wtc_instance['url'], 
                             self.object.files_changed = False
                             self.object.save()
-                        
+
                         return redirect('submission_notebook', id=self.object.id)
 
                     else:
@@ -1537,6 +1531,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
+#For local containers
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
 #This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
 #Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
@@ -1574,12 +1569,12 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         if(settings.CONTAINER_DRIVER == 'wholetale'):
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = wtc.get_model_instance(request.user, self.object)
-
+            print(wtm_instance.__dict__)
             #TODO-WT: Think about whether the admin should be served a special container? Make sure we're even giving the corere admins wt admin
 
             context['notebook_url'] = wtm_instance.get_full_container_url()
             print(wtm_instance.__dict__)
-            wtc_instance = wtc.get_instance(wtm_instance.container_id)
+            wtc_instance = wtc.get_instance(wtm_instance.instance_id)
             if wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                 context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
             else:
@@ -1641,12 +1636,12 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
                 #In case things are still happening after the ending status message
 
                 wtm_instance = wtc.get_model_instance(user, submission)
-                wtc_instance = wtc.get_instance(wtm_instance.container_id)
+                wtc_instance = wtc.get_instance(wtm_instance.instance_id)
                 while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                     time.sleep(1)
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
                 
-                wtm_instance.container_url = wtc_instance['url']
+                wtm_instance.instance_url = wtc_instance['url']
                 wtm_instance.save()
 
                 yield(f"Container URL: {wtc_instance.get_full_container_url()}")
@@ -1678,7 +1673,6 @@ def _helper_get_oauth_url(request, submission):
         container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address
-
 
 def _helper_submit_submission_and_redirect(request, submission):
     if submission._status == submission.Status.NEW or submission._status == submission.Status.REJECTED_EDITOR:
