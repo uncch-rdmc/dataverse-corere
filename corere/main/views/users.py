@@ -465,13 +465,13 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
     
     new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
     new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
-    new_user.invited_by=request.user
+    if request.user:
+        new_user.invited_by=request.user
     new_user.set_unusable_password()
     new_user.save()
 
     role.user_set.add(new_user)
 
-    #TODO: Think about doing this after everything else, incase something bombs
     invite.send_invitation(request)
 
     return new_user

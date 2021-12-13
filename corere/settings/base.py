@@ -22,6 +22,7 @@ SITE_ID = 1
 #INVITATION_MODEL = 'main.CorereInvitation' #Instead of using this we just reference CorereInvitation directly
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
+#INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True #TODO: this should allow us keep an invitation open until signup completes, but adding it errors
 
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
