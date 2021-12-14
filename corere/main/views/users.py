@@ -324,7 +324,8 @@ def unassign_verifier(request, id=None, user_id=None):
 
 def account_associate_oauth(request, key=None):
     logout(request)
-    user = get_object_or_404(User, invite_key=key)
+    user = get_object_or_404(User, invite__key=key)
+    print(user.__dict__)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
     #user.username = ""
     #user.invite_key = ""
@@ -371,16 +372,29 @@ def account_user_details(request):
     
     response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
 
-    if request.method == 'GET':
-        if(request.user.invite_key): #New User
-            #we clear out the invite_key now that we can associate the user
-            request.user.invite_key = "" 
-            request.user.save()
 
+    #TODO-WT: The problem here is that if the user somehow doesn't make it to account_user_details, they end up as a zombie
+    #How can I get WholeTale to send me the girderToken again? I think I've done this during login already?
+    #The next question becomes how do we enforce this?
+    #... I think the best solution is to detect if the user has no girderToken (on all pages?) and then send them to account_complete_oauth
+    #       - The detection is important. It'd be nice to avoid redirecting the user after they're working on an important task (so before we freak out about girder)
+    #... I also need to update this page to do the girderToken updating regardless.
+    #... ...
+    # The above info doesn't actually fix my immediate issue, which is that my vm-based browsers don't do access on localhost
+    # ... 
+
+
+    if request.method == 'GET':
+        try: #request.user.invite will error if there is no invite
+            #we delete the invitation now that we can associate the user
+            request.user.invite.delete() 
+            
             #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
             if(settings.CONTAINER_DRIVER == 'wholetale'):
                 girderToken = request.GET.get("girderToken", None)
+                print(girderToken)
                 if girderToken:
+                    print("GIRDER TOKEN")
                     response.set_cookie(key="girderToken", value=girderToken)
                     #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
                     wt_user = w.WholeTaleCorere(girderToken).get_logged_in_user()
@@ -400,7 +414,8 @@ def account_user_details(request):
                     wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).group_id)
 
                 w.WholeTaleCorere(girderToken) #connecting as the user detects and accepts outstanding invitations
-
+        except User.invite.RelatedObjectDoesNotExist:
+            pass
     return response
 
 def logout_view(request):
@@ -454,9 +469,11 @@ def invite_user_not_author(request, role, role_text):
 
 #TODO: Should most of this be added to the user save method?
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
+    from django.contrib.sites.models import Site
+    from django.contrib.sites.shortcuts import get_current_site
+    print(get_current_site(request))
     #Invitation = get_invitation_model()
     #print(Invitation.__dict__)
-    invite = CorereInvitation.create(email, first_name, last_name)#, inviter=request.user)
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
@@ -464,14 +481,22 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
     new_user.last_name = last_name
     
     new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
-    new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
+    
     if request.user:
         new_user.invited_by=request.user
     new_user.set_unusable_password()
     new_user.save()
-
     role.user_set.add(new_user)
 
+    invite = CorereInvitation.create(email, new_user)#, inviter=request.user)
+
+    ## TODO: This code was an attempt to alter the domain/port of the emails coming out of the invitations library. It didn't work
+    ##       The goal in doing this was to make the invitation urls match the SERVER_ADDRESS. Which is nice when we are using an alternate SERVER_ADDRESS to make VM based testing flow
+    ##       This wasn't high priority though so it was abandoned. We can just replace the urls during invite.
+    ##       We may need to do this for other reasons in the future. See here for more info: https://github.com/bee-keeper/django-invitations/blob/9069002f1a0572ae37ffec21ea72f66345a8276f/invitations/models.py
+
+    # request.META['SERVER_NAME'], request.META['SERVER_PORT'] = settings.SERVER_ADDRESS.split(":")
+    # request.HTTP_HOST = settings.SERVER_ADDRESS
     invite.send_invitation(request)
 
     return new_user
@@ -481,7 +506,7 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
 #Its a string that is used to initialize a js map, fairly hacky stuff
 #Output looks like: "[['key1', 'foo'], ['key2', 'test']]"
 def helper_generate_select_table_info(role_name, group_substring):
-    users = User.objects.filter(invite_key='', groups__name=role_name)
+    users = User.objects.filter(invite__isnull=True, groups__name=role_name)
     table_dict = "["
     for u in users:
         #{key1: "foo", key2: someObj}

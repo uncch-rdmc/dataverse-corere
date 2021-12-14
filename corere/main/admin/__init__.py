@@ -17,7 +17,7 @@ class GroupAdmin(SimpleHistoryAdmin):
     history_list_display = ["history_change_list"]
 
 class UserAdmin(SimpleHistoryAdmin):
-    fields = ('username', 'first_name', 'last_name', 'email', 'invite_key', 'invited_by', 'groups', 'user_permissions', 'is_superuser', 'is_staff', 'is_active', 'last_oauthproxy_forced_signin', 'date_joined', 'last_login', 'wt_id')
+    fields = ('username', 'first_name', 'last_name', 'email', 'invited_by', 'groups', 'user_permissions', 'is_superuser', 'is_staff', 'is_active', 'last_oauthproxy_forced_signin', 'date_joined', 'last_login', 'wt_id')
     filter_horizontal = ['groups','user_permissions']
     history_list_display = ["history_change_list"]
 

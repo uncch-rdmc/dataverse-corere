@@ -134,16 +134,16 @@ class AuthorInviteAddForm(forms.Form):
     first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
     last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
     email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
 class EditorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
 
 class CuratorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
 
 class VerifierAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
 
 class EditUserForm(forms.ModelForm):
     class Meta:

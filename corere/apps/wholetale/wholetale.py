@@ -168,9 +168,8 @@ class WholeTale:
     def delete_group(self, group_id):
         self.gc.delete("/group/{}".format(group_id))
 
-    #These two group functions will be called at the same time for corere. 
+    #invite and accept will be called at the same time for corere. 
     #They are kept separate as the invite will be called as the group admin, while the accept will be called as the user
-
     def invite_user_to_group(self, user_id, group_id):
         try:
             self.gc.post("group/{}/invitation".format(group_id), parameters={"level": self.AccessType.READ, "quiet": True},
@@ -183,13 +182,13 @@ class WholeTale:
                 return
             raise e
 
+    def accept_group_invite(self, group_id):
+        self.gc.post("group/{}/member".format(group_id))
+
     #NOTE: This works on invitations as well.
     def remove_user_from_group(self, user_id, group_id):
         #Note: the documentation says formData but using data causes it to error. If this blows up investigate further
         self.gc.delete("group/{}/member".format(group_id), parameters={"userId": user_id}) #data={"userId": user_id})
-
-    def accept_group_invite(self, group_id):
-        self.gc.post("group/{}/member".format(group_id))
 
     # def delete_user(user_info):
     #     users = gc.get("/user", parameters={"text": user_info["login"]})

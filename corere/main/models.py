@@ -76,7 +76,7 @@ class User(AbstractUser):
 
     # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
 
-    invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
+    #invite_key = models.CharField(max_length=64, blank=True)
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     email = models.EmailField(unique=True, blank=False)
@@ -119,7 +119,7 @@ def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_s
     
     if settings.CONTAINER_DRIVER == 'wholetale':
         wtc = w.WholeTaleCorere(admin=True)
-        if model is Group and instance.wt_id and not instance.invite_key:
+        if model is Group and instance.wt_id and not instance.invitation:
             if action == 'post_add':
                 print("add")
                 print(pk_set)
@@ -144,7 +144,8 @@ def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_s
                 print("add")
                 for pk in pk_set:
                     user = User.objects.get(id=pk)
-                    if user.wt_id and not user.invite_key:
+                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
                             wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
@@ -155,7 +156,8 @@ def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_s
                 print("remove")
                 for pk in pk_set:
                     user = User.objects.get(id=pk)
-                    if user.wt_id and not user.invite_key:
+                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
                             wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
@@ -1158,17 +1160,15 @@ class VerificationMetadata(AbstractCreateUpdateModel):
 #other fields (email, created) are in base model
 #see https://github.com/bee-keeper/django-invitations/issues/143 for a bit more info (especially if we want to wire this into admin)
 class CorereInvitation(Invitation):
-    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
-    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
+    user = models.OneToOneField('User', on_delete=models.CASCADE, null=True, blank=True, related_name="invite")
     #TODO: connect submission here and cascade on delete
 
     @classmethod
-    def create(cls, email, first_name, last_name, inviter=None, **kwargs):
+    def create(cls, email, user, inviter=None, **kwargs):
         key = get_random_string(64).lower()
         instance = cls._default_manager.create(
             email=email,
-            first_name=first_name,
-            last_name=last_name,
+            user=user,
             key=key,
             inviter=inviter,
             **kwargs)
@@ -1178,14 +1178,23 @@ class CorereInvitation(Invitation):
         current_site = kwargs.pop('site', Site.objects.get_current())
         invite_url = reverse('invitations:accept-invite',
                              args=[self.key])
-        invite_url = request.build_absolute_uri(invite_url)
+        
+        ##Custom
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        invite_url = protocol + "://" + settings.SERVER_ADDRESS + invite_url
+        ##End Custom
+
+        #invite_url = request.build_absolute_uri(invite_url) #Original        
         ctx = kwargs
         ctx.update({
             'invite_url': invite_url,
             'site_name': current_site.name,
             'email': self.email,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
             'key': self.key,
             'inviter': self.inviter,
         })
