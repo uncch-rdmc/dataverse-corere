@@ -188,6 +188,11 @@ def manuscript_landing(request, id=None):
             'createLaterSubmissionButton': createLaterSubmissionButton
             }
 
+    if settings.CONTAINER_DRIVER == "wholetale":
+        args['wholetale'] = True
+        args['latest_submission_id'] = manuscript.get_latest_submission().id
+    else:
+        args['wholetale'] = False
         
     return render(request, "main/manuscript_landing.html", args)
 

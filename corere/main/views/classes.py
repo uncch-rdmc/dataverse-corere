@@ -1566,6 +1566,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
+    #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
         if(settings.CONTAINER_DRIVER == 'wholetale'):
 
@@ -1598,25 +1599,46 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
 
         if(settings.CONTAINER_DRIVER == 'wholetale'):
+            context['is_author'] = w.get_dominant_group_connector(request.user, self.object).corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
-            print(wtm_instance)
+            print("wtm_instance")
+            #print(wtm_instance.__dict__)
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
                 wtm.Instance.objects.create(tale=self.wtm_tale, instance_id=wtc_instance['_id'], corere_user=request.user) 
             else:
                 wtc_instance = wtc.get_instance(wtm_instance.instance_id)  
+                print("wtc_instance")
                 print(wtc_instance)
                 if not wtm_instance.instance_url:       
-                    #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
-                    #We don't do this on a new launch because there is no way it'll be ready.  
-                    wtm_instance.instance_url = wtc_instance['url']
-                    wtm_instance.save()
+                    if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
+                        print("ERROR")
+                        #If we get an error... what... delete the instance and try again?
+                        wtc.delete_instance(wtm_instance.instance_id)
+                        wtm_instance.delete()
+                        wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                        wtm.Instance.objects.create(tale=self.wtm_tale, instance_id=wtc_instance['_id'], corere_user=request.user) 
+                    elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
+                        #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
+                        #We don't do this on a new launch because there is no way it'll be ready.  
+                        wtm_instance.instance_url = wtc_instance['url'].split("?")[0]
+                        wtm_instance.save()
+                        context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+                        print("RUNNING")
+                    else: #launching
+                        print("LAUNCHING")
+                        pass
+                        #what do we do if we are still launching when we get here????
+                        #TODO-WT: We are already using similar logic below!!!!!
+                else:
+                    context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+
+            #print(context['notebook_url'])
             # print(wtm_instance.__dict__)
 
             #TODO-WT: Think about whether the admin should be served a special container? Make sure we're even giving the corere admins wt admin
 
-            context['notebook_url'] = wtm_instance.get_full_container_url()
             # print(wtm_instance.__dict__)
             if wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                 print("TRUE")
@@ -1644,16 +1666,45 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             return redirect('submission_uploadfiles', id=self.object.id)
         pass
 
-#TODO: how are we detecting the end? I guess detecting a certain yeild reponse and ending the connection?
-#TODO: we'll need to ensure only the correct messages for the user/tale are returned
-class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+#TODO-WT: I switched this to be view_noop but I may want to make it conditional based upon the user/role
+#         It's probably ok thought because all the code is doing is running calls the user could already do with their girderToken.
+#         ... well besides creating a wtm_instance. We probably don't want the authors to do that
+class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-    transition_method_name = 'edit_noop'
     http_method_names = ['get']
+
+    #We programatically check transition permissions depending on the tale in question (for WholeTale).
+    #For now if not wholetale, we check if 'edit_noop'
+    #Code is same as in SubmissionNotebookView
+    def dispatch(self, request, *args, **kwargs):
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+
+            print(w.get_dominant_group_connector(request.user, self.object).__dict__)
+            self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tale
+
+            if self.wtm_tale.original_tale == None:
+                transition_method = getattr(self.object, 'edit_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+            else:
+                transition_method = getattr(self.object, 'view_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    self.http_method_names = ['get'] #TODO-WT: Check whether you can actually set http_method_names in dispatch
+                    self.read_only = True
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+        else:
+            transition_method = getattr(self.object, 'edit_noop')
+            if(not has_transition_perm(transition_method, request.user)):
+                logger.debug("PermissionDenied")
+                raise Http404()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         if settings.CONTAINER_DRIVER != 'wholetale':
@@ -1686,10 +1737,10 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
                     time.sleep(1)
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
                 
-                wtm_instance.instance_url = wtc_instance['url']
+                wtm_instance.instance_url, girderToken = wtc_instance['url'].split("?")
                 wtm_instance.save()
 
-                yield(f"Container URL: {wtc_instance.get_full_container_url()}")
+                yield(f"Container URL: {wtc_instance.get_login_container_url(girderToken)}")
                 return 
 
 #TODO: delete

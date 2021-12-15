@@ -59,16 +59,28 @@
             notebookiframe.src = container_url
             notebookiframe.style.display = 'block';
         }
+        {% if is_author %}
         var formbuttons = document.getElementById("file_note_nested_form");
         if(formbuttons) {
             formbuttons.style.display = 'block';
         }
+        {% endif %}
         var logandbuttondiv = document.getElementById("logandbuttondiv");
         if(logandbuttondiv) {
             logandbuttondiv.style.display = 'none';
         }
     }
 </script>
+{% else %}
+{% if is_author %}
+
+<script>
+var formbuttons = document.getElementById("file_note_nested_form");
+        if(formbuttons) {
+            formbuttons.style.display = 'block';
+        }
+</script>
+{% endif %}
 {% endif %}
 
 {% endblock content %}

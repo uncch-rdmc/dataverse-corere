@@ -140,6 +140,18 @@
                                 },
                             enabled: false
                         },
+                        {
+                            text: 'Launch Container',
+                            name: 'launchSubmissionContainer',
+                            action: function ( e, dt, node, config ) {
+
+                                window.location.href = "/submission/"+submission_id+"/notebook/";
+                            },
+                            init: function ( dt, node, config ) {
+                                    node.css("display", "none");
+                                },
+                            enabled: false
+                        },
 
                         {
                             text: 'Hand-off to Editors',
@@ -358,7 +370,11 @@
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
         <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/report/">View Report</a></li>
         {% if manuscript_has_submissions %}
-        <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
+            {% if wholetale %}
+            <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
+            {% else %}
+            <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
+            {% endif %}
         {% endif %}
     </ul>
 
@@ -373,9 +389,8 @@
             <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a></li>
         </ul>
     {% endif %}
-</div>    
-<br>
-
+    </div>    
+    <br>
     <div class="accordion" style="margin:10px -21px" id="manuscriptAccordionPanels">
         <div class="accordion-item">
           <h2 class="accordion-header" id="panelsStayOpen-headingTwo">

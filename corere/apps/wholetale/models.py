@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import Group
 from django.core.exceptions import FieldError
 from corere.main import models as m
+from urllib.parse import quote_plus
 
 #Information related to a specific tale remotely hosted in WholeTale
 class Tale(models.Model):
@@ -63,10 +64,11 @@ class Instance(models.Model):
     class Meta: #TODO-WT: I think this is the right approach. Each user should only have one instance per tale
         unique_together = ("tale", "corere_user")
 
-    def get_full_container_url(self):
-        #TODO-WT: Implement this getting the right info from settings
-        #TODO-WT: I may actually be storing the full URL already, WITH the token. Which seems bad.
-        return self.instance_url
+    #This gets the url in the format needed for iframes. This gets the login url that'll then correct set up the user for interaction in the iframe
+    def get_login_container_url(self, girderToken):
+        return f"https://girder.stage.wholetale.org/api/v1/user/sign_in?redirect={quote_plus(self.instance_url)}&token={girderToken}"
+        #return self.instance_url
+        
 
 class GroupConnector(models.Model):
     corere_group = models.OneToOneField(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="wholetale_group")
