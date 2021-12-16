@@ -245,8 +245,6 @@ class SubmissionJson(CorereBaseDatatableView):
                 if('editSubmissionFiles' not in avail_buttons):
                     avail_buttons.append('viewSubmissionFiles')
 
-#TODO: Probably delete this after we move everything to submission
-
             # if(has_transition_perm(submission.submit, user)):
             #     avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.send_report, user)):
@@ -254,21 +252,18 @@ class SubmissionJson(CorereBaseDatatableView):
             if(has_transition_perm(submission.finish_submission, user)):
                 avail_buttons.append('returnSubmission')
 
+            # Similar logic repeated in main page view for showing the sub button for the manuscript level
             if(settings.CONTAINER_DRIVER == 'wholetale'):
-                #TODO-WT: We need to prevent the author? Should I REALLY have a perm check for this!?
-                #TODO-WT: I'm not going to for now but I'm going to leave myself a note about it
-
-                #w.get_dominant_group_connector(request.user, self.object).groupconnector_tale
                 dominant_corere_group = w.get_dominant_group_connector(user, submission).corere_group
                 if(dominant_corere_group.name.startswith("Author")):
                     if(has_transition_perm(submission.edit_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
-                            avail_buttons.append('launchSubmissionContainer')
+                        avail_buttons.append('launchSubmissionContainer')
                 else: #TODO-WT: This may not be what we want for admin (if the code doesn't blow up before here). Technically this could show buttons for someone with no groups but the actual url still won't work (and they couldn't load this page anyways)
                     if(has_transition_perm(submission.view_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
-                            avail_buttons.append('launchSubmissionContainer')
-
+                        avail_buttons.append('launchSubmissionContainer')
 
             return avail_buttons
+
         elif column[0] == 'version_id': 
             latest_submission_version = submission.manuscript.get_max_submission_version_id() #Probably inefficient here
             if(submission.version_id == latest_submission_version):
@@ -295,9 +290,6 @@ class SubmissionJson(CorereBaseDatatableView):
         if search:
             qs = qs.filter(Q(pub_name__icontains=search)|Q(pub_id__icontains=search))
         return qs
-
-
-
 
 def helper_user_columns(user):
     columns = [['selected',''],['id','ID'],['username','username'],['roles','Roles'],['assigned_manuscripts','Assigned Manuscripts']]

@@ -1731,6 +1731,8 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
             if(progress == 100):
                 #In case things are still happening after the ending status message
 
+                yield("Completing launch, should only take a few seconds.<br>")
+
                 wtm_instance = w.get_model_instance(user, submission)
                 wtc_instance = wtc.get_instance(wtm_instance.instance_id)
                 while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
@@ -1740,7 +1742,7 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
                 wtm_instance.instance_url, girderToken = wtc_instance['url'].split("?")
                 wtm_instance.save()
 
-                yield(f"Container URL: {wtc_instance.get_login_container_url(girderToken)}")
+                yield(f"Container URL: {wtm_instance.get_login_container_url(girderToken)}")
                 return 
 
 #TODO: delete
@@ -1785,25 +1787,40 @@ def _helper_submit_submission_and_redirect(request, submission):
             tale_original = submission.submission_tales.get(original_tale=None)        
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
             wtc.set_group_access(tale_original.tale_id, wtc.AccessType.READ, group.wholetale_group)
-            
+
+            #I'm going to delete author instances here. So I need to get the authors in the group and then for each author get the instance they have
+            for u in group.user_set.all():
+                #TODO-WT: This definitely needs a try catch, but I'll leave it off to see what errors we actually hit
+                u.user_instances.get(tale=tale_original).delete() #I think there should be only one tale per user per instance...
+
             #TODO-WT: The code I'm using to generate the tale title should be in one place
             #   - Create 3 tale copies, one for each role
+            #TODO-WT: I'm setting access on tales even after an editor return has happened. This may not be needed
             group_editor = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(submission.manuscript.id))
-            editor_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Editor"
-            wtc_tale_copy_editor = wtc.copy_tale(tale_original.tale_id, new_title=editor_tale_title)
-            tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
+            try: #Get tale if it exists. This happens when a submission was returned by an editor, as this does not create a new submission
+                tale_copy_editor = wtm.Tale.objects.get(group_connector=group_editor.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                editor_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Editor"
+                wtc_tale_copy_editor = wtc.copy_tale(tale_original.tale_id, new_title=editor_tale_title)
+                tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
             wtc.set_group_access(tale_copy_editor.tale_id, wtc.AccessType.WRITE, group_editor.wholetale_group)
 
             group_curator = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(submission.manuscript.id))
-            curator_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Curator"
-            wtc_tale_copy_curator = wtc.copy_tale(tale_original.tale_id, new_title=curator_tale_title)
-            tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
+            try:
+                tale_copy_curator = wtm.Tale.objects.get(group_connector=group_curator.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                curator_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Curator"
+                wtc_tale_copy_curator = wtc.copy_tale(tale_original.tale_id, new_title=curator_tale_title)
+                tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
             wtc.set_group_access(tale_copy_curator.tale_id, wtc.AccessType.WRITE, group_curator.wholetale_group)
 
             group_verifier = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(submission.manuscript.id))
-            verifier_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Verifier"
-            wtc_tale_copy_verifier = wtc.copy_tale(tale_original.tale_id, new_title=verifier_tale_title)
-            tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
+            try:
+                tale_copy_verifier = wtm.Tale.objects.get(group_connector=group_verifier.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                verifier_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Verifier"
+                wtc_tale_copy_verifier = wtc.copy_tale(tale_original.tale_id, new_title=verifier_tale_title)
+                tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
             wtc.set_group_access(tale_copy_verifier.tale_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
 
         ## Messaging ###

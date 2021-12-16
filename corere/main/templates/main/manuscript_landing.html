@@ -369,7 +369,7 @@
         <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
         <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/report/">View Report</a></li>
-        {% if manuscript_has_submissions %}
+        {% if launchContainerCurrentSubButton %}
             {% if wholetale %}
             <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
             {% else %}

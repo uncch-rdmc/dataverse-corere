@@ -108,6 +108,7 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createFirstSubmissionButton = False
     createLaterSubmissionButton = False
+    launchContainerCurrentSubButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
     if(has_transition_perm(manuscript.add_submission_noop, request.user)):
@@ -151,6 +152,18 @@ def manuscript_landing(request, id=None):
                 generateReportButton = True
             if(has_transition_perm(latestSubmission.finish_submission, request.user)):
                 returnSubmissionButton = True
+            # Similar logic repeated in main page view for showing the sub button for the manuscript level
+            if(settings.CONTAINER_DRIVER == 'wholetale'):
+                dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
+                if(dominant_corere_group.name.startswith("Author")):
+                    if(has_transition_perm(latestSubmission.edit_noop, user)):
+                        launchContainerCurrentSubButton = True
+                else: 
+                    if(has_transition_perm(latestSubmission.view_noop, user)):
+                        launchContainerCurrentSubButton = True
+            else:
+                launchContainerCurrentSubButton = True
+
         except m.Submission.DoesNotExist:
             pass
 
@@ -185,12 +198,12 @@ def manuscript_landing(request, id=None):
             'generateReportButton': generateReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createFirstSubmissionButton': createFirstSubmissionButton,
-            'createLaterSubmissionButton': createLaterSubmissionButton
+            'createLaterSubmissionButton': createLaterSubmissionButton,
+            'launchContainerCurrentSubButton': launchContainerCurrentSubButton
             }
 
     if settings.CONTAINER_DRIVER == "wholetale":
         args['wholetale'] = True
-        args['latest_submission_id'] = manuscript.get_latest_submission().id
     else:
         args['wholetale'] = False
         
