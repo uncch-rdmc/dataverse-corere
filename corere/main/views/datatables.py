@@ -255,12 +255,13 @@ class SubmissionJson(CorereBaseDatatableView):
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
             if(settings.CONTAINER_DRIVER == 'wholetale'):
                 dominant_corere_group = w.get_dominant_group_connector(user, submission).corere_group
-                if(dominant_corere_group.name.startswith("Author")):
-                    if(has_transition_perm(submission.edit_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
-                        avail_buttons.append('launchSubmissionContainer')
-                else: #TODO-WT: This may not be what we want for admin (if the code doesn't blow up before here). Technically this could show buttons for someone with no groups but the actual url still won't work (and they couldn't load this page anyways)
-                    if(has_transition_perm(submission.view_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
-                        avail_buttons.append('launchSubmissionContainer')
+                if dominant_corere_group:
+                    if(dominant_corere_group.name.startswith("Author")):
+                        if(has_transition_perm(submission.edit_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
+                            avail_buttons.append('launchSubmissionContainer')
+                    else: #TODO-WT: This may not be what we want for admin (if the code doesn't blow up before here). Technically this could show buttons for someone with no groups but the actual url still won't work (and they couldn't load this page anyways)
+                        if(has_transition_perm(submission.view_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
+                            avail_buttons.append('launchSubmissionContainer')
 
             return avail_buttons
 

@@ -111,8 +111,8 @@ def manuscript_landing(request, id=None):
     launchContainerCurrentSubButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
-    if(has_transition_perm(manuscript.add_submission_noop, request.user)):
-        if(submission_count < 1):
+    if has_transition_perm(manuscript.add_submission_noop, request.user) :
+        if submission_count < 1 :
             createFirstSubmissionButton = True
         else:
             createLaterSubmissionButton = True
@@ -124,43 +124,44 @@ def manuscript_landing(request, id=None):
             #TODO: I want a different label for edit/review even if they are the same page in the end
 
 
-            if(has_transition_perm(latestSubmission.add_edition_noop, request.user)
+            if (has_transition_perm(latestSubmission.add_edition_noop, request.user)
                 or has_transition_perm(latestSubmission.add_curation_noop, request.user)
-                or has_transition_perm(latestSubmission.add_verification_noop, request.user) ):
+                or has_transition_perm(latestSubmission.add_verification_noop, request.user)):
                 reviewSubmissionButton = True
             else:
                 try:
-                    if(has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
-                    if(has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
-                    if(has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
-            if(not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user)):
+            if not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
-            if(has_transition_perm(latestSubmission.send_report, request.user)):
+            if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
-            if(has_transition_perm(latestSubmission.finish_submission, request.user)):
+            if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
-            if(settings.CONTAINER_DRIVER == 'wholetale'):
+            if settings.CONTAINER_DRIVER == 'wholetale':
                 dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
-                if(dominant_corere_group.name.startswith("Author")):
-                    if(has_transition_perm(latestSubmission.edit_noop, user)):
-                        launchContainerCurrentSubButton = True
-                else: 
-                    if(has_transition_perm(latestSubmission.view_noop, user)):
-                        launchContainerCurrentSubButton = True
+                if dominant_corere_group:
+                    if dominant_corere_group.name.startswith("Author"):
+                        if has_transition_perm(latestSubmission.edit_noop, user):
+                            launchContainerCurrentSubButton = True
+                    else: 
+                        if has_transition_perm(latestSubmission.view_noop, user):
+                            launchContainerCurrentSubButton = True
             else:
                 launchContainerCurrentSubButton = True
 

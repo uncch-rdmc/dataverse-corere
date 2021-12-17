@@ -69,8 +69,8 @@ class WholeTale:
         return self.gc.put(f"/tale/{tale_id}", json=new_tale_json)
         
     #Force deletes the instances of the tale
-    def delete_tale(tale_id, force=True):
-        self.gc.delete(f"/tale/{tale_id}", parameters={"force": force})
+    def delete_tale(self, tale_id, force=True):
+        return self.gc.delete(f"/tale/{tale_id}", parameters={"force": force})
 
     def create_tale_version(self, tale_id, name, force=True):
         return self.gc.post("/version", parameters={"taleId": tale_id, "name": name, "force": force})

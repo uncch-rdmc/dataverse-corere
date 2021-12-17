@@ -403,7 +403,7 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.id = None
                     new_gfile.save()
                 if settings.CONTAINER_DRIVER == "wholetale":
-                    for tc in tale.tale_copies: #delete copy instances from previous submission
+                    for tc in tale.tale_copies.all(): #delete copy instances from previous submission
                         wtc.delete_tale(tale.tale_id) #deletes instances as well
                     #TODO-WT: I'm not 100% sure we're actually getting back the version here
                     wtc = w.WholeTaleCorere(girderToken)
