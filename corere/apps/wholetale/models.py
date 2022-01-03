@@ -14,8 +14,11 @@ class Tale(models.Model):
     submission = models.ForeignKey(m.Submission, on_delete=models.CASCADE, null=True, blank=True, related_name="submission_tales", verbose_name='The submission whose files are in the tale')
     original_tale = models.ForeignKey('Tale', on_delete=models.CASCADE, null=True, blank=True, related_name="tale_copies")
     #Each groupconnector should only have one tale
-    group_connector = models.OneToOneField('GroupConnector', on_delete=models.CASCADE, related_name="groupconnector_tale")
+    group_connector = models.ForeignKey('GroupConnector', on_delete=models.CASCADE, related_name="groupconnector_tales")
     # latest_version_id = models.CharField(max_length=24, unique=True, verbose_name='Active Version ID in Whole Tale')
+
+    class Meta:
+        unique_together = ("submission", "group_connector")
 
     def save(self, *args, **kwargs):
         print(self.__dict__)
@@ -34,6 +37,7 @@ class Tale(models.Model):
                 raise FieldError("The original_tale field cannot be modified")
 
         super(Tale, self).save(*args, **kwargs)
+
 
 ## Instead of storing versions as a separate object, we'll just store the submission with the tale. For the original tale this will mean the latest
 

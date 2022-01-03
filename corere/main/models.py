@@ -106,67 +106,6 @@ class User(AbstractUser):
 
         super(User, self).save(*args, **kwargs)
 
-#This function is called when a user is removed from a group, as well as a group from a user
-#Depending on the way this is called, the instance and pk_set will differ
-#TODO-WT: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
-#TODO-WT: Remove print statements
-
-#TODO-WT: I think this blows up on role-groups
-
-def update_wholetale_on_user_group_changes(sender, instance, action, model, pk_set, **kwargs):
-    print(instance.__dict__)
-    print(model)
-    
-    if settings.CONTAINER_DRIVER == 'wholetale':
-        wtc = w.WholeTaleCorere(admin=True)
-        if model is Group and instance.wt_id and not instance.invitation:
-            if action == 'post_add':
-                print("add")
-                print(pk_set)
-                for pk in pk_set:
-                    try:
-                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
-                        print(f'add {pk}')
-                    except wtm.GroupConnector.DoesNotExist:
-                        print(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
-            elif action == 'post_remove':
-                print("remove")
-                for pk in pk_set:
-                    try:
-                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
-                        print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
-                    except wtm.GroupConnector.DoesNotExist:
-                        print(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
-        if model is User:
-            if action == 'post_add':
-                print("add")
-                for pk in pk_set:
-                    user = User.objects.get(id=pk)
-                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
-                    if user.wt_id and not hasattr(user, 'invite'):
-                        try:
-                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
-                            print(f'add {instance.id}')
-                        except wtm.GroupConnector.DoesNotExist:
-                            print(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
-            elif action == 'post_remove':
-                print("remove")
-                for pk in pk_set:
-                    user = User.objects.get(id=pk)
-                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
-                    if user.wt_id and not hasattr(user, 'invite'):
-                        try:
-                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
-                            print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_group_id {wtm_group.group_id}')
-                        except wtm.GroupConnector.DoesNotExist:
-                            print(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
-
-m2m_changed.connect(update_wholetale_on_user_group_changes, sender=User.groups.through)
-
 ####################################################
 
 class Edition(AbstractCreateUpdateModel):
@@ -1236,36 +1175,87 @@ def add_history_info(sender, instance, **kwargs):
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
 
+#WT-NOTES:
+#This function is called when a user is removed from a group, as well as a group from a user
+#Depending on the way this is called, the instance and pk_set will differ
+#TODO-WT: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
+#TODO-WT: Remove print statements
+#TODO-WT: I think this blows up on role-groups
+
 #TODO: This works right when updating users through the UI, but when run via the admin user page the update doesn't work.
 #      I think we need a different case to catch the update there, as 
 #See: https://stackoverflow.com/questions/7899127/
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    # print(model)
-    # print(reverse)
-    # print(action)
-    # print(instance.__dict__)
+    if settings.CONTAINER_DRIVER == 'wholetale':
+        wtc = w.WholeTaleCorere(admin=True)
+        if model is Group and instance.wt_id and not instance.invitation:
+            if action == 'post_add':
+                print("add")
+                print(pk_set)
+                for pk in pk_set:
+                    try:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                        wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
+                        print(f'add {pk}')
+                    except wtm.GroupConnector.DoesNotExist:
+                        print(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
+            elif action == 'post_remove':
+                print("remove")
+                for pk in pk_set:
+                    try:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                        wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
+                        print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
+                    except wtm.GroupConnector.DoesNotExist:
+                        print(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
+        if model is User:
+            if action == 'post_add':
+                print("add")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
+                        try:
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
+                            print(f'add {instance.id}')
+                        except wtm.GroupConnector.DoesNotExist:
+                            print(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
+            elif action == 'post_remove':
+                print("remove")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
+                        try:
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
+                            print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_group_id {wtm_group.group_id}')
+                        except wtm.GroupConnector.DoesNotExist:
+                            print(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
 
-    update_groups = []
+    else:
+        update_groups = []
 
-    #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
-    if type(instance) == User:
-        update_groups = instance.groups.all()
-        #print(instance.groups.all())
+        #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
+        if type(instance) == User:
+            update_groups = instance.groups.all()
+            #print(instance.groups.all())
 
-    #If a group is added/removed from a user, we are passed the group specifically
-    if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
-        update_groups = [instance]
+        #If a group is added/removed from a user, we are passed the group specifically
+        if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
+            update_groups = [instance]
 
-    for group in update_groups:
-        #This splits up the group name for checking to see whether its a group we should act upon
-        #It would be better to have names formalized someday
-        split_name = group.name.split()
-        if(len(split_name) == 3):
-            [ _, assigned_obj, m_id ] = split_name
-            if(assigned_obj == "Manuscript"):
-                manuscript = Manuscript.objects.get(id=m_id)
-                if ((hasattr(manuscript, 'manuscript_localcontainerinfo'))):
-                    logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
-                    if (not settings.SKIP_DOCKER):
-                        d.update_oauthproxy_container_authenticated_emails(manuscript)
+        for group in update_groups:
+            #This splits up the group name for checking to see whether its a group we should act upon
+            #It would be better to have names formalized someday
+            split_name = group.name.split()
+            if(len(split_name) == 3):
+                [ _, assigned_obj, m_id ] = split_name
+                if(assigned_obj == "Manuscript"):
+                    manuscript = Manuscript.objects.get(id=m_id)
+                    if ((hasattr(manuscript, 'manuscript_localcontainerinfo'))):
+                        logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
+                        if (not settings.SKIP_DOCKER):
+                            d.update_oauthproxy_container_authenticated_emails(manuscript)

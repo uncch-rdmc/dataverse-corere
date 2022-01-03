@@ -5,12 +5,12 @@
 {%comment%} Don't forget to re-add the removed wt_loaded bits. Also the correct wtstream. {% endcomment %}
 <iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" {% if wt_launching %} style="display:none;" {% endif %} ></iframe>
 
-<form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data" style="display:none;">
+<form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    <input type="submit" name="back" value="Back">
+    <input id="file_note_form_back" type="submit" name="back" value="Back" style="display:none;">
     {% if not read_only %}
-    <input type="button" name="launch" value="Launch External" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">
-    <input type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');"> 
+    <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;">
+    <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
     {% endif %}
 </form>
 
@@ -42,6 +42,11 @@
         container_url= $('#logdiv').html().substring($('#logdiv').html().indexOf('Container URL: ')+15)
         console.log(container_url)
 
+        var formlaunch = document.getElementById("file_note_form_launch");
+        if(formlaunch) {
+            formlaunch.onclick = function() {window.open(container_url)};
+        }
+
         var show_notebook_button = document.getElementById("show_notebook_button");
         if(show_notebook_button) {
             show_notebook_button.style.display = 'block';
@@ -59,10 +64,18 @@
             notebookiframe.src = container_url
             notebookiframe.style.display = 'block';
         }
+        var formlaunch = document.getElementById("file_note_form_launch");
+        if(formlaunch) {
+            formlaunch.style.display = '';
+        }
         {% if is_author %}
-        var formbuttons = document.getElementById("file_note_nested_form");
-        if(formbuttons) {
-            formbuttons.style.display = 'block';
+        var formback = document.getElementById("file_note_form_back");
+        if(formback) {
+            formback.style.display = '';
+        }
+        var formsubmit = document.getElementById("file_note_form_submit");
+        if(formsubmit) {
+            formsubmit.style.display = '';
         }
         {% endif %}
         var logandbuttondiv = document.getElementById("logandbuttondiv");
@@ -72,15 +85,29 @@
     }
 </script>
 {% else %}
-{% if is_author %}
-
-<script>
-var formbuttons = document.getElementById("file_note_nested_form");
-        if(formbuttons) {
-            formbuttons.style.display = 'block';
+    <script>
+        var formlaunch = document.getElementById("file_note_form_launch");
+        if(formlaunch) {
+            var notebookiframe = document.getElementById("notebook_iframe");
+            if(notebookiframe) {
+                console.log(notebookiframe.src)
+                formlaunch.onclick = function() {window.open(notebookiframe.src)};
+            }
+            formlaunch.style.display = '';
         }
-</script>
-{% endif %}
+    </script>
+    {% if is_author %}
+    <script>
+        var formback = document.getElementById("file_note_form_back");
+        if(formback) {
+            formback.style.display = '';
+        }
+        var formsubmit = document.getElementById("file_note_form_submit");
+        if(formsubmit) {
+            formsubmit.style.display = '';
+        }
+    </script>
+    {% endif %}
 {% endif %}
 
 {% endblock content %}

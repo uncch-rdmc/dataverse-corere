@@ -71,4 +71,4 @@ def get_dominant_group_connector(user, submission):
 def get_model_instance(user, submission):
     group_connector = get_dominant_group_connector(user, submission)
     print(group_connector.__dict__)
-    return group_connector.groupconnector_tale.tale_instances.filter(corere_user=user).first()
+    return group_connector.groupconnector_tales.get(submission=submission).tale_instances.filter(corere_user=user).first()

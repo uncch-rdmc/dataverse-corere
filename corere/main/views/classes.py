@@ -1569,9 +1569,26 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-
-            print(w.get_dominant_group_connector(request.user, self.object).__dict__)
-            self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tale
+            self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
+            print(self.dominant_group.__dict__)
+            #TODO-WT: Right now for previous submissions the dominant group connector code is getting the admin group for non admins! That's bad
+            #TODO-WT: I think here if tale doesn't exist in the GroupConnector and "it should" then we create it. Gotta figure out when it should
+            #self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
+            try:
+                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object)
+            except wtm.Tale.DoesNotExist: 
+                if self.object.version_id < self.object.manuscript.get_max_submission_version_id(): #Happens launching an instance from a previous submission, as we have to create the Tale on demand
+                    #WT: Copy master tale, revert to previous version, launch instance.
+                    wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
+                    wtc = w.WholeTaleCorere(admin=True)
+                    wtc_tale_target_version = wtc.get_tale_version_by_name(wtm_parent_tale.tale_id, f"Submission {self.object.version_id}") #TODO-WT: Centralize this tale name logic
+                    print(wtc_tale_target_version)
+                    #Ok, so I gotta copy the parent tale first and then revert it
+                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.tale_id)#TODO-WT: Give a new name?
+                    wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version)
+                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object, tale_id=wtc_versioned_tale, group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                else:
+                    pass #TODO-WT: ERROR probably? 404?
 
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')
@@ -1599,7 +1616,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
 
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-            context['is_author'] = w.get_dominant_group_connector(request.user, self.object).corere_group.name.startswith("Author")
+            context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
             print("wtm_instance")
@@ -1684,7 +1701,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         if(settings.CONTAINER_DRIVER == 'wholetale'):
 
             print(w.get_dominant_group_connector(request.user, self.object).__dict__)
-            self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tale
+            self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
 
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')

@@ -44,7 +44,7 @@ class WholeTale:
             parameters={"since": int(datetime.datetime.now().timestamp())},
         )
         return stream
-
+ 
     #This should be run on submission start before uploading files
     #We create a new tale for each submission for access control reasons.
     #The alternative would be to create a version for each submission, there is not version-level access control.
@@ -83,10 +83,14 @@ class WholeTale:
         return self.gc.get("/version", parameters={"taleId": tale_id,"limit": 10000})
 
     def get_tale_version_by_name(self, tale_id, version_name):
-        versions = list_tale_version(tale_id)
+        versions = self.list_tale_version(tale_id)
         for version in versions:
             if version['name'] == version_name:
                 return version
+
+    #This is a GET because it doesn't alter their underlying objects, it just creates a mock. For us though its a different tale
+    def restore_tale_to_version(self, tale_id, version_id):
+        return self.gc.get(f"/tale/{version_id}/restore")
 
     def upload_files(self, tale_id, str_path):
         """
