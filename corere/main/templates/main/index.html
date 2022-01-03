@@ -56,7 +56,7 @@
                             action: function ( e, dt, node, config ) {
                                 if(search_completed_vis_toggle == false) {
                                     //Implicit globals are not best practice
-                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                                     search_completed_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
@@ -151,7 +151,7 @@
                 table.row(':first').select(); //Select first row always
 
                 //Implicit globals are not best practice
-                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
                 table.columns( 5 ).search( "{{request.user.username}}" ).draw();
