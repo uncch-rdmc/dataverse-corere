@@ -1177,7 +1177,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                                 wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
                             except wtm.Instance.DoesNotExist:
                                 pass
-                            wtm.Instance.objects.create(tale=tale, instance_id=wtc_instance['_id'], corere_user=request.user) # instance_url=wtc_instance['url'], 
+                            wtm.Instance.objects.create(tale=tale, instance_id=wtc_instance['_id'], corere_user=request.user)
                             self.object.files_changed = False
                             self.object.save()
 
@@ -1643,9 +1643,9 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
                         #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
                         #We don't do this on a new launch because there is no way it'll be ready.  
-                        wtm_instance.instance_url = wtc_instance['url'].split("?")[0]
+                        wtm_instance.instance_url, wtm_instance.instance_token = wtc_instance['url'].split("?token=")
                         wtm_instance.save()
-                        context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+                        context['notebook_url'] = wtm_instance.get_login_container_url()
                         print("RUNNING")
                     else: #launching
                         print("LAUNCHING")
@@ -1653,7 +1653,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                         #what do we do if we are still launching when we get here????
                         #TODO-WT: We are already using similar logic below!!!!!
                 else:
-                    context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+                    #TODO TEST GIRDER TOKEN
+                    context['notebook_url'] = wtm_instance.get_login_container_url()
 
             #print(context['notebook_url'])
             # print(wtm_instance.__dict__)
@@ -1760,10 +1761,12 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
                     time.sleep(1)
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
                 
-                wtm_instance.instance_url, girderToken = wtc_instance['url'].split("?")
+                print(wtc_instance['url'])
+                #TODO-WT: The token being split here is NOT the girder token. It is the container token. 
+                wtm_instance.instance_url, wtm_instance.instance_token = wtc_instance['url'].split("?token=")
                 wtm_instance.save()
 
-                yield(f"Container URL: {wtm_instance.get_login_container_url(girderToken)}")
+                yield(f"Container URL: {wtm_instance.get_login_container_url()}")
                 return 
 
 #TODO: delete

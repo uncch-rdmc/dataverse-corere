@@ -347,14 +347,13 @@ class Submission(AbstractCreateUpdateModel):
                     #TODO-WT: I'm not 100% sure we're actually getting back the version here
                     wtc = w.WholeTaleCorere(girderToken)
                     wtc.create_tale_version(tale.tale_id, f"Submission {self.version_id}") #TODO-WT: Maybe move this naming logic somewhere central?
-        elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale":
+        elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
             wtc.set_group_access(tale.tale_id, wtc.AccessType.WRITE, group.wholetale_group)
             tale.submission = self #update the submission for the root tale
             tale.save()
-            print("OH HELLO")
 
     ##### Queries #####
 

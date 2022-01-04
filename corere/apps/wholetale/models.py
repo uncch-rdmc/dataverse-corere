@@ -61,18 +61,16 @@ class Instance(models.Model):
     
     instance_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
     instance_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='Container URL')
+    instance_token = models.CharField(max_length=64, blank=True, null=True, verbose_name='Token that goes along with the instance url')
     corere_user = models.ForeignKey(m.User, on_delete=models.CASCADE, related_name="user_instances")
-    
-    #TODO-WT: Add accessor method to get the FULL instance_url
     
     class Meta: #TODO-WT: I think this is the right approach. Each user should only have one instance per tale
         unique_together = ("tale", "corere_user")
 
     #This gets the url in the format needed for iframes. This gets the login url that'll then correct set up the user for interaction in the iframe
-    def get_login_container_url(self, girderToken):
-        return f"https://girder.stage.wholetale.org/api/v1/user/sign_in?redirect={quote_plus(self.instance_url)}&token={girderToken}"
-        #return self.instance_url
-        
+    def get_login_container_url(self):
+        return f"https://girder.stage.wholetale.org/api/v1/user/sign_in?redirect={quote_plus(self.instance_url)}&token={self.instance_token}"
+
 
 class GroupConnector(models.Model):
     corere_group = models.OneToOneField(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="wholetale_group")
