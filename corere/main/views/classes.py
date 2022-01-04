@@ -1172,7 +1172,11 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
                             wtc.upload_files(tale.tale_id, g.get_submission_repo_path(self.object.manuscript))
-                            wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time
+                            wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
+                            try: #If instance model object already exists, delete it
+                                wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
+                            except wtm.Instance.DoesNotExist:
+                                pass
                             wtm.Instance.objects.create(tale=tale, instance_id=wtc_instance['_id'], corere_user=request.user) # instance_url=wtc_instance['url'], 
                             self.object.files_changed = False
                             self.object.save()

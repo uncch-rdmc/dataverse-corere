@@ -1,3 +1,4 @@
+import requests, json
 from corere.apps.wholetale import models as wtm
 from corere.apps.wholetale.wholetale import WholeTale
 from corere.main import models as m
@@ -19,7 +20,10 @@ class WholeTaleCorere(WholeTale):
             print(json.loads(e.responseText)['message'])
             if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
                 #Delete instances on other manuscript for the user
-                other_manuscript_instances = user.user_instances.objects.filter(~Q(tale__manuscript==tale.manuscript))
+                
+                #other_manuscript_instances = user.user_instances.objects.filter(~Q(tale__manuscript==tale.manuscript))
+                other_manuscript_instances = wtm.Instance.objects.filter(Q(corere_user=user) & ~Q(tale__manuscript=tale.manuscript))
+
                 for oi in other_manuscript_instances:
                     self.delete_instance(oi.instance_id)
                     oi.delete()
@@ -28,7 +32,8 @@ class WholeTaleCorere(WholeTale):
                 except requests.HTTPError as e:
                     if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
                         #Delete the farthest back submission-instance on the same manuscript for the user
-                        other_submission_instances = user.user_instances.objects.filter(Q(tale__manuscript==tale.manuscript) & ~Q(tale__submission==tale.submission))
+                        #other_submission_instances = user.user_instances.objects.filter(Q(tale__manuscript==tale.manuscript) & ~Q(tale__submission==tale.submission))
+                        other_submission_instances = wtm.Instance.objects.filter(Q(corere_user=user) & Q(tale__manuscript=tale.manuscript) & ~Q(tale__submission=tale.submission))
 
                         #This case should only happen if you have two older instances on this manuscript
                         if(other_submission_instances.count() > 1):
