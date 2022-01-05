@@ -1643,9 +1643,10 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
                         #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
                         #We don't do this on a new launch because there is no way it'll be ready.  
-                        wtm_instance.instance_url, wtm_instance.instance_token = wtc_instance['url'].split("?token=")
+                        print(wtc_instance['url'])
+                        wtm_instance.instance_url = wtc_instance['url']
                         wtm_instance.save()
-                        context['notebook_url'] = wtm_instance.get_login_container_url()
+                        context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
                         print("RUNNING")
                     else: #launching
                         print("LAUNCHING")
@@ -1654,7 +1655,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                         #TODO-WT: We are already using similar logic below!!!!!
                 else:
                     #TODO TEST GIRDER TOKEN
-                    context['notebook_url'] = wtm_instance.get_login_container_url()
+                    context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
 
             #print(context['notebook_url'])
             # print(wtm_instance.__dict__)
@@ -1733,10 +1734,10 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
             return Http404()
 
         wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
-        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user))
+        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user, request.COOKIES.get('girderToken')))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
         
-def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
+def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderToken):
     stream = wtc.get_event_stream()
     client = sseclient.SSEClient(stream)
     for event in client.events():
@@ -1762,11 +1763,11 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user):
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
                 
                 print(wtc_instance['url'])
-                #TODO-WT: The token being split here is NOT the girder token. It is the container token. 
-                wtm_instance.instance_url, wtm_instance.instance_token = wtc_instance['url'].split("?token=")
+
+                wtm_instance.instance_url = wtc_instance['url']
                 wtm_instance.save()
 
-                yield(f"Container URL: {wtm_instance.get_login_container_url()}")
+                yield(f"Container URL: {wtm_instance.get_login_container_url(girderToken)}")
                 return 
 
 #TODO: delete

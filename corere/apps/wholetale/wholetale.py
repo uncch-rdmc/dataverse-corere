@@ -48,8 +48,12 @@ class WholeTale:
     #This should be run on submission start before uploading files
     #We create a new tale for each submission for access control reasons.
     #The alternative would be to create a version for each submission, there is not version-level access control.
+    #NOTE: This command assumes your corere server is running as https because if it isn't the csp setting won't work anyways
     def create_tale(self, title, image_id):
-        return self.gc.post("/tale", json={"title": title, "imageId": image_id, "dataSet": []})
+        json_dict = {"title": title, "imageId": image_id, "dataSet": []}
+        json_dict['config'] = {"csp": f"frame-ancestors 'self' https://dashboard.{settings.WHOLETALE_BASE_URL} https://{settings.SERVER_ADDRESS}"}
+        print(json_dict)
+        return self.gc.post("/tale", json=json_dict)
 
     def copy_tale(self, tale_id, new_title=None):
         new_tale_json = self.gc.post(f"/tale/{tale_id}/copy")
@@ -117,7 +121,9 @@ class WholeTale:
         return instance
 
     def get_instance(self, instance_id):
-        return self.gc.get(f"/instance/{instance_id}")
+        instance = self.gc.get(f"/instance/{instance_id}")
+        print(instance)
+        return instance
 
     def delete_instance(self, instance_id):
         self.gc.delete(f"/instance/{instance_id}")

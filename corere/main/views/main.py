@@ -23,7 +23,6 @@ def index(request):
     if request.user.is_authenticated:
         if settings.CONTAINER_DRIVER == "wholetale":
             girderToken = request.GET.get("girderToken", None) #provided by wt ouath redirect
-
             #If no girderToken, we send the user to Whole Tale / Globus to get it.
             if not (girderToken or request.COOKIES.get('girderToken')):
                 if request.is_secure():
@@ -53,7 +52,8 @@ def index(request):
                 }
         response = render(request, "main/index.html", args)
         if girderToken:
-            response.set_cookie(key="girderToken", value=girderToken)
+            #TODO-WT: If samesite isn't needed we should remove samesite/secure
+            response.set_cookie(key="girderToken", value=girderToken, secure=True, samesite='None')
         return response
     else:
         return render(request, "main/login.html")
