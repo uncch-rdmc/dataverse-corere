@@ -7,10 +7,9 @@ from urllib.parse import quote_plus
 
 #Information related to a specific tale remotely hosted in WholeTale
 class Tale(models.Model):
-    #TODO-WT: maybe we should rename this to wt_id. Maybe we should do this for all models?
     wt_id = models.CharField(max_length=24, verbose_name='Tale ID in Whole Tale', unique=True)
     manuscript = models.ForeignKey(m.Manuscript, on_delete=models.CASCADE, related_name="manuscript_tales")
-    #TODO-WT: I wanted to require submission but we create original tale before the first submission.
+    #Note: Ideally we would require submission but we create original tale before the first submission.
     submission = models.ForeignKey(m.Submission, on_delete=models.CASCADE, null=True, blank=True, related_name="submission_tales", verbose_name='The submission whose files are in the tale')
     original_tale = models.ForeignKey('Tale', on_delete=models.CASCADE, null=True, blank=True, related_name="tale_copies")
     #Each groupconnector should only have one tale
@@ -37,7 +36,6 @@ class Tale(models.Model):
                 raise FieldError("The original_tale field cannot be modified")
 
         super(Tale, self).save(*args, **kwargs)
-
 
 ## Instead of storing versions as a separate object, we'll just store the submission with the tale. For the original tale this will mean the latest
 

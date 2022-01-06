@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
         try:
             wtm_group = wtm.GroupConnector.objects.get(is_admins=True)
-            wtc_group = wtc.get_group(group_id=wtm_group.id)
+            wtc_group = wtc.get_group(group_id=wtm_group.wt_id) #NOTE: I changed this from id to wt_id, I think that's right
         except wtm.GroupConnector.DoesNotExist:
             wtm_group = None
             wtc_group = None
