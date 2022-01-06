@@ -1556,7 +1556,6 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
 
-#TODO-WT: What happens if a user changes roles on a manuscript after creating an instance? We should maybe just nerf all their instances?
 class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1574,25 +1573,22 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def dispatch(self, request, *args, **kwargs):
         if(settings.CONTAINER_DRIVER == 'wholetale'):
             self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
-            print(self.dominant_group.__dict__)
-            #TODO-WT: Right now for previous submissions the dominant group connector code is getting the admin group for non admins! That's bad
-            #TODO-WT: I think here if tale doesn't exist in the GroupConnector and "it should" then we create it. Gotta figure out when it should
-            #self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
+
             try:
                 self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object)
             except wtm.Tale.DoesNotExist: 
                 if self.object.version_id < self.object.manuscript.get_max_submission_version_id(): #Happens launching an instance from a previous submission, as we have to create the Tale on demand
-                    #WT: Copy master tale, revert to previous version, launch instance.
+                    #Copy master tale, revert to previous version, launch instance.
                     wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
                     wtc = w.WholeTaleCorere(admin=True)
-                    wtc_tale_target_version = wtc.get_tale_version_by_name(wtm_parent_tale.wt_id, f"Submission {self.object.version_id}") #TODO-WT: Centralize this tale name logic
+                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.WholeTaleCorere.get_tale_version_name(self.object.version_id))
                     print(wtc_tale_target_version)
                     #Ok, so I gotta copy the parent tale first and then revert it
-                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)#TODO-WT: Give a new name?
+                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
                     wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version)
                     self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale, group_connector=self.dominant_group, original_tale=wtm_parent_tale)
                 else:
-                    pass #TODO-WT: ERROR probably? 404?
+                    raise Http404()
 
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')
@@ -1602,7 +1598,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             else:
                 transition_method = getattr(self.object, 'view_noop')
                 if(not has_transition_perm(transition_method, request.user)):
-                    self.http_method_names = ['get'] #TODO-WT: Check whether you can actually set http_method_names in dispatch
+                    self.http_method_names = ['get'] 
                     self.read_only = True
                     logger.debug("PermissionDenied")
                     raise Http404()
@@ -1623,8 +1619,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
-            print("wtm_instance")
-            #print(wtm_instance.__dict__)
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
@@ -1634,8 +1628,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 print(wtc_instance)
                 if not wtm_instance.instance_url:       
                     if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
-                        print("ERROR")
-                        #If we get an error... what... delete the instance and try again?
                         wtc.delete_instance(wtm_instance.wt_id)
                         wtm_instance.delete()
                         wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
@@ -1643,31 +1635,17 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
                         #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
                         #We don't do this on a new launch because there is no way it'll be ready.  
-                        print(wtc_instance['url'])
                         wtm_instance.instance_url = wtc_instance['url']
                         wtm_instance.save()
                         context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
-                        print("RUNNING")
                     else: #launching
-                        print("LAUNCHING")
                         pass
-                        #what do we do if we are still launching when we get here????
-                        #TODO-WT: We are already using similar logic below!!!!!
                 else:
-                    #TODO TEST GIRDER TOKEN
                     context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
 
-            #print(context['notebook_url'])
-            # print(wtm_instance.__dict__)
-
-            #TODO-WT: Think about whether the admin should be served a special container? Make sure we're even giving the corere admins wt admin
-
-            # print(wtm_instance.__dict__)
             if wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
-                print("TRUE")
                 context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
             else:
-                print("FALSE")
                 context['wt_launching'] = False                
         else:
             context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
@@ -1689,9 +1667,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             return redirect('submission_uploadfiles', id=self.object.id)
         pass
 
-#TODO-WT: I switched this to be view_noop but I may want to make it conditional based upon the user/role
-#         It's probably ok thought because all the code is doing is running calls the user could already do with their girderToken.
-#         ... well besides creating a wtm_instance. We probably don't want the authors to do that
 class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1717,7 +1692,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
             else:
                 transition_method = getattr(self.object, 'view_noop')
                 if(not has_transition_perm(transition_method, request.user)):
-                    self.http_method_names = ['get'] #TODO-WT: Check whether you can actually set http_method_names in dispatch
+                    self.http_method_names = ['get']
                     self.read_only = True
                     logger.debug("PermissionDenied")
                     raise Http404()
@@ -1815,12 +1790,9 @@ def _helper_submit_submission_and_redirect(request, submission):
 
             #I'm going to delete author instances here. So I need to get the authors in the group and then for each author get the instance they have
             for u in group.user_set.all():
-                #TODO-WT: This definitely needs a try catch, but I'll leave it off to see what errors we actually hit
+                #TODO: This probably should be in a try catch
                 u.user_instances.get(tale=tale_original).delete() #I think there should be only one tale per user per instance...
 
-            #TODO-WT: The code I'm using to generate the tale title should be in one place
-            #   - Create 3 tale copies, one for each role
-            #TODO-WT: I'm setting access on tales even after an editor return has happened. This may not be needed
             group_editor = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(submission.manuscript.id))
             try: #Get tale if it exists. This happens when a submission was returned by an editor, as this does not create a new submission
                 tale_copy_editor = wtm.Tale.objects.get(group_connector=group_editor.wholetale_group)

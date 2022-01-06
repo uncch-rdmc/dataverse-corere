@@ -372,18 +372,6 @@ def account_user_details(request):
     
     response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
 
-
-    #TODO-WT: The problem here is that if the user somehow doesn't make it to account_user_details, they end up as a zombie
-    #How can I get WholeTale to send me the girderToken again? I think I've done this during login already?
-    #The next question becomes how do we enforce this?
-    #... I think the best solution is to detect if the user has no girderToken (on all pages?) and then send them to account_complete_oauth
-    #       - The detection is important. It'd be nice to avoid redirecting the user after they're working on an important task (so before we freak out about girder)
-    #... I also need to update this page to do the girderToken updating regardless.
-    #... ...
-    # The above info doesn't actually fix my immediate issue, which is that my vm-based browsers don't do access on localhost
-    # ... 
-
-
     if request.method == 'GET':
         try: #request.user.invite will error if there is no invite
             #we delete the invitation now that we can associate the user
@@ -392,9 +380,7 @@ def account_user_details(request):
             #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
             if(settings.CONTAINER_DRIVER == 'wholetale'):
                 girderToken = request.GET.get("girderToken", None)
-                print(girderToken)
                 if girderToken:
-                    print("GIRDER TOKEN")
                     response.set_cookie(key="girderToken", value=girderToken)
                     #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
                     wt_user = w.WholeTaleCorere(girderToken).get_logged_in_user()
@@ -407,7 +393,6 @@ def account_user_details(request):
                     or group.name.startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) 
                     or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
                     or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
-                        #NOTE: If this blows up its because wholetale_group doesn't seem to work. I assume its because I'm working with the base group model but I'm unsure.
                         wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.wt_id)
 
                 if(request.user.is_superuser):

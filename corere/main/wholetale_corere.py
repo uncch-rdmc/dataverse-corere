@@ -9,6 +9,15 @@ from django.conf import settings
 #We create a subclass of WholeTale to add the corere-specific code.
 #This is so the WholeTale code can be better reused by others in the future
 class WholeTaleCorere(WholeTale):
+    def __init__(self, token=None, admin=False):
+        super(WholeTaleCorere, self).__init__(token, admin)
+        if token:
+            #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
+            wt_user = self.gc.get("/user/me")
+            for invite in wt_user['groupInvites']:
+                if(wtm.GroupConnector.objects.filter(wt_id=invite['groupId']).exists()): #if group is a corere group
+                    self.gc.post("group/{}/member".format(invite['groupId'])) #accept invite
+
     # Attempts to create a Whole Tale instance. If there is no space, the code attempts to remove other instances for the user that are owned by CORE2.
     # If this fails, the system tells the user to clean it up themselves in Whole Tale
     # NOTE: This code looks at the object model to tell what instances exist. So if somehow a CORE2 WT instance is created that isn't stored in our database, the system won't clean it up.
@@ -48,13 +57,34 @@ class WholeTaleCorere(WholeTale):
                             if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
                                 raise Exception(f'Your maximum number of instances in Whole Tale has been reached. Some of your running instances are not managed by CORE2 so they cannot be deleted. Please go to {settings.WHOLETALE_BASE_URL} and delete running instances manually before proceeding.')
 
-#TODO-WT: This is wrong no? We want to use the manuscript id????
+    def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
+        acls = self.gc.get("/tale/{}/access".format(tale_id))
+
+        existing_index = next((i for i, item in enumerate(acls['groups']) if item["id"] == wtm_group.wt_id), None)
+        if existing_index:
+            acls['groups'].pop(existing_index) #we remove the old, never to be seen again
+
+        if(level != self.AccessType.NONE): #If access is none, we need to not add it, instead of setting level as NONE (-1)
+            acl = {
+                'id': wtm_group.wt_id,
+                'name': wtm_group.corere_group.name,
+                'flags': [],
+                'level': level
+            }
+
+            acls['groups'].append(acl)    
+
+        self.gc.put("/tale/{}/access".format(tale_id), parameters={'access': json.dumps(acls), 'force': force_instance_shutdown})
+
 def get_wt_group_name(group_prefix, manuscript):
     return c.generate_group_name(group_prefix, manuscript)
 
+def get_tale_version_name(version_id):
+    return f"Submission {version_id}"
+
 #This is nessecary as users can have multiple groups. Admins are the primary example.
 #Current return hierarchy: author > curator > verifier > editor
-#TODO-WT: Should we be launching containers also as the admin group???
+#We do not treat admin in a special way at this point
 def get_dominant_group_connector(user, submission):
     user_groups = user.groups.all()
     

@@ -32,7 +32,6 @@ class Tale(models.Model):
         if(self.pk):
             orig = Tale.objects.get(pk=self.pk)
             if(orig.original_tale != self.original_tale):
-                #TODO-WT: Make field read-only in admin?
                 raise FieldError("The original_tale field cannot be modified")
 
         super(Tale, self).save(*args, **kwargs)
@@ -61,7 +60,7 @@ class Instance(models.Model):
     instance_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='Container URL')
     corere_user = models.ForeignKey(m.User, on_delete=models.CASCADE, related_name="user_instances")
     
-    class Meta: #TODO-WT: I think this is the right approach. Each user should only have one instance per tale
+    class Meta:
         unique_together = ("tale", "corere_user")
 
     #This gets the url in the format needed for iframes. This gets the login url that'll then correct set up the user for interaction in the iframe
@@ -88,11 +87,6 @@ class GroupConnector(models.Model):
         else:
             if not self.manuscript:
                 raise AssertionError("Non-admin groups must be connected to a Manuscript")
-
-    #This could also build it from our constructor method, but for now we use the same names for both so this is easiest
-    #TODO-WT: Do I really need both this and the function in wholetale_corere?
-    def get_wt_group_name(self):
-        return self.corere_group.name
 
 #Global image choices pulled from WT via a manually called admin command
 class ImageChoice(models.Model):

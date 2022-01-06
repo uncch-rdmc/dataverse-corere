@@ -342,11 +342,10 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.id = None
                     new_gfile.save()
                 if settings.CONTAINER_DRIVER == "wholetale":
-                    for tc in tale.tale_copies.all(): #delete copy instances from previous submission
+                    for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
-                    #TODO-WT: I'm not 100% sure we're actually getting back the version here
                     wtc = w.WholeTaleCorere(girderToken)
-                    wtc.create_tale_version(tale.wt_id, f"Submission {self.version_id}") #TODO-WT: Maybe move this naming logic somewhere central?
+                    wtc.create_tale_version(tale.wt_id, w.WholeTaleCorere.get_tale_version_name(self.version_id))
         elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
@@ -914,8 +913,6 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
-    #TODO-WT: Should we tap into this for deleting WT stuff as well 
-
 #Class related to locally hosted docker containers
 class LocalContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
@@ -1182,65 +1179,58 @@ def add_history_info(sender, instance, **kwargs):
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
 
-#WT-NOTES:
-#This function is called when a user is removed from a group, as well as a group from a user
+#This function is called when a user is added/removed from a group, as well as a group from a user
 #Depending on the way this is called, the instance and pk_set will differ
-#TODO-WT: If this errors out, the trigger won't be cleared and will error on later saves. Need to do something eventually I think
-#TODO-WT: Remove print statements
-#TODO-WT: I think this blows up on role-groups
-
-#TODO: This works right when updating users through the UI, but when run via the admin user page the update doesn't work.
-#      I think we need a different case to catch the update there, as 
-#See: https://stackoverflow.com/questions/7899127/
+#If this errors out, I think trigger won't be cleared and will error on later saves
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
     if settings.CONTAINER_DRIVER == 'wholetale':
         wtc = w.WholeTaleCorere(admin=True)
-        if model is Group and instance.wt_id and not instance.invitation:
+        if model is Group and instance.wt_id and not hasattr(instance, 'invite'):
             if action == 'post_add':
-                print("add")
-                print(pk_set)
+                logger.debug("add")
+                logger.debug(pk_set)
                 for pk in pk_set:
                     try:
                         wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
                         wtc.invite_user_to_group(instance.wt_id, wtm_group.wt_id)
-                        print(f'add {pk}')
+                        logger.debug(f'add {pk}')
                     except wtm.GroupConnector.DoesNotExist:
-                        print(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
+                        logger.debug(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
             elif action == 'post_remove':
-                print("remove")
+                logger.debug("remove")
                 for pk in pk_set:
                     try:
                         wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
                         wtc.remove_user_from_group(instance.wt_id, wtm_group.wt_id)
-                        print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}')
+                        logger.debug(f'remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}')
                     except wtm.GroupConnector.DoesNotExist:
-                        print(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
+                        logger.debug(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
         if model is User:
             if action == 'post_add':
-                print("add")
+                logger.debug("add")
                 for pk in pk_set:
                     user = User.objects.get(id=pk)
-                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    logger.debug(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
                     if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
                             wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
-                            print(f'add {instance.id}')
+                            logger.debug(f'add {instance.id}')
                         except wtm.GroupConnector.DoesNotExist:
-                            print(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
+                            logger.debug(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
             elif action == 'post_remove':
-                print("remove")
+                logger.debug("remove")
                 for pk in pk_set:
                     user = User.objects.get(id=pk)
-                    print(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    logger.debug(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
                     if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
                             wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
-                            print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}')
+                            logger.debug(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}')
                         except wtm.GroupConnector.DoesNotExist:
-                            print(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
+                            logger.debug(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
 
     else:
         update_groups = []

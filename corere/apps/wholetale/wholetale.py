@@ -22,15 +22,11 @@ class WholeTale:
     def __init__(self, token=None, admin=False):#, event_thread=False):
         self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
         if admin:
+            if token:
+                raise ValueError("Token and admin cannot be provided at the same time")
             self.gc.authenticate(apiKey=settings.WHOLETALE_ADMIN_GIRDER_API_KEY)
         elif token:
-            #TODO-WT: This references wtm, should it be in wholetale_corere?
             self.gc.setToken(token)
-            #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
-            wt_user = self.gc.get("/user/me")
-            for invite in wt_user['groupInvites']:
-                if(wtm.GroupConnector.objects.filter(wt_id=invite['groupId']).exists()): #if group is a corere group
-                    self.gc.post("group/{}/member".format(invite['groupId'])) #accept invite
         else:
             raise ValueError("A Whole Tale connection must be provided a girder token or run as an admin.")
 
@@ -86,7 +82,7 @@ class WholeTale:
     def list_tale_version(self, tale_id):
         return self.gc.get("/version", parameters={"taleId": tale_id,"limit": 10000})
 
-    def get_tale_version_by_name(self, tale_id, version_name):
+    def get_tale_version(self, tale_id, version_name):
         versions = self.list_tale_version(tale_id)
         for version in versions:
             if version['name'] == version_name:
@@ -142,26 +138,6 @@ class WholeTale:
 
     def get_access(self, tale_id):
         return self.gc.get("/tale/{}/access".format(tale_id))
-    
-    #TODO-WT: This references wtm, should it be in wholetale_corere?
-    def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
-        acls = self.gc.get("/tale/{}/access".format(tale_id))
-
-        existing_index = next((i for i, item in enumerate(acls['groups']) if item["id"] == wtm_group.wt_id), None)
-        if existing_index:
-            acls['groups'].pop(existing_index) #we remove the old, never to be seen again
-
-        if(level != self.AccessType.NONE): #If access is none, we need to not add it, instead of setting level as NONE (-1)
-            acl = {
-                'id': wtm_group.wt_id,
-                'name': wtm_group.get_wt_group_name(),
-                'flags': [],
-                'level': level
-            }
-
-            acls['groups'].append(acl)    
-
-        self.gc.put("/tale/{}/access".format(tale_id), parameters={'access': json.dumps(acls), 'force': force_instance_shutdown})
     
     def create_group(self, name, public=False):
         return self.gc.post("/group", parameters={"name": name, "public": public})

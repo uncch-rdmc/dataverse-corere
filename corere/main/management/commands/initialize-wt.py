@@ -8,7 +8,6 @@ from corere.main import models as m
 # from corere.main.models import User
 # from django.contrib.auth.models import Group
 
-#TODO-WT: Maybe move over the the WholeTale app?
 #NOTE: This code uses 3 types of groups. Local corere groups, Whole Tale remote instance groups (accessed via api), and wholetale.group(s) which store the connetion between the two
 class Command(BaseCommand):
     help = "Initializes the state of the connected Whole Tale instance. Currently this means creating the admin group on the Whole Tale server."
@@ -27,18 +26,14 @@ class Command(BaseCommand):
 
         if deleteall:
             for wtc_group in wtc.get_all_groups():
-                #TODO-WT: This should probably check if the groups start with our managed prefixes?
-                #TODO-WT: I probably need to better document re-launching for testing purposes
-                #TODO-WT: 
-                wtc.delete_group(wtc_group["_id"])
-                print(f"Group '{wtc_group['name']}' deleted")
+                if(wtc_group['name'].startswith(GROUP_MANUSCRIPT_AUTHOR_PREFIX) or wtc_group['name'].startswith(GROUP_MANUSCRIPT_EDITOR_PREFIX)
+                or wtc_group['name'].startswith(GROUP_MANUSCRIPT_CURATOR_PREFIX) or wtc_group['name'].startswith(GROUP_MANUSCRIPT_VERIFIER_PREFIX)
+                or wtc_group['name'].startswith(GROUP_MANUSCRIPT_ADMIN_PREFIX)):
+                    wtc.delete_group(wtc_group["_id"])
+                    print(f"Group '{wtc_group['name']}' deleted")
 
             wtm.GroupConnector.objects.all().delete()
             print("All Whole Tale instance groups and wholetale.Group deleted.")
-
-# TODO-WT: Should there be one admin group for the whole project, or one per manuscript
-# One per project may be simpler on the WT side, but one per manuscript may be easier for our logic??
-# That being said, admin access in corere is not per manuscript...
 
         try:
             wtm_group = wtm.GroupConnector.objects.get(is_admins=True)
@@ -48,6 +43,7 @@ class Command(BaseCommand):
             wtc_group = None
             pass
         
+        #Note: We create this admin group in WT but don't use it currently
         if not wtc_group:
             wtc_group = wtc.create_group(name=c.GROUP_MANUSCRIPT_ADMIN)
             print("Whole Tale instance group did not exist and was created")
