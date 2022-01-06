@@ -7,9 +7,8 @@ from urllib.parse import quote_plus
 
 #Information related to a specific tale remotely hosted in WholeTale
 class Tale(models.Model):
-    #TODO-WT: this id (and probably all the other WT ones) are probably too long
     #TODO-WT: maybe we should rename this to wt_id. Maybe we should do this for all models?
-    tale_id = models.CharField(max_length=24, verbose_name='Tale ID in Whole Tale', unique=True)
+    wt_id = models.CharField(max_length=24, verbose_name='Tale ID in Whole Tale', unique=True)
     manuscript = models.ForeignKey(m.Manuscript, on_delete=models.CASCADE, related_name="manuscript_tales")
     #TODO-WT: I wanted to require submission but we create original tale before the first submission.
     submission = models.ForeignKey(m.Submission, on_delete=models.CASCADE, null=True, blank=True, related_name="submission_tales", verbose_name='The submission whose files are in the tale')
@@ -60,7 +59,7 @@ class Instance(models.Model):
     tale = models.ForeignKey('Tale', on_delete=models.CASCADE, related_name="tale_instances") #maybe unnessecary with tale_verison
     #tale_version = models.ForeignKey('TaleVersion', on_delete=models.CASCADE, related_name="taleversion_instances")
     
-    instance_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
+    wt_id = models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')
     instance_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='Container URL')
     corere_user = models.ForeignKey(m.User, on_delete=models.CASCADE, related_name="user_instances")
     
@@ -75,7 +74,7 @@ class Instance(models.Model):
 class GroupConnector(models.Model):
     corere_group = models.OneToOneField(Group, blank=True, null=True, on_delete=models.CASCADE, related_name="wholetale_group")
     is_admins = models.BooleanField(default=False) #There is no corere group for admins so we just do this.
-    group_id = models.CharField(max_length=24, unique=True, verbose_name='Group ID in Whole Tale') 
+    wt_id = models.CharField(max_length=24, unique=True, verbose_name='Group ID in Whole Tale') 
     #group_name = models.CharField(max_length=1024, unique=True, verbose_name='Group Name in Whole Tale') #We store this for ACLs mostly
     manuscript = models.ForeignKey(m.Manuscript, blank=True, null=True, on_delete=models.CASCADE, related_name="manuscript_wtgroups")
 
@@ -86,7 +85,7 @@ class GroupConnector(models.Model):
             if self.corere_group:
                 raise AssertionError("Admin wholetale groups cannot also be connected to corere_group")
 
-            if GroupConnector.objects.filter(is_admins=True).exclude(group_id=self.group_id).count() > 0:
+            if GroupConnector.objects.filter(is_admins=True).exclude(group_id=self.wt_id).count() > 0:
                 raise AssertionError("Only one admin wholetale group can be created")
         else:
             if not self.manuscript:

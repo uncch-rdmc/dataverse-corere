@@ -29,7 +29,7 @@ class WholeTale:
             #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
             wt_user = self.gc.get("/user/me")
             for invite in wt_user['groupInvites']:
-                if(wtm.GroupConnector.objects.filter(group_id=invite['groupId']).exists()): #if group is a corere group
+                if(wtm.GroupConnector.objects.filter(wt_id=invite['groupId']).exists()): #if group is a corere group
                     self.gc.post("group/{}/member".format(invite['groupId'])) #accept invite
         else:
             raise ValueError("A Whole Tale connection must be provided a girder token or run as an admin.")
@@ -147,13 +147,13 @@ class WholeTale:
     def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
         acls = self.gc.get("/tale/{}/access".format(tale_id))
 
-        existing_index = next((i for i, item in enumerate(acls['groups']) if item["id"] == wtm_group.group_id), None)
+        existing_index = next((i for i, item in enumerate(acls['groups']) if item["id"] == wtm_group.wt_id), None)
         if existing_index:
             acls['groups'].pop(existing_index) #we remove the old, never to be seen again
 
         if(level != self.AccessType.NONE): #If access is none, we need to not add it, instead of setting level as NONE (-1)
             acl = {
-                'id': wtm_group.group_id,
+                'id': wtm_group.wt_id,
                 'name': wtm_group.get_wt_group_name(),
                 'flags': [],
                 'level': level

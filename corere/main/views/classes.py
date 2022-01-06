@@ -1171,13 +1171,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         if(self.object.files_changed):
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
-                            wtc.upload_files(tale.tale_id, g.get_submission_repo_path(self.object.manuscript))
+                            wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self.object.manuscript))
                             wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
                             try: #If instance model object already exists, delete it
                                 wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
                             except wtm.Instance.DoesNotExist:
                                 pass
-                            wtm.Instance.objects.create(tale=tale, instance_id=wtc_instance['_id'], corere_user=request.user)
+                            wtm.Instance.objects.create(tale=tale, wt_id=wtc_instance['_id'], corere_user=request.user)
                             self.object.files_changed = False
                             self.object.save()
 
@@ -1498,7 +1498,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 if(settings.CONTAINER_DRIVER == 'wholetale'):
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
-                        wtc.delete_tale(wtm_tale.tale_id)
+                        wtc.delete_tale(wtm_tale.wt_id)
                         wtm_tale.delete()   
 
                 ### Messaging ###
@@ -1585,12 +1585,12 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     #WT: Copy master tale, revert to previous version, launch instance.
                     wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
                     wtc = w.WholeTaleCorere(admin=True)
-                    wtc_tale_target_version = wtc.get_tale_version_by_name(wtm_parent_tale.tale_id, f"Submission {self.object.version_id}") #TODO-WT: Centralize this tale name logic
+                    wtc_tale_target_version = wtc.get_tale_version_by_name(wtm_parent_tale.wt_id, f"Submission {self.object.version_id}") #TODO-WT: Centralize this tale name logic
                     print(wtc_tale_target_version)
                     #Ok, so I gotta copy the parent tale first and then revert it
-                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.tale_id)#TODO-WT: Give a new name?
+                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)#TODO-WT: Give a new name?
                     wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version)
-                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object, tale_id=wtc_versioned_tale, group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale, group_connector=self.dominant_group, original_tale=wtm_parent_tale)
                 else:
                     pass #TODO-WT: ERROR probably? 404?
 
@@ -1627,19 +1627,19 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             #print(wtm_instance.__dict__)
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
-                wtm.Instance.objects.create(tale=self.wtm_tale, instance_id=wtc_instance['_id'], corere_user=request.user) 
+                wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
             else:
-                wtc_instance = wtc.get_instance(wtm_instance.instance_id)  
+                wtc_instance = wtc.get_instance(wtm_instance.wt_id)  
                 print("wtc_instance")
                 print(wtc_instance)
                 if not wtm_instance.instance_url:       
                     if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
                         print("ERROR")
                         #If we get an error... what... delete the instance and try again?
-                        wtc.delete_instance(wtm_instance.instance_id)
+                        wtc.delete_instance(wtm_instance.wt_id)
                         wtm_instance.delete()
                         wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
-                        wtm.Instance.objects.create(tale=self.wtm_tale, instance_id=wtc_instance['_id'], corere_user=request.user) 
+                        wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
                     elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
                         #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
                         #We don't do this on a new launch because there is no way it'll be ready.  
@@ -1757,7 +1757,7 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderTok
                 yield("Completing launch, should only take a few seconds.<br>")
 
                 wtm_instance = w.get_model_instance(user, submission)
-                wtc_instance = wtc.get_instance(wtm_instance.instance_id)
+                wtc_instance = wtc.get_instance(wtm_instance.wt_id)
                 while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                     time.sleep(1)
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
@@ -1811,7 +1811,7 @@ def _helper_submit_submission_and_redirect(request, submission):
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)        
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
-            wtc.set_group_access(tale_original.tale_id, wtc.AccessType.READ, group.wholetale_group)
+            wtc.set_group_access(tale_original.wt_id, wtc.AccessType.READ, group.wholetale_group)
 
             #I'm going to delete author instances here. So I need to get the authors in the group and then for each author get the instance they have
             for u in group.user_set.all():
@@ -1826,27 +1826,27 @@ def _helper_submit_submission_and_redirect(request, submission):
                 tale_copy_editor = wtm.Tale.objects.get(group_connector=group_editor.wholetale_group)
             except wtm.Tale.DoesNotExist:
                 editor_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Editor"
-                wtc_tale_copy_editor = wtc.copy_tale(tale_original.tale_id, new_title=editor_tale_title)
-                tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
-            wtc.set_group_access(tale_copy_editor.tale_id, wtc.AccessType.WRITE, group_editor.wholetale_group)
+                wtc_tale_copy_editor = wtc.copy_tale(tale_original.wt_id, new_title=editor_tale_title)
+                tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_editor.wt_id, wtc.AccessType.WRITE, group_editor.wholetale_group)
 
             group_curator = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(submission.manuscript.id))
             try:
                 tale_copy_curator = wtm.Tale.objects.get(group_connector=group_curator.wholetale_group)
             except wtm.Tale.DoesNotExist:
                 curator_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Curator"
-                wtc_tale_copy_curator = wtc.copy_tale(tale_original.tale_id, new_title=curator_tale_title)
-                tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
-            wtc.set_group_access(tale_copy_curator.tale_id, wtc.AccessType.WRITE, group_curator.wholetale_group)
+                wtc_tale_copy_curator = wtc.copy_tale(tale_original.wt_id, new_title=curator_tale_title)
+                tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_curator.wt_id, wtc.AccessType.WRITE, group_curator.wholetale_group)
 
             group_verifier = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(submission.manuscript.id))
             try:
                 tale_copy_verifier = wtm.Tale.objects.get(group_connector=group_verifier.wholetale_group)
             except wtm.Tale.DoesNotExist:
                 verifier_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Verifier"
-                wtc_tale_copy_verifier = wtc.copy_tale(tale_original.tale_id, new_title=verifier_tale_title)
-                tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, tale_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
-            wtc.set_group_access(tale_copy_verifier.tale_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
+                wtc_tale_copy_verifier = wtc.copy_tale(tale_original.wt_id, new_title=verifier_tale_title)
+                tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_verifier.wt_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
 
         ## Messaging ###
         msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_display_name=submission.manuscript.get_display_name())

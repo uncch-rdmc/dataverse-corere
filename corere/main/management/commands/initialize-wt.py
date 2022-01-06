@@ -56,5 +56,5 @@ class Command(BaseCommand):
             if wtm_group:
                 print("Local wholetale.Group already exists, createlocal skipped.")
             else:
-                wtm.GroupConnector.objects.create(is_admins=True, group_id=wtc_group['_id'])
+                wtm.GroupConnector.objects.create(is_admins=True, wt_id=wtc_group['_id'])
                 print("Local wholetale.Group created")

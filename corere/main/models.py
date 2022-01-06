@@ -100,9 +100,9 @@ class User(AbstractUser):
                 admin_wtm_group = wtm.GroupConnector.objects.get(is_admins=True)
                 wtc = w.WholeTaleCorere(admin=True)
                 if self.is_superuser:
-                    wtc.invite_user_to_group(self.wt_id , admin_wtm_group.group_id)
+                    wtc.invite_user_to_group(self.wt_id , admin_wtm_group.wt_id)
                 else:
-                    wtc.remove_user_from_group(self.wt_id , admin_wtm_group.group_id)
+                    wtc.remove_user_from_group(self.wt_id , admin_wtm_group.wt_id)
 
         super(User, self).save(*args, **kwargs)
 
@@ -330,7 +330,7 @@ class Submission(AbstractCreateUpdateModel):
                 wtc = w.WholeTaleCorere(admin=True)
                 tale = self.manuscript.manuscript_tales.get(original_tale=None)
                 group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
-                wtc.set_group_access(tale.tale_id, wtc.AccessType.WRITE, group.wholetale_group)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
                 tale.submission = self #update the submission for the root tale
                 tale.save()
 
@@ -343,15 +343,15 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.save()
                 if settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission
-                        wtc.delete_tale(tale.tale_id) #deletes instances as well
+                        wtc.delete_tale(tale.wt_id) #deletes instances as well
                     #TODO-WT: I'm not 100% sure we're actually getting back the version here
                     wtc = w.WholeTaleCorere(girderToken)
-                    wtc.create_tale_version(tale.tale_id, f"Submission {self.version_id}") #TODO-WT: Maybe move this naming logic somewhere central?
+                    wtc.create_tale_version(tale.wt_id, f"Submission {self.version_id}") #TODO-WT: Maybe move this naming logic somewhere central?
         elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
-            wtc.set_group_access(tale.tale_id, wtc.AccessType.WRITE, group.wholetale_group)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
             tale.submission = self #update the submission for the root tale
             tale.save()
 
@@ -751,13 +751,13 @@ class Manuscript(AbstractCreateUpdateModel):
                 #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
                 wtc = w.WholeTaleCorere(admin=True)
                 wtc_group_editor = wtc.create_group(editor_group_name)
-                wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, group_id=wtc_group_editor['_id'], manuscript=self)
+                wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, wt_id=wtc_group_editor['_id'], manuscript=self)
                 wtc_group_author = wtc.create_group(author_group_name)
-                wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, group_id=wtc_group_author['_id'], manuscript=self)
+                wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, wt_id=wtc_group_author['_id'], manuscript=self)
                 wtc_group_curator = wtc.create_group(curator_group_name)
-                wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, group_id=wtc_group_curator['_id'], manuscript=self)
+                wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, wt_id=wtc_group_curator['_id'], manuscript=self)
                 wtc_group_verifier = wtc.create_group(verifier_group_name)
-                wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, group_id=wtc_group_verifier['_id'], manuscript=self)
+                wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier['_id'], manuscript=self)
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
@@ -776,14 +776,14 @@ class Manuscript(AbstractCreateUpdateModel):
                 wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
                 tale = wtm.Tale()
                 tale.manuscript = self
-                tale.tale_id = wtc_tale["_id"]
+                tale.wt_id = wtc_tale["_id"]
                 tale.group_connector = wtm_group_author
                 tale.save()
 
-                wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_editor)
-                wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_author)
-                wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_curator)
-                wtc.set_group_access(tale.tale_id, wtc.AccessType.READ, wtm_group_verifier)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
@@ -1203,7 +1203,7 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                 for pk in pk_set:
                     try:
                         wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.invite_user_to_group(instance.wt_id, wtm_group.group_id)
+                        wtc.invite_user_to_group(instance.wt_id, wtm_group.wt_id)
                         print(f'add {pk}')
                     except wtm.GroupConnector.DoesNotExist:
                         print(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
@@ -1212,8 +1212,8 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                 for pk in pk_set:
                     try:
                         wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.remove_user_from_group(instance.wt_id, wtm_group.group_id)
-                        print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_group_id {wtm_group.group_id}')
+                        wtc.remove_user_from_group(instance.wt_id, wtm_group.wt_id)
+                        print(f'remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}')
                     except wtm.GroupConnector.DoesNotExist:
                         print(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
         if model is User:
@@ -1225,7 +1225,7 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                     if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
                             print(f'add {instance.id}')
                         except wtm.GroupConnector.DoesNotExist:
                             print(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
@@ -1237,8 +1237,8 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                     if user.wt_id and not hasattr(user, 'invite'):
                         try:
                             wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.group_id)
-                            print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_group_id {wtm_group.group_id}')
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
+                            print(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}')
                         except wtm.GroupConnector.DoesNotExist:
                             print(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
 

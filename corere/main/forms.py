@@ -235,14 +235,14 @@ class ManuscriptBaseForm(forms.ModelForm):
     def save(self, commit=True, *args, **kwargs):
         mf = super(ManuscriptBaseForm, self).save(*args, commit=False, **kwargs)    
         if('wt_compute_env' in self.cleaned_data):
-            choice_id = self.data.get('wt_compute_env')
-            print(f"choice_id {choice_id}")        
+            wt_id = self.data.get('wt_compute_env')
+            print(f"wt_id {wt_id}")        
         #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
         #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
-        if choice_id and not re.match("^[\w\d]*$", choice_id):
+        if wt_id and not re.match("^[\w\d]*$", wt_id):
             logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
             raise Http404()
-        setattr(mf, 'wt_compute_env', choice_id)
+        setattr(mf, 'wt_compute_env', wt_id)
         mf.save()
 
     def clean(self):

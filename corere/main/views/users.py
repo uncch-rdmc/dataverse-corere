@@ -408,10 +408,10 @@ def account_user_details(request):
                     or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
                     or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
                         #NOTE: If this blows up its because wholetale_group doesn't seem to work. I assume its because I'm working with the base group model but I'm unsure.
-                        wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.group_id)
+                        wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.wt_id)
 
                 if(request.user.is_superuser):
-                    wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).group_id)
+                    wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).wt_id)
 
                 w.WholeTaleCorere(girderToken) #connecting as the user detects and accepts outstanding invitations
         except User.invite.RelatedObjectDoesNotExist:
