@@ -25,8 +25,6 @@ class WholeTaleCorere(WholeTale):
         try:
             return self.create_instance(tale.wt_id)
         except requests.HTTPError as e:
-            print(e.__dict__)
-            print(json.loads(e.responseText)['message'])
             if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
                 #Delete instances on other manuscript for the user
                 
@@ -89,16 +87,12 @@ def get_dominant_group_connector(user, submission):
     user_groups = user.groups.all()
     
     if corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, submission.manuscript)).first():
-        print("AUTHOR")
         pass
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, submission.manuscript)).first():
-        print("CURATOR")
         pass 
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, submission.manuscript)).first():
-        print("VERIFIER")
         pass 
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, submission.manuscript)).first():
-        print("EDITOR")
         pass 
 
     return wtm.GroupConnector.objects.get(corere_group=corere_group)

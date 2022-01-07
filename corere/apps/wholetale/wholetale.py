@@ -84,13 +84,16 @@ class WholeTale:
 
     def get_tale_version(self, tale_id, version_name):
         versions = self.list_tale_version(tale_id)
+        # print(versions)
         for version in versions:
             if version['name'] == version_name:
                 return version
 
-    #This is a GET because it doesn't alter their underlying objects, it just creates a mock. For us though its a different tale
     def restore_tale_to_version(self, tale_id, version_id):
-        return self.gc.get(f"/tale/{version_id}/restore")
+        # print(f"tale_id {tale_id}")
+        # print(f"version_id {version_id}")
+        #TODO-WT: I don't think this ever worked? its definitely was wrong...
+        return self.gc.put(f"/tale/{tale_id}/restore", parameters={"versionId": version_id})
 
     def upload_files(self, tale_id, str_path):
         """

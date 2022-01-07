@@ -826,7 +826,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
                 try:
                     #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
-
                     status = None
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
@@ -834,6 +833,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.submit_edition()
                         self.object.save()
+                        if(settings.CONTAINER_DRIVER == 'wholetale'):
+                            #Here we create the wholetale version. We do this after the editors approval because it isn't really a "done" submission then
+                            wtc = w.WholeTaleCorere(admin=True)
+                            tale_original = self.object.submission_tales.get(original_tale=None)    
+                            wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
+                
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
@@ -1581,12 +1586,12 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     #Copy master tale, revert to previous version, launch instance.
                     wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
                     wtc = w.WholeTaleCorere(admin=True)
-                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.WholeTaleCorere.get_tale_version_name(self.object.version_id))
-                    print(wtc_tale_target_version)
+                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
                     #Ok, so I gotta copy the parent tale first and then revert it
                     wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
-                    wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version)
-                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale, group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                    wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version['_id'])
+                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                    wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
                 else:
                     raise Http404()
 
@@ -1621,6 +1626,9 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             wtm_instance = w.get_model_instance(request.user, self.object)
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                print("BEFORE CREATE")
+                print(self.wtm_tale.__dict__)
+                print(wtc_instance)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
             else:
                 wtc_instance = wtc.get_instance(wtm_instance.wt_id)  
@@ -1729,7 +1737,7 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderTok
             if(progress == 100):
                 #In case things are still happening after the ending status message
 
-                yield("Completing launch, should only take a few seconds.<br>")
+                yield("Completing launch, should only take a moment.<br>")
 
                 wtm_instance = w.get_model_instance(user, submission)
                 wtc_instance = wtc.get_instance(wtm_instance.wt_id)
@@ -1782,9 +1790,9 @@ def _helper_submit_submission_and_redirect(request, submission):
         submission.save()
 
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-            #   - Set the wt author group's access to the root tale as read
             wtc = w.WholeTaleCorere(admin=True)
-            tale_original = submission.submission_tales.get(original_tale=None)        
+            tale_original = submission.submission_tales.get(original_tale=None)    
+            #  Set the wt author group's access to the root tale as read
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
             wtc.set_group_access(tale_original.wt_id, wtc.AccessType.READ, group.wholetale_group)
 
