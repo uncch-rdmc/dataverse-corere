@@ -95,6 +95,10 @@ class WholeTale:
         #TODO-WT: I don't think this ever worked? its definitely was wrong...
         return self.gc.put(f"/tale/{tale_id}/restore", parameters={"versionId": version_id})
 
+#TODO-WT: I tried switching upload_files and delete_tale_files to take the tale itself instead of the tale_id, and removing the get tale from inside.
+#         Something about my changes during that caused weird issues with wholetale not finding my instance. I couldn't pin it down for the life of me so I reverted.
+#         Ideally though these calls shouldn't need to contact WT multiple times.
+
     def upload_files(self, tale_id, str_path):
         """
         path needs to point to a directory with submission files
@@ -104,13 +108,21 @@ class WholeTale:
 
         #By default the "*" match ignores hidden folders (e.g. our .git folder)
         glob_path = str_path + "*"
-        self.gc.upload(glob_path, tale["workspaceId"])
+        return self.gc.upload(glob_path, tale["workspaceId"])
+
+    def delete_tale_files(self, tale_id):
+        """
+        deletes the contents of a folder. Can be used to delete all files in a tale
+        """
+
+        tale = self.gc.get(f"/tale/{tale_id}")
+        return self.gc.delete(f"/folder/{tale['workspaceId']}/contents")
 
     #TODO: Do we need the completed instance? Probably yes for the url?
     #Note: Run will launch a container for the user authenticated.
     def create_instance(self, tale_id, wait_for_complete=False):
         tale = self.gc.get(f"/tale/{tale_id}")
-        instance = self.gc.post("/instance", parameters={"taleId": tale["_id"]})
+        instance = self.gc.post("/instance", parameters={"taleId": tale["_id"]} )
         
         if(wait_for_complete):
             while instance["status"] == self.InstanceStatus.LAUNCHING:
@@ -121,11 +133,10 @@ class WholeTale:
 
     def get_instance(self, instance_id):
         instance = self.gc.get(f"/instance/{instance_id}")
-        print(instance)
         return instance
 
     def delete_instance(self, instance_id):
-        self.gc.delete(f"/instance/{instance_id}")
+        return self.gc.delete(f"/instance/{instance_id}")
 
     def download_files(self, path, folder_id=None):
         if folder_id is None:
@@ -183,5 +194,3 @@ class WholeTale:
     #     users = gc.get("/user", parameters={"text": user_info["login"]})
     #     if users:
     #         gc.delete("/user/{}".format(users[0]["_id"]))
-
-

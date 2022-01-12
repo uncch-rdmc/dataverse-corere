@@ -333,6 +333,8 @@ class Submission(AbstractCreateUpdateModel):
                 wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
                 tale.submission = self #update the submission for the root tale
                 tale.save()
+                #wtc = w.WholeTaleCorere(girderToken)
+                # wtc.create_tale_version(tale.wt_id, w.get_tale_version_name(self.version_id))
 
             if(self.version_id > 1):
                 prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
@@ -343,9 +345,9 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.save()
                 if settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
+                        print("In wtc delete_tale (first save). wtm tale info:")
+                        print(tc.__dict__)
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
-                    wtc = w.WholeTaleCorere(girderToken)
-                    wtc.create_tale_version(tale.wt_id, w.WholeTaleCorere.get_tale_version_name(self.version_id))
         elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)

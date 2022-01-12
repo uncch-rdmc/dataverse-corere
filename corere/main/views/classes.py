@@ -1176,6 +1176,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                         if(self.object.files_changed):
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
+                            wtc.delete_tale_files(tale.wt_id)
                             wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self.object.manuscript))
                             wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
                             try: #If instance model object already exists, delete it
@@ -1503,6 +1504,8 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 if(settings.CONTAINER_DRIVER == 'wholetale'):
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
+                        print("In wtc delete_tale (finish). wtm tale info:")
+                        print(wtm_tale.__dict__)
                         wtc.delete_tale(wtm_tale.wt_id)
                         wtm_tale.delete()   
 
@@ -1624,6 +1627,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
+
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
                 print("BEFORE CREATE")
@@ -1631,10 +1635,12 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 print(wtc_instance)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
             else:
-                wtc_instance = wtc.get_instance(wtm_instance.wt_id)  
-                print("wtc_instance")
-                print(wtc_instance)
-                if not wtm_instance.instance_url:       
+                wtc_instance = wtc.get_instance_or_nothing(wtm_instance)   
+                if not wtc_instance: #If the instance was deleted externally (by the user most likely)      
+                    wtm_instance.delete()
+                    wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                    wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
+                elif not wtm_instance.instance_url:       
                     if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
                         wtc.delete_instance(wtm_instance.wt_id)
                         wtm_instance.delete()
