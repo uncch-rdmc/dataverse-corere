@@ -333,8 +333,6 @@ class Submission(AbstractCreateUpdateModel):
                 wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
                 tale.submission = self #update the submission for the root tale
                 tale.save()
-                #wtc = w.WholeTaleCorere(girderToken)
-                # wtc.create_tale_version(tale.wt_id, w.get_tale_version_name(self.version_id))
 
             if(self.version_id > 1):
                 prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
@@ -345,8 +343,6 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.save()
                 if settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
-                        print("In wtc delete_tale (first save). wtm tale info:")
-                        print(tc.__dict__)
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
         elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
@@ -481,7 +477,6 @@ class Submission(AbstractCreateUpdateModel):
             return False
         try:
             if(self.submission_curation.needs_verification == False):
-                #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
@@ -763,15 +758,12 @@ class Manuscript(AbstractCreateUpdateModel):
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
         if settings.CONTAINER_DRIVER == "wholetale":
-            print(f"DECIDING TALE CREATE {self.wt_compute_env} | {self.manuscript_tales}")
             if self.wt_compute_env and not self.manuscript_tales.all().exists():
                 wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
                 wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
                 wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
                 wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
                 
-                print("IN TALE CREATE")
-                print(self.manuscript_tales)
                 wtc = w.WholeTaleCorere(admin=True)
                 tale_title = f"{self.get_display_name()} - {self.id}"
                 wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)

@@ -1504,15 +1504,11 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 if(settings.CONTAINER_DRIVER == 'wholetale'):
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
-                        print("In wtc delete_tale (finish). wtm tale info:")
-                        print(wtm_tale.__dict__)
                         wtc.delete_tale(wtm_tale.wt_id)
                         wtm_tale.delete()   
 
                 ### Messaging ###
-                # print("SUBMISSION STATUS: " + self.object._status)
                 if(self.object._status == m.Submission.Status.RETURNED):
-                    # print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
                     if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
@@ -1630,9 +1626,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
-                print("BEFORE CREATE")
-                print(self.wtm_tale.__dict__)
-                print(wtc_instance)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
             else:
                 wtc_instance = wtc.get_instance_or_nothing(wtm_instance)   
@@ -1694,8 +1687,6 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     #Code is same as in SubmissionNotebookView
     def dispatch(self, request, *args, **kwargs):
         if(settings.CONTAINER_DRIVER == 'wholetale'):
-
-            print(w.get_dominant_group_connector(request.user, self.object).__dict__)
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
 
             if self.wtm_tale.original_tale == None:
@@ -1750,8 +1741,6 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderTok
                 while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
                     time.sleep(1)
                     wtc_instance = wtc.get_instance(wtc_instance['_id'])
-                
-                print(wtc_instance['url'])
 
                 wtm_instance.instance_url = wtc_instance['url']
                 wtm_instance.save()
@@ -1759,7 +1748,6 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderTok
                 yield(f"Container URL: {wtm_instance.get_login_container_url(girderToken)}")
                 return 
 
-#TODO: delete
 # def _helper_fake_stream(wtc):
 #     for x in range(10):
 #         yield(f"This is message {x} from the emergency broadcast system.<br>")
@@ -1768,8 +1756,6 @@ def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderTok
 #     return
 
 def _helper_get_oauth_url(request, submission):
-    # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))
-    # print("time now:" + str(timezone.now()))
     #This code is for doing pro-active reauthentication via oauth2. We do this so that the user isn't presented with the oauth2 login inside their iframe (which they can't use).
     if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
         #We need to send the user to reauth

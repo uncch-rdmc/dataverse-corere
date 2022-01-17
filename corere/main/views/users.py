@@ -213,7 +213,6 @@ def unassign_editor(request, id=None, user_id=None):
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_editor_group.user_set.remove(user)
-        # print("DELETE " + str(user_id))
         return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
@@ -319,16 +318,12 @@ def unassign_verifier(request, id=None, user_id=None):
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_verifier_group.user_set.remove(user)
-        # print("DELETE " + str(user_id))
         return redirect('/manuscript/'+str(id)+'/assignverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)
     user = get_object_or_404(User, invite__key=key)
-    print(user.__dict__)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
-    #user.username = ""
-    #user.invite_key = ""
 
     return render(request, 'main/new_user_oauth.html')
 
@@ -367,7 +362,6 @@ def account_user_details(request):
             messages.add_message(request, messages.SUCCESS, msg)
             return redirect('/')
         else:
-            print(form.errors)
             logger.debug(form.errors) #TODO: DO MORE?
     
     response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
@@ -456,9 +450,6 @@ def invite_user_not_author(request, role, role_text):
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
     from django.contrib.sites.models import Site
     from django.contrib.sites.shortcuts import get_current_site
-    print(get_current_site(request))
-    #Invitation = get_invitation_model()
-    #print(Invitation.__dict__)
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email

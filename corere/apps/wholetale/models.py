@@ -19,8 +19,6 @@ class Tale(models.Model):
         unique_together = ("submission", "group_connector")
 
     def save(self, *args, **kwargs):
-        print(self.__dict__)
-        print(self.original_tale)
         if self.original_tale:
             if not self.submission:
                 #We only enforce this for non-original tales because the original tale is created before the first submission

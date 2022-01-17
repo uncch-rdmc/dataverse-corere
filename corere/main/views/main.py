@@ -238,7 +238,6 @@ def open_notebook(request, id=None):
             latest_submission.files_changed = False
             latest_submission.save()
 
-        print(manuscript.manuscript_localcontainerinfo.container_public_address())
         return redirect(manuscript.manuscript_localcontainerinfo.container_public_address())
     else:
         raise Http404()
