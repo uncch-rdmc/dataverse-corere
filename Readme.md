@@ -147,6 +147,8 @@ Before going live in production, make sure to go into the admin interface and co
 
 You will need to collect static files before running (and after updating these files) See https://docs.djangoproject.com/en/3.2/howto/static-files/ for more info.
 
+Note that the `wholetale.py` file located in `corere/apps/wholetale/` has been built to be portable from the main application. If you are looking to integrate an application with Whole Tale, this might be a useful reference.
+
 ### First Run
 
 Once the app is up and running, go to the Sites section of the admin console and change the names to match your current site. This is used mainly for email formatting.
