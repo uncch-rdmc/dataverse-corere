@@ -8,7 +8,12 @@ GROUP_MANUSCRIPT_EDITOR_PREFIX = "Editor Manuscript"
 GROUP_MANUSCRIPT_AUTHOR_PREFIX = "Author Manuscript"
 GROUP_MANUSCRIPT_VERIFIER_PREFIX = "Verifier Manuscript"
 GROUP_MANUSCRIPT_CURATOR_PREFIX = "Curator Manuscript"
+GROUP_MANUSCRIPT_ADMIN = "Corere Admin" #Only used currently for Whole Tale group
 GROUP_COMPLETED_SUFFIX = "Completed"
+
+#TODO: This should be used throughout the code
+def generate_group_name(group_prefix, manuscript):
+    return f"{group_prefix} {manuscript.id}"
 
 def get_roles():
     return [GROUP_ROLE_EDITOR, GROUP_ROLE_AUTHOR, GROUP_ROLE_VERIFIER, GROUP_ROLE_CURATOR]

@@ -39,6 +39,8 @@ def fsm_check_transition_perm(bound_method, user):
 # If the user has the session role for the manuscript, return it
 # Otherwise, return a role they do have based on a set order
 # Note: This is a bit overloaded with the create logic.
+#TODO: This logic doesn't serve the right content when you have multiple roles but not admin
+#      But that only happens for testing so turning on admin is fine.
 def get_role_name_for_form(user, manuscript, session, create):
     if create:
         if user.is_superuser:

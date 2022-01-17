@@ -1,6 +1,7 @@
 from . import constants as c
 from django.contrib.contenttypes.models import ContentType
 from corere.main import models as m
+from django.contrib.auth import get_user_model
 #from .models import Manuscript
 
 # Currently For creation of groups with permissions in CoReRe
@@ -44,7 +45,6 @@ def populate_models(sender, **kwargs):
 
     ## Add all roles to superusers 
 
-    from django.contrib.auth import get_user_model
     User = get_user_model()
     superusers = User.objects.filter(is_superuser=True)
 

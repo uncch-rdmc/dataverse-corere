@@ -1,4 +1,4 @@
-import logging, os, copy, sys
+import logging, os, copy, sys, re
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
 from django.contrib.postgres.fields import ArrayField
@@ -9,6 +9,7 @@ from invitations.utils import get_invitation_model
 from django.conf import settings
 from . import constants as c
 from corere.main import models as m
+from corere.main import wholetale_corere as w
 from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -17,6 +18,7 @@ from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 from django.http import Http404
+from corere.apps.wholetale import models as wtm
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -99,6 +101,21 @@ class UserByRoleAddFormHelper(FormHelper):
             'email'
         )
 
+class UserDetailsFormHelper(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            Div(
+                Div('first_name',css_class='col-md-6',),
+                Div('last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'username',
+            'email'
+        )
+
 #For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
     first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
@@ -114,18 +131,19 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 
 #For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
-    # TODO: If we do keep this email field we should make it accept multiple. But we should probably just combine it with the choice field below
+    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
     email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
 
 class EditorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
 
 class CuratorAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_CURATOR), widget=CustomSelect2UserWidget(), required=False)
 
 class VerifierAddForm(forms.Form):
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite_key='', groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
+    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_VERIFIER), widget=CustomSelect2UserWidget(), required=False)
 
 class EditUserForm(forms.ModelForm):
     class Meta:
@@ -169,6 +187,7 @@ class ManuscriptFormHelperMain(FormHelper):
                 Div('qdr_review',css_class='col-md-6',),
                 css_class='row',
             ),
+            'wt_compute_env',
             Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
@@ -203,14 +222,29 @@ class ManuscriptBaseForm(forms.ModelForm):
     class Meta:
         abstract = True
         model = m.Manuscript
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info']#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','wt_compute_env','contact_first_name','contact_last_name','contact_email',
+            'description','subject','additional_info', ]#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    def clean(self):
-        # print(self.Meta.role_required)
+    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
 
+    #This whole save is being called to force the correct value into wt_compute_env
+    #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want
+    #I gotta believe there is some other way but this works
+    def save(self, commit=True, *args, **kwargs):
+        mf = super(ManuscriptBaseForm, self).save(*args, commit=False, **kwargs)    
+        if('wt_compute_env' in self.cleaned_data):
+            wt_id = self.data.get('wt_compute_env')     
+        #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
+        #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
+        if wt_id and not re.match("^[\w\d]*$", wt_id):
+            logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
+            raise Http404()
+        setattr(mf, 'wt_compute_env', wt_id)
+        mf.save()
+
+    def clean(self):
         #We run this clean if the manuscript is progressed, or after being progressed it is being edited.
         if("submit_progress_manuscript" in self.data.keys() or self.instance._status != m.Manuscript.Status.NEW):
             description = self.cleaned_data.get('description')
@@ -228,6 +262,10 @@ class ManuscriptBaseForm(forms.ModelForm):
             contact_last_name = self.cleaned_data.get('contact_last_name')
             if(not contact_last_name):
                 self.add_error('contact_last_name', 'This field is required.')
+
+            contact_email = self.cleaned_data.get('contact_email')
+            if(not contact_email):
+                self.add_error('contact_email', 'This field is required.')
 
             contact_email = self.cleaned_data.get('contact_email')
             if(not contact_email):
@@ -259,7 +297,7 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'wt_compute_env']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):
@@ -558,6 +596,7 @@ class NoteForm(forms.ModelForm):
     #Other args are also passed in for performance improvements across all the notes
     def __init__ (self, *args, checkers, manuscript, submission, sub_files, **kwargs):
         super(NoteForm, self).__init__(*args, **kwargs)
+
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
@@ -831,6 +870,9 @@ class SubmissionBaseForm(forms.ModelForm):
         model = m.Submission
         fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
         labels = label_gen(model, fields)
+
+    def save(self, *args, **kwargs):
+        self.instance.save(girderToken=kwargs.pop('girderToken', None))
 
 class SubmissionForm_Admin(SubmissionBaseForm):
     pass
@@ -1307,16 +1349,6 @@ for role_str in list_of_roles:
     except AttributeError:
         pass #If no form for role we should never show the form, so pass
 
-
-# VMetadataAuditVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataAudit,  
-#     extra=1,
-#     form=VMetadataAuditForm,
-#     fields=("name","version","url","organization","verified_results","code_executability","exceptions","exception_reason"),
-#     can_delete = True,
-# )
-
 class ReadOnlyVMetadataAuditForm(ReadOnlyFormMixin, VMetadataAuditBaseForm):
     pass
 
@@ -1327,91 +1359,3 @@ ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
     form=ReadOnlyVMetadataAuditForm,
     can_delete = False,
 )
-
-
-
-
-
-
-
-
-#OK, so my code is able to create a new form with changed fields and then pass it to a dynamically created formset
-#The next question becomes whether its really worth it?
-#... well, we can use the "non-dynamic" forms for admin and just generate one for each of the four roles
-#... meh, I think its actually better to just re-define the form for admin with no changes
-#... This also scales ok because it preserves any other configuration done in the base form
-#... ... Well except for the formset_factory which is defined twice currently. Maybe I can use type() to subclass it as well.
-#... ... Doesn't seem to work as expected. I don't understand factory functions
-
-# What is my plan?
-# Define all forms manually, using inheritance
-# Define formsets programatically, using type?
-
-
-
-
-
-
-##### SEMI WORKING TEST
-
-# testfactorydict = {}
-# for x in range(5):
-#     afield = VMetadataForm.base_fields['operating_system']
-#     afield.disabled = True
-#     field_defs = {
-#         'operating_system': afield
-#         }
-#     DynamicFormClass = type("DynamicForm"+str(x), (VMetadataForm,), field_defs)
-
-#     # formset_defs = {
-#     #     'form': DynamicFormClass
-#     #     }
-#     # testfactorydict[str(x)] = type("DynamicFormset"+str(x), (VMetadataSubmissionFormset,), formset_defs)
-#     testfactorydict[str(x)] = inlineformset_factory(
-#         m.Submission,
-#         m.VerificationMetadata,  
-#         extra=1,
-#         form=VMetadataForm,
-#         fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-#         can_delete = True,
-#     )
-
-
-##### NOT WORKING JUNK
-
-#Input: takes your inlineformset_factory, a list of disabled fields, a list of fields to remove
-#Output: a new inlineformset_factory with these fields changed
-# def inlineformset_factory_restrictor(if_factory, disable_fields, remove_fields):
-#     altered_if_factory = copy.deepcopy(if_factory)
-#     altered_if_form = copy.deepcopy(altered_if_factory.form)
-#     #print(altered_if_factory.form.base_fields)
-#     altered_if_factory.form = altered_if_form
-#     #altered_if_factory.form.base_fields['host_url'].disabled = True
-#     return altered_if_factory  
-
-#VMetadataSubmissionFormsetRestrictTest = inlineformset_factory_restrictor(VMetadataSubmissionFormset, [], [])
-
-    #testfactorydict[str(x)] = VMetadataSubmissionFormset
-
-    # testfactorydict[str(x)] = inlineformset_factory(
-    #     m.Submission,
-    #     m.VerificationMetadata,  
-    #     extra=1,
-    #     form=DynamicFormClass,
-    #     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-    #     can_delete = True,
-    # )
-
-
-# class GitFileForm(forms.ModelForm):
-#     class Meta:
-#         model = m.GitFile
-#         fields = ['path']
-
-#     def __init__ (self, *args, **kwargs):
-#         super(GitFileForm, self).__init__(*args, **kwargs)
-#         self.fields['path'].widget.object_instance = self.instance
-#         self.fields['path'].disabled = True
-#         self.fields['md5'].disabled = True
-#         self.fields['size'].disabled = True
-#         self.fields['date'].disabled = True

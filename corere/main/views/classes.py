@@ -1,11 +1,14 @@
-import logging, os, requests, urllib, time, git
+import logging, os, requests, urllib, time, git, sseclient, threading, base64, json
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
-from .. import constants as c 
 from corere.main import docker as d
+from corere.main import wholetale_corere as w
+from corere.apps.wholetale import models as wtm
+from corere.main import git as g
+from .. import constants as c 
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
@@ -16,7 +19,7 @@ from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
@@ -25,7 +28,6 @@ from notifications.signals import notify
 from templated_email import send_templated_mail
 from django.utils.datastructures import MultiValueDictKeyError
 from django.db import transaction
-import base64
 
 logger = logging.getLogger(__name__)  
 
@@ -364,6 +366,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     http_method_names = ['get']
     read_only = True
 
+#This is for the upload files page. The ajax uploader uses a different class
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/not_form_upload_files.html'
@@ -433,6 +436,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             return render(request, self.template, context)
 
+#Supports the ajax uploader performing file uploads
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     transition_method_name = 'edit_noop'
     http_method_names = ['post']
@@ -768,7 +772,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
                 and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
-                self.form.save() #Note: this is what saves a newly created model instance
+                self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
@@ -822,7 +826,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
                 try:
                     #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
-
                     status = None
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
@@ -830,6 +833,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.submit_edition()
                         self.object.save()
+                        if(settings.CONTAINER_DRIVER == 'wholetale'):
+                            #Here we create the wholetale version. We do this after the editors approval because it isn't really a "done" submission then
+                            wtc = w.WholeTaleCorere(admin=True)
+                            tale_original = self.object.submission_tales.get(original_tale=None)    
+                            wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
+                
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
@@ -951,7 +960,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         prev_sub.id = None #Do I need to do both?
         prev_sub._status = m.Submission.Status.NEW
         self.object = prev_sub
-
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
@@ -1092,6 +1100,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
 #         return super().dispatch(request, *args, **kwargs)
 
+#This is for the upload files page. The ajax uploader uses a different class
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
@@ -1128,7 +1137,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if not self.read_only:
             errors = []
             changes_for_git = []
-            try: 
+            try: #File Renaming
                 with transaction.atomic(): #to ensure we only save if there are no errors
                     for key, value in request.POST.items():
                         if(key.startswith("file:")):
@@ -1146,6 +1155,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                                 gfile.path=after_path
                                 gfile.save()
                                 changes_for_git.append({"old":skey, "new":value})
+                                self.object.files_changed = True
+                                self.object.save()
             except ValueError as e:
                 errors.append(str(e))
                 #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
@@ -1161,25 +1172,45 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                     return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.files_dict_list):
-                    if(hasattr(self.object.manuscript, 'manuscript_containerinfo')):
-                        if self.object.manuscript.manuscript_containerinfo.build_in_progress:
-                            while self.object.manuscript.manuscript_containerinfo.build_in_progress:
-                                time.sleep(.1)
-                                self.object.manuscript.manuscript_containerinfo.refresh_from_db()
-                        
-                        elif(self.object.files_changed):
-                            logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
-                            d.refresh_notebook_stack(self.object.manuscript)
+                    if(settings.CONTAINER_DRIVER == 'wholetale'):
+                        if(self.object.files_changed):
+                            wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+                            tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
+                            wtc.delete_tale_files(tale.wt_id)
+                            wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self.object.manuscript))
+                            wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
+                            try: #If instance model object already exists, delete it
+                                wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
+                            except wtm.Instance.DoesNotExist:
+                                pass
+                            wtm.Instance.objects.create(tale=tale, wt_id=wtc_instance['_id'], corere_user=request.user)
                             self.object.files_changed = False
                             self.object.save()
-                    else:
-                        logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
-                        d.build_manuscript_docker_stack(self.object.manuscript, request)
-                        self.object.files_changed = False
-                        self.object.save()
 
-                    container_flow_address = _helper_get_oauth_url(request, self.object)
-                    return redirect(container_flow_address)
+                        return redirect('submission_notebook', id=self.object.id)
+
+                    else:
+                        if(hasattr(self.object.manuscript, 'manuscript_localcontainerinfo')):
+                            if self.object.manuscript.manuscript_localcontainerinfo.build_in_progress:
+                                while self.object.manuscript.manuscript_localcontainerinfo.build_in_progress:
+                                    time.sleep(.1)
+                                    self.object.manuscript.manuscript_localcontainerinfo.refresh_from_db()
+                            
+                            elif(self.object.files_changed):
+                                logger.info("Refreshing docker stack for manuscript: " + str(self.object.manuscript.id))
+                                d.refresh_notebook_stack(self.object.manuscript)
+                                self.object.files_changed = False
+                                self.object.save()
+                        else:
+                            logger.info("Building docker stack for manuscript: " + str(self.object.manuscript.id))
+                            d.build_manuscript_docker_stack(self.object.manuscript, request)
+                            self.object.files_changed = False
+                            self.object.save()
+
+                        container_flow_address = _helper_get_oauth_url(request, self.object)
+
+                        #Note: We redirect to the oauth page not in an iframe. When that it done it redirects back to our UIs iframe.
+                        return redirect(container_flow_address)
 
                 errors.append(_('submission_noFiles_error'))
             
@@ -1201,7 +1232,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             return render(request, self.template, context)
 
-
+#Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Probably don't need some of these, after creating uploader
     transition_method_name = 'edit_noop'
@@ -1310,7 +1341,6 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
         return HttpResponse(status=200)
 
-
 #Used for ajax refreshing in EditFiles
 #TODO: Probably no longer be needed with list rewrite
 class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1329,7 +1359,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
-    template = 'main/file_list.html'
+    template = 'main/file_list.html' #I think this is not actually used here
     transition_method_name = 'edit_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1371,38 +1401,60 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             return HttpResponse(base64.b64decode(image_base64), content_type='image/png')
             #return image is new
 
-
-#NOTE: This is unused and disabled in URLs. Probably should delete.
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#This gets the list of files from the running container and compares it to our local list. The differences are presented to the author to approve.
+class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
+    #TODO: Maybe don't need some of these, after creating uploader
+    # form = f.SubmissionUploadFilesForm
+    # template = 'main/not_form_upload_files.html'
+    transition_method_name = 'edit_noop'
+    page_help_text = _("submission_reconcileFiles_helpText")
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-    note_formset = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
-    http_method_names = ['post']
+
+    def dispatch(self, request, *args, **kwargs):
+        self.page_title = _("submission_reconcileFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        #here we need to get the list of files from WT, compare them to our files_dict_list, and return back the differences.
+        #... or well maybe the info about the differences can be done with SubmissionFilesCheckNewness (probably will require expanding that method)
+
+        pass
 
     def post(self, request, *args, **kwargs):
-        print("SUBMISSION PROGRESS")
-        print(self.__dict__)
-        print(request.__dict__)
-        try:
-            if not fsm_check_transition_perm(self.object.submit, request.user): 
-                logger.debug("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.submit(request.user)
-                self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
+        pass
 
-        except (TransitionNotAllowed):
-            self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
-            messages.add_message(request, messages.ERROR, self.msg)
-        return redirect('/manuscript/'+str(self.object.manuscript.id))
+#NOTE: This is unused and disabled in URLs. Probably should delete.
+#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+# class SubmissionProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#     parent_reference_name = 'manuscript'
+#     parent_id_name = "manuscript_id"
+#     parent_model = m.Manuscript
+#     object_friendly_name = 'submission'
+#     model = m.Submission
+#     note_formset = f.NoteSubmissionFormset
+#     note_helper = f.NoteFormSetHelper()
+#     http_method_names = ['post']
+
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             if not fsm_check_transition_perm(self.object.submit, request.user): 
+#                 logger.debug("PermissionDenied")
+#                 raise Http404()
+#             try:
+#                 self.object.submit(request.user)
+#                 self.object.save()
+#             except TransitionNotAllowed as e:
+#                 logger.error("TransitionNotAllowed: " + str(e))
+#                 raise
+
+#         except (TransitionNotAllowed):
+#             self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+#             messages.add_message(request, messages.ERROR, self.msg)
+#         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
 class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
@@ -1440,21 +1492,23 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
-        print("YAY1")
         try:
             if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
-                print("BAD")
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                print("YAY2")
                 self.object.finish_submission()
                 self.object.save()
 
+                #Delete all tale copies both locally and in WT. This also deletes running instances.
+                if(settings.CONTAINER_DRIVER == 'wholetale'):
+                    wtc = w.WholeTaleCorere(admin=True)
+                    for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
+                        wtc.delete_tale(wtm_tale.wt_id)
+                        wtm_tale.delete()   
+
                 ### Messaging ###
-                print("SUBMISSION STATUS: " + self.object._status)
                 if(self.object._status == m.Submission.Status.RETURNED):
-                    print("MANUSCRIPT STATUS: " + self.object.manuscript._status)
                     if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
@@ -1485,6 +1539,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
+#For local containers
 #This view is loaded via oauth2-proxy as an upstream. All it does is redirect to the actual notebook iframe url
 #This allows us to do oauth2 outside the iframe (you can't do it inside) and then redirect to the protected notebook container viewed inside corere
 #Our implementation also still preserves the ability for the notebook container to be viewed outside the iframe
@@ -1505,22 +1560,103 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
 
-class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
-    transition_method_name = 'edit_noop'
     template = 'main/notebook_iframe.html'
+    #These two parameters are updated programatically in dispatch
+    http_method_names = ['get', 'post']
+    read_only = False
+
+    #We programatically check transition permissions depending on the tale in question (for WholeTale).
+    #For now if not wholetale, we check if 'edit_noop'
+    #code is same as in SubmissionWholeTaleEventStreamView
+    def dispatch(self, request, *args, **kwargs):
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
+
+            try:
+                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object)
+            except wtm.Tale.DoesNotExist: 
+                if self.object.version_id < self.object.manuscript.get_max_submission_version_id(): #Happens launching an instance from a previous submission, as we have to create the Tale on demand
+                    #Copy master tale, revert to previous version, launch instance.
+                    wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
+                    wtc = w.WholeTaleCorere(admin=True)
+                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
+                    #Ok, so I gotta copy the parent tale first and then revert it
+                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
+                    wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version['_id'])
+                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                    wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
+                else:
+                    raise Http404()
+
+            if self.wtm_tale.original_tale == None:
+                transition_method = getattr(self.object, 'edit_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+            else:
+                transition_method = getattr(self.object, 'view_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    self.http_method_names = ['get'] 
+                    self.read_only = True
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+        else:
+            transition_method = getattr(self.object, 'edit_noop')
+            if(not has_transition_perm(transition_method, request.user)):
+                logger.debug("PermissionDenied")
+                raise Http404()
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        notebook_url = self.object.manuscript.manuscript_containerinfo.container_public_address()
-
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_display_name': self.object.manuscript.get_display_name(), 'notebook_url': notebook_url, 'manuscript_id': self.object.manuscript.id}
-        
+            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
+
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
+            wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+            wtm_instance = w.get_model_instance(request.user, self.object)
+
+            if not wtm_instance:
+                wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
+            else:
+                wtc_instance = wtc.get_instance_or_nothing(wtm_instance)   
+                if not wtc_instance: #If the instance was deleted externally (by the user most likely)      
+                    wtm_instance.delete()
+                    wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                    wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
+                elif not wtm_instance.instance_url:       
+                    if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
+                        wtc.delete_instance(wtm_instance.wt_id)
+                        wtm_instance.delete()
+                        wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
+                        wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
+                    elif(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.RUNNING):
+                        #If coming here later and we don't have a instance_url (because the user went away after launch) grab it.
+                        #We don't do this on a new launch because there is no way it'll be ready.  
+                        wtm_instance.instance_url = wtc_instance['url']
+                        wtm_instance.save()
+                        context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+                    else: #launching
+                        pass
+                else:
+                    context['notebook_url'] = wtm_instance.get_login_container_url(request.COOKIES.get('girderToken'))
+
+            if wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
+                context['wt_launching'] = True #When we do status for non wt, this can probably be generalized
+            else:
+                context['wt_launching'] = False                
+        else:
+            context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
+
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
                 progress_list = c.progress_list_submission_first
@@ -1538,15 +1674,92 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             return redirect('submission_uploadfiles', id=self.object.id)
         pass
 
+class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['get']
+
+    #We programatically check transition permissions depending on the tale in question (for WholeTale).
+    #For now if not wholetale, we check if 'edit_noop'
+    #Code is same as in SubmissionNotebookView
+    def dispatch(self, request, *args, **kwargs):
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
+
+            if self.wtm_tale.original_tale == None:
+                transition_method = getattr(self.object, 'edit_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+            else:
+                transition_method = getattr(self.object, 'view_noop')
+                if(not has_transition_perm(transition_method, request.user)):
+                    self.http_method_names = ['get']
+                    self.read_only = True
+                    logger.debug("PermissionDenied")
+                    raise Http404()
+        else:
+            transition_method = getattr(self.object, 'edit_noop')
+            if(not has_transition_perm(transition_method, request.user)):
+                logger.debug("PermissionDenied")
+                raise Http404()
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        if settings.CONTAINER_DRIVER != 'wholetale':
+            return Http404()
+
+        wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+        return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user, request.COOKIES.get('girderToken')))
+        #return StreamingHttpResponse(_helper_fake_stream(wtc))
+        
+def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderToken):
+    stream = wtc.get_event_stream()
+    client = sseclient.SSEClient(stream)
+    for event in client.events():
+        data = json.loads(event.data)
+        if data["type"] == "wt_progress":
+            progress = int(data["data"]["current"] / data["data"]["total"] * 100.0)
+            msg = (
+                "  -> event received:"
+                f" msg = {data['data']['message']}"
+                f" status = {data['data']['state']}"
+                f" progress = {progress}%"
+            )
+            yield(msg+"<br>")
+            if(progress == 100):
+                #In case things are still happening after the ending status message
+
+                yield("Completing launch, should only take a moment.<br>")
+
+                wtm_instance = w.get_model_instance(user, submission)
+                wtc_instance = wtc.get_instance(wtm_instance.wt_id)
+                while wtc_instance["status"] == wtc.InstanceStatus.LAUNCHING:
+                    time.sleep(1)
+                    wtc_instance = wtc.get_instance(wtc_instance['_id'])
+
+                wtm_instance.instance_url = wtc_instance['url']
+                wtm_instance.save()
+
+                yield(f"Container URL: {wtm_instance.get_login_container_url(girderToken)}")
+                return 
+
+# def _helper_fake_stream(wtc):
+#     for x in range(10):
+#         yield(f"This is message {x} from the emergency broadcast system.<br>")
+#         time.sleep(.05)
+#     yield("Container URL: https://google.com")
+#     return
 
 def _helper_get_oauth_url(request, submission):
-    # print("last_forced:" + str(request.user.last_oauthproxy_forced_signin ))
-    # print("time now:" + str(timezone.now()))
     #This code is for doing pro-active reauthentication via oauth2. We do this so that the user isn't presented with the oauth2 login inside their iframe (which they can't use).
     if(request.user.last_oauthproxy_forced_signin + timedelta(days=1) < timezone.now()):
         #We need to send the user to reauth
-        # print("REAUTH")
-        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() 
+        container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() 
         if(request.is_secure()):
             container_flow_redirect = "https://" + settings.SERVER_ADDRESS
         else:
@@ -1554,9 +1767,8 @@ def _helper_get_oauth_url(request, submission):
         container_flow_redirect += "/submission/" + str(submission.id) + "/notebooklogin/?postauth"
         container_flow_address += "/oauth2/sign_in?rd=" + urllib.parse.quote(container_flow_redirect, safe='')
     else:
-        # print("NO REAUTH")
         #We don't need to send the user to reauth
-        container_flow_address = submission.manuscript.manuscript_containerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
+        container_flow_address = submission.manuscript.manuscript_localcontainerinfo.container_public_address() + "/submission/" + str(submission.id) + "/notebooklogin/"
 
     return container_flow_address
 
@@ -1565,8 +1777,48 @@ def _helper_submit_submission_and_redirect(request, submission):
         if not fsm_check_transition_perm(submission.submit, request.user): 
             logger.debug("PermissionDenied")
             raise Http404()
+
         submission.submit(request.user)
         submission.save()
+
+        if(settings.CONTAINER_DRIVER == 'wholetale'):
+            wtc = w.WholeTaleCorere(admin=True)
+            tale_original = submission.submission_tales.get(original_tale=None)    
+            #  Set the wt author group's access to the root tale as read
+            group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
+            wtc.set_group_access(tale_original.wt_id, wtc.AccessType.READ, group.wholetale_group)
+
+            #I'm going to delete author instances here. So I need to get the authors in the group and then for each author get the instance they have
+            for u in group.user_set.all():
+                #TODO: This probably should be in a try catch
+                u.user_instances.get(tale=tale_original).delete() #I think there should be only one tale per user per instance...
+
+            group_editor = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(submission.manuscript.id))
+            try: #Get tale if it exists. This happens when a submission was returned by an editor, as this does not create a new submission
+                tale_copy_editor = wtm.Tale.objects.get(group_connector=group_editor.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                editor_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Editor"
+                wtc_tale_copy_editor = wtc.copy_tale(tale_original.wt_id, new_title=editor_tale_title)
+                tale_copy_editor = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_editor["_id"], group_connector=group_editor.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_editor.wt_id, wtc.AccessType.WRITE, group_editor.wholetale_group)
+
+            group_curator = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(submission.manuscript.id))
+            try:
+                tale_copy_curator = wtm.Tale.objects.get(group_connector=group_curator.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                curator_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Curator"
+                wtc_tale_copy_curator = wtc.copy_tale(tale_original.wt_id, new_title=curator_tale_title)
+                tale_copy_curator = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_curator["_id"], group_connector=group_curator.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_curator.wt_id, wtc.AccessType.WRITE, group_curator.wholetale_group)
+
+            group_verifier = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(submission.manuscript.id))
+            try:
+                tale_copy_verifier = wtm.Tale.objects.get(group_connector=group_verifier.wholetale_group)
+            except wtm.Tale.DoesNotExist:
+                verifier_tale_title = f"{submission.manuscript.get_display_name()} - {submission.manuscript.id} - Verifier"
+                wtc_tale_copy_verifier = wtc.copy_tale(tale_original.wt_id, new_title=verifier_tale_title)
+                tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
+            wtc.set_group_access(tale_copy_verifier.wt_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
 
         ## Messaging ###
         msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_display_name=submission.manuscript.get_display_name())

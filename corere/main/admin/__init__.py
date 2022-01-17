@@ -1,5 +1,6 @@
 from django.contrib import admin
 from corere.main import models as m
+from django.conf import settings
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin
@@ -16,7 +17,7 @@ class GroupAdmin(SimpleHistoryAdmin):
     history_list_display = ["history_change_list"]
 
 class UserAdmin(SimpleHistoryAdmin):
-    fields = ('username', 'first_name', 'last_name', 'email', 'invite_key', 'invited_by', 'groups', 'user_permissions', 'is_superuser', 'is_staff', 'is_active', 'last_oauthproxy_forced_signin', 'date_joined', 'last_login')
+    fields = ('username', 'first_name', 'last_name', 'email', 'invited_by', 'groups', 'user_permissions', 'is_superuser', 'is_staff', 'is_active', 'last_oauthproxy_forced_signin', 'date_joined', 'last_login', 'wt_id')
     filter_horizontal = ['groups','user_permissions']
     history_list_display = ["history_change_list"]
 
@@ -58,7 +59,10 @@ admin.site.register(m.User, UserAdmin)
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
 admin.site.register(Permission)
-admin.site.register(m.ContainerInfo)
+
+#TODO: If we make the local implementation an app, then this should move
+if settings.CONTAINER_DRIVER != 'wholetale' :
+    admin.site.register(m.LocalContainerInfo)
 
 admin.site.register(m.HistoricalManuscript, HistoryAdmin)
 admin.site.register(m.HistoricalSubmission, HistoryAdmin)
@@ -71,3 +75,7 @@ admin.site.register(m.HistoricalVerificationMetadata, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataSoftware, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataBadge, HistoryAdmin)
 admin.site.register(m.HistoricalVerificationMetadataAudit, HistoryAdmin)
+
+
+
+

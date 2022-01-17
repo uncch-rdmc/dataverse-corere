@@ -22,6 +22,7 @@ SITE_ID = 1
 #INVITATION_MODEL = 'main.CorereInvitation' #Instead of using this we just reference CorereInvitation directly
 INVITATIONS_EMAIL_MAX_LENGTH = 200
 INVITATIONS_SIGNUP_REDIRECT = '/account_associate_oauth'
+#INVITATIONS_ACCEPT_INVITE_AFTER_SIGNUP = True #TODO: this should allow us keep an invitation open until signup completes, but adding it errors
 
 GIT_ROOT = os.environ["CORERE_GIT_FOLDER"]
 
@@ -33,6 +34,7 @@ DOCKER_BUILD_FOLDER = "/tmp"
 
 # Application definition
 INSTALLED_APPS = [
+    'corere.apps.wholetale',
     'django.forms',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -59,6 +61,7 @@ INSTALLED_APPS_DEBUG = [
     'django_fsm', #Library is used in prod, but only has to be installed in dev for visualizing the state diagram
     'django_extensions',
     'debug_toolbar',
+    'sslserver',
 ]
 
 # Note that middleware order matters https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#enabling-middleware
@@ -223,17 +226,16 @@ STATIC_URL = '/static/'
 DRFSO2_PROPRIETARY_BACKEND_NAME =  "Corere"
 
 SOCIAL_AUTH_PIPELINE = (
-    'social_core.pipeline.social_auth.social_details',
+    #'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
     'corere.main.utils.social_pipeline_return_session_user',
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.social_auth.associate_user',
-    'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
-    #'corere.main.views.users.account_user_details' #We tried to use this to redirect to user details at the end but it blows up
-)
+    # 'social_core.pipeline.social_auth.load_extra_data',
+    #'social_core.pipeline.user.user_details',
+    )
 
 #NOTE: As part of glbous registration, we currently have pre-reserve ports 50020-50039 on our ip (for the oauth redirect url). This is for the jupyter notebooks. It includes the /tree path
 
@@ -243,9 +245,18 @@ SOCIAL_AUTH_GLOBUS_SECRET = os.environ["SOCIAL_AUTH_GLOBUS_OAUTH2_SECRET"]
 SOCIAL_AUTH_GLOBUS_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'offline',
 }
+SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/account_complete_oauth/'
+SOCIAL_AUTH_NEW_ASSOCIATION_REDIRECT_URL = '/account_complete_oauth/'
 
 OAUTHPROXY_COOKIE_SECRET = os.environ["OAUTHPROXY_COOKIE_SECRET"]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 SIMPLE_HISTORY_REVERT_DISABLED=True
+
+WHOLETALE_BASE_URL = os.environ["WHOLETALE_BASE_URL"]
+WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
+
+#CSRF_COOKIE_SAMESITE = 'None'
+##Enabling this setting causes social auth to break
+#SESSION_COOKIE_SAMESITE = 'None'

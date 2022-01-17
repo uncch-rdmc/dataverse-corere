@@ -1,19 +1,20 @@
-import logging
+import logging, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User, CorereInvitation
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
+from corere.main import wholetale_corere as w
 from django.contrib.auth import login, logout
 from django.conf import settings
 from notifications.signals import notify
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_html
 from django.utils.translation import gettext as _
@@ -26,7 +27,6 @@ logger = logging.getLogger(__name__)
 # Corere emails the user telling them to sign-up. This has a one-time 
 
 # TODO: We should probably make permissions part of our constants as well
-
 
 @login_required
 # @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
@@ -46,12 +46,15 @@ def invite_assign_author(request, id=None):
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
             users = list(form.cleaned_data['users_to_add']) 
             new_user = ''
             if(email):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 try:
-                    new_user = helper_create_user_and_invite(request, email, author_role)
+                    #def helper_create_user_and_invite(request, email, first_name, last_name, role):
+                    new_user = helper_create_user_and_invite(request, email, first_name, last_name, author_role)
                     # msg = _("user_inviteRole_banner").format(email=email, role="author")
                     # messages.add_message(request, messages.INFO, msg)
                     users.append(new_user) #add new new_user to the other users provided
@@ -63,7 +66,7 @@ def invite_assign_author(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form)".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_author_group.user_set.add(u)
-                
+                    
                 ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_display_name=manuscript.get_display_name())
                 logger.info(msg)
@@ -210,7 +213,6 @@ def unassign_editor(request, id=None, user_id=None):
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_editor_group.user_set.remove(user)
-        # print("DELETE " + str(user_id))
         return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
@@ -316,38 +318,84 @@ def unassign_verifier(request, id=None, user_id=None):
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_verifier_group.user_set.remove(user)
-        # print("DELETE " + str(user_id))
         return redirect('/manuscript/'+str(id)+'/assignverifier')
 
 def account_associate_oauth(request, key=None):
     logout(request)
-    user = get_object_or_404(User, invite_key=key)
+    user = get_object_or_404(User, invite__key=key)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0]) # select a "fake" backend for our auth
-    #user.username = ""
-    #user.invite_key = ""
 
     return render(request, 'main/new_user_oauth.html')
 
+#If Whole Tale is enabled, redirect user to the Whole Tale Globus authorization. Otherwise just continue to account_user_details
+#TODO: Should we restrict at all when this page is accessed?
+@login_required()
+def account_complete_oauth(request):
+    if settings.CONTAINER_DRIVER == "wholetale":
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        
+        r = requests.get(
+            "https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1/oauth/provider",
+            params={"redirect": protocol + "://"+settings.SERVER_ADDRESS+"/account_user_details/?girderToken={girderToken}"} #This is not an f string. The {girderToken} indicates to girder to pass the token back
+        )
+        resp = HttpResponse(content="", status=303)
+        resp["Location"] = r.json()["Globus"]
+        return resp
+    else:
+        return redirect('/account_user_details/')
+
+#This view is the first one the users are sent to after accepting an invite and registering
 @login_required()
 def account_user_details(request):
+    helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
-    if(request.user.invite_key):
-        #we clear out the invite_key now that we can associate the user
-        #we do it regardless incase a new user clicks out of the page.
-        #This is somewhat a hack to get around having to serve this page with and without header content
-        request.user.invite_key = "" 
-        request.user.save()
+           
     form = EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':
         if form.is_valid():
-            user = form.save()
+            form.save()
             msg = _("user_infoUpdated_banner")
             messages.add_message(request, messages.SUCCESS, msg)
             return redirect('/')
         else:
             logger.debug(form.errors) #TODO: DO MORE?
-    return render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title})
+    
+    response = render(request, 'main/form_user_details.html', {'form': form, 'page_title': page_title, 'helper': helper})
+
+    if request.method == 'GET':
+        try: #request.user.invite will error if there is no invite
+            #we delete the invitation now that we can associate the user
+            request.user.invite.delete() 
+            
+            #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
+            if(settings.CONTAINER_DRIVER == 'wholetale'):
+                girderToken = request.GET.get("girderToken", None)
+                if girderToken:
+                    response.set_cookie(key="girderToken", value=girderToken)
+                    #Here we also store the wt_id for the user, if there is a girderToken incoming it means they were just redirected from WT
+                    wt_user = w.WholeTaleCorere(girderToken).get_logged_in_user()
+                    request.user.wt_id = wt_user.get("_id")
+                    request.user.save()
+
+                wtc = w.WholeTaleCorere(admin=True)
+                for group in request.user.groups.all():
+                    if (group.name.startswith(c.GROUP_MANUSCRIPT_EDITOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) 
+                    or group.name.startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)):
+                        wtc.invite_user_to_group(request.user.wt_id, group.wholetale_group.wt_id)
+
+                if(request.user.is_superuser):
+                    wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).wt_id)
+
+                w.WholeTaleCorere(girderToken) #connecting as the user detects and accepts outstanding invitations
+        except User.invite.RelatedObjectDoesNotExist:
+            pass
+    return response
 
 def logout_view(request):
     logout(request)
@@ -400,9 +448,8 @@ def invite_user_not_author(request, role, role_text):
 
 #TODO: Should most of this be added to the user save method?
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
-    #Invitation = get_invitation_model()
-    #print(Invitation.__dict__)
-    invite = CorereInvitation.create(email, first_name, last_name)#, inviter=request.user)
+    from django.contrib.sites.models import Site
+    from django.contrib.sites.shortcuts import get_current_site
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
@@ -410,14 +457,22 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
     new_user.last_name = last_name
     
     new_user.username = email #get_random_string(64).lower() #required field, we enter jibberish for now
-    new_user.invite_key = invite.key #to later reconnect the new_user we've created to the invite
-    new_user.invited_by=request.user
+    
+    if request.user:
+        new_user.invited_by=request.user
     new_user.set_unusable_password()
     new_user.save()
-
     role.user_set.add(new_user)
 
-    #TODO: Think about doing this after everything else, incase something bombs
+    invite = CorereInvitation.create(email, new_user)#, inviter=request.user)
+
+    ## TODO: This code was an attempt to alter the domain/port of the emails coming out of the invitations library. It didn't work
+    ##       The goal in doing this was to make the invitation urls match the SERVER_ADDRESS. Which is nice when we are using an alternate SERVER_ADDRESS to make VM based testing flow
+    ##       This wasn't high priority though so it was abandoned. We can just replace the urls during invite.
+    ##       We may need to do this for other reasons in the future. See here for more info: https://github.com/bee-keeper/django-invitations/blob/9069002f1a0572ae37ffec21ea72f66345a8276f/invitations/models.py
+
+    # request.META['SERVER_NAME'], request.META['SERVER_PORT'] = settings.SERVER_ADDRESS.split(":")
+    # request.HTTP_HOST = settings.SERVER_ADDRESS
     invite.send_invitation(request)
 
     return new_user
@@ -427,7 +482,7 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
 #Its a string that is used to initialize a js map, fairly hacky stuff
 #Output looks like: "[['key1', 'foo'], ['key2', 'test']]"
 def helper_generate_select_table_info(role_name, group_substring):
-    users = User.objects.filter(invite_key='', groups__name=role_name)
+    users = User.objects.filter(invite__isnull=True, groups__name=role_name)
     table_dict = "["
     for u in users:
         #{key1: "foo", key2: someObj}

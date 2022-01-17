@@ -1,4 +1,4 @@
-import logging, json, time
+import logging, json, time, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from corere.main import models as m
@@ -21,6 +21,24 @@ logger = logging.getLogger(__name__)
 
 def index(request):
     if request.user.is_authenticated:
+        if settings.CONTAINER_DRIVER == "wholetale":
+            girderToken = request.GET.get("girderToken", None) #provided by wt ouath redirect
+            #If no girderToken, we send the user to Whole Tale / Globus to get it.
+            if not (girderToken or request.COOKIES.get('girderToken')):
+                if request.is_secure():
+                    protocol = "https"
+                else:
+                    protocol = "http"
+                    
+                r = requests.get(
+                    "https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1/oauth/provider",
+                    params={"redirect": protocol + "://"+settings.SERVER_ADDRESS+"/?girderToken={girderToken}"} #This is not an f string. The {girderToken} indicates to girder to pass the token back
+                )
+
+                response = HttpResponse(content="", status=303)
+                response["Location"] = r.json()["Globus"]
+                return response
+
         args = {'user':     request.user, 
                 'page_title': _("index_pageTitle"),
                 'manuscript_columns':  helper_manuscript_columns(request.user),
@@ -32,7 +50,11 @@ def index(request):
                 'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
                 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M)
                 }
-        return render(request, "main/index.html", args)
+        response = render(request, "main/index.html", args)
+        if girderToken:
+            #TODO-WT: If samesite isn't needed we should remove samesite/secure
+            response.set_cookie(key="girderToken", value=girderToken, secure=True, samesite='None')
+        return response
     else:
         return render(request, "main/login.html")
 
@@ -86,10 +108,11 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createFirstSubmissionButton = False
     createLaterSubmissionButton = False
+    launchContainerCurrentSubButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
-    if(has_transition_perm(manuscript.add_submission_noop, request.user)):
-        if(submission_count < 1):
+    if has_transition_perm(manuscript.add_submission_noop, request.user) :
+        if submission_count < 1 :
             createFirstSubmissionButton = True
         else:
             createLaterSubmissionButton = True
@@ -100,34 +123,48 @@ def manuscript_landing(request, id=None):
 
             #TODO: I want a different label for edit/review even if they are the same page in the end
 
-            if(has_transition_perm(latestSubmission.add_edition_noop, request.user)
+
+            if (has_transition_perm(latestSubmission.add_edition_noop, request.user)
                 or has_transition_perm(latestSubmission.add_curation_noop, request.user)
-                or has_transition_perm(latestSubmission.add_verification_noop, request.user) ):
+                or has_transition_perm(latestSubmission.add_verification_noop, request.user)):
                 reviewSubmissionButton = True
             else:
                 try:
-                    if(has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
-                    if(has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
-                    if(has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user)):
+                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user):
                         reviewSubmissionButton = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
-            if(not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user)):
+            if not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
-            if(has_transition_perm(latestSubmission.send_report, request.user)):
+            if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
-            if(has_transition_perm(latestSubmission.finish_submission, request.user)):
+            if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
+            # Similar logic repeated in main page view for showing the sub button for the manuscript level
+            if settings.CONTAINER_DRIVER == 'wholetale':
+                dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
+                if dominant_corere_group:
+                    if dominant_corere_group.name.startswith("Author"):
+                        if has_transition_perm(latestSubmission.edit_noop, user):
+                            launchContainerCurrentSubButton = True
+                    else: 
+                        if has_transition_perm(latestSubmission.view_noop, user):
+                            launchContainerCurrentSubButton = True
+            else:
+                launchContainerCurrentSubButton = True
+
         except m.Submission.DoesNotExist:
             pass
 
@@ -162,14 +199,21 @@ def manuscript_landing(request, id=None):
             'generateReportButton': generateReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createFirstSubmissionButton': createFirstSubmissionButton,
-            'createLaterSubmissionButton': createLaterSubmissionButton
+            'createLaterSubmissionButton': createLaterSubmissionButton,
+            'launchContainerCurrentSubButton': launchContainerCurrentSubButton
             }
 
+    if settings.CONTAINER_DRIVER == "wholetale":
+        args['wholetale'] = True
+    else:
+        args['wholetale'] = False
         
     return render(request, "main/manuscript_landing.html", args)
 
 @login_required
 def open_notebook(request, id=None):
+    #TODO: This needs to be completely rethought. With WholeTale we are allowing previous versions and this doesn't think about that
+
     manuscript = get_object_or_404(m.Manuscript, id=id)
     if(has_transition_perm(manuscript.edit_noop, request.user)):
         if(not manuscript.get_max_submission_version_id()):
@@ -177,11 +221,11 @@ def open_notebook(request, id=None):
         
         latest_submission = manuscript.get_latest_submission()
 
-        if(hasattr(manuscript, 'manuscript_containerinfo')): 
-            if manuscript.manuscript_containerinfo.build_in_progress:
-                while manuscript.manuscript_containerinfo.build_in_progress:
+        if(hasattr(manuscript, 'manuscript_localcontainerinfo')): 
+            if manuscript.manuscript_localcontainerinfo.build_in_progress:
+                while manuscript.manuscript_localcontainerinfo.build_in_progress:
                     time.sleep(.1)
-                    manuscript.manuscript_containerinfo.refresh_from_db()
+                    manuscript.manuscript_localcontainerinfo.refresh_from_db()
 
             elif(latest_submission.files_changed):
                 logger.info("Refreshing docker stack (on main page) for manuscript: " + str(manuscript.id))
@@ -194,8 +238,7 @@ def open_notebook(request, id=None):
             latest_submission.files_changed = False
             latest_submission.save()
 
-        print(manuscript.manuscript_containerinfo.container_public_address())
-        return redirect(manuscript.manuscript_containerinfo.container_public_address())
+        return redirect(manuscript.manuscript_localcontainerinfo.container_public_address())
     else:
         raise Http404()
 

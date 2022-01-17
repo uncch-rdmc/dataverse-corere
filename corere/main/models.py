@@ -21,6 +21,8 @@ from simple_history.utils import update_change_reason
 from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
+from corere.main import wholetale_corere as w
+from corere.apps.wholetale import models as wtm
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
@@ -28,6 +30,7 @@ from django.contrib.postgres.fields import ArrayField
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
 from datetime import date, datetime
+from django.db.models.signals import m2m_changed
 
 #for custom invitation class
 from invitations import signals
@@ -73,10 +76,12 @@ class User(AbstractUser):
 
     # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
 
-    invite_key = models.CharField(max_length=64, blank=True) # MAD: Should this be encrypted?
+    #invite_key = models.CharField(max_length=64, blank=True)
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     email = models.EmailField(unique=True, blank=False)
+    wt_id = models.CharField(max_length=24, blank=True, null=True, verbose_name='User ID in Whole Tale')
+
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
     #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
     #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
@@ -87,6 +92,19 @@ class User(AbstractUser):
     # See for more info: https://github.com/django/django/pull/9581
     def has_any_perm(self, perm_string, obj):
         return self.has_perm(c.perm_path(perm_string)) or self.has_perm(perm_string, obj)
+
+    def save(self, *args, **kwargs):
+        if settings.CONTAINER_DRIVER == "wholetale" and self.pk is not None:
+            orig = User.objects.get(pk=self.pk)
+            if orig.is_superuser != self.is_superuser: #If change in superuser status
+                admin_wtm_group = wtm.GroupConnector.objects.get(is_admins=True)
+                wtc = w.WholeTaleCorere(admin=True)
+                if self.is_superuser:
+                    wtc.invite_user_to_group(self.wt_id , admin_wtm_group.wt_id)
+                else:
+                    wtc.remove_user_from_group(self.wt_id , admin_wtm_group.wt_id)
+
+        super(User, self).save(*args, **kwargs)
 
 ####################################################
 
@@ -109,7 +127,7 @@ class Edition(AbstractCreateUpdateModel):
         try:
             if(not self.pk and self.submission._status != Submission.Status.IN_PROGRESS_EDITION):
                 raise FieldError('A edition cannot be added to a submission unless its status is: ' + Submission.Status.IN_PROGRESS_EDITION)
-        except Edition.submission.RelatedObjectDoesNotExist:
+        except Edition.submission.RelatedObject:
             pass #this is caught in super
         try:
             self.manuscript #to see if not set
@@ -303,15 +321,36 @@ class Submission(AbstractCreateUpdateModel):
                 self.version_id = 1
             else:
                 self.version_id = prev_max_version_id + 1
-
+        
+        girderToken = kwargs.pop('girderToken', None)
         super(Submission, self).save(*args, **kwargs)
-        if(first_save and self.version_id > 1):
-            prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
-            for gfile in prev_submission.submission_files.all():
-                new_gfile = gfile
-                new_gfile.parent_submission = self
-                new_gfile.id = None
-                new_gfile.save()
+
+        if(first_save):
+            if settings.CONTAINER_DRIVER == "wholetale":
+                wtc = w.WholeTaleCorere(admin=True)
+                tale = self.manuscript.manuscript_tales.get(original_tale=None)
+                group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
+                tale.submission = self #update the submission for the root tale
+                tale.save()
+
+            if(self.version_id > 1):
+                prev_submission = Submission.objects.get(manuscript=self.manuscript, version_id=prev_max_version_id)
+                for gfile in prev_submission.submission_files.all():
+                    new_gfile = gfile
+                    new_gfile.parent_submission = self
+                    new_gfile.id = None
+                    new_gfile.save()
+                if settings.CONTAINER_DRIVER == "wholetale":
+                    for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
+                        wtc.delete_tale(tale.wt_id) #deletes instances as well
+        elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
+            wtc = w.WholeTaleCorere(admin=True)
+            tale = self.manuscript.manuscript_tales.get(original_tale=None)
+            group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, group.wholetale_group)
+            tale.submission = self #update the submission for the root tale
+            tale.save()
 
     ##### Queries #####
 
@@ -438,7 +477,6 @@ class Submission(AbstractCreateUpdateModel):
             return False
         try:
             if(self.submission_curation.needs_verification == False):
-                #print("The curation had issues, so shouldn't be verified")
                 return False
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return False
@@ -643,7 +681,8 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-     
+    wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
@@ -665,6 +704,7 @@ class Manuscript(AbstractCreateUpdateModel):
             (c.PERM_MANU_VERIFY, 'Can verify manuscript/submission'),
         ]
 
+    #There are 3 types of groups in this code. Django groups, Whole Tale groups stored in Whole Tale, and wholetale app groups connecting the two and storing the info locally
     def save(self, *args, **kwargs):
         first_save = False
         if not self.pk:
@@ -673,33 +713,70 @@ class Manuscript(AbstractCreateUpdateModel):
         if first_save:
             # Note these works alongside global permissions defined in signals.py
             # TODO: Make this concatenation standardized
-            group_manuscript_editor, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.id))
+            editor_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)
+            group_manuscript_editor, created = Group.objects.get_or_create(name=editor_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_APPROVE, group_manuscript_editor, self)
 
-            group_manuscript_author, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.id))
+            author_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)
+            group_manuscript_author, created = Group.objects.get_or_create(name=author_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_author, self)
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_author, self) 
             #assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_author, self) 
             assign_perm(c.PERM_MANU_ADD_SUBMISSION, group_manuscript_author, self) 
 
-            group_manuscript_curator, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.id))
+            curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
+            group_manuscript_curator, created = Group.objects.get_or_create(name=curator_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_CURATE, group_manuscript_curator, self) 
 
-            group_manuscript_verifier, created = Group.objects.get_or_create(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.id))
+            verifier_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)
+            group_manuscript_verifier, created = Group.objects.get_or_create(name=verifier_group_name)
             #assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_verifier, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_verifier, self) 
             assign_perm(c.PERM_MANU_VERIFY, group_manuscript_verifier, self) 
 
-            group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts
-
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
+
+            if settings.CONTAINER_DRIVER == "wholetale":
+                #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
+                wtc = w.WholeTaleCorere(admin=True)
+                wtc_group_editor = wtc.create_group(editor_group_name)
+                wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, wt_id=wtc_group_editor['_id'], manuscript=self)
+                wtc_group_author = wtc.create_group(author_group_name)
+                wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, wt_id=wtc_group_author['_id'], manuscript=self)
+                wtc_group_curator = wtc.create_group(curator_group_name)
+                wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, wt_id=wtc_group_curator['_id'], manuscript=self)
+                wtc_group_verifier = wtc.create_group(verifier_group_name)
+                wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier['_id'], manuscript=self)
+                
+            group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
+        
+        if settings.CONTAINER_DRIVER == "wholetale":
+            if self.wt_compute_env and not self.manuscript_tales.all().exists():
+                wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
+                wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
+                wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
+                wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
+                
+                wtc = w.WholeTaleCorere(admin=True)
+                tale_title = f"{self.get_display_name()} - {self.id}"
+                wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
+                tale = wtm.Tale()
+                tale.manuscript = self
+                tale.wt_id = wtc_tale["_id"]
+                tale.group_connector = wtm_group_author
+                tale.save()
+
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
+                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
@@ -830,7 +907,8 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
 
-class ContainerInfo(models.Model):
+#Class related to locally hosted docker containers
+class LocalContainerInfo(models.Model):
     repo_image_name = models.CharField(max_length=128, blank=True, null=True)
     proxy_image_name = models.CharField(max_length=128, blank=True, null=True)
     repo_container_id = models.CharField(max_length=64, blank=True, null=True)
@@ -841,8 +919,8 @@ class ContainerInfo(models.Model):
     proxy_container_port = models.IntegerField(blank=True, null=True, unique=True)
     network_ip_substring = models.CharField(max_length=12, blank=True, null=True)
     network_id = models.CharField(max_length=64, blank=True, null=True)
-    submission_version = models.IntegerField(blank=True, null=True)
-    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_containerinfo")
+    submission_version = models.IntegerField(blank=True, null=True) #Why didn't I just use submission???
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_localcontainerinfo")
     build_in_progress = models.BooleanField(default=False)
 
     def container_public_address(self):
@@ -947,7 +1025,7 @@ class Note(AbstractCreateUpdateModel):
     def save(self, *args, **kwargs):
         refs = 0
         refs += (self.ref_file is not None)
-        refs += (self.ref_file_type is not '')
+        refs += (self.ref_file_type != '')
         if(refs > 1):
             raise AssertionError("Multiple References set")
             
@@ -1019,16 +1097,15 @@ class VerificationMetadata(AbstractCreateUpdateModel):
 #other fields (email, created) are in base model
 #see https://github.com/bee-keeper/django-invitations/issues/143 for a bit more info (especially if we want to wire this into admin)
 class CorereInvitation(Invitation):
-    first_name = models.CharField(max_length=150, blank=False, null=False,  verbose_name='First Name')
-    last_name =  models.CharField(max_length=150, blank=False, null=False,  verbose_name='Last Name')
+    user = models.OneToOneField('User', on_delete=models.CASCADE, null=True, blank=True, related_name="invite")
+    #TODO: connect submission here and cascade on delete
 
     @classmethod
-    def create(cls, email, first_name, last_name, inviter=None, **kwargs):
+    def create(cls, email, user, inviter=None, **kwargs):
         key = get_random_string(64).lower()
         instance = cls._default_manager.create(
             email=email,
-            first_name=first_name,
-            last_name=last_name,
+            user=user,
             key=key,
             inviter=inviter,
             **kwargs)
@@ -1038,14 +1115,23 @@ class CorereInvitation(Invitation):
         current_site = kwargs.pop('site', Site.objects.get_current())
         invite_url = reverse('invitations:accept-invite',
                              args=[self.key])
-        invite_url = request.build_absolute_uri(invite_url)
+        
+        ##Custom
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        invite_url = protocol + "://" + settings.SERVER_ADDRESS + invite_url
+        ##End Custom
+
+        #invite_url = request.build_absolute_uri(invite_url) #Original        
         ctx = kwargs
         ctx.update({
             'invite_url': invite_url,
             'site_name': current_site.name,
             'email': self.email,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
             'key': self.key,
             'inviter': self.inviter,
         })
@@ -1087,36 +1173,80 @@ def add_history_info(sender, instance, **kwargs):
     except ValueError:
         pass #On new object creation there are not 2 records to do a history diff on.
 
-#TODO: This works right when updating users through the UI, but when run via the admin user page the update doesn't work.
-#      I think we need a different case to catch the update there, as 
-#See: https://stackoverflow.com/questions/7899127/
+#This function is called when a user is added/removed from a group, as well as a group from a user
+#Depending on the way this is called, the instance and pk_set will differ
+#If this errors out, I think trigger won't be cleared and will error on later saves
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    # print(model)
-    # print(reverse)
-    # print(action)
-    # print(instance.__dict__)
+    if settings.CONTAINER_DRIVER == 'wholetale':
+        wtc = w.WholeTaleCorere(admin=True)
+        if model is Group and instance.wt_id and not hasattr(instance, 'invite'):
+            if action == 'post_add':
+                logger.debug("add")
+                logger.debug(pk_set)
+                for pk in pk_set:
+                    try:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                        wtc.invite_user_to_group(instance.wt_id, wtm_group.wt_id)
+                        logger.debug(f'add {pk}')
+                    except wtm.GroupConnector.DoesNotExist:
+                        logger.debug(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
+            elif action == 'post_remove':
+                logger.debug("remove")
+                for pk in pk_set:
+                    try:
+                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                        wtc.remove_user_from_group(instance.wt_id, wtm_group.wt_id)
+                        logger.debug(f'remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}')
+                    except wtm.GroupConnector.DoesNotExist:
+                        logger.debug(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')                
+        if model is User:
+            if action == 'post_add':
+                logger.debug("add")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    logger.debug(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
+                        try:
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
+                            logger.debug(f'add {instance.id}')
+                        except wtm.GroupConnector.DoesNotExist:
+                            logger.debug(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
+            elif action == 'post_remove':
+                logger.debug("remove")
+                for pk in pk_set:
+                    user = User.objects.get(id=pk)
+                    logger.debug(f'invite {hasattr(user, "invite")}') #we should expect a new user to have invite
+                    if user.wt_id and not hasattr(user, 'invite'):
+                        try:
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
+                            logger.debug(f'remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}')
+                        except wtm.GroupConnector.DoesNotExist:
+                            logger.debug(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT') 
 
-    update_groups = []
+    else:
+        update_groups = []
 
-    #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
-    if type(instance) == User:
-        update_groups = instance.groups.all()
-        #print(instance.groups.all())
+        #If the user groups are updated via the user admin page, we are just passed back the full user, so we just trigger email updates for each container. Hopefully this isn't too heavy.
+        if type(instance) == User:
+            update_groups = instance.groups.all()
+            #print(instance.groups.all())
 
-    #If a group is added/removed from a user, we are passed the group specifically
-    if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
-        update_groups = [instance]
+        #If a group is added/removed from a user, we are passed the group specifically
+        if type(instance) == Group and (action == 'post_remove' or action == 'post_add'):
+            update_groups = [instance]
 
-    for group in update_groups:
-        #This splits up the group name for checking to see whether its a group we should act upon
-        #It would be better to have names formalized someday
-        split_name = group.name.split()
-        if(len(split_name) == 3):
-            [ _, assigned_obj, m_id ] = split_name
-            if(assigned_obj == "Manuscript"):
-                manuscript = Manuscript.objects.get(id=m_id)
-                if ((hasattr(manuscript, 'manuscript_containerinfo'))):
-                    logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
-                    if (not settings.SKIP_DOCKER):
-                        d.update_oauthproxy_container_authenticated_emails(manuscript)
+        for group in update_groups:
+            #This splits up the group name for checking to see whether its a group we should act upon
+            #It would be better to have names formalized someday
+            split_name = group.name.split()
+            if(len(split_name) == 3):
+                [ _, assigned_obj, m_id ] = split_name
+                if(assigned_obj == "Manuscript"):
+                    manuscript = Manuscript.objects.get(id=m_id)
+                    if ((hasattr(manuscript, 'manuscript_localcontainerinfo'))):
+                        logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
+                        if (not settings.SKIP_DOCKER):
+                            d.update_oauthproxy_container_authenticated_emails(manuscript)

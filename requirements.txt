@@ -6,7 +6,7 @@ chardet==4.0.0
 cryptography==3.4.7
 defusedxml==0.7.1
 docker==5.0.0
-Django==3.2.5
+django==3.2.11
 django-appconf==1.0.4
 django-autoslug==1.9.8
 django-braces==1.14.0
@@ -29,6 +29,7 @@ django-rest-framework-social-oauth2==1.1.0
 django-simple-history==3.0.0
 django-templated-email==3.0.0
 djangorestframework==3.12.4
+girder-client==3.1.5
 gitpython==3.1.18
 idna==3.2
 jupyter-repo2docker==2021.3.0
