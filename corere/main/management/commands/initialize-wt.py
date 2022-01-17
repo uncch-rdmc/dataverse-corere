@@ -9,26 +9,43 @@ from corere.main import models as m
 # from django.contrib.auth.models import Group
 
 #NOTE: This code uses 3 types of groups. Local corere groups, Whole Tale remote instance groups (accessed via api), and wholetale.group(s) which store the connetion between the two
+#TODO: Maybe add a way to skip admin group creation when calling deletes
 class Command(BaseCommand):
     help = "Initializes the state of the connected Whole Tale instance. Currently this means creating the admin group on the Whole Tale server."
 
     def add_arguments(self, parser):
         parser.add_argument('--createlocal', action='store_true', help='Create the local wholetale.admin group connected to what is created in the Whole Tale instance.')
-        parser.add_argument('--deleteall', action='store_true', help='Deletes all remote/local groups (and tales someday?).')
-        ## TODO: Enable this and write its code
-        # parser.add_argument('--clear', action='store_true', help='Deletes all tales owned by the admin user.')
+        parser.add_argument('--deletegroups', action='store_true', help='Deletes all remote/local groups. Note that doing this will break existing access')
+        parser.add_argument('--deletetales', action='store_true', help='Deletes all remote/local tales. Note that doing this will break existing manuscripts.')
 
     def handle(self, *args, **options):
         wtc = w.WholeTaleCorere(admin=True)
 
         createlocal = options.get('createlocal', [])
-        deleteall = options.get('deleteall', [])
+        deletegroups = options.get('deletegroups', [])
+        deletetales = options.get('deletetales', [])
 
-        if deleteall:
+        if deletetales:
+            talecount = 0
+            for tale in wtm.Tale.objects.all().order_by('original_tale'): #we delete child tales first
+                try:
+                    wtc.delete_tale(tale.wt_id)
+                except Exception as e:
+                    print("error deleting tale from WT")
+                    print(tale.wt_id)
+                    print(e)
+
+                tale.delete()
+                talecount += 1
+                print(f"Tale '{tale.wt_id}' deleted")
+
+            print(f"Deleted {talecount} Tale objects in corere and their associated Whole Tale objects")
+          
+        if deletegroups:
             for wtc_group in wtc.get_all_groups():
-                if(wtc_group['name'].startswith(GROUP_MANUSCRIPT_AUTHOR_PREFIX) or wtc_group['name'].startswith(GROUP_MANUSCRIPT_EDITOR_PREFIX)
-                or wtc_group['name'].startswith(GROUP_MANUSCRIPT_CURATOR_PREFIX) or wtc_group['name'].startswith(GROUP_MANUSCRIPT_VERIFIER_PREFIX)
-                or wtc_group['name'].startswith(GROUP_MANUSCRIPT_ADMIN_PREFIX)):
+                if(wtc_group['name'].startswith(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX) or wtc_group['name'].startswith(c.GROUP_MANUSCRIPT_EDITOR_PREFIX)
+                or wtc_group['name'].startswith(c.GROUP_MANUSCRIPT_CURATOR_PREFIX) or wtc_group['name'].startswith(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX)
+                or wtc_group['name'].startswith(c.GROUP_MANUSCRIPT_ADMIN)):
                     wtc.delete_group(wtc_group["_id"])
                     print(f"Group '{wtc_group['name']}' deleted")
 
