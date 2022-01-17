@@ -68,7 +68,7 @@ class GroupConnector(models.Model):
 
 #Global image choices pulled from WT via a manually called admin command
 class ImageChoice(models.Model):
-    choice_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
+    wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
     name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')
 
     def __str__(self):
