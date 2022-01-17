@@ -25,51 +25,34 @@ class WholeTaleCorere(WholeTale):
         try:
             return self.create_instance(wtm_tale.wt_id)
         except requests.HTTPError as e:
-            print("PURGE 1")
             if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
-                print("PURGE 2A")
                 #Delete instances on other manuscript for the user. Also cleans up orphan wtm instances it runs into along the way (not all).
                 #NOTE: if the user is full from another manuscript's instances, this will delete all (2) of them. We could improve this but this is a bit simpler.
                 
-                #other_manuscript_instances = user.user_instances.objects.filter(~Q(tale__manuscript==wtm_tale.manuscript))
                 other_manuscript_instances = wtm.Instance.objects.filter(Q(corere_user=user) & ~Q(tale__manuscript=wtm_tale.manuscript))
-                print("PURGE 2B")
                 for wtm_oi in other_manuscript_instances:
-                    print("PURGE 2CA")
-                    print(f'delete_or_clean other_manuscript submission_id {wtm_oi.tale.submission.id}')
                     delete_success = self.delete_instance_or_nothing(wtm_oi)
-                    print("PURGE 2CB")
                     wtm_oi.delete()
-                    print("PURGE 2CC")
                     if delete_success: #once we delete one, break
-                        print("PURGE 2CD")
                         break
-                    print("PURGE 2CZ")  
                 try:
-                    print("PURGE 2D")
                     return self.create_instance(wtm_tale.wt_id)
                 except requests.HTTPError as e:
-                    print("PURGE 3")
                     if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
                         #Delete the farthest back submission-instance on the same manuscript for the user
-                        #other_submission_instances = user.user_instances.objects.filter(Q(tale__manuscript==wtm_tale.manuscript) & ~Q(tale__submission==wtm_tale.submission))
                         other_submission_instances = wtm.Instance.objects.filter(Q(corere_user=user) & Q(tale__manuscript=wtm_tale.manuscript) & ~Q(tale__submission=wtm_tale.submission))
 
                         #This case should only happen if you have two older instances on this manuscript
                         #If we have orphans wtm_instances, this should clean up the ones along the way (not all).
-                        #TODO-WT: Confirm this works as expected, as count was called before and I'm not sure if that works right
                         while(other_submission_instances.count() > 1): 
-                            print("PURGE 4")
                             farthest_back_submission_instance = other_submission_instances.order_by('tale__submission__version_id').first()
                             self.delete_instance_or_nothing(farthest_back_submission_instance)
-                            print(f'delete_or_clean same_manuscript submission_id {farthest_back_submission_instance.tale.submission.id}')
+                            #print(f'delete_or_clean same_manuscript submission_id {farthest_back_submission_instance.tale.submission.id}')
                             farthest_back_submission_instance.delete()
                         try:
                             return self.create_instance(wtm_tale.wt_id)
                         except requests.HTTPError as e:
-                            print("PURGE XBA")
-                            if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"):
-                                print("PURGE XBB")
+                            if e.response.status_code == 400 and json.loads(e.responseText)['message'].startswith("You have reached a limit for running instances"): 
                                 raise Exception(f'Your maximum number of instances in Whole Tale has been reached. Some of your running instances are not managed by CORE2 so they cannot be deleted. Please go to {settings.WHOLETALE_BASE_URL} and delete running instances manually before proceeding.')
 
     def set_group_access(self, tale_id, level, wtm_group, force_instance_shutdown=True):
@@ -138,5 +121,4 @@ def get_dominant_group_connector(user, submission):
 
 def get_model_instance(user, submission):
     group_connector = get_dominant_group_connector(user, submission)
-    print(group_connector.__dict__)
     return group_connector.groupconnector_tales.get(submission=submission).tale_instances.filter(corere_user=user).first()

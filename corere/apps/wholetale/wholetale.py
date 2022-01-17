@@ -48,7 +48,6 @@ class WholeTale:
     def create_tale(self, title, image_id):
         json_dict = {"title": title, "imageId": image_id, "dataSet": []}
         json_dict['config'] = {"csp": f"frame-ancestors 'self' https://dashboard.{settings.WHOLETALE_BASE_URL} https://{settings.SERVER_ADDRESS}"}
-        print(json_dict)
         return self.gc.post("/tale", json=json_dict)
 
     def copy_tale(self, tale_id, new_title=None):
@@ -58,11 +57,6 @@ class WholeTale:
             new_tale_json['title'] = new_title
             new_tale_json = self.update_tale(new_tale_json["_id"], new_tale_json)
         return new_tale_json
-
-    # #helper method for just changing the title of a tale without having to muck in json
-    # def rename_tale(self, new_title, tale_json):
-    #     tale_json[]
-    #     return update_tale()
 
     #replace the existing tales fields with the new fields
     def update_tale(self, tale_id, new_tale_json):
@@ -84,26 +78,19 @@ class WholeTale:
 
     def get_tale_version(self, tale_id, version_name):
         versions = self.list_tale_version(tale_id)
-        # print(versions)
         for version in versions:
             if version['name'] == version_name:
                 return version
 
     def restore_tale_to_version(self, tale_id, version_id):
-        # print(f"tale_id {tale_id}")
-        # print(f"version_id {version_id}")
-        #TODO-WT: I don't think this ever worked? its definitely was wrong...
         return self.gc.put(f"/tale/{tale_id}/restore", parameters={"versionId": version_id})
 
-#TODO-WT: I tried switching upload_files and delete_tale_files to take the tale itself instead of the tale_id, and removing the get tale from inside.
-#         Something about my changes during that caused weird issues with wholetale not finding my instance. I couldn't pin it down for the life of me so I reverted.
-#         Ideally though these calls shouldn't need to contact WT multiple times.
+#TODO-WT: We should switch upload_files and delete_tale_files to take the tale itself instead of the tale id, and stop querying it in both as they are called at the same time.
 
     def upload_files(self, tale_id, str_path):
         """
         path needs to point to a directory with submission files
         """
-        print(tale_id)
         tale = self.gc.get(f"/tale/{tale_id}")
 
         #By default the "*" match ignores hidden folders (e.g. our .git folder)
@@ -118,7 +105,6 @@ class WholeTale:
         tale = self.gc.get(f"/tale/{tale_id}")
         return self.gc.delete(f"/folder/{tale['workspaceId']}/contents")
 
-    #TODO: Do we need the completed instance? Probably yes for the url?
     #Note: Run will launch a container for the user authenticated.
     def create_instance(self, tale_id, wait_for_complete=False):
         tale = self.gc.get(f"/tale/{tale_id}")
@@ -156,9 +142,6 @@ class WholeTale:
     def create_group(self, name, public=False):
         return self.gc.post("/group", parameters={"name": name, "public": public})
 
-    # def get_group(self, name, exact=True):
-    #     return self.gc.get("/group", parameters={"text": name, "exact": exact})
-
     def get_group(self, group_id):
         return self.gc.get("/group/{}".format(group_id))
 
@@ -175,8 +158,6 @@ class WholeTale:
             self.gc.post("group/{}/invitation".format(group_id), parameters={"level": self.AccessType.READ, "quiet": True},
                 data={"userId": user_id})
         except requests.HTTPError as e:
-            print(e.__dict__)
-            print(json.loads(e.responseText)['message'])
             if e.response.status_code == 400 and json.loads(e.responseText)['message'] == "User is already in this group.":
                 logger.warning(f"Whole tale user {user_id} was added to group {group_id}, of which they were already a member.")
                 return
@@ -187,10 +168,5 @@ class WholeTale:
 
     #NOTE: This works on invitations as well.
     def remove_user_from_group(self, user_id, group_id):
-        #Note: the documentation says formData but using data causes it to error. If this blows up investigate further
-        self.gc.delete("group/{}/member".format(group_id), parameters={"userId": user_id}) #data={"userId": user_id})
-
-    # def delete_user(user_info):
-    #     users = gc.get("/user", parameters={"text": user_info["login"]})
-    #     if users:
-    #         gc.delete("/user/{}".format(users[0]["_id"]))
+        #Note: the documentation says formData but using data causes it to error.
+        self.gc.delete("group/{}/member".format(group_id), parameters={"userId": user_id})
