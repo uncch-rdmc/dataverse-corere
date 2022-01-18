@@ -60,7 +60,7 @@ class GroupConnector(models.Model):
             if self.corere_group:
                 raise AssertionError("Admin wholetale groups cannot also be connected to corere_group")
 
-            if GroupConnector.objects.filter(is_admins=True).exclude(group_id=self.wt_id).count() > 0:
+            if GroupConnector.objects.filter(is_admins=True).exclude(wt_id=self.wt_id).count() > 0:
                 raise AssertionError("Only one admin wholetale group can be created")
         else:
             if not self.manuscript:
