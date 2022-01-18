@@ -145,7 +145,6 @@ def add_author(request, id=None):
     return render(request, 'main/form_add_author.html', {'form': form, 'helper': helper,  'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 
         'group_substring': group_substring, 'role_name': 'Author', 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
 
-
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
 def unassign_author(request, id=None, user_id=None):
@@ -225,6 +224,9 @@ def assign_curator(request, id=None):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+    if internal_mode:
+        manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
+        manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
     if request.method == 'POST':
         if form.is_valid():
             users_to_add = list(form.cleaned_data['users_to_add'])
@@ -234,6 +236,9 @@ def assign_curator(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_curator_group.user_set.add(u)
+                if manuscript.internal_mode:
+                    manu_author_group.user_set.add(u)
+                    manu_editor_group.user_set.add(u)
 
                 ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_display_name=manuscript.get_display_name())
@@ -259,12 +264,19 @@ def unassign_curator(request, id=None, user_id=None):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
+        if internal_mode:
+            manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
+            manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
         try:
             user = manu_curator_group.user_set.get(id=user_id)
         except User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_curator_group.user_set.remove(user)
+        if manuscript.internal_mode:
+            manu_author_group.user_set.remove(u)
+            manu_editor_group.user_set.remove(u)
+
         return redirect('/manuscript/'+str(id)+'/assigncurator')
 
 @login_required

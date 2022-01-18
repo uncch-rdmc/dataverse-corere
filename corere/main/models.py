@@ -427,12 +427,16 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #TODO: I'm not sure if on_error is ever hit, but we'd want it to be NEW or REJECTED_EDITOR conditionally.
-    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=Status.IN_PROGRESS_EDITION, on_error=Status.NEW, conditions=[can_submit],
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), on_error=Status.NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
             self.manuscript.review()
             self.manuscript.save()
+            if self.manuscript.internal_mode:
+                return Status.IN_PROGRESS_CURATION
+            else:
+                return Status.IN_PROGRESS_EDITION
         else:
             raise Exception
         pass
@@ -682,6 +686,7 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+    internal_mode = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
@@ -709,6 +714,9 @@ class Manuscript(AbstractCreateUpdateModel):
         first_save = False
         if not self.pk:
             first_save = True
+            if settings.INTERNAL_MODE: #Set here because we want it to save with super
+                self.internal_mode = True
+
         super(Manuscript, self).save(*args, **kwargs)
         if first_save:
             # Note these works alongside global permissions defined in signals.py

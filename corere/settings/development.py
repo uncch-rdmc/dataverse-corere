@@ -33,3 +33,7 @@ SKIP_DOCKER = False
 
 #CONTAINER_DRIVER = 'local-docker'
 CONTAINER_DRIVER = 'wholetale'
+
+# For use of CORE2 solely by curators and verifiers.
+# This bypass some editor and author steps, and assign editor when curator is assigned if both roles are present
+INTERNAL_MODE = True
