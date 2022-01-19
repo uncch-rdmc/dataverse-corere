@@ -434,9 +434,9 @@ class Submission(AbstractCreateUpdateModel):
             self.manuscript.review()
             self.manuscript.save()
             if self.manuscript.internal_mode:
-                return Status.IN_PROGRESS_CURATION
+                return self.Status.IN_PROGRESS_CURATION
             else:
-                return Status.IN_PROGRESS_EDITION
+                return self.Status.IN_PROGRESS_EDITION
         else:
             raise Exception
         pass
@@ -868,11 +868,13 @@ class Manuscript(AbstractCreateUpdateModel):
         return True
 
     # Perm: ability to create/edit a submission
-    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=Status.REVIEWING, conditions=[can_review],
+    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_review],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance))
     def review(self):
-        #update submission status here?
-        pass #Here add any additional actions related to the state change
+        if self.internal_mode:
+            return self.Status.PROCESSING
+        else:
+            return self.Status.REVIEWING
 
     #-----------------------
 

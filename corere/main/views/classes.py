@@ -1617,7 +1617,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def get(self, request, *args, **kwargs):
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
+            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "internal_mode": self.object.manuscript.internal_mode}
 
         if(settings.CONTAINER_DRIVER == 'wholetale'):
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
