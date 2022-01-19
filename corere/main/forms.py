@@ -921,7 +921,7 @@ class EditionBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Edition.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Edition.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Edition.Status.NEW.label + '.']
         
 
 class EditionForm_Admin(EditionBaseForm):
@@ -985,7 +985,7 @@ class CurationBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Curation.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW.label + '.']
 
 class CurationForm_Admin(CurationBaseForm):
     pass
@@ -1051,7 +1051,7 @@ class VerificationBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Verification.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Verification.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Verification.Status.NEW.label + '.']
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass

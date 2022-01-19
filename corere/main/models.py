@@ -110,7 +110,7 @@ class User(AbstractUser):
 
 class Edition(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', 'New'
+        NEW = 'new', '---'
         ISSUES = 'issues', 'Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
@@ -162,7 +162,7 @@ class Edition(AbstractCreateUpdateModel):
 
 class Curation(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', 'New'
+        NEW = 'new', '---'
         INCOM_MATERIALS = 'incom_materials', 'Incomplete Materials'
         MAJOR_ISSUES = 'major_issues', 'Major Issues'
         MINOR_ISSUES = 'minor_issues', 'Minor Issues'
@@ -216,12 +216,12 @@ class Curation(AbstractCreateUpdateModel):
 
 class Verification(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = "new"
-        NOT_ATTEMPTED = "not_attempted" # The name of this is vague
-        MINOR_ISSUES = "minor_issues"
-        MAJOR_ISSUES = "major_issues"
-        SUCCESS_W_MOD = "success_w_mod"
-        SUCCESS = "success"
+        NEW = 'new', '---'
+        NOT_ATTEMPTED = 'not_attempted', 'Not Attempted'
+        MINOR_ISSUES = 'minor_issues', 'Minor Issues'
+        MAJOR_ISSUES = 'major_issues', 'Major Issues'
+        SUCCESS_W_MOD = 'success_w_mod', 'Success with Modification'
+        SUCCESS = 'success', 'Success'
 
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
