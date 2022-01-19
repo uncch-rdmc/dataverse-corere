@@ -1,4 +1,4 @@
-import time, datetime, sseclient, threading, json, requests
+import time, datetime, sseclient, threading, json, requests, random, string
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
@@ -141,6 +141,11 @@ class WholeTale:
     
     def create_group(self, name, public=False):
         return self.gc.post("/group", parameters={"name": name, "public": public})
+
+    def create_group_with_hash(self, name):
+        """ create a group with a random string attached to the end, to practically avoid collisions """
+        our_hash = random.choices(string.ascii_uppercase + string.digits, k=64)
+        return self.create_group(name + ' ' + ''.join(our_hash))
 
     def get_group(self, group_id):
         return self.gc.get("/group/{}".format(group_id))

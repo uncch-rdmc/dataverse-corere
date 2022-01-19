@@ -754,13 +754,13 @@ class Manuscript(AbstractCreateUpdateModel):
             if settings.CONTAINER_DRIVER == "wholetale":
                 #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
                 wtc = w.WholeTaleCorere(admin=True)
-                wtc_group_editor = wtc.create_group(editor_group_name)
+                wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
                 wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, wt_id=wtc_group_editor['_id'], manuscript=self)
-                wtc_group_author = wtc.create_group(author_group_name)
+                wtc_group_author = wtc.create_group_with_hash(author_group_name)
                 wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, wt_id=wtc_group_author['_id'], manuscript=self)
-                wtc_group_curator = wtc.create_group(curator_group_name)
+                wtc_group_curator = wtc.create_group_with_hash(curator_group_name)
                 wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, wt_id=wtc_group_curator['_id'], manuscript=self)
-                wtc_group_verifier = wtc.create_group(verifier_group_name)
+                wtc_group_verifier = wtc.create_group_with_hash(verifier_group_name)
                 wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier['_id'], manuscript=self)
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.

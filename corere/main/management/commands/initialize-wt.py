@@ -62,7 +62,7 @@ class Command(BaseCommand):
         
         #Note: We create this admin group in WT but don't use it currently
         if not wtc_group:
-            wtc_group = wtc.create_group(name=c.GROUP_MANUSCRIPT_ADMIN)
+            wtc_group = wtc.create_group_with_hash(name=c.GROUP_MANUSCRIPT_ADMIN)
             print("Whole Tale instance group did not exist and was created")
 
         if createlocal:
