@@ -224,7 +224,7 @@ def assign_curator(request, id=None):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    if internal_mode:
+    if skip_edition:
         manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
         manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
     if request.method == 'POST':
@@ -236,7 +236,7 @@ def assign_curator(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_curator_group.user_set.add(u)
-                if manuscript.internal_mode:
+                if manuscript.skip_edition:
                     manu_author_group.user_set.add(u)
                     manu_editor_group.user_set.add(u)
 
@@ -264,7 +264,7 @@ def unassign_curator(request, id=None, user_id=None):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-        if internal_mode:
+        if skip_edition:
             manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
             manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
         try:
@@ -273,7 +273,7 @@ def unassign_curator(request, id=None, user_id=None):
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_curator_group.user_set.remove(user)
-        if manuscript.internal_mode:
+        if manuscript.skip_edition:
             manu_author_group.user_set.remove(u)
             manu_editor_group.user_set.remove(u)
 

@@ -10,7 +10,7 @@
     <input id="file_note_form_back" type="submit" name="back" value="Back" style="display:none;">
     {% if not read_only %}
     <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;">
-    {% if internal_mode %}
+    {% if skip_edition %}
     <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the curation team. Is that ok?');" style="display:none;"> 
     {% else %}
     <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 

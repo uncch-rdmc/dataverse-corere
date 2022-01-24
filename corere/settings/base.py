@@ -260,3 +260,5 @@ WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
 #CSRF_COOKIE_SAMESITE = 'None'
 ##Enabling this setting causes social auth to break
 #SESSION_COOKIE_SAMESITE = 'None'
+
+SKIP_EDITION = False

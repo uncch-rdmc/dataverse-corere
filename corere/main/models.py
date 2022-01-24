@@ -433,7 +433,7 @@ class Submission(AbstractCreateUpdateModel):
         if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
             self.manuscript.review()
             self.manuscript.save()
-            if self.manuscript.internal_mode:
+            if self.manuscript.skip_edition:
                 return self.Status.IN_PROGRESS_CURATION
             else:
                 return self.Status.IN_PROGRESS_EDITION
@@ -686,7 +686,7 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
-    internal_mode = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
+    skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
@@ -714,8 +714,8 @@ class Manuscript(AbstractCreateUpdateModel):
         first_save = False
         if not self.pk:
             first_save = True
-            if settings.INTERNAL_MODE: #Set here because we want it to save with super
-                self.internal_mode = True
+            if settings.SKIP_EDITION: #Set here because we want it to save with super
+                self.skip_edition = True
 
         super(Manuscript, self).save(*args, **kwargs)
         if first_save:
@@ -871,7 +871,7 @@ class Manuscript(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_review],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance))
     def review(self):
-        if self.internal_mode:
+        if self.skip_edition:
             return self.Status.PROCESSING
         else:
             return self.Status.REVIEWING
