@@ -39,7 +39,23 @@
             {% endif %}
         });
         {% endif %}
+
+        var dropdown_compute_env = document.getElementById('id_wt_compute_env');
+        var dropdown_compute_env_other_div = document.getElementById('div_id_wt_compute_env_other');
+       
+        if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") { //TODO: re-enable
+            dropdown_compute_env_other_div.style.display = "none";
+        }
+
+        dropdown_compute_env.addEventListener('change', function() {
+            if(this.options[this.selectedIndex].value == "Other") {
+                dropdown_compute_env_other_div.style.display = "block";
+            } else {
+                dropdown_compute_env_other_div.style.display = "none";
+            }
+        })
     })
+    
 </script>
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">

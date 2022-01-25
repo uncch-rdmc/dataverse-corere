@@ -70,6 +70,11 @@ class GroupConnector(models.Model):
 class ImageChoice(models.Model):
     wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
     name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')
+    show_last = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['show_last', 'name']
 
     def __str__(self):
         return self.name

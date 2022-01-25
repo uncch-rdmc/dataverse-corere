@@ -686,6 +686,7 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+    wt_compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Please provide us details about your unlisted environment')
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create

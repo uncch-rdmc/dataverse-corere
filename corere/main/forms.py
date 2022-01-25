@@ -187,7 +187,7 @@ class ManuscriptFormHelperMain(FormHelper):
                 Div('qdr_review',css_class='col-md-6',),
                 css_class='row',
             ),
-            'wt_compute_env',
+            'wt_compute_env','wt_compute_env_other',
             Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
@@ -222,12 +222,12 @@ class ManuscriptBaseForm(forms.ModelForm):
     class Meta:
         abstract = True
         model = m.Manuscript
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','wt_compute_env','contact_first_name','contact_last_name','contact_email',
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','wt_compute_env', 'wt_compute_env_other','contact_first_name','contact_last_name','contact_email',
             'description','subject','additional_info', ]#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
+    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.filter(hidden=False), empty_label=None, required=False, label="Compute Environment")
 
     #This whole save is being called to force the correct value into wt_compute_env
     #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want
@@ -297,7 +297,7 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'wt_compute_env']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'wt_compute_env', 'wt_compute_env_other']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):
