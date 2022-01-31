@@ -1581,7 +1581,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env != 'Other':
+        if self.object.manuscript.compute_env == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
@@ -1607,6 +1607,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 if(not has_transition_perm(transition_method, request.user)):
                     logger.debug("PermissionDenied")
                     raise Http404()
+                else: #TODO: This form should be moved eventually to handle the non-wt workflow. Note that we only want it to show up for when authors test.
+                    self.form = f.SubmissionContainerIssuesForm
             else:
                 transition_method = getattr(self.object, 'view_noop')
                 if(not has_transition_perm(transition_method, request.user)):
@@ -1623,9 +1625,11 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+        context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
+        if self.form:
+            context['form'] = self.form
 
         if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
@@ -1643,6 +1647,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
                 elif not wtm_instance.instance_url:       
                     if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
+                        #TODO-WT: Is there an error case where we want the user (author) to just skip the container entirely?
                         wtc.delete_instance(wtm_instance.wt_id)
                         wtm_instance.delete()
                         wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
@@ -1677,6 +1682,13 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
     def post(self, request, *args, **kwargs):
         if request.POST.get('submit'):
+            if self.form:
+                print("FORM1")
+                if self.form.is_valid():
+                    print("FORM2")
+                    #This saves our launch issues. The curation team should look for these issues.
+                    self.form.save()
+                    print("FORM3")
             return _helper_submit_submission_and_redirect(request, self.object)
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)

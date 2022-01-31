@@ -156,10 +156,10 @@ def manuscript_landing(request, id=None):
                 dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
                 if dominant_corere_group:
                     if dominant_corere_group.name.startswith("Author"):
-                        if has_transition_perm(latestSubmission.edit_noop, user):
+                        if has_transition_perm(latestSubmission.edit_noop, request.user):
                             launchContainerCurrentSubButton = True
                     else: 
-                        if has_transition_perm(latestSubmission.view_noop, user):
+                        if has_transition_perm(latestSubmission.view_noop, request.user):
                             launchContainerCurrentSubButton = True
             else:
                 launchContainerCurrentSubButton = True

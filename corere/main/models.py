@@ -299,6 +299,8 @@ class Submission(AbstractCreateUpdateModel):
     contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
     contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')
     
+    launch_issues = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Container Launch Issues', help_text='Issues faced when attempting to launch the container')
+    
     class Meta:
         default_permissions = ()
         ordering = ['version_id']
@@ -687,7 +689,7 @@ class Manuscript(AbstractCreateUpdateModel):
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     #TODO: When fixing local container mode (non settings.CONTAINER_DRIVER == 'wholetale'), we will need to generate a list of compute environments to populate the form for selecting the below fields
     compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
-    compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Please provide us details about your unlisted environment')
+    compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create

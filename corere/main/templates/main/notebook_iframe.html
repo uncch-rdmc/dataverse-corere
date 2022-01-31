@@ -1,5 +1,6 @@
 {% extends "main/layout_full.html" %}
 {% block content %}
+{% load crispy_forms_tags %}
 {% comment %} This way of showing the notebook may fail if the notebook finishes at the same time this page is loaded {% endcomment %}
 
 {%comment%} Don't forget to re-add the removed wt_loaded bits. Also the correct wtstream. {% endcomment %}
@@ -7,14 +8,19 @@
 
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    <div id="notebook_issue_div" style="display:none;">
+        {% crispy form helper %}
+    </div>
     <input id="file_note_form_back" type="submit" name="back" value="Back" style="display:none;">
     {% if not read_only %}
-    <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;">
-    {% if skip_edition %}
-    <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the curation team. Is that ok?');" style="display:none;"> 
-    {% else %}
-    <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
-    {% endif %}
+        <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;">
+        {% if skip_edition %}
+            <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the curation team. Is that ok?');" style="display:none;"> 
+        {% else %}
+            <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
+        {% endif %}
+            
+        <input id="file_note_form_issues" type="button" name="submit" value="It isn't working" onClick="alert('We are sorry to hear you are having issues running your container. Please enter info about the issues you ran into in the text box above the button clicked, and then click submit.'); show_issues_form()" style="display:none;"> 
 
     {% endif %}
 </form>
@@ -82,6 +88,10 @@
         if(formsubmit) {
             formsubmit.style.display = '';
         }
+        var formissues = document.getElementById("file_note_form_issues");
+        if(formissues) {
+            formissues.style.display = '';
+        }
         {% endif %}
         var logandbuttondiv = document.getElementById("logandbuttondiv");
         if(logandbuttondiv) {
@@ -111,8 +121,26 @@
         if(formsubmit) {
             formsubmit.style.display = '';
         }
+        var formissues = document.getElementById("file_note_form_issues");
+        if(formissues) {
+            formissues.style.display = '';
+        }
     </script>
     {% endif %}
 {% endif %}
-
+<!-- <br>
+<div id="notebook_issue_div" style="display:none;">
+    <form id="submission_notebook_issues_form" action="" method="post" enctype="multipart/form-data" >
+        {% csrf_token %}
+        {% crispy form helper %}
+    </form>
+</div> -->
+<script>
+    function show_issues_form() {
+        var notebook_issue_div = document.getElementById("notebook_issue_div");
+        if(notebook_issue_div) {
+            notebook_issue_div.style.display = 'block';
+        }
+    }
+</script>
 {% endblock content %}

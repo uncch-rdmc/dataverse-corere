@@ -898,7 +898,16 @@ SubmissionForms = {
 }
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
-    pass
+    class Meta(SubmissionBaseForm.Meta):
+        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing','launch_issues']
+
+#------------- Submission Container Issues -------------
+
+class SubmissionContainerIssuesForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = ['launch_issues']
+        labels = label_gen(model, fields)
 
 #------------- Edition -------------
 
