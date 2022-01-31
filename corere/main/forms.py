@@ -187,7 +187,7 @@ class ManuscriptFormHelperMain(FormHelper):
                 Div('qdr_review',css_class='col-md-6',),
                 css_class='row',
             ),
-            'wt_compute_env','wt_compute_env_other',
+            'compute_env','compute_env_other',
             Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
@@ -222,26 +222,26 @@ class ManuscriptBaseForm(forms.ModelForm):
     class Meta:
         abstract = True
         model = m.Manuscript
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','wt_compute_env', 'wt_compute_env_other','contact_first_name','contact_last_name','contact_email',
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
             'description','subject','additional_info', ]#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.filter(hidden=False), empty_label=None, required=False, label="Compute Environment")
+    compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.filter(hidden=False), empty_label=None, required=False, label="Compute Environment")
 
-    #This whole save is being called to force the correct value into wt_compute_env
+    #This whole save is being called to force the correct value into compute_env
     #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want
     #I gotta believe there is some other way but this works
     def save(self, commit=True, *args, **kwargs):
         mf = super(ManuscriptBaseForm, self).save(*args, commit=False, **kwargs)    
-        if('wt_compute_env' in self.cleaned_data):
-            wt_id = self.data.get('wt_compute_env')     
+        if('compute_env' in self.cleaned_data):
+            wt_id = self.data.get('compute_env')     
         #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
         #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
         if wt_id and not re.match("^[\w\d]*$", wt_id):
-            logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
+            logger.warning("Someone attempted attempted to set compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
             raise Http404()
-        setattr(mf, 'wt_compute_env', wt_id)
+        setattr(mf, 'compute_env', wt_id)
         mf.save()
 
     def clean(self):
@@ -297,7 +297,7 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'wt_compute_env', 'wt_compute_env_other']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'compute_env', 'compute_env_other']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):

@@ -22,6 +22,8 @@
             {% if obj_type == 'submission' %}
                 {% if skip_docker %}
                     <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
+                {% elif compute_env_other %}
+                    <input type="button" name="submit_continue" value="Submit" onClick="if (confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
                 {% else %}
                     <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
                 {% endif %}

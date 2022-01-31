@@ -833,7 +833,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.submit_edition()
                         self.object.save()
-                        if(settings.CONTAINER_DRIVER == 'wholetale'):
+                        if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
                             #Here we create the wholetale version. We do this after the editors approval because it isn't really a "done" submission then
                             wtc = w.WholeTaleCorere(admin=True)
                             tale_original = self.object.submission_tales.get(original_tale=None)    
@@ -851,7 +851,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.review_verification()
                         self.object.save()
-
 
                     ### Messaging ###
                     if(status != None):
@@ -1121,7 +1120,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
+            'skip_docker': settings.SKIP_DOCKER, 'compute_env_other': self.object.manuscript.compute_env == 'Other'}
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -1171,9 +1171,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
+                if self.object.manuscript.compute_env == 'Other':
+                    self.msg = "Your submission has been submitted." #TODO: Improve message
+                    messages.add_message(request, messages.INFO, self.msg)
+
+                    return _helper_submit_submission_and_redirect(request, self.object)
+
                 if list(self.files_dict_list):
-                    if(settings.CONTAINER_DRIVER == 'wholetale'):
-                        if(self.object.files_changed):
+                    if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                        if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
                             wtc.delete_tale_files(tale.wt_id)
@@ -1501,7 +1507,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 self.object.save()
 
                 #Delete all tale copies both locally and in WT. This also deletes running instances.
-                if(settings.CONTAINER_DRIVER == 'wholetale'):
+                if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
                         wtc.delete_tale(wtm_tale.wt_id)
@@ -1575,7 +1581,9 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        if self.object.manuscript.compute_env != 'Other':
+            raise Http404()
+        elif settings.CONTAINER_DRIVER == 'wholetale':
             self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
 
             try:
@@ -1619,7 +1627,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             'page_title': self.page_title, 'page_help_text': self.page_help_text,  
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
 
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
@@ -1686,7 +1694,9 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     #For now if not wholetale, we check if 'edit_noop'
     #Code is same as in SubmissionNotebookView
     def dispatch(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        if self.object.manuscript.compute_env != 'Other':
+            raise Http404()
+        elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
 
             if self.wtm_tale.original_tale == None:
@@ -1710,7 +1720,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        if settings.CONTAINER_DRIVER != 'wholetale':
+        if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
 
         wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
@@ -1781,7 +1791,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         submission.submit(request.user)
         submission.save()
 
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        if submission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)    
             #  Set the wt author group's access to the root tale as read

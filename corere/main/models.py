@@ -326,7 +326,7 @@ class Submission(AbstractCreateUpdateModel):
         super(Submission, self).save(*args, **kwargs)
 
         if(first_save):
-            if settings.CONTAINER_DRIVER == "wholetale":
+            if self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale":
                 wtc = w.WholeTaleCorere(admin=True)
                 tale = self.manuscript.manuscript_tales.get(original_tale=None)
                 group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -341,10 +341,10 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.parent_submission = self
                     new_gfile.id = None
                     new_gfile.save()
-                if settings.CONTAINER_DRIVER == "wholetale":
+                if self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
-        elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
+        elif self._status == self.Status.REJECTED_EDITOR and self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -685,8 +685,9 @@ class Manuscript(AbstractCreateUpdateModel):
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-    wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
-    wt_compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Please provide us details about your unlisted environment')
+    #TODO: When fixing local container mode (non settings.CONTAINER_DRIVER == 'wholetale'), we will need to generate a list of compute environments to populate the form for selecting the below fields
+    compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+    compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Please provide us details about your unlisted environment')
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
@@ -752,7 +753,7 @@ class Manuscript(AbstractCreateUpdateModel):
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
 
-            if settings.CONTAINER_DRIVER == "wholetale":
+            if settings.CONTAINER_DRIVER == "wholetale": #NOTE: We don't check compute_env != 'Other' here because we don't know it yet. It means we create groups for manuscripts that won't be in wholetale but that's ok
                 #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
                 wtc = w.WholeTaleCorere(admin=True)
                 wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
@@ -766,26 +767,27 @@ class Manuscript(AbstractCreateUpdateModel):
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
-        if settings.CONTAINER_DRIVER == "wholetale":
-            if self.wt_compute_env and not self.manuscript_tales.all().exists():
-                wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
-                wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
-                wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
-                wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
-                
-                wtc = w.WholeTaleCorere(admin=True)
-                tale_title = f"{self.get_display_name()} - {self.id}"
-                wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
-                tale = wtm.Tale()
-                tale.manuscript = self
-                tale.wt_id = wtc_tale["_id"]
-                tale.group_connector = wtm_group_author
-                tale.save()
+        if self.compute_env and self.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale" and not self.manuscript_tales.all().exists():
+            #We create our root tale for the manuscript after the compute env has been provided
+            wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
+            wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
+            wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
+            wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
+            
+            wtc = w.WholeTaleCorere(admin=True)
+            tale_title = f"{self.get_display_name()} - {self.id}"
 
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
+            wtc_tale = wtc.create_tale(tale_title, self.compute_env)
+            tale = wtm.Tale()
+            tale.manuscript = self
+            tale.wt_id = wtc_tale["_id"]
+            tale.group_connector = wtm_group_author
+            tale.save()
+
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
@@ -1189,7 +1191,7 @@ def add_history_info(sender, instance, **kwargs):
 #If this errors out, I think trigger won't be cleared and will error on later saves
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    if settings.CONTAINER_DRIVER == 'wholetale':
+    if settings.CONTAINER_DRIVER == 'wholetale': #TODO-WT: Should I bypass this when self.compute_env != 'Other'? For now I'm just letting it happen. Probably should skip though if only for efficiency
         wtc = w.WholeTaleCorere(admin=True)
         if model is Group and instance.wt_id and not hasattr(instance, 'invite'):
             if action == 'post_add':

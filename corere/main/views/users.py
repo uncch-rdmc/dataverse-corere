@@ -384,7 +384,7 @@ def account_user_details(request):
             request.user.invite.delete() 
             
             #Since the new user now is part of Whole Tale, we invite them to all the groups they should be in    
-            if(settings.CONTAINER_DRIVER == 'wholetale'):
+            if settings.CONTAINER_DRIVER == 'wholetale':
                 girderToken = request.GET.get("girderToken", None)
                 if girderToken:
                     response.set_cookie(key="girderToken", value=girderToken)
