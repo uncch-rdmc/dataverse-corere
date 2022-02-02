@@ -107,15 +107,22 @@ def get_tale_version_name(version_id):
 #We do not treat admin in a special way at this point
 def get_dominant_group_connector(user, submission):
     user_groups = user.groups.all()
-    
-    if corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, submission.manuscript)).first():
-        pass
+    has_author = False
+
+    #Author is highest priority if we are in a phase where they can actually edit
+    if submission._status == m.Submission.Status.NEW or submission._status == m.Submission.Status.REJECTED_EDITOR:
+        if corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, submission.manuscript)).first():
+            has_author = True
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, submission.manuscript)).first():
         pass 
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, submission.manuscript)).first():
         pass 
     elif corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, submission.manuscript)).first():
         pass 
+    #We put author at the end as well. We don't want it twice though
+    elif not has_author:
+        if corere_group := user_groups.filter(name=get_wt_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, submission.manuscript)).first():
+            pass
 
     return wtm.GroupConnector.objects.get(corere_group=corere_group)
 

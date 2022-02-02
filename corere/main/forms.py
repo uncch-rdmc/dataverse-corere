@@ -909,6 +909,15 @@ class SubmissionContainerIssuesForm(forms.ModelForm):
         fields = ['launch_issues']
         labels = label_gen(model, fields)
 
+#------------- Submission Empty Issues -------------
+
+#This was created alongside ContainerIssues, because there are cases where we don't want to ask issues but need to pass a form and this is easiest
+class SubmissionEmptyForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = []
+        labels = label_gen(model, fields)
+
 #------------- Edition -------------
 
 class EditionBaseForm(forms.ModelForm):

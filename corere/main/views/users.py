@@ -224,7 +224,7 @@ def assign_curator(request, id=None):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    if skip_edition:
+    if manuscript.skip_edition:
         manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
         manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
     if request.method == 'POST':
@@ -264,7 +264,7 @@ def unassign_curator(request, id=None, user_id=None):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-        if skip_edition:
+        if manuscript.skip_edition:
             manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
             manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
         try:

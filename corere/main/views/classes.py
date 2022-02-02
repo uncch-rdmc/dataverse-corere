@@ -1539,7 +1539,6 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
 
-
         except (TransitionNotAllowed):
             self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
             messages.add_message(request, messages.ERROR, self.msg)
@@ -1576,6 +1575,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #These two parameters are updated programatically in dispatch
     http_method_names = ['get', 'post']
     read_only = False
+    form = f.SubmissionEmptyForm
 
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
@@ -1584,27 +1584,27 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         if self.object.manuscript.compute_env == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
-            self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
+            self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
 
             try:
-                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object)
-            except wtm.Tale.DoesNotExist: 
-                if self.object.version_id < self.object.manuscript.get_max_submission_version_id(): #Happens launching an instance from a previous submission, as we have to create the Tale on demand
-                    #Copy master tale, revert to previous version, launch instance.
-                    wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
-                    wtc = w.WholeTaleCorere(admin=True)
-                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
-                    #Ok, so I gotta copy the parent tale first and then revert it
-                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
+                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object) #this will blow up and 404 if there is no dominant group, which we want
+            except wtm.Tale.DoesNotExist: #We create the tale on demand if not existent. This happens because the tale is from a previous submission, or the tales were wiped out after the manuscript.compute_env was changed
+                #Copy master tale, revert to previous version, launch instance.
+                wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
+                wtc = w.WholeTaleCorere(admin=True)
+                wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
+                #Ok, so I gotta copy the parent tale first and then revert it
+                wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
+                if self.object.version_id < self.object.manuscript.get_max_submission_version_id():
                     wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version['_id'])
-                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
-                    wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
-                else:
-                    raise Http404()
+                self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
 
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')
                 if(not has_transition_perm(transition_method, request.user)):
+                    print(self.dominant_group.corere_group.__dict__)
+
                     logger.debug("PermissionDenied")
                     raise Http404()
                 else: #TODO: This form should be moved eventually to handle the non-wt workflow. Note that we only want it to show up for when authors test.
@@ -1626,16 +1626,13 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
     def get(self, request, *args, **kwargs):
         context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text,  
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, "form": self.form,
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
-        if self.form:
-            context['form'] = self.form
 
         if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
-
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
@@ -1683,12 +1680,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     def post(self, request, *args, **kwargs):
         if request.POST.get('submit'):
             if self.form:
-                print("FORM1")
                 if self.form.is_valid():
-                    print("FORM2")
-                    #This saves our launch issues. The curation team should look for these issues.
-                    self.form.save()
-                    print("FORM3")
+                    self.form.save() #This saves any launch issues reported by the author, for the curation team to review.
             return _helper_submit_submission_and_redirect(request, self.object)
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
@@ -1706,7 +1699,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     #For now if not wholetale, we check if 'edit_noop'
     #Code is same as in SubmissionNotebookView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env != 'Other':
+        if self.object.manuscript.compute_env == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)

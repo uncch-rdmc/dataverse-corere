@@ -721,7 +721,22 @@ class Manuscript(AbstractCreateUpdateModel):
             if settings.SKIP_EDITION: #Set here because we want it to save with super
                 self.skip_edition = True
 
+        if not first_save and settings.CONTAINER_DRIVER == "wholetale":
+            orig = Manuscript.objects.get(pk=self.pk)
+            if orig.compute_env != self.compute_env:
+                old_tales = self.manuscript_tales.all()
+                # print(old_tales)
+                wtc = w.WholeTaleCorere(admin=True)
+                for ot in old_tales:
+                    wtc.delete_tale(ot.wt_id)
+                self.manuscript_tales.all().delete()
+
+                #TODO-WT: Our code below manually creates the parent tale, but what are we doing about the child tales????
+                # ... I think the best idea is to move the tale creating part of _helper_submit_submission_and_redirect to a new function and call it below if a boolean is set by the delete code above
+                # ... Is there a phase where we don't want these child tales? if so maybe I'm diving into a logic black hole
+
         super(Manuscript, self).save(*args, **kwargs)
+
         if first_save:
             # Note these works alongside global permissions defined in signals.py
             # TODO: Make this concatenation standardized
@@ -769,8 +784,8 @@ class Manuscript(AbstractCreateUpdateModel):
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
-        if self.compute_env and self.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale" and not self.manuscript_tales.all().exists():
-            #We create our root tale for the manuscript after the compute env has been provided
+        if settings.CONTAINER_DRIVER == "wholetale" and self.compute_env and self.compute_env != 'Other' and not self.manuscript_tales.all().exists():
+            #We create our root tale for the manuscript after the compute env has been provided. This only triggers before there are tales
             wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
             wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
             wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
