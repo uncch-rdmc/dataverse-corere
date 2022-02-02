@@ -255,6 +255,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
 
         if(self.from_submission):
+            #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
             progress_list = c.progress_list_submission_first
             progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
@@ -324,6 +325,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
 
         if(self.from_submission):
+            #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
             progress_list = c.progress_list_submission_first
             progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
@@ -676,9 +678,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_first
+                else:
+                    progress_list = c.progress_list_submission_first
             else:
-                progress_list = c.progress_list_submission_subsequent
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_subsequent
+                else:
+                    progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
             context['progress_bar_html'] = progress_bar_html
 
@@ -916,12 +924,18 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
             'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
-        
+    
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_first
+                else:
+                    progress_list = c.progress_list_submission_first
             else:
-                progress_list = c.progress_list_submission_subsequent
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_subsequent
+                else:
+                    progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
             context['progress_bar_html'] = progress_bar_html
 
@@ -1125,9 +1139,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_first
+                else:
+                    progress_list = c.progress_list_submission_first
             else:
-                progress_list = c.progress_list_submission_subsequent
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_subsequent
+                else:
+                    progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
             context['progress_bar_html'] = progress_bar_html
 
@@ -1227,9 +1247,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
                 if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                    progress_list = c.progress_list_submission_first
+                    if(self.object.manuscript.compute_env == "Other"):
+                        progress_list = c.progress_list_other_submission_first
+                    else:
+                        progress_list = c.progress_list_submission_first
                 else:
-                    progress_list = c.progress_list_submission_subsequent
+                    if(self.object.manuscript.compute_env == "Other"):
+                        progress_list = c.progress_list_other_submission_subsequent
+                    else:
+                        progress_list = c.progress_list_submission_subsequent
                 progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
                 context['progress_bar_html'] = progress_bar_html
 
@@ -1669,15 +1695,22 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_first
+                else:
+                    progress_list = c.progress_list_submission_first
             else:
-                progress_list = c.progress_list_submission_subsequent
+                if(self.object.manuscript.compute_env == "Other"):
+                    progress_list = c.progress_list_other_submission_subsequent
+                else:
+                    progress_list = c.progress_list_submission_subsequent
             progress_bar_html = generate_progress_bar_html(progress_list, 'Run Code')
             context['progress_bar_html'] = progress_bar_html
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        #TODO: This probably needs to handle what happens if the form isn't valid?
         if request.POST.get('submit'):
             if self.form:
                 if self.form.is_valid():
@@ -1685,7 +1718,6 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             return _helper_submit_submission_and_redirect(request, self.object)
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
-        pass
 
 class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'

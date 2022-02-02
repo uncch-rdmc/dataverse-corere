@@ -49,3 +49,6 @@ def perm_path(perm):
 progress_list_manuscript = ['Create Manuscript', 'Upload Files', 'Invite Author']
 progress_list_submission_first = ['Update Manuscript', 'Add Submission Info', 'Upload Files', 'Run Code']
 progress_list_submission_subsequent = ['Add Submission Info', 'Upload Files', 'Run Code']
+#Submissions that we don't run a container for
+progress_list_other_submission_first = ['Update Manuscript', 'Add Submission Info', 'Upload Files']
+progress_list_other_submission_subsequent = ['Add Submission Info', 'Upload Files']
