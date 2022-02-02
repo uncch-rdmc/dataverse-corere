@@ -310,6 +310,7 @@
 <p id="manuscript_overview"> 
     <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
     Title: {{manuscript_pub_name}}<br>
+    {% if manuscript_compute_env %}Compute Environment: {{manuscript_compute_env}}<br>{% endif %}
     QDR Review: {{manuscript_qdr_review}}<br>
     Corresponding Author: {{manuscript_corresponding_author}}<br>
     Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>

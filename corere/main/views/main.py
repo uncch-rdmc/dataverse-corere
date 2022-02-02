@@ -8,6 +8,7 @@ from corere.main import docker as d
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns, helper_user_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
 from corere.main.utils import get_pretty_user_list_by_group_prefix
+from corere.apps.wholetale import models as wtm
 from django.contrib.auth.models import Permission, Group
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404, HttpResponse
@@ -204,6 +205,11 @@ def manuscript_landing(request, id=None):
 
     if settings.CONTAINER_DRIVER == "wholetale":
         args['wholetale'] = True
+        try:
+            compute_env_str = wtm.ImageChoice.objects.get(wt_id=manuscript.compute_env).name
+            args['manuscript_compute_env'] = compute_env_str + " (External)" if compute_env_str == "Other" else compute_env_str
+        except wtm.ImageChoice.DoesNotExist:
+            pass
     else:
         args['wholetale'] = False
         
