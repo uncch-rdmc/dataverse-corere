@@ -46,6 +46,7 @@ class WholeTale:
     #The alternative would be to create a version for each submission, there is not version-level access control.
     #NOTE: This command assumes your corere server is running as https because if it isn't the csp setting won't work anyways
     def create_tale(self, title, image_id):
+        #TODO-WT: We should only be setting the config if the tale is a jupyternotebook. But this would require which Images are jupyter. This doesn't break anything so for now it'll stay.
         json_dict = {"title": title, "imageId": image_id, "dataSet": []}
         json_dict['config'] = {"csp": f"frame-ancestors 'self' https://dashboard.{settings.WHOLETALE_BASE_URL} https://{settings.SERVER_ADDRESS}"}
         return self.gc.post("/tale", json=json_dict)

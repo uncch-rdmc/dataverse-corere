@@ -835,18 +835,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 try:
                     #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
                     status = None
+                    #TODO-WT: If bypass_edition is enabled, we need to do this after the submission is submitted instead!
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
                         status = self.object.submit_edition()
-                        self.object.save()
-                        if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
-                            #Here we create the wholetale version. We do this after the editors approval because it isn't really a "done" submission then
-                            wtc = w.WholeTaleCorere(admin=True)
-                            tale_original = self.object.submission_tales.get(original_tale=None)    
-                            wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
-                
+                        self.object.save()                
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
@@ -859,6 +854,22 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.review_verification()
                         self.object.save()
+                        
+                    if ((self.object.manuscript.skip_edition and request.POST.get('submit_progress_curation'))
+                        or (not self.object.manuscript.skip_edition and request.POST.get('submit_progress_edition'))):
+                        if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                            #Here we create the wholetale version. 
+                            # If not skipping editor, we do this after the editors approval because it isn't really a "done" submission then
+                            # Else, we do it after curator approval because that's the next step.
+                            wtc = w.WholeTaleCorere(admin=True)
+                            tale_original = self.object.submission_tales.get(original_tale=None)    
+                            print("tale_original")
+                            print(tale_original.__dict__)
+                            print("tale version_name")
+                            print(w.get_tale_version_name(self.object.version_id))
+                            result = wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
+                            print("create_tale_version result")
+                            print(result)
 
                     ### Messaging ###
                     if(status != None):
@@ -1622,6 +1633,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 #Ok, so I gotta copy the parent tale first and then revert it
                 wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
                 if self.object.version_id < self.object.manuscript.get_max_submission_version_id():
+                    if not wtc_tale_target_version:
+                        raise Http404("The compute environment cannot be launched for this submission, because the compute environment changed after this submission was created.")
                     wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version['_id'])
                 self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
                 wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)

@@ -731,10 +731,6 @@ class Manuscript(AbstractCreateUpdateModel):
                     wtc.delete_tale(ot.wt_id)
                 self.manuscript_tales.all().delete()
 
-                #TODO-WT: Our code below manually creates the parent tale, but what are we doing about the child tales????
-                # ... I think the best idea is to move the tale creating part of _helper_submit_submission_and_redirect to a new function and call it below if a boolean is set by the delete code above
-                # ... Is there a phase where we don't want these child tales? if so maybe I'm diving into a logic black hole
-
         super(Manuscript, self).save(*args, **kwargs)
 
         if first_save:
@@ -785,7 +781,7 @@ class Manuscript(AbstractCreateUpdateModel):
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
         if settings.CONTAINER_DRIVER == "wholetale" and self.compute_env and self.compute_env != 'Other' and not self.manuscript_tales.all().exists():
-            #We create our root tale for the manuscript after the compute env has been provided. This only triggers before there are tales
+            #We create our root tale for the manuscript after the compute env has been provided. This triggers before there were ever tales, and after tales were deleted due to compute_env switch.
             wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
             wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
             wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
@@ -805,6 +801,22 @@ class Manuscript(AbstractCreateUpdateModel):
             wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
             wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
             wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
+
+            if not first_save:
+                try: #All this code is for recreating a tale after an environment switch
+                    latest_sub = self.get_latest_submission()
+                    tale.submission = latest_sub
+                    tale.save()
+                    wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self)) #Upload existing files. Only should actually do anything when changing compute_env. This could take a long time, we don't do anything about that right now.
+                    if latest_sub._status == Submission.Status.NEW or latest_sub._status == Submission.Status.REJECTED_EDITOR:
+                        wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, wtm_group_author)
+                except Submission.DoesNotExist:
+                    pass
+
+            #TODO: we need to set the tale access for the root tale for the author based upon the group
+                
+            #TODO-WT: We aren't handling the case where a compute env is changed and then a user attempts to run a compute env for a previous submission with a different env.
+            #         I think my best bet is to make a custom error for this? "The environment type for this manuscript has changed. You cannot run submissions from before this change took place."
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
