@@ -18,6 +18,7 @@ from django.urls import path
 from django.conf.urls import url, include
 from django.conf import settings
 from django.views.generic.base import RedirectView
+import django_sql_dashboard
 import notifications.urls
 
 handler400 = 'corere.main.views.errors.handler400'
@@ -35,6 +36,7 @@ urlpatterns = [
     #url('^notification_functions/', include(notifications.urls, namespace='notifications')),
     #TODO: Renaming this path broke badge updating, something in the library must me hardcoded. Maybe fork and fix?
     url('^inbox/notifications/', include(notifications.urls, namespace='notifications')), 
+    path("dashboard/", include(django_sql_dashboard.urls)),
     #url(r'^select2/', include('django_select2.urls')), #if you use any "Auto" fields.
 ]
 

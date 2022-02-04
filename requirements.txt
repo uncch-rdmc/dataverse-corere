@@ -6,7 +6,7 @@ chardet==4.0.0
 cryptography==3.4.7
 defusedxml==0.7.1
 docker==5.0.0
-django==3.2.11
+django==3.2.12
 django-appconf==1.0.4
 django-autoslug==1.9.8
 django-braces==1.14.0
@@ -16,11 +16,10 @@ django-crispy-forms==1.12.0
 django-datatables-view==1.19.1
 django-fsm==2.7.1
 django-guardian==2.4.0
+django-sql-dashboard==1.0.1
+
 #Custom django-invitations (1.9.3) with minor change to pass the key forward to signup as we use it when creating an initial user
 git+git://github.com/OdumInstitute/django-invitations.git
-
-#Fixes bug in open_id_connect hardcoded algorithm and globus
-git+git://github.com/lukaszlacinski/social-core.git@globus_backend
 
 django-libsass==0.9
 django-notifications-hq==1.6.0

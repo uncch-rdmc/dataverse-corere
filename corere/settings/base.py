@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'guardian',
     'simple_history',
     'corere.main',
+    'django_sql_dashboard'
 ]
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting' #to allow our custom override of default widgets
@@ -125,7 +126,19 @@ DATABASES = {
         'PASSWORD': os.environ["POSTGRES_PASSWORD"],
         'HOST': os.environ["POSTGRES_HOST"], #TODO: is this needed?
         'PORT': '5432',
-    }
+    },
+    #Used for admin sql queries
+    "dashboard": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": "5432",
+        "OPTIONS": {
+            "options": "-c default_transaction_read_only=on"
+        },
+    },
 }
 
 REST_FRAMEWORK = {
