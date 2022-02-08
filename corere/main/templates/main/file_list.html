@@ -45,4 +45,6 @@
 
         <input type="submit" id="submit_continue_fileslist" name="submit_continue" value="Submit" style="visibility:hidden;"> {% comment %}This button is always hidden but can be clicked by other buttons outside the form {% endcomment %}
     </form>
-    </div>
+
+    {% include "file_datatable/file_datatable.html" with manuscript_id=45%}
+</div>
