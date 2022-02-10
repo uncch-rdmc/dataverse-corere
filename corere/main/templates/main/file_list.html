@@ -1,5 +1,5 @@
 {% load always_escape %}
-<div id="filesWithHeader">    
+<div id="filesWithHeader">   
     <div id="filesHeaderDiv" 
         {% if not files_dict_list %}
             style="visibility:hidden;"
@@ -13,14 +13,13 @@
         {% if not landing_page %}<h5 class="cblue">Uploaded Files:</h5> {% endif %}
     </div>
 
-    <form action="" method="post">
+    <!-- <form action="" method="post">
         {% csrf_token %}
         <table id="filestable" class="filestable">
             {% for path in files_dict_list %}
                 <tr>
                     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
                     {% if not read_only %}
-                    <!-- <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td> -->
                     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this,'{{ path|always_escape }}')"><span class="far fa-trash-alt"></span></button></td>
                     {% endif %}
                     <td class="filespath">
@@ -44,7 +43,7 @@
         <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="submit_fileslist" class="btn btn-secondary btn-sm" type="submit">Save Names</button>
 
         <input type="submit" id="submit_continue_fileslist" name="submit_continue" value="Submit" style="visibility:hidden;"> {% comment %}This button is always hidden but can be clicked by other buttons outside the form {% endcomment %}
-    </form>
+    </form> -->
 
     {% include "file_datatable/file_datatable.html" with obj_id=obj_id%}
 </div>

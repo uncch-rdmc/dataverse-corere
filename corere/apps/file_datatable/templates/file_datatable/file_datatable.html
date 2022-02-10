@@ -7,228 +7,52 @@
                 <th></th>
                 <th>Path</th>
                 <th>Name</th>
+                {% if obj_type == "submission" %}<th></th>{% endif %}
             </tr>
         </thead>
     </table>
 </div>
 
+{% load static %}
+<!--NEXT: we need to dynamically serve this table depending on manuscript/submission and read/write-->
+<script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#file_table').DataTable( {
-            ajax: "/manuscript/{{obj_id}}/file_table/",
-            lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
-            searching: true,
-            processing: true,
-            stateSave: true,
-            paging: true,
-            select: 'single',
-            dom: 'Blp',
-            // keys: true, //for keyboard
-            columns:[
-                {
-                    data: 'buttons',
+        {% if obj_type == "submission" %}
+        config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}})
+        //Do we want to define the icon column somewhere else? Or will we always call this code anyways?
+        fourth_column =                 {
+                    data: 'newness',
                     render: function(data,type,row,meta){
-                        //TODO: Delete button needs to be a post with a csrf, see delete_and_remove or delete_and_refresh
-                        //TODO: Unify how we are doing these two calls (after understanding generalizing better). One is relative, one isn't
                         encoded = encodeURIComponent(row[0]+row[1])
-                        button =  '<button class="btn btn-secondary btn-sm" type="button" onclick="window.open(\'{{ file_download_url }}'+encoded+'\')"><span class="fas fa-file-download"></span></button>'
-                        button += '<button class="btn btn-secondary btn-sm" type="button" onclick="window.open(\'../deletefile/?file_path='+encoded+'\')"><span class="far fa-trash-alt"></span></button>'
+                        button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'"/></td>'
+
                         return button;
                     }
                 },
-                {
-                    data: 'path',
-                    render: function(data,type,row,meta){
-                        return row[0];
-                    }
-                },
-                {
-                    data: 'name',
-                    render: function(data,type,row,meta){
-                        return row[1];
-                    }
-                },
-
-
-
-            ],
-
-            buttons: [
-                        {
-                            text: 'Refresh',
-                            name: 'refresh',
-                            action: function ( e, dt, node, config ) {
-                                var table = $('#file_table').DataTable();
-                                console.log(table.ajax);
-                                table.ajax.reload();
-                                // dt_user_ajax.reload();
-                            },
-                        },
-                    ]
-        } );
+        config['columns'].push(fourth_column)
+        fourth_column_def = { "width": "33px", "targets": 3 }
+        config['columnDefs'].push(fourth_column_def)
+        {% else %}
+        config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}})
+        {% endif %}
+        $('#file_table').DataTable(config)
     } );
 </script>
-<!-- 
-<div class="cblue" id="user_table_holder">
-    <br>
-    <h2>Users</h2>
-    <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
-        <thead>
-            {% for field in user_columns %}
-                <th>{{ field }}</th>
-            {% endfor %}
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    <hr>
-</div>
+<!-- steps: 
+    - get base datatable options
+    - extend() them with new options (programatically from template tags?)
+    - instantiate datatable off our options
+    - pass our datatable to predefined listeners to attach them
 
-<script type="text/javascript">
-    var search_completed_vis_toggle = true;
-    //var USER_LIST_JSON_URL = '{% url "user_table" %}';
-    var USER_LIST_JSON_URL = "/manuscript/{{obj_id}}/file_table/"
-
-    $(document).ready(function() {
-        dt_user_ajax = $.ajax({
-            url: USER_LIST_JSON_URL,
-            cache: false,
-            success: function (response) {
-                // console.log("SUCCESS1")
-                // console.log(response.data.slice(1))
-                var [columns_config, button_index] = constructTable(response.data[0]);
-                var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
-                var select_timeout;
-                var table = $('#user_table').DataTable({
-                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
-                    searching: true,
-                    processing: true,
-                    stateSave: true,
-                    paging: true,
-                    select: 'single',
-                    columns: columns_config,
-                    dom: 'Bfrtpl',
-                    keys: true, //for keyboard
-                    rowId: 'id', //for retaining selected row
-                    data: response.data.slice(1),
-                    buttons: [
-                        {
-                            text: 'Refresh',
-                            name: 'refresh',
-                            action: function ( e, dt, node, config ) {
-                                var table = $('#user_table').DataTable();
-                                console.log(table.ajax);
-                                table.ajax.reload();
-                                // dt_user_ajax.reload();
-                            },
-                        },
-
-                        // {
-                        //     text: '<i class="far fa-eye"></i> All Shown',
-                        //     name: 'showAll',
-                        //     action: function ( e, dt, node, config ) {
-                        //         table.columns( 3 ).search( "" ).draw();
-                        //         $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye"></i> All Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye"></i> Editors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );
-                        //     },
-                        // },
-                        // {
-                        //     text: '<i class="far fa-eye"></i> Authors Shown',
-                        //     name: 'showOnlyAuthors',
-                        //     action: function ( e, dt, node, config ) {
-                        //         table.columns( 3 ).search( "Author" ).draw();
-                        //         $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
-                        //     },
-                        // },
-                        // {
-                        //     text: '<i class="far fa-eye"></i> Editors Shown',
-                        //     name: 'showOnlyEditors',
-                        //     action: function ( e, dt, node, config ) {
-                        //         table.columns( 3 ).search( "Editor" ).draw();
-                        //         $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye-slash"></i> Authors Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye"></i> Editors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
-                        //     },
-                        // },
-                        // {
-                        //     text: '<i class="far fa-eye"></i> Curators Shown',
-                        //     name: 'showOnlyCurators',
-                        //     action: function ( e, dt, node, config ) {
-                        //         table.columns( 3 ).search( "Curator" ).draw();
-                        //         $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye-slash"></i> Authors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
-                        //     },
-                        // },
-                        // {
-                        //     text: '<i class="far fa-eye"></i> Verifiers Shown',
-                        //     name: 'showOnlyVerifiers',
-                        //     action: function ( e, dt, node, config ) {
-                        //         table.columns( 3 ).search( "Verifier" ).draw();
-                        //         $('#user_table').DataTable().buttons( "showAll:name" ).text( '<i class="far fa-eye-slash"></i> Not All Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyAuthors:name" ).text( '<i class="far fa-eye"></i> Authors Shown' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyEditors:name" ).text( '<i class="far fa-eye-slash"></i> Editors Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
-                        //         $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
-                        //     },
-                        // },
-
-                    ]
-                })
-                .on( 'select', function ( e, dt, type, indexes ) {
-                    username = dt.rows( { selected: true } ).data()[0][2]
-                    $('#manuscript_table').DataTable().columns(5).search(username).draw();
-                    if(! $('#manuscript_table').hasClass("visibleMe")) {
-                        $('#manuscript_table').addClass("visibleMe")
-                    }
-                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> Custom Manuscripts' );
-                    console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
-
-                } )
-                .on( 'deselect', function ( e, dt, type, indexes ) {
-                    if($('#manuscript_table').hasClass("visibleMe")) {
-                        $('#manuscript_table').removeClass("visibleMe")
-                    }
-
-                    $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> All Manuscripts' );
-                    $('#manuscript_table').DataTable().columns(5).search('').draw();
-                    // dt.button('workOnManuscript:name').enable(false);
-                } );
-                table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
-                table.order.neutral().draw(); //NOT SURE WHAT THIS DOES
-
-            }
-        })
-
-    });
-
-    function constructTable(columns) {
-        console.log("HELLO 2")
-        var columns_config = [];
-        var button_index;
-        for (var c in columns) {
-            var column_settings = {name: columns[c][0], title:columns[c][1]}
-            // if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
-            //     column_settings.visible = true;
-            // } 
-            // else 
-            if(columns[c][0] === 'selected') {
-                column_settings.orderable = false;
-                column_settings.className = 'select-checkbox';
-            }
-            columns_config[c] = column_settings
-        }
-        return [columns_config, button_index];
-    } 
-</script> -->
+    So my big question is how to turn OFF nested pieces of functionality. 
+    Extend merges at the highest level but then either overrides or recrusively merges.
+    The nested parameters (button, columns) we'd want to disable aren't named... so we can't disable them without disabling everything?
+    ... We could have base parameters and then add the columns and buttons seperately 
+        ... At this point maybe we should just write a function that does all this
+            ... function create_file_table_config(readonly, )
+        ... This connects to another issue which is what code do I want to live in my separate app, and what to live outside
+            ... I think the compare files option should be outside. 
+                ... Which is easy, we can just push the extra column
+            ... 
+-->

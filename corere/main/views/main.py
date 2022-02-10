@@ -200,7 +200,9 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createFirstSubmissionButton': createFirstSubmissionButton,
             'createLaterSubmissionButton': createLaterSubmissionButton,
-            'launchContainerCurrentSubButton': launchContainerCurrentSubButton
+            'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
+            "obj_id": id, #for file table
+            "obj_type": "manuscript" #for file table
             }
 
     if settings.CONTAINER_DRIVER == "wholetale":

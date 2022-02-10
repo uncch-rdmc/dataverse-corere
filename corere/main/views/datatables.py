@@ -3,6 +3,7 @@ from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.conf import settings
 from corere.main import constants as c
 from corere.main import models as m
+from corere.main import wholetale_corere as w
 from corere.apps.file_datatable import views as fdtv
 from corere.main.utils import fsm_check_transition_perm
 from guardian.shortcuts import get_objects_for_user, get_perms
@@ -341,7 +342,7 @@ class UserJson(CorereBaseDatatableView):
 
 ############ File Tables (based off the files_datatable app) ############
 
-class ManuscriptFileJson(fdtv.FileBaseDatatableView):
+class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['id']
         try:
@@ -352,5 +353,19 @@ class ManuscriptFileJson(fdtv.FileBaseDatatableView):
             #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
             print("wow")
             return m.GitFile.objects.filter(parent_manuscript=manuscript) 
+        else:
+            raise Http404()
+
+class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    def get_initial_queryset(self):
+        submission_id = self.kwargs['id']
+        try:
+            submission = m.Submission.objects.get(id=submission_id)
+        except ObjectDoesNotExist:
+            raise Http404()
+        #TODO: Should this perm be checking more... right now editors/curators/verifiers might be able to see author files while they are working
+        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, submission.manuscript)):
+            #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
+            return m.GitFile.objects.filter(parent_submission=submission) 
         else:
             raise Http404()
