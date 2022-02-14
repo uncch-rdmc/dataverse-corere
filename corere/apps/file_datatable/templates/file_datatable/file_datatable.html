@@ -1,6 +1,4 @@
 <div class="cblue" id="file_table_holder">
-    <br>
-    <h2>Files</h2>
     <table id="file_table" class="datatable table table-striped table-bordered filetable" cellspacing="0" width="100%">
         <thead>
             <tr>
@@ -14,13 +12,12 @@
 </div>
 
 {% load static %}
-<!--NEXT: we need to dynamically serve this table depending on manuscript/submission and read/write-->
 <script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}"></script>
 <script type="text/javascript">
     $(document).ready(function() {
+        {% comment %}Add our UI components specific to CORE2 {% endcomment %}
         {% if obj_type == "submission" %}
         config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}})
-        //Do we want to define the icon column somewhere else? Or will we always call this code anyways?
         fourth_column =                 {
                     data: 'newness',
                     render: function(data,type,row,meta){
@@ -39,20 +36,3 @@
         $('#file_table').DataTable(config)
     } );
 </script>
-<!-- steps: 
-    - get base datatable options
-    - extend() them with new options (programatically from template tags?)
-    - instantiate datatable off our options
-    - pass our datatable to predefined listeners to attach them
-
-    So my big question is how to turn OFF nested pieces of functionality. 
-    Extend merges at the highest level but then either overrides or recrusively merges.
-    The nested parameters (button, columns) we'd want to disable aren't named... so we can't disable them without disabling everything?
-    ... We could have base parameters and then add the columns and buttons seperately 
-        ... At this point maybe we should just write a function that does all this
-            ... function create_file_table_config(readonly, )
-        ... This connects to another issue which is what code do I want to live in my separate app, and what to live outside
-            ... I think the compare files option should be outside. 
-                ... Which is easy, we can just push the extra column
-            ... 
--->

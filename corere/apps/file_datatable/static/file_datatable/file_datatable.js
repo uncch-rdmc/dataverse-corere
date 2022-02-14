@@ -7,7 +7,8 @@ function create_file_table_config(table_path, readonly) {
             stateSave: true,
             paging: true,
             select: 'single',
-            dom: 'Bftlp',
+            // dom: 'Bftlp',
+            dom: 'Bfrtpl',
             // keys: true, //for keyboard
             columns:[
                 {

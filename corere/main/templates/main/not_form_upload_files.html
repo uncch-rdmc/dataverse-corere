@@ -7,7 +7,24 @@
 {% else %}
 <input type=button value="Home" onClick="location.href='..';">
 {% endif %}
-{% include "main/file_list.html" %}
+
+<div class="accordion" style="margin:10px -21px" id="manuscriptAccordionPanels">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+          Files (1)
+        </button>
+      </h2>
+      <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        <div class="accordion-body">                
+          <div id="files_list_holder">
+            {% include "main/file_list.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
 <script>
     function delete_and_refresh(delete_url, id, obj_type){
         var headers = new Headers();
@@ -47,4 +64,30 @@
         })
     }
 </script>
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" %}
+        <input type=button value="Back" onclick="location.href='../edit/'">
+        {% if obj_type == 'submission' %}
+            {% if skip_docker %}
+                <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
+            {% elif compute_env_other %}
+                <input type="button" name="submit_continue" value="Submit" onClick="if (confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
+            {% else %}
+                <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
+            {% endif %}
+            
+        {% else %}
+            <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
+        {% endif %}
+    {% else %}
+        <input type=button value="Home" onClick="location.href='/'">
+    {% endif %}
+
+</form>
+{% if obj_type == "submission" and not read_only %}
+<br>
+<p style="color:gray"><i>By click Launch Notebook, you will be sent to the next step where your files will be sent to Whole Tale to launch a web environment to run your code. If you need to upload more files, you can do this through the environment or by coming back to this page and uploading new files.</i></p>
+{% endif %}
 {% endblock content %}
