@@ -294,11 +294,6 @@ class Submission(AbstractCreateUpdateModel):
     files_changed = models.BooleanField(default=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')
-    
     launch_issues = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Container Launch Issues', help_text='Issues faced when attempting to launch the container')
     
     class Meta:
@@ -691,6 +686,12 @@ class Manuscript(AbstractCreateUpdateModel):
     compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
     compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
+
+    # Was a part of submission
+    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
+    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
+    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')    
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
@@ -1093,13 +1094,15 @@ class Note(AbstractCreateUpdateModel):
 
     #TODO: If implementing fsm can_edit, base it upon the creator of the note
 
+#NOTE: Disabled as part of the manuscript/submission models rework. I'm pretty sure we don't want this as the authors won't fill it out
+
 #If we add any field requirements to software it'll cause issues with our submission form saving.
-class VerificationMetadataSoftware(models.Model):
-    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
-    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
-    #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+# class VerificationMetadataSoftware(models.Model):
+#     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+#     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+#     #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
+#     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
+#     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -1109,7 +1112,8 @@ class VerificationMetadataBadge(models.Model):
     logo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Logo URL')
     issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Issuing Organization')
     issuing_date = models.DateField(blank=True, null=True, verbose_name='Issuing Date')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataAudit(models.Model):
@@ -1120,7 +1124,8 @@ class VerificationMetadataAudit(models.Model):
     verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Verified Results')
     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+    #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadata(AbstractCreateUpdateModel):
@@ -1133,7 +1138,8 @@ class VerificationMetadata(AbstractCreateUpdateModel):
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
     packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
     software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')
-    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_vmetadata")
+    #submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 #other fields (email, created) are in base model
@@ -1202,7 +1208,7 @@ class CorereInvitation(Invitation):
 @receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
 @receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
-@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
+#@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
 @receiver(post_save, sender=VerificationMetadataBadge, dispatch_uid="add_history_info_vmetadata_badge")
 @receiver(post_save, sender=VerificationMetadataAudit, dispatch_uid="add_history_info_vmetadata_audit")
 @receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")

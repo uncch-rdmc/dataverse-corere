@@ -193,7 +193,8 @@ class ManuscriptFormHelperMain(FormHelper):
                 Div('contact_last_name',css_class='col-md-6',),
                 Div('contact_email',css_class='col-md-6',),
                 css_class='row',
-            )
+            ),
+            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing'
         )
 
 class ManuscriptFormHelperEditor(FormHelper):
@@ -223,7 +224,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', ]#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
@@ -865,10 +866,11 @@ class GitFileFormSetHelper(FormHelper):
     #                         data-trigger="hover" data-placement="auto" data-content="' + content + '"> \
     #                         <span class="glyphicon glyphicon-info-sign"></span></a>'
 
+#This could maybe be deleted as there are no fields. But we may use it to pass the girder token?
 class SubmissionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Submission
-        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
+        fields = []
         labels = label_gen(model, fields)
 
     def save(self, *args, **kwargs):
@@ -899,7 +901,7 @@ SubmissionForms = {
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
     class Meta(SubmissionBaseForm.Meta):
-        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing','launch_issues']
+        fields = ['launch_issues']
 
 #------------- Submission Container Issues -------------
 
@@ -1190,11 +1192,11 @@ class VMetadataForm_Curator(VMetadataBaseForm):
 class VMetadataForm_Verifier(VMetadataBaseForm):
     pass
 
-VMetadataSubmissionFormsets = {}
+VMetadataManuscriptFormsets = {}
 for role_str in list_of_roles:
     try:
-        VMetadataSubmissionFormsets[role_str] = inlineformset_factory(
-            m.Submission, 
+        VMetadataManuscriptFormsets[role_str] = inlineformset_factory(
+            m.Manuscript, 
             m.VerificationMetadata, 
             extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
             form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
@@ -1206,88 +1208,70 @@ for role_str in list_of_roles:
 class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
     pass
 
-ReadOnlyVMetadataSubmissionFormset = inlineformset_factory(
-    m.Submission, 
+ReadOnlyVMetadataManuscriptFormset = inlineformset_factory(
+    m.Manuscript, 
     m.VerificationMetadata, 
     extra=0,
     form=ReadOnlyVMetadataForm,
     can_delete = False,
 )
 
-# VMetadataSubmissionFormset = inlineformset_factory(
-#     m.Submission,
-#     m.VerificationMetadata,  
-#     extra=1,
-#     form=VMetadataForm,
-#     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-#     can_delete = True,
-# )
-
 #------------ Verification Metadata - Software -------------
 
-class VMetadataSoftwareBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataSoftware
-        fields = ["name","version"]
-        labels = label_gen(model, fields)
+# class VMetadataSoftwareBaseForm(forms.ModelForm):
+#     class Meta:
+#         model = m.VerificationMetadataSoftware
+#         fields = ["name","version"]
+#         labels = label_gen(model, fields)
 
-    # def __init__ (self, *args, **kwargs):
-    #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
+#     # def __init__ (self, *args, **kwargs):
+#     #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
 
-class VMetadataSoftwareForm_Admin(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Admin(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Author(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Author(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Editor(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Editor(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Curator(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Curator(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Verifier(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Verifier(VMetadataSoftwareBaseForm):
+#     pass
 
-VMetadataSoftwareVMetadataFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataSoftwareVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
-            m.VerificationMetadataSoftware,  
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataSoftwareForm_"+role_str),
-            can_delete = True,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
+# VMetadataSoftwareVMetadataFormsets = {}
+# for role_str in list_of_roles:
+#     try:
+#         VMetadataSoftwareVMetadataFormsets[role_str] = inlineformset_factory(
+#             m.VerificationMetadata,  
+#             m.VerificationMetadataSoftware,  
+#             extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+#             form=getattr(sys.modules[__name__], "VMetadataSoftwareForm_"+role_str),
+#             can_delete = True,
+#         ) 
+#     except AttributeError:
+#         pass #If no form for role we should never show the form, so pass
 
-# VMetadataSoftwareVMetadataFormset = inlineformset_factory(
+# class ReadOnlyVMetadataSoftwareForm(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+#     pass
+
+# ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
 #     m.VerificationMetadata,  
 #     m.VerificationMetadataSoftware,  
-#     extra=1,
-#     form=VMetadataSoftwareForm,
-#     fields=("name","version", "code_repo_url"),
-#     can_delete = True,
+#     extra=0,
+#     form=ReadOnlyVMetadataSoftwareForm,
+#     can_delete = False,
 # )
-
-class ReadOnlyVMetadataSoftwareForm(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
-    pass
-
-ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataSoftware,  
-    extra=0,
-    form=ReadOnlyVMetadataSoftwareForm,
-    can_delete = False,
-)
 
 #------------ Verification Metadata - Badge -------------
 
 class VMetadataBadgeBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataBadge
-        fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+        fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date"]
         labels = label_gen(model, fields)
 
     # def __init__ (self, *args, **kwargs):
@@ -1301,11 +1285,11 @@ class VMetadataBadgeForm_Curator(VMetadataBadgeBaseForm):
 
 #No forms for other roles as they cannot view
 
-VMetadataBadgeVMetadataFormsets = {}
+VMetadataBadgeManuscriptFormsets = {}
 for role_str in list_of_roles:
     try:
-        VMetadataBadgeVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
+        VMetadataBadgeManuscriptFormsets[role_str] = inlineformset_factory(
+            m.Manuscript,  
             m.VerificationMetadataBadge,  
             extra=1 if(role_str == "Admin" or role_str == "Curator" ) else 0,
             form=getattr(sys.modules[__name__], "VMetadataBadgeForm_"+role_str),
@@ -1314,20 +1298,11 @@ for role_str in list_of_roles:
     except AttributeError:
         pass #If no form for role we should never show the form, so pass
 
-# VMetadataBadgeVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataBadge,  
-#     extra=1,
-#     form=VMetadataBadgeForm,
-#     fields=("name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"),
-#     can_delete = True,
-# )
-
 class ReadOnlyVMetadataBadgeForm(ReadOnlyFormMixin, VMetadataBadgeBaseForm):
     pass
 
-ReadOnlyVMetadataBadgeVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
+ReadOnlyVMetadataBadgeManuscriptFormset = inlineformset_factory(
+    m.Manuscript,  
     m.VerificationMetadataBadge,  
     extra=0,
     form=ReadOnlyVMetadataBadgeForm,
@@ -1354,11 +1329,11 @@ class VMetadataAuditForm_Curator(VMetadataAuditBaseForm):
 
 #No forms for other roles as they cannot view
 
-VMetadataAuditVMetadataFormsets = {}
+VMetadataAuditManuscriptFormsets = {}
 for role_str in list_of_roles:
     try:
-        VMetadataAuditVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
+        VMetadataAuditManuscriptFormsets[role_str] = inlineformset_factory(
+            m.Manuscript,  
             m.VerificationMetadataAudit,  
             extra=1 if(role_str == "Admin" or role_str == "Curator") else 0,
             form=getattr(sys.modules[__name__], "VMetadataAuditForm_"+role_str),
@@ -1370,8 +1345,8 @@ for role_str in list_of_roles:
 class ReadOnlyVMetadataAuditForm(ReadOnlyFormMixin, VMetadataAuditBaseForm):
     pass
 
-ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
+ReadOnlyVMetadataAuditManuscriptFormset = inlineformset_factory(
+    m.Manuscript,  
     m.VerificationMetadataAudit,  
     extra=0,
     form=ReadOnlyVMetadataAuditForm,

@@ -215,6 +215,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.ReadOnlyAuthorFormSet
                 self.data_source_formset = f.ReadOnlyDataSourceFormSet
                 self.keyword_formset = f.ReadOnlyKeywordFormSet
+                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
@@ -222,6 +223,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
+                self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
             
         if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
             self.form_helper = f.ManuscriptFormHelperEditor()
@@ -253,6 +255,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
@@ -275,6 +278,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
+            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
@@ -282,7 +286,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             manuscript_display_name = self.object.manuscript.get_display_name()
 
         if not self.read_only and self.form.is_valid() \
-            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) \
+            and (not self.keyword_formset or self.keyword_formset.is_valid() and (not self.v_metadata_formset or self.v_metadata_formset.is_valid())):
+            
             self.form.save()
             if(self.author_formset):
                 self.author_formset.save()
@@ -290,6 +296,8 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.data_source_formset.save()
             if(self.keyword_formset):
                 self.keyword_formset.save()
+            if(self.v_metadata_formset):
+                self.v_metadata_formset.save()
 
             if request.POST.get('submit_continue'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
@@ -309,6 +317,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.author_formset.errors)
             logger.debug(self.data_source_formset.errors)
             logger.debug(self.keyword_formset.errors)  
+            logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
             'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
@@ -323,6 +332,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
@@ -626,55 +636,50 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
+#TODO-MV: DELETE AFTER REORDER. Or, delete some, keep some for when we add the end-step
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+        #         self.v_metadata_formset = f.VMetadataManuscriptFormsets[role_name]
+        #     elif(has_transition_perm(self.object.view_noop, request.user)):
+        #         self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
 
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+        #         self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
+        #     elif(has_transition_perm(self.object.view_noop, request.user)):
+        #         self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
 
-        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-
-        #TODO: Figure out how we should do perms for these
-        #self.v_metadata_formset = f.VMetadataSubmissionFormset
-        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
-        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
-        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
+        # #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+        #         self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
+        #     elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+        #         self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
+        # except (m.Curation.DoesNotExist, KeyError):
+        #     pass
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+        #         self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
+        #     elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+        #         self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
+        # except (m.Curation.DoesNotExist, KeyError):
+        #     pass
 
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         manuscript_display_name = self.object.manuscript.get_display_name()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -706,22 +711,22 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
-        try:
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
+        # if(self.v_metadata_formset is not None):
+        #     context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
+        # try:
+        #     if(self.v_metadata_software_formset is not None):
+        #         context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
+        #     if(self.v_metadata_badge_formset is not None):
+        #         context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        # except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+        #     if(self.v_metadata_software_formset is not None):
+        #         context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
@@ -749,26 +754,26 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset):
-            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+        # if(self.v_metadata_formset):
+        #     self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
 
-        #TODO: not sure if we need to do this ID logic in the post    
-        try:
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            # print("DNE")
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
+        # #TODO: not sure if we need to do this ID logic in the post    
+        # try:
+        #     # if(self.v_metadata_software_formset is not None):
+        #     #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        # except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+        #     # print("DNE")
+        #     # if(self.v_metadata_software_formset is not None):
+        #     #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
 
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
@@ -776,9 +781,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             # print(self.v_metadata_software_formset)
             # print((self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid()))
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
-                and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
+                and (self.verification_formset is None or self.verification_formset.is_valid()) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
-                and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
+                #and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
                 self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
                 if(self.edition_formset):
@@ -787,48 +792,48 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.curation_formset.save()
                 if(self.verification_formset):
                     self.verification_formset.save()
-                if(self.v_metadata_formset):
-                    self.v_metadata_formset.save()
-                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-                if(self.v_metadata_software_formset):
-                    # All this logic is to fix our software verificatio metadata we have copied over from our previous submission
-                    # The forms provided in the formset have the old vmetadata id which breaks saving.
-                    # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
-                    updated_request = request.POST.copy()
+                # if(self.v_metadata_formset):
+                #     self.v_metadata_formset.save()
+                # self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+                # if(self.v_metadata_software_formset):
+                #     # All this logic is to fix our software verification metadata we have copied over from our previous submission
+                #     # The forms provided in the formset have the old vmetadata id which breaks saving.
+                #     # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
+                #     updated_request = request.POST.copy()
                     
-                    #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
-                    try:
-                        if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
-                            updated_request = request.POST.copy()
-                            updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                            softwares_counter = 0
-                            while True:
-                                if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
-                                    break
-                                #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
-                                updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                                softwares_counter = softwares_counter + 1
+                #     #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
+                #     try:
+                #         if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
+                #             updated_request = request.POST.copy()
+                #             updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                #             softwares_counter = 0
+                #             while True:
+                #                 if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
+                #                     break
+                #                 #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
+                #                 updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                #                 softwares_counter = softwares_counter + 1
 
-                            role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
-                            f.VMetadataSoftwareVMetadataFormsets[role_name]
+                #             role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+                #             f.VMetadataSoftwareVMetadataFormsets[role_name]
 
-                            #TODO: save_as_new may not be a good idea all of the time??
-                            self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
+                #             #TODO: save_as_new may not be a good idea all of the time??
+                #             self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
 
-                        if(self.v_metadata_software_formset.is_valid()):
-                            self.v_metadata_software_formset.save()
-                        else:
-                            #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
-                            print(self.v_metadata_software_formset.errors)
-                            logger.debug(self.v_metadata_software_formset.errors)
-                    except MultiValueDictKeyError:
-                        logger.error("MULTI VALUE KEY DICT ERROR")
-                        logger.error(request.POST)
+                #         if(self.v_metadata_software_formset.is_valid()):
+                #             self.v_metadata_software_formset.save()
+                #         else:
+                #             #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
+                #             print(self.v_metadata_software_formset.errors)
+                #             logger.debug(self.v_metadata_software_formset.errors)
+                #     except MultiValueDictKeyError:
+                #         logger.error("MULTI VALUE KEY DICT ERROR")
+                #         logger.error(request.POST)
 
-                if(self.v_metadata_badge_formset):
-                    self.v_metadata_badge_formset.save()
-                if(self.v_metadata_audit_formset): 
-                    self.v_metadata_audit_formset.save()
+                # if(self.v_metadata_badge_formset):
+                #     self.v_metadata_badge_formset.save()
+                # if(self.v_metadata_audit_formset): 
+                #     self.v_metadata_audit_formset.save()
                 if(self.note_formset is not None and self.note_formset.is_valid()):
                     self.note_formset.save()
 
@@ -919,22 +924,22 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.curation_formset.errors)
                 if(self.verification_formset):
                     logger.debug(self.verification_formset.errors)
-                if(self.v_metadata_formset):
-                    logger.debug(self.v_metadata_formset.errors)
+                # if(self.v_metadata_formset):
+                #     logger.debug(self.v_metadata_formset.errors)
                 # if(self.v_metadata_software_formset):
                 #     logger.debug(self.v_metadata_software_formset.errors)
-                if(self.v_metadata_badge_formset):
-                    logger.debug(self.v_metadata_badge_formset.errors)
-                if(self.v_metadata_audit_formset): 
-                    logger.debug(self.v_metadata_audit_formset.errors)
+                # if(self.v_metadata_badge_formset):
+                #     logger.debug(self.v_metadata_badge_formset.errors)
+                # if(self.v_metadata_audit_formset): 
+                #     logger.debug(self.v_metadata_audit_formset.errors)
         else:
             if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
                 self.note_formset.save()
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
     
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
@@ -958,14 +963,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['curation_formset'] = self.curation_formset
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset
-        if(self.v_metadata_software_formset is not None):
-            context['v_metadata_software_formset'] = self.v_metadata_software_formset
-        if(self.v_metadata_badge_formset is not None):
-            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
-        if(self.v_metadata_audit_formset is not None):
-            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
+        # if(self.v_metadata_formset is not None):
+        #     context['v_metadata_formset'] = self.v_metadata_formset
+        # if(self.v_metadata_software_formset is not None):
+        #     context['v_metadata_software_formset'] = self.v_metadata_software_formset
+        # if(self.v_metadata_badge_formset is not None):
+        #     context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
+        # if(self.v_metadata_audit_formset is not None):
+        #     context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
