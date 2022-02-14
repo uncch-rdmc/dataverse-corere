@@ -4,6 +4,7 @@ from django.conf import settings
 from corere.main import constants as c
 from corere.main import models as m
 from corere.main import wholetale_corere as w
+from corere.apps.file_datatable import views as fdtv
 from corere.main.utils import fsm_check_transition_perm
 from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
@@ -17,7 +18,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
 logger = logging.getLogger(__name__)
 
-#Shared across our various datatables
+#Shared across our various (non-file) datatables
 class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
     # pull from source mostly, except when noted. 
     # Needed to disallow users from requesting columns from the model we do not wish to provide
@@ -339,4 +340,32 @@ class UserJson(CorereBaseDatatableView):
     #         qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
     #     return qs
 
+############ File Tables (based off the files_datatable app) ############
 
+class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    def get_initial_queryset(self):
+        manuscript_id = self.kwargs['id']
+        try:
+            manuscript = m.Manuscript.objects.get(id=manuscript_id)
+        except ObjectDoesNotExist:
+            raise Http404()
+        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+            #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
+            print("wow")
+            return m.GitFile.objects.filter(parent_manuscript=manuscript) 
+        else:
+            raise Http404()
+
+class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    def get_initial_queryset(self):
+        submission_id = self.kwargs['id']
+        try:
+            submission = m.Submission.objects.get(id=submission_id)
+        except ObjectDoesNotExist:
+            raise Http404()
+        #TODO: Should this perm be checking more... right now editors/curators/verifiers might be able to see author files while they are working
+        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, submission.manuscript)):
+            #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
+            return m.GitFile.objects.filter(parent_submission=submission) 
+        else:
+            raise Http404()

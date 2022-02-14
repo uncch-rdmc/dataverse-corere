@@ -32,6 +32,7 @@ urlpatterns = [
     #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
     path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
+    path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
@@ -52,7 +53,8 @@ urlpatterns = [
     path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebooklogin"), #Technically this page is more than login, but login is a good user facing name
     path('submission/<int:id>/newfilecheck/', classes.SubmissionFilesCheckNewness.as_view(), name="submission_checkfilenewness"),
     path('submission/<int:id>/wtstream/', classes.SubmissionWholeTaleEventStreamView.as_view(), name="submission_wholetalestream"),
-    
+    path('submission/<int:id>/file_table/', datatables.SubmissionFileJson.as_view(), name="submission_file_table"),
+
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
     path('account_user_details/', users.account_user_details, name="account_user_details"),

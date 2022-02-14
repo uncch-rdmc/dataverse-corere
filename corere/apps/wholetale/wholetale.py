@@ -1,8 +1,9 @@
-import time, datetime, sseclient, threading, json, requests, random, string
+import time, datetime, sseclient, threading, json, requests, random, string, logging
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
 from corere.apps.wholetale import models as wtm
+logger = logging.getLogger(__name__)
 
 #Some code taken from https://github.com/whole-tale/corere-mock
 #Some code also taken from https://gist.github.com/craig-willis/1d928c9afe78ff2a55a804c35637fa42

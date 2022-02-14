@@ -49,6 +49,14 @@ table.dataTable tr.selected td.select-checkbox:after, table.dataTable tr.selecte
     //I can't seem to figure out how to change the color of the checkmark here
 }
 
+table.filetable {
+    //Target th & td, overriding bootstrap's _tables.scss
+    > :not(caption) > * > * {
+        padding: 0.25rem;
+        vertical-align: middle;
+              }
+}
+
 .page-title {
     margin-bottom: 1rem;
     font-weight: 500;
@@ -341,6 +349,14 @@ select {
     border: 1px solid #dee2e6;   
     border-width: 1px;
 }
+
+//Add back bootstrap 3 tiny buttons, for our grid. We aren't targeting mobile anyways
+// .btn-group-xs > .btn, .btn-xs {
+//     padding: .25rem .4rem;
+//     font-size: .875rem;
+//     line-height: .5;
+//     border-radius: .2rem;
+// }
 
 /* Datatables OLD */
 
