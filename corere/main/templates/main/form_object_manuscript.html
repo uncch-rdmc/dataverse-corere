@@ -57,6 +57,69 @@
     })
     
 </script>
+{% comment %} This script was used for submissions before moving many form related fields around {% endcomment %}
+<script type="text/javascript">
+    $(function () {
+
+        //checkbox conditionality and popups
+        var hp_checkbox = document.getElementById('id_high_performance');
+        var v_mt_div = document.getElementById('div_id_v_metadata_formset-0-machine_type');
+        var v_s_div = document.getElementById('div_id_v_metadata_formset-0-scheduler');
+        var v_p_div = document.getElementById('div_id_v_metadata_formset-0-platform');
+        var v_pr_div = document.getElementById('div_id_v_metadata_formset-0-processor_reqs');
+        var v_hu_div = document.getElementById('div_id_v_metadata_formset-0-host_url');
+        var v_mr_div = document.getElementById('div_id_v_metadata_formset-0-memory_reqs');
+
+        
+        if (!hp_checkbox.checked) {
+            v_mt_div.style.display = "none";
+            v_s_div.style.display = "none";
+            v_p_div.style.display = "none";
+            v_pr_div.style.display = "none";
+            v_hu_div.style.display = "none";
+            v_mr_div.style.display = "none";
+        }
+        hp_checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+                v_mt_div.style.display = "block";
+                v_s_div.style.display = "block";
+                v_p_div.style.display = "block";
+                v_pr_div.style.display = "block";
+                v_hu_div.style.display = "block";
+                v_mr_div.style.display = "block";
+            } else {
+                v_mt_div.style.display = "none";
+                v_s_div.style.display = "none";
+                v_p_div.style.display = "none";
+                v_pr_div.style.display = "none";
+                v_hu_div.style.display = "none";
+                v_mr_div.style.display = "none";
+            } 
+        });
+
+        var cp_checkbox = document.getElementById('id_contents_proprietary');
+        var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
+        if (!cp_checkbox.checked) {
+            ps_div.style.display = "none";
+        }
+        cp_checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                ps_div.style.display = "block";
+            } else {
+                ps_div.style.display = "none";
+            }
+        });
+
+        var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
+        cps_checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
+            }
+        });
+
+    })
+</script>
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -79,6 +142,12 @@
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
+    {% endif %}
+    {% if v_metadata_formset %}
+        <h5 class="cblue">Verification Metadata</h5>
+        {{ v_metadata_formset.non_form_errors }}
+        {% crispy v_metadata_formset helper %}
+        <hr>  
     {% endif %}
 
     {% if not read_only %}

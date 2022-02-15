@@ -351,7 +351,6 @@ class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
             raise Http404()
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
             #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
-            print("wow")
             return m.GitFile.objects.filter(parent_manuscript=manuscript) 
         else:
             raise Http404()

@@ -202,6 +202,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     author_formset = None
     data_source_formset = None
     keyword_formset = None 
+    v_metadata_formset = None
     role_name = None
     from_submission = False
     create = False
@@ -215,7 +216,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.ReadOnlyAuthorFormSet
                 self.data_source_formset = f.ReadOnlyDataSourceFormSet
                 self.keyword_formset = f.ReadOnlyKeywordFormSet
-                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
+                self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
@@ -332,7 +333,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+            context['v_metadata_formset'] = self.v_metadata_formset
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
