@@ -202,7 +202,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     author_formset = None
     data_source_formset = None
     keyword_formset = None 
-    v_metadata_formset = None
+    # v_metadata_formset = None
     role_name = None
     from_submission = False
     create = False
@@ -216,7 +216,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.ReadOnlyAuthorFormSet
                 self.data_source_formset = f.ReadOnlyDataSourceFormSet
                 self.keyword_formset = f.ReadOnlyKeywordFormSet
-                self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
+                # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
@@ -224,7 +224,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
-                self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
+                # self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
             
         if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
             self.form_helper = f.ManuscriptFormHelperEditor()
@@ -256,7 +256,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
+            # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
@@ -279,7 +279,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
-            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+            # self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
@@ -288,7 +288,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if not self.read_only and self.form.is_valid() \
             and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) \
-            and (not self.keyword_formset or self.keyword_formset.is_valid() and (not self.v_metadata_formset or self.v_metadata_formset.is_valid())):
+            and (not self.keyword_formset or self.keyword_formset.is_valid()):
             
             self.form.save()
             if(self.author_formset):
@@ -297,8 +297,8 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.data_source_formset.save()
             if(self.keyword_formset):
                 self.keyword_formset.save()
-            if(self.v_metadata_formset):
-                self.v_metadata_formset.save()
+            # if(self.v_metadata_formset):
+            #     self.v_metadata_formset.save()
 
             if request.POST.get('submit_continue'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
@@ -318,7 +318,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.author_formset.errors)
             logger.debug(self.data_source_formset.errors)
             logger.debug(self.keyword_formset.errors)  
-            logger.debug(self.v_metadata_formset.errors)  
+            # logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
             'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
@@ -333,7 +333,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
-            context['v_metadata_formset'] = self.v_metadata_formset
+            # context['v_metadata_formset'] = self.v_metadata_formset
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
@@ -588,10 +588,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     edition_formset = None
     curation_formset = None
     verification_formset = None
-    v_metadata_formset = None
-    v_metadata_software_formset = None
-    v_metadata_badge_formset = None
-    v_metadata_audit_formset = None
+    # v_metadata_formset = None
+    # v_metadata_software_formset = None
+    # v_metadata_badge_formset = None
+    # v_metadata_audit_formset = None
 
     #TODO: Move this to the top, after (probably) deleting add_formsets
     def dispatch(self, request, *args, **kwargs):

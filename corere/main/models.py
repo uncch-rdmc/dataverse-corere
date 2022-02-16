@@ -643,6 +643,8 @@ class Keyword(models.Model):
 
 ####################################################
 
+#This model has a lot of fields because it stores the (many) user form fields as well as a few internal fields.
+#Ideally it may be better to have the form fields in their own class, but this requires touching hundreds of places in the application, and the benefit is minor.
 class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new', 'New'
@@ -681,21 +683,32 @@ class Manuscript(AbstractCreateUpdateModel):
     additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     #TODO: When fixing local container mode (non settings.CONTAINER_DRIVER == 'wholetale'), we will need to generate a list of compute environments to populate the form for selecting the below fields
     compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
     compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
-    skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
-
+    
     # Was a part of submission
     high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
     contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
     contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')    
+    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
+
+    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
+    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
+    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
+    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
+    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
+    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
+    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
+    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
+    skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
+    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
+    
 
     class Meta:
         permissions = [
@@ -1128,20 +1141,6 @@ class VerificationMetadataAudit(models.Model):
     #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
-    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
-    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
-    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
-    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
-    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
-    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
-    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
-    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')
-    manuscript = models.OneToOneField('Manuscript', on_delete=models.CASCADE, related_name="manuscript_vmetadata")
-    #submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-
 #other fields (email, created) are in base model
 #see https://github.com/bee-keeper/django-invitations/issues/143 for a bit more info (especially if we want to wire this into admin)
 class CorereInvitation(Invitation):
@@ -1211,7 +1210,7 @@ class CorereInvitation(Invitation):
 #@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
 @receiver(post_save, sender=VerificationMetadataBadge, dispatch_uid="add_history_info_vmetadata_badge")
 @receiver(post_save, sender=VerificationMetadataAudit, dispatch_uid="add_history_info_vmetadata_audit")
-@receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
+# @receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
 def add_history_info(sender, instance, **kwargs):
     try:
         new_record, old_record = instance.history.order_by('-history_date')[:2]

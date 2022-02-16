@@ -14,7 +14,7 @@ from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
+from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div, HTML
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 from django.http import Http404
@@ -181,20 +181,42 @@ class ManuscriptFormHelperMain(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
+            HTML("""
+                <h5 class='cblue'>General Info</h5>
+            """),
             'pub_name','pub_id','description','subject', 'additional_info',
-            Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
-                css_class='row',
-            ),
-            'compute_env','compute_env_other',
             Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
                 Div('contact_email',css_class='col-md-6',),
                 css_class='row',
             ),
-            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing'
+            HTML("""
+                <hr><h5 class='cblue'>Environment Info</h5>
+            """),
+            Div(
+                Div('qual_analysis',css_class='col-md-6',),
+                Div('qdr_review',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing',
+            'compute_env','compute_env_other',
+            'operating_system', 'packages_info', 'software_info', 
+            Div(
+                Div('machine_type',css_class='col-md-6',),
+                Div('scheduler',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('platform',css_class='col-md-6',),
+                Div('host_url',css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('processor_reqs',css_class='col-md-6',),
+                Div('memory_reqs',css_class='col-md-6',),
+                css_class='row',
+            ),
         )
 
 class ManuscriptFormHelperEditor(FormHelper):
@@ -224,7 +246,8 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing']
+            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing',
+            'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
@@ -281,6 +304,31 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
+            if("high_performance" in self.data.keys()):
+                machine_type = self.cleaned_data.get('machine_type')
+                if(not machine_type):
+                    self.add_error('machine_type', 'This field is required.')
+
+                scheduler = self.cleaned_data.get('scheduler')
+                if(not scheduler):
+                    self.add_error('scheduler', 'This field is required.')
+
+                platform = self.cleaned_data.get('platform')
+                if(not platform):
+                    self.add_error('platform', 'This field is required.')
+
+                processor_reqs = self.cleaned_data.get('processor_reqs')
+                if(not processor_reqs):
+                    self.add_error('processor_reqs', 'This field is required.')
+
+                host_url = self.cleaned_data.get('host_url')
+                if(not host_url):
+                    self.add_error('host_url', 'This field is required.')
+
+                memory_reqs = self.cleaned_data.get('memory_reqs')
+                if(not memory_reqs):
+                    self.add_error('memory_reqs', 'This field is required.')
+
             validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
@@ -288,6 +336,7 @@ class ManuscriptBaseForm(forms.ModelForm):
                 #But if we return any contents the error shows in the top errors field and in the formset field, and we don't want that
                 #So we return an empty list
                 raise ValidationError([])
+        
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
@@ -1121,100 +1170,100 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
 
 #------------ Verification Metadata - Main -------------
 
-class VMetadataBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadata
-        fields = ["operating_system", "packages_info", "software_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
-        #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
-        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info", "software_info"]
-        labels = label_gen(model, fields, always_required)
+# class VMetadataBaseForm(forms.ModelForm):
+#     class Meta:
+#         model = m.VerificationMetadata
+#         fields = ["operating_system", "packages_info", "software_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+#         #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
+#         always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info", "software_info"]
+#         labels = label_gen(model, fields, always_required)
 
-    #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
-    #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
-    #      But I don't want to do this until things are more stable and I have tests working again.
-    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
-        super(VMetadataBaseForm, self).__init__(*args, **kwargs)
-        self.empty_permitted = False
-        # self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
-        # self.fields['software_info'].widget.attrs['class'] = 'smallerarea'
+#     #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
+#     #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
+#     #      But I don't want to do this until things are more stable and I have tests working again.
+#     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+#         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+#         self.empty_permitted = False
+#         # self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+#         # self.fields['software_info'].widget.attrs['class'] = 'smallerarea'
 
-        if(previous_vmetadata):
-            self.fields['operating_system'].initial = previous_vmetadata.operating_system
-            self.fields['machine_type'].initial = previous_vmetadata.machine_type
-            self.fields['scheduler'].initial = previous_vmetadata.scheduler
-            self.fields['platform'].initial = previous_vmetadata.platform
-            self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
-            self.fields['host_url'].initial = previous_vmetadata.host_url
-            self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
-            self.fields['packages_info'].initial = previous_vmetadata.packages_info
-            self.fields['software_info'].initial = previous_vmetadata.software_info
+#         if(previous_vmetadata):
+#             self.fields['operating_system'].initial = previous_vmetadata.operating_system
+#             self.fields['machine_type'].initial = previous_vmetadata.machine_type
+#             self.fields['scheduler'].initial = previous_vmetadata.scheduler
+#             self.fields['platform'].initial = previous_vmetadata.platform
+#             self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
+#             self.fields['host_url'].initial = previous_vmetadata.host_url
+#             self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
+#             self.fields['packages_info'].initial = previous_vmetadata.packages_info
+#             self.fields['software_info'].initial = previous_vmetadata.software_info
 
-    def clean(self):
-        #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
-        if("high_performance" in self.data.keys()):
-            machine_type = self.cleaned_data.get('machine_type')
-            if(not machine_type):
-                self.add_error('machine_type', 'This field is required.')
+#     def clean(self):
+#         #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
+#         if("high_performance" in self.data.keys()):
+#             machine_type = self.cleaned_data.get('machine_type')
+#             if(not machine_type):
+#                 self.add_error('machine_type', 'This field is required.')
 
-            scheduler = self.cleaned_data.get('scheduler')
-            if(not scheduler):
-                self.add_error('scheduler', 'This field is required.')
+#             scheduler = self.cleaned_data.get('scheduler')
+#             if(not scheduler):
+#                 self.add_error('scheduler', 'This field is required.')
 
-            platform = self.cleaned_data.get('platform')
-            if(not platform):
-                self.add_error('platform', 'This field is required.')
+#             platform = self.cleaned_data.get('platform')
+#             if(not platform):
+#                 self.add_error('platform', 'This field is required.')
 
-            processor_reqs = self.cleaned_data.get('processor_reqs')
-            if(not processor_reqs):
-                self.add_error('processor_reqs', 'This field is required.')
+#             processor_reqs = self.cleaned_data.get('processor_reqs')
+#             if(not processor_reqs):
+#                 self.add_error('processor_reqs', 'This field is required.')
 
-            host_url = self.cleaned_data.get('host_url')
-            if(not host_url):
-                self.add_error('host_url', 'This field is required.')
+#             host_url = self.cleaned_data.get('host_url')
+#             if(not host_url):
+#                 self.add_error('host_url', 'This field is required.')
 
-            memory_reqs = self.cleaned_data.get('memory_reqs')
-            if(not memory_reqs):
-                self.add_error('memory_reqs', 'This field is required.')
+#             memory_reqs = self.cleaned_data.get('memory_reqs')
+#             if(not memory_reqs):
+#                 self.add_error('memory_reqs', 'This field is required.')
 
 
-class VMetadataForm_Admin(VMetadataBaseForm):
-    pass
+# class VMetadataForm_Admin(VMetadataBaseForm):
+#     pass
 
-class VMetadataForm_Author(VMetadataBaseForm):
-    pass
+# class VMetadataForm_Author(VMetadataBaseForm):
+#     pass
 
-class VMetadataForm_Editor(ReadOnlyFormMixin, VMetadataBaseForm):
-    pass
+# class VMetadataForm_Editor(ReadOnlyFormMixin, VMetadataBaseForm):
+#     pass
 
-class VMetadataForm_Curator(VMetadataBaseForm):
-    pass
+# class VMetadataForm_Curator(VMetadataBaseForm):
+#     pass
 
-class VMetadataForm_Verifier(VMetadataBaseForm):
-    pass
+# class VMetadataForm_Verifier(VMetadataBaseForm):
+#     pass
 
-VMetadataManuscriptFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataManuscriptFormsets[role_str] = inlineformset_factory(
-            m.Manuscript, 
-            m.VerificationMetadata, 
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
-            can_delete = False,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
+# VMetadataManuscriptFormsets = {}
+# for role_str in list_of_roles:
+#     try:
+#         VMetadataManuscriptFormsets[role_str] = inlineformset_factory(
+#             m.Manuscript, 
+#             m.VerificationMetadata, 
+#             extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+#             form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
+#             can_delete = False,
+#         ) 
+#     except AttributeError:
+#         pass #If no form for role we should never show the form, so pass
 
-class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
-    pass
+# class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
+#     pass
 
-ReadOnlyVMetadataManuscriptFormset = inlineformset_factory(
-    m.Manuscript, 
-    m.VerificationMetadata, 
-    extra=0,
-    form=ReadOnlyVMetadataForm,
-    can_delete = False,
-)
+# ReadOnlyVMetadataManuscriptFormset = inlineformset_factory(
+#     m.Manuscript, 
+#     m.VerificationMetadata, 
+#     extra=0,
+#     form=ReadOnlyVMetadataForm,
+#     can_delete = False,
+# )
 
 #------------ Verification Metadata - Software -------------
 

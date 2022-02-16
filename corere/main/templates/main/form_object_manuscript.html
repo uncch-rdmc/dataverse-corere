@@ -60,17 +60,15 @@
 {% comment %} This script was used for submissions before moving many form related fields around {% endcomment %}
 <script type="text/javascript">
     $(function () {
-
         //checkbox conditionality and popups
         var hp_checkbox = document.getElementById('id_high_performance');
-        var v_mt_div = document.getElementById('div_id_v_metadata_formset-0-machine_type');
-        var v_s_div = document.getElementById('div_id_v_metadata_formset-0-scheduler');
-        var v_p_div = document.getElementById('div_id_v_metadata_formset-0-platform');
-        var v_pr_div = document.getElementById('div_id_v_metadata_formset-0-processor_reqs');
-        var v_hu_div = document.getElementById('div_id_v_metadata_formset-0-host_url');
-        var v_mr_div = document.getElementById('div_id_v_metadata_formset-0-memory_reqs');
+        var v_mt_div = document.getElementById('div_id_machine_type');
+        var v_s_div = document.getElementById('div_id_scheduler');
+        var v_p_div = document.getElementById('div_id_platform');
+        var v_pr_div = document.getElementById('div_id_processor_reqs');
+        var v_hu_div = document.getElementById('div_id_host_url');
+        var v_mr_div = document.getElementById('div_id_memory_reqs');
 
-        
         if (!hp_checkbox.checked) {
             v_mt_div.style.display = "none";
             v_s_div.style.display = "none";
@@ -97,7 +95,6 @@
                 v_mr_div.style.display = "none";
             } 
         });
-
         var cp_checkbox = document.getElementById('id_contents_proprietary');
         var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
         if (!cp_checkbox.checked) {
@@ -110,7 +107,6 @@
                 ps_div.style.display = "none";
             }
         });
-
         var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
         cps_checkbox.addEventListener('change', function() {
             if (this.checked) {
@@ -126,13 +122,13 @@
     {% crispy form manuscript_helper %}
     <hr>
     {% if author_formset %}
-        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="cblue">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-original-title="Description about data sources"></span></h5>
+        <h5 class="cblue">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
