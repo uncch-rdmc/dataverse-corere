@@ -323,7 +323,7 @@ class Submission(AbstractCreateUpdateModel):
         super(Submission, self).save(*args, **kwargs)
 
         if(first_save):
-            if self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale":
+            if self.manuscript.is_containerized and settings.CONTAINER_DRIVER == "wholetale":
                 wtc = w.WholeTaleCorere(admin=True)
                 tale = self.manuscript.manuscript_tales.get(original_tale=None)
                 group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -338,10 +338,10 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.parent_submission = self
                     new_gfile.id = None
                     new_gfile.save()
-                if self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale":
+                if self.manuscript.is_containerized and settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
-        elif self._status == self.Status.REJECTED_EDITOR and self.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
+        elif self._status == self.Status.REJECTED_EDITOR and self.manuscript.is_containerized and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -834,6 +834,11 @@ class Manuscript(AbstractCreateUpdateModel):
 
     def is_complete(self):
         return self._status == Manuscript.Status.COMPLETED
+
+    def is_containerized(self):
+        if self.compute_env == 'Other' or self.high_performance or self.qdr_review:
+            return False
+        return True
 
     def get_max_submission_version_id(self):
         return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']

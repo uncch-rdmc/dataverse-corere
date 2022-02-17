@@ -685,12 +685,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_first
                 else:
                     progress_list = c.progress_list_submission_first
             else:
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_subsequent
                 else:
                     progress_list = c.progress_list_submission_subsequent
@@ -864,7 +864,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         
                     if ((self.object.manuscript.skip_edition and request.POST.get('submit_progress_curation'))
                         or (not self.object.manuscript.skip_edition and request.POST.get('submit_progress_edition'))):
-                        if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                        if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                             #Here we create the wholetale version. 
                             # If not skipping editor, we do this after the editors approval because it isn't really a "done" submission then
                             # Else, we do it after curator approval because that's the next step.
@@ -945,12 +945,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_first
                 else:
                     progress_list = c.progress_list_submission_first
             else:
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_subsequent
                 else:
                     progress_list = c.progress_list_submission_subsequent
@@ -1153,16 +1153,16 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
-            'skip_docker': settings.SKIP_DOCKER, 'compute_env_other': self.object.manuscript.compute_env == 'Other'}
+            'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized()}
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_first
                 else:
                     progress_list = c.progress_list_submission_first
             else:
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_subsequent
                 else:
                     progress_list = c.progress_list_submission_subsequent
@@ -1209,14 +1209,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
-                if self.object.manuscript.compute_env == 'Other':
+                if self.object.manuscript.is_containerized() == 'Other':
                     self.msg = "Your submission has been submitted." #TODO: Improve message
                     messages.add_message(request, messages.INFO, self.msg)
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.files_dict_list):
-                    if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                    if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
@@ -1265,12 +1265,12 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
                 if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                    if(self.object.manuscript.compute_env == "Other"):
+                    if(self.object.manuscript.is_containerized()):
                         progress_list = c.progress_list_other_submission_first
                     else:
                         progress_list = c.progress_list_submission_first
                 else:
-                    if(self.object.manuscript.compute_env == "Other"):
+                    if(self.object.manuscript.is_containerized()):
                         progress_list = c.progress_list_other_submission_subsequent
                     else:
                         progress_list = c.progress_list_submission_subsequent
@@ -1551,7 +1551,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 self.object.save()
 
                 #Delete all tale copies both locally and in WT. This also deletes running instances.
-                if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
                         wtc.delete_tale(wtm_tale.wt_id)
@@ -1625,7 +1625,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env == 'Other':
+        if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
@@ -1715,12 +1715,12 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_first
                 else:
                     progress_list = c.progress_list_submission_first
             else:
-                if(self.object.manuscript.compute_env == "Other"):
+                if(self.object.manuscript.is_containerized()):
                     progress_list = c.progress_list_other_submission_subsequent
                 else:
                     progress_list = c.progress_list_submission_subsequent
@@ -1751,7 +1751,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     #For now if not wholetale, we check if 'edit_noop'
     #Code is same as in SubmissionNotebookView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env == 'Other':
+        if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
@@ -1848,7 +1848,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         submission.submit(request.user)
         submission.save()
 
-        if submission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+        if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)    
             #  Set the wt author group's access to the root tale as read

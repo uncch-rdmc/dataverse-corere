@@ -319,7 +319,6 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(not software_info):
                 self.add_error('software_info', 'This field is required.')
 
-
             validation_errors = [] #we store all the "generic" errors and raise them at once
             if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
                 ):
@@ -379,12 +378,15 @@ class ManuscriptForm_Author(ManuscriptBaseForm):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['qdr_review'].disabled = True
+        self.fields['qual_analysis'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['compute_env'].disabled = True
         self.fields['compute_env_other'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['qdr_review'].disabled = True
         self.fields['operating_system'].disabled = True
         self.fields['packages_info'].disabled = True
         self.fields['software_info'].disabled = True
@@ -401,6 +403,8 @@ class ManuscriptForm_Curator(ManuscriptBaseForm):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['compute_env'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['qdr_review'].disabled = True
 
 class ManuscriptForm_Verifier(ManuscriptBaseForm):
 
