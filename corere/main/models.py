@@ -688,20 +688,21 @@ class Manuscript(AbstractCreateUpdateModel):
     compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
     
     # Was a part of submission
-    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
+    high_performance = models.BooleanField(default=False, verbose_name='Does this manuscript require a high-performance compute environment?')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this manuscript contain GIS data and mapping?')
+    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?')
     contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
+    other_exemptions = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Exemptions', help_text='Are there any other exemptions to the verification workflow that the curation team should know about?')
 
     operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
+    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
     machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
     scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
     platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
     processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
     host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
     memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
-    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
-    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
@@ -709,7 +710,6 @@ class Manuscript(AbstractCreateUpdateModel):
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
     _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     
-
     class Meta:
         permissions = [
             #TODO: This includes default CRUD permissions. We could switch it to be explicit (other objects too)

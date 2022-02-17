@@ -226,7 +226,8 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
                 # self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
             
-        if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
+        if(self.create and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
+            self.form = f.ManuscriptForm_Editor_Create
             self.form_helper = f.ManuscriptFormHelperEditor()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()

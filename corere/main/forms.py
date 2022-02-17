@@ -192,14 +192,17 @@ class ManuscriptFormHelperMain(FormHelper):
                 css_class='row',
             ),
             HTML("""
-                <hr><h5 class='cblue'>Environment Info</h5>
+                <hr><h5 class='cblue'>Exemptions</h5>
             """),
             Div(
                 Div('qual_analysis',css_class='col-md-6',),
                 Div('qdr_review',css_class='col-md-6',),
                 css_class='row',
             ),
-            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing',
+            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing', 'other_exemptions',
+            HTML("""
+                <hr><h5 class='cblue'>Environment Info</h5>
+            """),
             'compute_env','compute_env_other',
             'operating_system', 'packages_info', 'software_info', 
             Div(
@@ -219,24 +222,33 @@ class ManuscriptFormHelperMain(FormHelper):
             ),
         )
 
+#TODO: What fields should be on here for the editor
+
 class ManuscriptFormHelperEditor(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_tag = False
 
         self.layout = Layout(
+            HTML("""
+                <h5 class='cblue'>General Info</h5>
+            """),
             'pub_name','pub_id','additional_info',
-            Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
-                css_class='row',
-            ),
             Div(
                 Div('contact_first_name',css_class='col-md-6',),
                 Div('contact_last_name',css_class='col-md-6',),
                 Div('contact_email',css_class='col-md-6',),
                 css_class='row',
-            )
+            ),
+            HTML("""
+                <hr><h5 class='cblue'>Exemptions</h5>
+            """),
+            Div(
+                Div('qual_analysis',css_class='col-md-6',),
+                Div('qdr_review',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'contents_proprietary', 'contents_proprietary_sharing','other_exemptions'
         )
 
 #------------- Base Manuscript -------------
@@ -246,7 +258,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing',
+            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing', 'other_exemptions',
             'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
@@ -294,6 +306,19 @@ class ManuscriptBaseForm(forms.ModelForm):
             contact_email = self.cleaned_data.get('contact_email')
             if(not contact_email):
                 self.add_error('contact_email', 'This field is required.')
+                
+            operating_system = self.cleaned_data.get('operating_system')
+            if(not operating_system):
+                self.add_error('operating_system', 'This field is required.')
+
+            packages_info = self.cleaned_data.get('packages_info')
+            if(not packages_info):
+                self.add_error('packages_info', 'This field is required.')
+
+            software_info = self.cleaned_data.get('software_info')
+            if(not software_info):
+                self.add_error('software_info', 'This field is required.')
+
 
             validation_errors = [] #we store all the "generic" errors and raise them at once
             if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
@@ -347,7 +372,7 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'compute_env', 'compute_env_other']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'compute_env', 'compute_env_other', 'operating_system', 'packages_info', 'software_info']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):
@@ -356,22 +381,26 @@ class ManuscriptForm_Author(ManuscriptBaseForm):
         self.fields['qdr_review'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
-    class Meta(ManuscriptBaseForm.Meta):
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
-
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.fields['description'].disabled = True
-        # self.fields['subject'].disabled = True
-        # self.fields['contact_first_name'].disabled = True
-        # self.fields['contact_last_name'].disabled = True
-        # self.fields['contact_email'].disabled = True
+        self.fields['compute_env'].disabled = True
+        self.fields['compute_env_other'].disabled = True
+        self.fields['operating_system'].disabled = True
+        self.fields['packages_info'].disabled = True
+        self.fields['software_info'].disabled = True
+        self.fields['machine_type'].disabled = True
+        self.fields['scheduler'].disabled = True
+        self.fields['platform'].disabled = True
+        self.fields['host_url'].disabled = True
+        self.fields['processor_reqs'].disabled = True
+        self.fields['memory_reqs'].disabled = True
 
 class ManuscriptForm_Curator(ManuscriptBaseForm):
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
+        self.fields['compute_env'].disabled = True
 
 class ManuscriptForm_Verifier(ManuscriptBaseForm):
 
@@ -387,6 +416,8 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['description'].disabled = True
         self.fields['additional_info'].disabled = True
         self.fields['subject'].disabled = True
+        self.fields['compute_env'].disabled = True
+        self.fields['other_exemptions'].disabled = True
 
 ManuscriptForms = {
     "Admin": ManuscriptForm_Admin,
@@ -395,6 +426,19 @@ ManuscriptForms = {
     "Curator": ManuscriptForm_Curator,
     "Verifier": ManuscriptForm_Verifier,
 }
+
+class ManuscriptForm_Editor_Create(ManuscriptBaseForm):
+    class Meta(ManuscriptBaseForm.Meta):
+        fields = ['pub_name','pub_id','qual_analysis','contents_proprietary', 'contents_proprietary_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
+
+    def __init__ (self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # self.fields['description'].disabled = True
+        # self.fields['subject'].disabled = True
+        # self.fields['contact_first_name'].disabled = True
+        # self.fields['contact_last_name'].disabled = True
+        # self.fields['contact_email'].disabled = True
+
 #------------- Data Source -------------
 
 #Doing this check in "is_valid" is probably not the right spot. We raise a validation error instead of letting the function complete.
