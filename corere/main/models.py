@@ -672,8 +672,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
     pub_name = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript includes qualitative analysis')
-    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Does this manuscript need verification of qualitative results by QDR?')
+    qual_analysis = models.BooleanField(default=False, verbose_name='Does this manuscript include qualitative analysis')
+    qdr_review = models.BooleanField(default=False, verbose_name='Does this manuscript need verification of qualitative results by QDR?')
     contact_first_name = models.CharField(max_length=150, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
@@ -737,9 +737,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
         if not first_save and settings.CONTAINER_DRIVER == "wholetale":
             orig = Manuscript.objects.get(pk=self.pk)
-            if orig.compute_env != self.compute_env:
+
+            if orig.is_containerized() != self.is_containerized() or orig.compute_env != self.compute_env:
+                #This code will delete "nothing" if there was no container previously
                 old_tales = self.manuscript_tales.all()
-                # print(old_tales)
                 wtc = w.WholeTaleCorere(admin=True)
                 for ot in old_tales:
                     wtc.delete_tale(ot.wt_id)
@@ -780,7 +781,7 @@ class Manuscript(AbstractCreateUpdateModel):
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
 
-            if settings.CONTAINER_DRIVER == "wholetale": #NOTE: We don't check compute_env != 'Other' here because we don't know it yet. It means we create groups for manuscripts that won't be in wholetale but that's ok
+            if settings.CONTAINER_DRIVER == "wholetale": #NOTE: We don't check is_containerized() here because it'll be false until a compute_env is set. It means we create groups for manuscripts that won't be in wholetale but that's ok
                 #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
                 wtc = w.WholeTaleCorere(admin=True)
                 wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
@@ -794,7 +795,7 @@ class Manuscript(AbstractCreateUpdateModel):
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
-        if settings.CONTAINER_DRIVER == "wholetale" and self.compute_env and self.compute_env != 'Other' and not self.manuscript_tales.all().exists():
+        if settings.CONTAINER_DRIVER == "wholetale" and self.is_containerized() and not self.manuscript_tales.all().exists():
             #We create our root tale for the manuscript after the compute env has been provided. This triggers before there were ever tales, and after tales were deleted due to compute_env switch.
             wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
             wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
@@ -817,17 +818,15 @@ class Manuscript(AbstractCreateUpdateModel):
             wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
 
             if not first_save:
-                try: #All this code is for recreating a tale after an environment switch
+                try: #All this code is for recreating a tale after an environment switch.
                     latest_sub = self.get_latest_submission()
                     tale.submission = latest_sub
                     tale.save()
-                    wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self)) #Upload existing files. Only should actually do anything when changing compute_env. This could take a long time, we don't do anything about that right now.
+                    wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self)) #Upload existing files. Only should actually do anything when is_containerized changes because we check for tale existence.
                     if latest_sub._status == Submission.Status.NEW or latest_sub._status == Submission.Status.REJECTED_EDITOR:
                         wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, wtm_group_author)
                 except Submission.DoesNotExist:
                     pass
-
-            #TODO: we need to set the tale access for the root tale for the author based upon the group
                 
             #TODO-WT: We aren't handling the case where a compute env is changed and then a user attempts to run a compute env for a previous submission with a different env.
             #         I think my best bet is to make a custom error for this? "The environment type for this manuscript has changed. You cannot run submissions from before this change took place."
@@ -836,7 +835,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return self._status == Manuscript.Status.COMPLETED
 
     def is_containerized(self):
-        if self.compute_env == 'Other' or self.high_performance or self.qdr_review:
+        if not self.compute_env or self.compute_env == 'Other' or self.high_performance or self.contents_proprietary_sharing:
             return False
         return True
 

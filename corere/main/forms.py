@@ -186,38 +186,38 @@ class ManuscriptFormHelperMain(FormHelper):
             """),
             'pub_name','pub_id','description','subject', 'additional_info',
             Div(
-                Div('contact_first_name',css_class='col-md-6',),
-                Div('contact_last_name',css_class='col-md-6',),
-                Div('contact_email',css_class='col-md-6',),
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
                 css_class='row',
             ),
             HTML("""
                 <hr><h5 class='cblue'>Exemptions</h5>
             """),
-            Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
-                css_class='row',
-            ),
-            'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing', 'other_exemptions',
+            # Div(
+            #     Div('qual_analysis',css_class='col-md-6',),
+            #     Div('qdr_review',css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_proprietary', 'contents_proprietary_sharing', 'other_exemptions',
             HTML("""
                 <hr><h5 class='cblue'>Environment Info</h5>
             """),
             'compute_env','compute_env_other',
             'operating_system', 'packages_info', 'software_info', 
             Div(
-                Div('machine_type',css_class='col-md-6',),
-                Div('scheduler',css_class='col-md-6',),
+                Div('machine_type', css_class='col-md-6',),
+                Div('scheduler', css_class='col-md-6',),
                 css_class='row',
             ),
             Div(
-                Div('platform',css_class='col-md-6',),
-                Div('host_url',css_class='col-md-6',),
+                Div('platform', css_class='col-md-6',),
+                Div('host_url', css_class='col-md-6',),
                 css_class='row',
             ),
             Div(
-                Div('processor_reqs',css_class='col-md-6',),
-                Div('memory_reqs',css_class='col-md-6',),
+                Div('processor_reqs', css_class='col-md-6',),
+                Div('memory_reqs', css_class='col-md-6',),
                 css_class='row',
             ),
         )
@@ -235,20 +235,20 @@ class ManuscriptFormHelperEditor(FormHelper):
             """),
             'pub_name','pub_id','additional_info',
             Div(
-                Div('contact_first_name',css_class='col-md-6',),
-                Div('contact_last_name',css_class='col-md-6',),
-                Div('contact_email',css_class='col-md-6',),
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
                 css_class='row',
             ),
             HTML("""
                 <hr><h5 class='cblue'>Exemptions</h5>
             """),
-            Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
-                css_class='row',
-            ),
-            'contents_proprietary', 'contents_proprietary_sharing','other_exemptions'
+            # Div(
+            #     Div('qual_analysis', css_class='col-md-6',),
+            #     Div('qdr_review', css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'contents_proprietary', 'contents_proprietary_sharing','other_exemptions'
         )
 
 #------------- Base Manuscript -------------
