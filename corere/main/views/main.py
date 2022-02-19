@@ -107,16 +107,12 @@ def manuscript_landing(request, id=None):
     generateReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
-    createFirstSubmissionButton = False
-    createLaterSubmissionButton = False
+    createSubmissionButton = False
     launchContainerCurrentSubButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
-        if submission_count < 1 :
-            createFirstSubmissionButton = True
-        else:
-            createLaterSubmissionButton = True
+        createSubmissionButton = True
     else:
         try:
             latestSubmission = manuscript.get_latest_submission()
@@ -198,8 +194,7 @@ def manuscript_landing(request, id=None):
             'reviewSubmissionButton': reviewSubmissionButton,
             'generateReportButton': generateReportButton,
             'returnSubmissionButton': returnSubmissionButton,
-            'createFirstSubmissionButton': createFirstSubmissionButton,
-            'createLaterSubmissionButton': createLaterSubmissionButton,
+            'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table

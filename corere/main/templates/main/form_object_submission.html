@@ -78,9 +78,7 @@
         <input type="submit" name="submit_continue" value="Create and Continue">
     {% elif s_status == "new" or s_status == "rejected_editor"%}
         <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{parent_id}}/';}">
-        {% if not s_version > 1 %}
-            <input type="submit" name="back_save" value="Back">
-        {% endif %}
+        <input type="submit" name="back_save" value="Back">
         <input type="submit" name="submit_continue" value="Save and Continue">
     {% elif edition_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">

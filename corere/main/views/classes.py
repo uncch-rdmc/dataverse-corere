@@ -14,7 +14,7 @@ from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
-from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, generate_progress_bar_html
+from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, get_progress_bar_html_submission, generate_progress_bar_html
 from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
@@ -260,13 +260,13 @@ class GenericManuscriptView(GenericCorereObjectView):
             # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
-            #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            if(self.object.is_containerized()):
+                progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
+            else:
+                progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -305,11 +305,18 @@ class GenericManuscriptView(GenericCorereObjectView):
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
+
+            #This logic needs a different way of detecting whether to go to the edit of a submission or creation
+            #We should get the latest submission and check its status?
             elif request.POST.get('submit_continue_submission'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
+
                 try: #If it already exists from the user going between the form pages
-                    first_submission = self.object.get_latest_submission()
-                    return redirect('submission_edit', id=first_submission.id)
+                    latest_sub = self.object.get_latest_submission()
+                    if latest_sub._status == m.Submission.Status.RETURNED:
+                        return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    else:
+                        return redirect('submission_edit', id=latest_sub.id)
                 except m.Submission.DoesNotExist:
                     return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
             else:
@@ -338,12 +345,10 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -393,8 +398,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        progress_list = c.progress_list_manuscript
-        progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+        progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
@@ -436,8 +440,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 else:
                     errors.append(_('manuscript_noFiles_error'))
                 
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscriptt, 'Upload Files')
 
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_display_name': self.object.get_display_name(), 
                 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
@@ -596,11 +599,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
     #TODO: Move this to the top, after (probably) deleting add_formsets
     def dispatch(self, request, *args, **kwargs):
-        #If new submission with previous submission existing, copy over data from the previous submission
-        if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
-            if prev_max_sub_version_id:
-                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
+        # #If new submission with previous submission existing, copy over data from the previous submission
+        # if(request.method == 'GET' and not self.object.id):
+        #     prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
+        #     if prev_max_sub_version_id:
+        #         self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
 
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
@@ -683,19 +686,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
             # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+        # print(self.object._status)
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR or self.object._status == m.Submission.Status.RETURNED):
+        #     print("IN PROGRESS BAR SECTION")
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Add Submission Info')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Add Submission Info')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -943,19 +942,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
             # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
     
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+
+        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Add Submission Info')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Add Submission Info')
+        #     context['progress_bar_html'] = progress_bar_html
 
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset
@@ -979,18 +973,18 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         return render(request, self.template, context)
 
-    #Custom method, called via dispatch. Copies over submission and its verification metadatas
-    #This does not copy over GitFiles, those are done later in the flow
-    def copy_previous_submission_contents(self, manuscript, version_id):
-        #print("COPY PREV SUB")
-        prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
-        #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
+    # #Custom method, called via dispatch. Copies over submission and its verification metadatas
+    # #This does not copy over GitFiles, those are done later in the flow
+    # def copy_previous_submission_contents(self, manuscript, version_id):
+    #     #print("COPY PREV SUB")
+    #     prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
+    #     #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
 
-        self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
-        prev_sub.pk = None
-        prev_sub.id = None #Do I need to do both?
-        prev_sub._status = m.Submission.Status.NEW
-        self.object = prev_sub
+    #     self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
+    #     prev_sub.pk = None
+    #     prev_sub.id = None #Do I need to do both?
+    #     prev_sub._status = m.Submission.Status.NEW
+    #     self.object = prev_sub
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
@@ -1049,9 +1043,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1105,9 +1099,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1155,19 +1149,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized()}
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-            context['progress_bar_html'] = progress_bar_html
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Upload Files')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Upload Files')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
 
@@ -1263,19 +1251,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                 "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
 
-            if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-                if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                    if(self.object.manuscript.is_containerized()):
-                        progress_list = c.progress_list_other_submission_first
-                    else:
-                        progress_list = c.progress_list_submission_first
-                else:
-                    if(self.object.manuscript.is_containerized()):
-                        progress_list = c.progress_list_other_submission_subsequent
-                    else:
-                        progress_list = c.progress_list_submission_subsequent
-                progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-                context['progress_bar_html'] = progress_bar_html
+            # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+            #     if(self.object.manuscript.is_containerized()):
+            #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Upload Files')
+            #     else:
+            #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Upload Files')
+            #     context['progress_bar_html'] = progress_bar_html
+            context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
                 context['errors']= errors
@@ -1672,7 +1654,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
     def get(self, request, *args, **kwargs):
         context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, "form": self.form,
+            'page_title': _("submission_notebook_pageTitle").format(submission_version=self.object.version_id),
+            'page_help_text': self.page_help_text, "form": self.form,
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
 
         if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
@@ -1713,19 +1696,13 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         else:
             context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.is_containerized()):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Run Code')
-            context['progress_bar_html'] = progress_bar_html
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Run Code')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Run Code')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Run Code', self.object)
 
         return render(request, self.template, context)
 

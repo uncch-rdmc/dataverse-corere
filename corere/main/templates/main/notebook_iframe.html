@@ -4,6 +4,7 @@
 {% comment %} This way of showing the notebook may fail if the notebook finishes at the same time this page is loaded {% endcomment %}
 
 {%comment%} Don't forget to re-add the removed wt_loaded bits. Also the correct wtstream. {% endcomment %}
+{% include "main/page_title.html" %}
 <iframe src="{{notebook_url}}" title="notebook" id="notebook_iframe" {% if wt_launching %} style="display:none;" {% endif %} ></iframe>
 
 <form action="" method="post" enctype="multipart/form-data">
