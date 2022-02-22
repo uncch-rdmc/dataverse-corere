@@ -690,8 +690,8 @@ class Manuscript(AbstractCreateUpdateModel):
     # Was a part of submission
     high_performance = models.BooleanField(default=False, verbose_name='Does this manuscript require a high-performance compute environment?')
     contents_gis = models.BooleanField(default=False, verbose_name='Does this manuscript contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
+    contents_restricted = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?')
+    contents_restricted_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
     other_exemptions = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Exemptions', help_text='Are there any other exemptions to the verification workflow that the curation team should know about?')
 
     operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
@@ -835,7 +835,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return self._status == Manuscript.Status.COMPLETED
 
     def is_containerized(self):
-        if not self.compute_env or self.compute_env == 'Other' or self.high_performance or self.contents_proprietary_sharing:
+        if not self.compute_env or self.compute_env == 'Other' or self.high_performance or self.contents_restricted_sharing:
             return False
         return True
 

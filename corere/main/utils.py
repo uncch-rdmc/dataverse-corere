@@ -73,7 +73,6 @@ def get_role_name_for_form(user, manuscript, session, create):
             logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
             raise Http404()
     
-
 def get_pretty_user_list_by_group_prefix(group):
     userset = Group.objects.get(name__startswith=group).user_set.all()
     user_list_pretty = []

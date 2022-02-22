@@ -40,20 +40,6 @@
         });
         {% endif %}
 
-        var dropdown_compute_env = document.getElementById('id_compute_env');
-        var dropdown_compute_env_other_div = document.getElementById('div_id_compute_env_other');
-       
-        if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") { //TODO: re-enable
-            dropdown_compute_env_other_div.style.display = "none";
-        }
-
-        dropdown_compute_env.addEventListener('change', function() {
-            if(this.options[this.selectedIndex].value == "Other") {
-                dropdown_compute_env_other_div.style.display = "block";
-            } else {
-                dropdown_compute_env_other_div.style.display = "none";
-            }
-        })
     })
     
 </script>
@@ -69,50 +55,80 @@
         var v_hu_div = document.getElementById('div_id_host_url');
         var v_mr_div = document.getElementById('div_id_memory_reqs');
 
-        if (!hp_checkbox.checked) {
-            v_mt_div.style.display = "none";
-            v_s_div.style.display = "none";
-            v_p_div.style.display = "none";
-            v_pr_div.style.display = "none";
-            v_hu_div.style.display = "none";
-            v_mr_div.style.display = "none";
-        }
-        hp_checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
-                v_mt_div.style.display = "block";
-                v_s_div.style.display = "block";
-                v_p_div.style.display = "block";
-                v_pr_div.style.display = "block";
-                v_hu_div.style.display = "block";
-                v_mr_div.style.display = "block";
-            } else {
+        if(hp_checkbox) {
+            if (!hp_checkbox.checked) {
                 v_mt_div.style.display = "none";
                 v_s_div.style.display = "none";
                 v_p_div.style.display = "none";
                 v_pr_div.style.display = "none";
                 v_hu_div.style.display = "none";
                 v_mr_div.style.display = "none";
-            } 
-        });
-        var cp_checkbox = document.getElementById('id_contents_proprietary');
-        var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
-        if (!cp_checkbox.checked) {
+            }
+            hp_checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+                    v_mt_div.style.display = "block";
+                    v_s_div.style.display = "block";
+                    v_p_div.style.display = "block";
+                    v_pr_div.style.display = "block";
+                    v_hu_div.style.display = "block";
+                    v_mr_div.style.display = "block";
+                } else {
+                    v_mt_div.style.display = "none";
+                    v_s_div.style.display = "none";
+                    v_p_div.style.display = "none";
+                    v_pr_div.style.display = "none";
+                    v_hu_div.style.display = "none";
+                    v_mr_div.style.display = "none";
+                    document.getElementById('id_machine_type').value = '';
+                    document.getElementById('id_scheduler').value = '';
+                    document.getElementById('id_platform').value = '';
+                    document.getElementById('id_processor_reqs').value = '';
+                    document.getElementById('id_host_url').value = '';
+                    document.getElementById('id_memory_reqs').value = '';
+                } 
+            });
+        }
+        var cr_checkbox = document.getElementById('id_contents_restricted');
+        var crs_checkbox = document.getElementById('id_contents_restricted_sharing');
+        var ps_div = document.getElementById('div_id_contents_restricted_sharing');
+        if (!cr_checkbox.checked) {
             ps_div.style.display = "none";
         }
-        cp_checkbox.addEventListener('change', function() {
+        cr_checkbox.addEventListener('change', function() {
             if (this.checked) {
+                if('{{role_name}}' == 'Author'){
+                    alert("Please send restricted data to the AJPS editor.")
+                }
                 ps_div.style.display = "block";
             } else {
                 ps_div.style.display = "none";
+                crs_checkbox.checked = false;
             }
         });
-        var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
-        cps_checkbox.addEventListener('change', function() {
-            if (this.checked) {
+        crs_checkbox.addEventListener('change', function() {
+            if ('{{role_name}}' == 'Author' && this.checked) {
                 alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
             }
         });
+
+        var dropdown_compute_env = document.getElementById('id_compute_env');
+        var dropdown_compute_env_other_div = document.getElementById('div_id_compute_env_other');
+       
+        if(dropdown_compute_env && dropdown_compute_env_other_div) {
+            if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") {
+                dropdown_compute_env_other_div.style.display = "none";
+            }
+
+            dropdown_compute_env.addEventListener('change', function() {
+                if(this.options[this.selectedIndex].value == "Other") {
+                    dropdown_compute_env_other_div.style.display = "block";
+                } else {
+                    dropdown_compute_env_other_div.style.display = "none";
+                    document.getElementById('id_compute_env_other').value = '';
+                }
+            })
+        }
 
     })
 </script>

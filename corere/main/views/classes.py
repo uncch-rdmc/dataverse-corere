@@ -246,7 +246,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission,
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper }#'
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
@@ -329,7 +329,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper}
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
@@ -371,7 +371,7 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     page_title = _("manuscript_edit_pageTitle")
     page_help_text = _("manuscript_edit_helpText")
 
-class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+class ManuscriptUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_edit_pageTitle")
@@ -388,7 +388,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #This is for the upload files page. The ajax uploader uses a different class
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
                 
@@ -510,7 +510,7 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'view_noop'
     page_title = _("manuscript_viewFiles_pageTitle")
     http_method_names = ['get']
@@ -910,7 +910,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get('back_save'):
-                    return redirect('manuscript_complete', id=self.object.manuscript.id)
+                    return redirect('manuscript_update', id=self.object.manuscript.id)
 
                 if request.POST.get('submit_continue'):
                     messages.add_message(request, messages.SUCCESS, self.msg)
@@ -1129,7 +1129,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_uploadFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1437,7 +1437,7 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     # form = f.SubmissionUploadFilesForm
-    # template = 'main/not_form_upload_files.html'
+    # template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_reconcileFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1546,7 +1546,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_update_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
                             send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )

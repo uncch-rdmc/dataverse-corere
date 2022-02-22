@@ -84,7 +84,7 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
+                                    window.location.href = "/manuscript/"+ manuscript_id +"/update/";
                                 },
                                 enabled: createSubButton
                             },
@@ -325,7 +325,7 @@
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
     {% if createSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/complete/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/update/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
 
     {% if editSubmissionButton %}
