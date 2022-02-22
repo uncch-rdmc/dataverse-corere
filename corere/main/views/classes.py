@@ -212,7 +212,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
-            if self.request.user.is_superuser or not self.create:
+            if self.request.user.is_superuser or self.object.has_submissions():
                 self.author_formset = f.ReadOnlyAuthorFormSet
                 self.data_source_formset = f.ReadOnlyDataSourceFormSet
                 self.keyword_formset = f.ReadOnlyKeywordFormSet
@@ -220,14 +220,14 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
-            if self.request.user.is_superuser or not self.create:
+            if self.request.user.is_superuser or self.object.has_submissions():
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
                 # self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
-            
-        if(self.create and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
-            self.form = f.ManuscriptForm_Editor_Create
+
+        if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
+            self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
@@ -250,7 +250,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
@@ -276,7 +276,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
@@ -334,7 +334,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
 
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             context['author_formset'] = self.author_formset
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset

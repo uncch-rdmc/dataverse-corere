@@ -431,7 +431,7 @@ ManuscriptForms = {
     "Verifier": ManuscriptForm_Verifier,
 }
 
-class ManuscriptForm_Editor_Create(ManuscriptBaseForm):
+class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
         fields = ['pub_name','pub_id','qual_analysis','contents_proprietary', 'contents_proprietary_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
 

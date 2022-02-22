@@ -845,6 +845,9 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
 
+    def has_submissions(self):
+        return self.get_max_submission_version_id() != None
+
     def get_landing_url(self):
         return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
