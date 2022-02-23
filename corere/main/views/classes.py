@@ -14,7 +14,7 @@ from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
-from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, generate_progress_bar_html
+from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, get_progress_bar_html_submission, generate_progress_bar_html
 from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
@@ -202,6 +202,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     author_formset = None
     data_source_formset = None
     keyword_formset = None 
+    # v_metadata_formset = None
     role_name = None
     from_submission = False
     create = False
@@ -211,19 +212,22 @@ class GenericManuscriptView(GenericCorereObjectView):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
-            if self.request.user.is_superuser or not self.create:
+            if self.request.user.is_superuser or self.object.has_submissions():
                 self.author_formset = f.ReadOnlyAuthorFormSet
                 self.data_source_formset = f.ReadOnlyDataSourceFormSet
                 self.keyword_formset = f.ReadOnlyKeywordFormSet
+                # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
-            if self.request.user.is_superuser or not self.create:
+            if self.request.user.is_superuser or self.object.has_submissions():
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
-            
-        if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
+                # self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
+
+        if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
+            self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
@@ -242,26 +246,27 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission,
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper }#'
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
-            #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            if(self.object.is_containerized()):
+                progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
+            else:
+                progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -271,10 +276,11 @@ class GenericManuscriptView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
+            # self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
@@ -282,7 +288,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             manuscript_display_name = self.object.manuscript.get_display_name()
 
         if not self.read_only and self.form.is_valid() \
-            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) \
+            and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            
             self.form.save()
             if(self.author_formset):
                 self.author_formset.save()
@@ -290,16 +298,25 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.data_source_formset.save()
             if(self.keyword_formset):
                 self.keyword_formset.save()
+            # if(self.v_metadata_formset):
+            #     self.v_metadata_formset.save()
 
             if request.POST.get('submit_continue'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
+
+            #This logic needs a different way of detecting whether to go to the edit of a submission or creation
+            #We should get the latest submission and check its status?
             elif request.POST.get('submit_continue_submission'):
                 messages.add_message(request, messages.SUCCESS, self.msg)
+
                 try: #If it already exists from the user going between the form pages
-                    first_submission = self.object.get_latest_submission()
-                    return redirect('submission_edit', id=first_submission.id)
+                    latest_sub = self.object.get_latest_submission()
+                    if latest_sub._status == m.Submission.Status.RETURNED:
+                        return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    else:
+                        return redirect('submission_edit', id=latest_sub.id)
                 except m.Submission.DoesNotExist:
                     return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
             else:
@@ -309,29 +326,29 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.author_formset.errors)
             logger.debug(self.data_source_formset.errors)
             logger.debug(self.keyword_formset.errors)  
+            # logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper}
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
 
-        if self.request.user.is_superuser or not self.create:
+        if self.request.user.is_superuser or self.object.has_submissions():
             context['author_formset'] = self.author_formset
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            # context['v_metadata_formset'] = self.v_metadata_formset
 
         if(self.from_submission):
             #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -354,7 +371,7 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     page_title = _("manuscript_edit_pageTitle")
     page_help_text = _("manuscript_edit_helpText")
 
-class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+class ManuscriptUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_edit_pageTitle")
@@ -371,7 +388,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #This is for the upload files page. The ajax uploader uses a different class
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
                 
@@ -381,8 +398,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        progress_list = c.progress_list_manuscript
-        progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+        progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
@@ -424,8 +440,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 else:
                     errors.append(_('manuscript_noFiles_error'))
                 
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscriptt, 'Upload Files')
 
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_display_name': self.object.get_display_name(), 
                 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
@@ -495,7 +510,7 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'view_noop'
     page_title = _("manuscript_viewFiles_pageTitle")
     http_method_names = ['get']
@@ -577,18 +592,18 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     edition_formset = None
     curation_formset = None
     verification_formset = None
-    v_metadata_formset = None
-    v_metadata_software_formset = None
-    v_metadata_badge_formset = None
-    v_metadata_audit_formset = None
+    # v_metadata_formset = None
+    # v_metadata_software_formset = None
+    # v_metadata_badge_formset = None
+    # v_metadata_audit_formset = None
 
     #TODO: Move this to the top, after (probably) deleting add_formsets
     def dispatch(self, request, *args, **kwargs):
-        #If new submission with previous submission existing, copy over data from the previous submission
-        if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
-            if prev_max_sub_version_id:
-                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
+        # #If new submission with previous submission existing, copy over data from the previous submission
+        # if(request.method == 'GET' and not self.object.id):
+        #     prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
+        #     if prev_max_sub_version_id:
+        #         self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
 
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
@@ -626,69 +641,60 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
+#TODO-MV: DELETE AFTER REORDER. Or, delete some, keep some for when we add the end-step
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+        #         self.v_metadata_formset = f.VMetadataManuscriptFormsets[role_name]
+        #     elif(has_transition_perm(self.object.view_noop, request.user)):
+        #         self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
 
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
+        #         self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
+        #     elif(has_transition_perm(self.object.view_noop, request.user)):
+        #         self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
 
-        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-
-        #TODO: Figure out how we should do perms for these
-        #self.v_metadata_formset = f.VMetadataSubmissionFormset
-        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
-        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
-        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
+        # #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+        #         self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
+        #     elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+        #         self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
+        # except (m.Curation.DoesNotExist, KeyError):
+        #     pass
+        # try:
+        #     if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+        #         self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
+        #     elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
+        #         self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
+        # except (m.Submission.DoesNotExist, KeyError):
+        #     pass
+        # except (m.Curation.DoesNotExist, KeyError):
+        #     pass
 
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         manuscript_display_name = self.object.manuscript.get_display_name()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+        # print(self.object._status)
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR or self.object._status == m.Submission.Status.RETURNED):
+        #     print("IN PROGRESS BAR SECTION")
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Add Submission Info')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Add Submission Info')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -706,22 +712,22 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
-        try:
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
+        # if(self.v_metadata_formset is not None):
+        #     context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
+        # try:
+        #     if(self.v_metadata_software_formset is not None):
+        #         context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
+        #     if(self.v_metadata_badge_formset is not None):
+        #         context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        # except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+        #     if(self.v_metadata_software_formset is not None):
+        #         context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
@@ -749,26 +755,26 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset):
-            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+        # if(self.v_metadata_formset):
+        #     self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
 
-        #TODO: not sure if we need to do this ID logic in the post    
-        try:
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            # print("DNE")
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
+        # #TODO: not sure if we need to do this ID logic in the post    
+        # try:
+        #     # if(self.v_metadata_software_formset is not None):
+        #     #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
+        # except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
+        #     # print("DNE")
+        #     # if(self.v_metadata_software_formset is not None):
+        #     #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
+        #     if(self.v_metadata_badge_formset is not None):
+        #         self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
+        #     if(self.v_metadata_audit_formset is not None):
+        #         self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
 
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
@@ -776,9 +782,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             # print(self.v_metadata_software_formset)
             # print((self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid()))
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
-                and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
+                and (self.verification_formset is None or self.verification_formset.is_valid()) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
-                and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
+                #and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
                 self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
                 if(self.edition_formset):
@@ -787,48 +793,48 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.curation_formset.save()
                 if(self.verification_formset):
                     self.verification_formset.save()
-                if(self.v_metadata_formset):
-                    self.v_metadata_formset.save()
-                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-                if(self.v_metadata_software_formset):
-                    # All this logic is to fix our software verificatio metadata we have copied over from our previous submission
-                    # The forms provided in the formset have the old vmetadata id which breaks saving.
-                    # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
-                    updated_request = request.POST.copy()
+                # if(self.v_metadata_formset):
+                #     self.v_metadata_formset.save()
+                # self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
+                # if(self.v_metadata_software_formset):
+                #     # All this logic is to fix our software verification metadata we have copied over from our previous submission
+                #     # The forms provided in the formset have the old vmetadata id which breaks saving.
+                #     # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
+                #     updated_request = request.POST.copy()
                     
-                    #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
-                    try:
-                        if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
-                            updated_request = request.POST.copy()
-                            updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                            softwares_counter = 0
-                            while True:
-                                if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
-                                    break
-                                #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
-                                updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                                softwares_counter = softwares_counter + 1
+                #     #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
+                #     try:
+                #         if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
+                #             updated_request = request.POST.copy()
+                #             updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                #             softwares_counter = 0
+                #             while True:
+                #                 if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
+                #                     break
+                #                 #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
+                #                 updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
+                #                 softwares_counter = softwares_counter + 1
 
-                            role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
-                            f.VMetadataSoftwareVMetadataFormsets[role_name]
+                #             role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+                #             f.VMetadataSoftwareVMetadataFormsets[role_name]
 
-                            #TODO: save_as_new may not be a good idea all of the time??
-                            self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
+                #             #TODO: save_as_new may not be a good idea all of the time??
+                #             self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
 
-                        if(self.v_metadata_software_formset.is_valid()):
-                            self.v_metadata_software_formset.save()
-                        else:
-                            #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
-                            print(self.v_metadata_software_formset.errors)
-                            logger.debug(self.v_metadata_software_formset.errors)
-                    except MultiValueDictKeyError:
-                        logger.error("MULTI VALUE KEY DICT ERROR")
-                        logger.error(request.POST)
+                #         if(self.v_metadata_software_formset.is_valid()):
+                #             self.v_metadata_software_formset.save()
+                #         else:
+                #             #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
+                #             print(self.v_metadata_software_formset.errors)
+                #             logger.debug(self.v_metadata_software_formset.errors)
+                #     except MultiValueDictKeyError:
+                #         logger.error("MULTI VALUE KEY DICT ERROR")
+                #         logger.error(request.POST)
 
-                if(self.v_metadata_badge_formset):
-                    self.v_metadata_badge_formset.save()
-                if(self.v_metadata_audit_formset): 
-                    self.v_metadata_audit_formset.save()
+                # if(self.v_metadata_badge_formset):
+                #     self.v_metadata_badge_formset.save()
+                # if(self.v_metadata_audit_formset): 
+                #     self.v_metadata_audit_formset.save()
                 if(self.note_formset is not None and self.note_formset.is_valid()):
                     self.note_formset.save()
 
@@ -857,7 +863,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         
                     if ((self.object.manuscript.skip_edition and request.POST.get('submit_progress_curation'))
                         or (not self.object.manuscript.skip_edition and request.POST.get('submit_progress_edition'))):
-                        if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                        if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                             #Here we create the wholetale version. 
                             # If not skipping editor, we do this after the editors approval because it isn't really a "done" submission then
                             # Else, we do it after curator approval because that's the next step.
@@ -904,7 +910,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get('back_save'):
-                    return redirect('manuscript_complete', id=self.object.manuscript.id)
+                    return redirect('manuscript_update', id=self.object.manuscript.id)
 
                 if request.POST.get('submit_continue'):
                     messages.add_message(request, messages.SUCCESS, self.msg)
@@ -919,36 +925,31 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.curation_formset.errors)
                 if(self.verification_formset):
                     logger.debug(self.verification_formset.errors)
-                if(self.v_metadata_formset):
-                    logger.debug(self.v_metadata_formset.errors)
+                # if(self.v_metadata_formset):
+                #     logger.debug(self.v_metadata_formset.errors)
                 # if(self.v_metadata_software_formset):
                 #     logger.debug(self.v_metadata_software_formset.errors)
-                if(self.v_metadata_badge_formset):
-                    logger.debug(self.v_metadata_badge_formset.errors)
-                if(self.v_metadata_audit_formset): 
-                    logger.debug(self.v_metadata_audit_formset.errors)
+                # if(self.v_metadata_badge_formset):
+                #     logger.debug(self.v_metadata_badge_formset.errors)
+                # if(self.v_metadata_audit_formset): 
+                #     logger.debug(self.v_metadata_audit_formset.errors)
         else:
             if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
                 self.note_formset.save()
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
     
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+
+        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Add Submission Info')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Add Submission Info')
+        #     context['progress_bar_html'] = progress_bar_html
 
         if(self.note_formset is not None):
             context['note_formset'] = self.note_formset
@@ -958,32 +959,32 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context['curation_formset'] = self.curation_formset
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset
-        if(self.v_metadata_software_formset is not None):
-            context['v_metadata_software_formset'] = self.v_metadata_software_formset
-        if(self.v_metadata_badge_formset is not None):
-            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
-        if(self.v_metadata_audit_formset is not None):
-            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
+        # if(self.v_metadata_formset is not None):
+        #     context['v_metadata_formset'] = self.v_metadata_formset
+        # if(self.v_metadata_software_formset is not None):
+        #     context['v_metadata_software_formset'] = self.v_metadata_software_formset
+        # if(self.v_metadata_badge_formset is not None):
+        #     context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
+        # if(self.v_metadata_audit_formset is not None):
+        #     context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
 
         return render(request, self.template, context)
 
-    #Custom method, called via dispatch. Copies over submission and its verification metadatas
-    #This does not copy over GitFiles, those are done later in the flow
-    def copy_previous_submission_contents(self, manuscript, version_id):
-        #print("COPY PREV SUB")
-        prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
-        #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
+    # #Custom method, called via dispatch. Copies over submission and its verification metadatas
+    # #This does not copy over GitFiles, those are done later in the flow
+    # def copy_previous_submission_contents(self, manuscript, version_id):
+    #     #print("COPY PREV SUB")
+    #     prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
+    #     #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
 
-        self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
-        prev_sub.pk = None
-        prev_sub.id = None #Do I need to do both?
-        prev_sub._status = m.Submission.Status.NEW
-        self.object = prev_sub
+    #     self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
+    #     prev_sub.pk = None
+    #     prev_sub.id = None #Do I need to do both?
+    #     prev_sub._status = m.Submission.Status.NEW
+    #     self.object = prev_sub
 
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
@@ -1042,9 +1043,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1098,9 +1099,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1128,7 +1129,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_uploadFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1146,21 +1147,15 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
-            'skip_docker': settings.SKIP_DOCKER, 'compute_env_other': self.object.manuscript.compute_env == 'Other'}
+            'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized()}
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-            context['progress_bar_html'] = progress_bar_html
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Upload Files')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Upload Files')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
 
@@ -1202,14 +1197,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
-                if self.object.manuscript.compute_env == 'Other':
+                if self.object.manuscript.is_containerized() == 'Other':
                     self.msg = "Your submission has been submitted." #TODO: Improve message
                     messages.add_message(request, messages.INFO, self.msg)
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.files_dict_list):
-                    if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                    if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
@@ -1256,19 +1251,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                 "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
 
-            if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-                if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                    if(self.object.manuscript.compute_env == "Other"):
-                        progress_list = c.progress_list_other_submission_first
-                    else:
-                        progress_list = c.progress_list_submission_first
-                else:
-                    if(self.object.manuscript.compute_env == "Other"):
-                        progress_list = c.progress_list_other_submission_subsequent
-                    else:
-                        progress_list = c.progress_list_submission_subsequent
-                progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-                context['progress_bar_html'] = progress_bar_html
+            # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+            #     if(self.object.manuscript.is_containerized()):
+            #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Upload Files')
+            #     else:
+            #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Upload Files')
+            #     context['progress_bar_html'] = progress_bar_html
+            context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
                 context['errors']= errors
@@ -1448,7 +1437,7 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     # form = f.SubmissionUploadFilesForm
-    # template = 'main/not_form_upload_files.html'
+    # template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_reconcileFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1544,7 +1533,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 self.object.save()
 
                 #Delete all tale copies both locally and in WT. This also deletes running instances.
-                if self.object.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+                if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
                         wtc.delete_tale(wtm_tale.wt_id)
@@ -1557,7 +1546,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_update_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
                             send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
@@ -1618,7 +1607,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env == 'Other':
+        if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
@@ -1665,7 +1654,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
 
     def get(self, request, *args, **kwargs):
         context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, "form": self.form,
+            'page_title': _("submission_notebook_pageTitle").format(submission_version=self.object.version_id),
+            'page_help_text': self.page_help_text, "form": self.form,
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
 
         if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
@@ -1706,19 +1696,13 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         else:
             context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_first
-                else:
-                    progress_list = c.progress_list_submission_first
-            else:
-                if(self.object.manuscript.compute_env == "Other"):
-                    progress_list = c.progress_list_other_submission_subsequent
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Run Code')
-            context['progress_bar_html'] = progress_bar_html
+        # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+        #     if(self.object.manuscript.is_containerized()):
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Run Code')
+        #     else:
+        #         progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Run Code')
+        #     context['progress_bar_html'] = progress_bar_html
+        context['progress_bar_html'] = get_progress_bar_html_submission('Run Code', self.object)
 
         return render(request, self.template, context)
 
@@ -1744,7 +1728,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     #For now if not wholetale, we check if 'edit_noop'
     #Code is same as in SubmissionNotebookView
     def dispatch(self, request, *args, **kwargs):
-        if self.object.manuscript.compute_env == 'Other':
+        if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
@@ -1841,7 +1825,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         submission.submit(request.user)
         submission.save()
 
-        if submission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+        if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)    
             #  Set the wt author group's access to the root tale as read

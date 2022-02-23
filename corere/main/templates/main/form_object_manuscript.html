@@ -40,22 +40,97 @@
         });
         {% endif %}
 
+    })
+    
+</script>
+{% comment %} This script was used for submissions before moving many form related fields around {% endcomment %}
+<script type="text/javascript">
+    $(function () {
+        //checkbox conditionality and popups
+        var hp_checkbox = document.getElementById('id_high_performance');
+        var v_mt_div = document.getElementById('div_id_machine_type');
+        var v_s_div = document.getElementById('div_id_scheduler');
+        var v_p_div = document.getElementById('div_id_platform');
+        var v_pr_div = document.getElementById('div_id_processor_reqs');
+        var v_hu_div = document.getElementById('div_id_host_url');
+        var v_mr_div = document.getElementById('div_id_memory_reqs');
+
+        if(hp_checkbox) {
+            if (!hp_checkbox.checked) {
+                v_mt_div.style.display = "none";
+                v_s_div.style.display = "none";
+                v_p_div.style.display = "none";
+                v_pr_div.style.display = "none";
+                v_hu_div.style.display = "none";
+                v_mr_div.style.display = "none";
+            }
+            hp_checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+                    v_mt_div.style.display = "block";
+                    v_s_div.style.display = "block";
+                    v_p_div.style.display = "block";
+                    v_pr_div.style.display = "block";
+                    v_hu_div.style.display = "block";
+                    v_mr_div.style.display = "block";
+                } else {
+                    v_mt_div.style.display = "none";
+                    v_s_div.style.display = "none";
+                    v_p_div.style.display = "none";
+                    v_pr_div.style.display = "none";
+                    v_hu_div.style.display = "none";
+                    v_mr_div.style.display = "none";
+                    document.getElementById('id_machine_type').value = '';
+                    document.getElementById('id_scheduler').value = '';
+                    document.getElementById('id_platform').value = '';
+                    document.getElementById('id_processor_reqs').value = '';
+                    document.getElementById('id_host_url').value = '';
+                    document.getElementById('id_memory_reqs').value = '';
+                } 
+            });
+        }
+        var cr_checkbox = document.getElementById('id_contents_restricted');
+        var crs_checkbox = document.getElementById('id_contents_restricted_sharing');
+        var ps_div = document.getElementById('div_id_contents_restricted_sharing');
+        if (!cr_checkbox.checked) {
+            ps_div.style.display = "none";
+        }
+        cr_checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if('{{role_name}}' == 'Author'){
+                    alert("Please send restricted data to the AJPS editor.")
+                }
+                ps_div.style.display = "block";
+            } else {
+                ps_div.style.display = "none";
+                crs_checkbox.checked = false;
+            }
+        });
+        crs_checkbox.addEventListener('change', function() {
+            if ('{{role_name}}' == 'Author' && this.checked) {
+                alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
+            }
+        });
+
         var dropdown_compute_env = document.getElementById('id_compute_env');
         var dropdown_compute_env_other_div = document.getElementById('div_id_compute_env_other');
        
-        if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") { //TODO: re-enable
-            dropdown_compute_env_other_div.style.display = "none";
-        }
-
-        dropdown_compute_env.addEventListener('change', function() {
-            if(this.options[this.selectedIndex].value == "Other") {
-                dropdown_compute_env_other_div.style.display = "block";
-            } else {
+        if(dropdown_compute_env && dropdown_compute_env_other_div) {
+            if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") {
                 dropdown_compute_env_other_div.style.display = "none";
             }
-        })
+
+            dropdown_compute_env.addEventListener('change', function() {
+                if(this.options[this.selectedIndex].value == "Other") {
+                    dropdown_compute_env_other_div.style.display = "block";
+                } else {
+                    dropdown_compute_env_other_div.style.display = "none";
+                    document.getElementById('id_compute_env_other').value = '';
+                }
+            })
+        }
+
     })
-    
 </script>
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
@@ -63,13 +138,13 @@
     {% crispy form manuscript_helper %}
     <hr>
     {% if author_formset %}
-        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="cblue">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-original-title="Description about data sources"></span></h5>
+        <h5 class="cblue">Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
@@ -79,6 +154,12 @@
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
+    {% endif %}
+    {% if v_metadata_formset %}
+        <h5 class="cblue">Verification Metadata</h5>
+        {{ v_metadata_formset.non_form_errors }}
+        {% crispy v_metadata_formset helper %}
+        <hr>  
     {% endif %}
 
     {% if not read_only %}

@@ -5,134 +5,12 @@
 
 {% load static %}
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
-<script type="text/javascript">
-    $(function () {
-        {% if not read_only %}
-            {% if not edition_formset %}
-            $('#v_metadata_software_table tbody tr').formset({
-                prefix: '{{ v_metadata_software_formset.prefix }}',
-                formCssClass: 'v_metadata_software_table',
-                addText: '{% if not read_only %}add software{% endif %}'
-            });
-            {% endif %}
-        $('#v_metadata_badge_table tbody tr').formset({
-            prefix: '{{ v_metadata_badge_formset.prefix }}',
-            formCssClass: 'v_metadata_badge_table',
-            addText: '{% if not read_only %}add badge{% endif %}'
-        });
-            $('#v_metadata_audit_table tbody tr').formset({
-            prefix: '{{ v_metadata_audit_formset.prefix }}',
-            formCssClass: 'v_metadata_audit_table',
-            addText: '{% if not read_only %}add audit{% endif %}'
-        });
-        {% endif %}
-
-        //inline N/A text when there are no entries (only happens during readonly)
-        if(!document.getElementById("id_v_metadata_software_formset-0-id")) {
-            na_span_vametadata_software.style.display = "block";
-        }
-        if(!document.getElementById("id_v_metadata_badge_formset-0-id") && document.getElementById("na_span_vametadata_badge")) {
-            na_span_vametadata_badge.style.display = "block";
-        }
-        if(!document.getElementById("id_v_metadata_audit_formset-0-id") && document.getElementById("na_span_vametadata_audit")) {
-            na_span_vametadata_audit.style.display = "block";
-        }
-        
-        //checkbox conditionality and popups
-        var hp_checkbox = document.getElementById('id_high_performance');
-        var v_mt_div = document.getElementById('div_id_v_metadata_formset-0-machine_type');
-        var v_s_div = document.getElementById('div_id_v_metadata_formset-0-scheduler');
-        var v_p_div = document.getElementById('div_id_v_metadata_formset-0-platform');
-        var v_pr_div = document.getElementById('div_id_v_metadata_formset-0-processor_reqs');
-        var v_hu_div = document.getElementById('div_id_v_metadata_formset-0-host_url');
-        var v_mr_div = document.getElementById('div_id_v_metadata_formset-0-memory_reqs');
-        var v_ms_h = document.getElementById('title-v_metadata_software');
-        var v_ms_sp = document.getElementById('na_span_vametadata_software');
-        var v_ms_tbl = document.getElementById('v_metadata_software_table');
-        var v_ms_tbl_ad = document.getElementsByClassName('v_metadata_software_table-add')[0];
-        
-        if (!hp_checkbox.checked) {
-            v_mt_div.style.display = "none";
-            v_s_div.style.display = "none";
-            v_p_div.style.display = "none";
-            v_pr_div.style.display = "none";
-            v_hu_div.style.display = "none";
-            v_mr_div.style.display = "none";
-            v_ms_h.style.display = "none";
-            v_ms_sp.style.display = "none";
-            v_ms_tbl.style.display = "none";
-            v_ms_tbl_ad.style.display = "none";
-        }
-        hp_checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
-                v_mt_div.style.display = "block";
-                v_s_div.style.display = "block";
-                v_p_div.style.display = "block";
-                v_pr_div.style.display = "block";
-                v_hu_div.style.display = "block";
-                v_mr_div.style.display = "block";
-                v_ms_h.style.display = "block";
-                //v_ms_sp.style.display = "";
-                v_ms_tbl.style.display = "";
-                v_ms_tbl_ad.style.display = "";
-            } else {
-                v_mt_div.style.display = "none";
-                v_s_div.style.display = "none";
-                v_p_div.style.display = "none";
-                v_pr_div.style.display = "none";
-                v_hu_div.style.display = "none";
-                v_mr_div.style.display = "none";
-                v_ms_h.style.display = "none";
-                v_ms_sp.style.display = "none";
-                v_ms_tbl.style.display = "none";
-                v_ms_tbl_ad.style.display = "none";
-            } 
-        });
-
-        var cp_checkbox = document.getElementById('id_contents_proprietary');
-        var ps_div = document.getElementById('div_id_contents_proprietary_sharing');
-        if (!cp_checkbox.checked) {
-            ps_div.style.display = "none";
-        }
-        cp_checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                ps_div.style.display = "block";
-            } else {
-                ps_div.style.display = "none";
-            }
-        });
-
-        var cps_checkbox = document.getElementById('id_contents_proprietary_sharing');
-        cps_checkbox.addEventListener('change', function() {
-            if (this.checked) {
-                alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
-            }
-        });
-
-    })
-</script>
 
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    <h5 class="cblue">Submission Info </h5>
     {% crispy form helper %}
-    <hr>
 
-    {% if v_metadata_formset %}
-        <h5 class="cblue">Verification Metadata</h5>
-        {{ v_metadata_formset.non_form_errors }}
-        {% crispy v_metadata_formset helper %}
-        <hr>  
-    {% endif %}
-
-    {% if v_metadata_software_formset %} 
-        <h5 id="title-v_metadata_software" class="cblue"><hr>Verification Metadata - Software</h5>
-        <span id="na_span_vametadata_software" style="display:none"><p>N/A</p></span>
-        {{ v_metadata_software_formset.non_form_errors }}
-        {% crispy v_metadata_software_formset v_metadata_software_inline_helper %}
-    {% endif %}
     {% if verification_formset %}
         <h5 class="cblue">Verifier Review</h5>
         {{ verification_formset.non_form_errors }}
@@ -151,19 +29,7 @@
         {% crispy edition_formset helper %}
         <hr>
     {% endif %}
-    {% if v_metadata_badge_formset %}
-        <h5 class="cblue">Verification Metadata - Badges</h5>
-        <span id="na_span_vametadata_badge" style="display:none"><p>N/A</p></span>
-        {{ v_metadata_badge_formset.non_form_errors }}
-        {% crispy v_metadata_badge_formset v_metadata_badge_inline_helper %}
-    {% endif %}
 
-    {% if v_metadata_audit_formset %}
-        <h5 class="cblue">Verification Metadata - Audits</h5>
-        <span id="na_span_vametadata_audit" style="display:none"><p>N/A</p></span>
-        {{ v_metadata_audit_formset.non_form_errors }}
-        {% crispy v_metadata_audit_formset v_metadata_audit_inline_helper %}
-    {% endif %}
     {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
         {% include "main/note_list.html" %} 
         <hr>   
@@ -205,16 +71,14 @@
                 }
             };
 
-            </script>
+        </script>
     {% elif create %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="back_save" value="Back">
         <input type="submit" name="submit_continue" value="Create and Continue">
     {% elif s_status == "new" or s_status == "rejected_editor"%}
         <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{parent_id}}/';}">
-        {% if not s_version > 1 %}
-            <input type="submit" name="back_save" value="Back">
-        {% endif %}
+        <input type="submit" name="back_save" value="Back">
         <input type="submit" name="submit_continue" value="Save and Continue">
     {% elif edition_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">

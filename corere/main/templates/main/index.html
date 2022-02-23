@@ -69,7 +69,7 @@
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                         {
-                            text: '<i class="far fa-eye"></i> All Manuscripts',
+                            text: '<i class="far fa-eye-slash"></i> My Manuscripts',
                             name: 'viewnotuserassigned',
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
@@ -210,7 +210,7 @@
 
 <div>
     <div class="cblue" id="manuscript_table_holder">
-        <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+        <table id="manuscript_table" class="datatable table table-striped table-bordered visibleMe" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}
                     <th>{{ field }}</th>

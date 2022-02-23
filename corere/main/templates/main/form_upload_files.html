@@ -72,7 +72,7 @@
         {% if obj_type == 'submission' %}
             {% if skip_docker %}
                 <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
-            {% elif compute_env_other %}
+            {% elif not containerized %}
                 <input type="button" name="submit_continue" value="Submit" onClick="if (confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
             {% else %}
                 <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
@@ -86,7 +86,7 @@
     {% endif %}
 
 </form>
-{% if obj_type == "submission" and not read_only %}
+{% if obj_type == "submission" and not read_only and containerized%}
 <br>
 <p style="color:gray"><i>By click Launch Notebook, you will be sent to the next step where your files will be sent to Whole Tale to launch a web environment to run your code. If you need to upload more files, you can do this through the environment or by coming back to this page and uploading new files.</i></p>
 {% endif %}

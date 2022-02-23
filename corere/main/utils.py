@@ -1,6 +1,7 @@
 import logging
 logger = logging.getLogger(__name__)  
 from corere.main import constants as c
+from corere.main import models as m
 from django.http import Http404
 from django.contrib.auth.models import Group
 #from corere.main.models import Manuscript, User
@@ -72,7 +73,6 @@ def get_role_name_for_form(user, manuscript, session, create):
             logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
             raise Http404()
     
-
 def get_pretty_user_list_by_group_prefix(group):
     userset = Group.objects.get(name__startswith=group).user_set.all()
     user_list_pretty = []
@@ -82,6 +82,14 @@ def get_pretty_user_list_by_group_prefix(group):
         else:
             user_list_pretty += [user.first_name + ' ' + user.last_name + ' (' +user.email +')']
     return user_list_pretty
+
+#TODO: Write one of these for manuscript? Even there really isn't logic/
+def get_progress_bar_html_submission(progress_step_text, submission):
+    if(submission._status == m.Submission.Status.NEW or submission._status == m.Submission.Status.REJECTED_EDITOR or submission._status == m.Submission.Status.RETURNED):
+        if(submission.manuscript.is_containerized()):
+            return generate_progress_bar_html(c.progress_list_container_submission, progress_step_text)
+        else:
+            return generate_progress_bar_html(c.progress_list_external_submission, progress_step_text)
 
 def generate_progress_bar_html(step_list, last_active_step):
     list_html = '<ol class="progtrckr" data-progtrckr-steps="' + str(len(step_list)) + '">'

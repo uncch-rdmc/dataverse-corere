@@ -254,7 +254,7 @@ class SubmissionJson(CorereBaseDatatableView):
                 avail_buttons.append('returnSubmission')
 
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
-            if submission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
+            if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                 dominant_corere_group = w.get_dominant_group_connector(user, submission).corere_group
                 if dominant_corere_group:
                     if(dominant_corere_group.name.startswith("Author")):
@@ -351,7 +351,6 @@ class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
             raise Http404()
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
             #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
-            print("wow")
             return m.GitFile.objects.filter(parent_manuscript=manuscript) 
         else:
             raise Http404()

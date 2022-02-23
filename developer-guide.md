@@ -28,7 +28,7 @@ Note that type is optional and is intended for use when there are different mess
 
 To add new messages translations:
 1. Add your message the above format to the django code
-2. Run "django-admin makemessages -l en --no-wrap"
+2. Run "django-admin makemessages -l en --no-wrap". You might have to add the corere project folder to your `PYTHONPATH`.
 3. Refer to the django.po file, and find your string. makemesages has probably tried to guess a message for it, and it is wrong. Delete the guessed message as well as the "fuzzy" comment.
 4. Write your own string
 5. Run "django-admin compilemessages" so the strings will show up while operating the system.
