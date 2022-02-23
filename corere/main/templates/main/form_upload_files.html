@@ -8,14 +8,14 @@
 <input type=button value="Home" onClick="location.href='..';">
 {% endif %}
 
-<div class="accordion" style="margin:10px -21px" id="manuscriptAccordionPanels">
+<div class="accordion" style="padding-bottom:10px" id="uploadAccordionPanels">
     <div class="accordion-item">
       <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
-          Files (1)
+          Files&nbsp<span id="files_count_text"></span>
         </button>
       </h2>
-      <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+      <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
         <div class="accordion-body">                
           <div id="files_list_holder">
             {% include "main/file_list.html" %}
@@ -25,7 +25,7 @@
     </div>
 </div>
 
-<script>
+<!-- <script>
     function delete_and_refresh(delete_url, id, obj_type){
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
@@ -63,7 +63,7 @@
             $("#filesWithHeader").load("/submission/"+id+"/fileslist/")
         })
     }
-</script>
+</script> -->
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     

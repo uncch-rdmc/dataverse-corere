@@ -351,7 +351,7 @@ class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
             raise Http404()
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
             #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
-            return m.GitFile.objects.filter(parent_manuscript=manuscript) 
+            return m.GitFile.objects.filter(parent_manuscript=manuscript).order_by('-date')
         else:
             raise Http404()
 
@@ -365,6 +365,6 @@ class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
         #TODO: Should this perm be checking more... right now editors/curators/verifiers might be able to see author files while they are working
         if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, submission.manuscript)):
             #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
-            return m.GitFile.objects.filter(parent_submission=submission) 
+            return m.GitFile.objects.filter(parent_submission=submission).order_by('-date')
         else:
             raise Http404()

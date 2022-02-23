@@ -42,14 +42,6 @@ function create_file_table_config(table_path, readonly) {
               ],
             buttons: [
                         {
-                            text: 'Refresh',
-                            name: 'refresh',
-                            action: function ( e, dt, node, config ) {
-                                var table = $('#file_table').DataTable();
-                                table.ajax.reload();
-                            },
-                        },
-                        {
                             text: '<span class="fas fa-file-download"></span> Download All',
                             name: 'downloadall',
                             action: function ( e, dt, node, config ) {

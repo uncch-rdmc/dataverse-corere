@@ -48,62 +48,68 @@
             dictDefaultMessage:'Drop files here or click to open upload window',
             init: function () {
                 this.on('success', function(file) {
-                    var args = Array.prototype.slice.call(arguments);    
+                    var table = $('#file_table').DataTable();
+                    table.ajax.reload( function(){ 
+                        document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
+                    });
+                    //console.log(table.page.info().recordsTotal);
+                    //document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')';
+                    // var args = Array.prototype.slice.call(arguments);    
 
-                    if(file.fullPath){
-                        full_name = "/" + file.fullPath
-                    } else {
-                        full_name = "/" + file.name
-                    }
-                    encode_full_name = encodeURIComponent(full_name)
+                    // if(file.fullPath){
+                    //     full_name = "/" + file.fullPath
+                    // } else {
+                    //     full_name = "/" + file.name
+                    // }
+                    // encode_full_name = encodeURIComponent(full_name)
                     
                     // console.log(encode_full_name)
 
-                    document.getElementById("filesHeaderDiv").style.visibility = 'visible';
+                    // document.getElementById("filesHeaderDiv").style.visibility = 'visible';
 
-                    $("#filestable").append(`<tr>
-                        <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('../downloadfile/?file_path=`+encode_full_name+`')"><span class="fas fa-file-download"></span></button></td>
-                        <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this, '`+encode_full_name+`')"><span class="far fa-trash-alt"></span></button></td>
-                        <td class="filespath"><input name="file:`+full_name+`" type="text" style="width:500px" value='`+full_name+`'> </td>
-                        {% if obj_type == "submission" %}
-                        <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path=`+encode_full_name+`"/></td>
-                        {% endif %}
-                        </tr>`);
+                    // $("#filestable").append(`<tr>
+                    //     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('../downloadfile/?file_path=`+encode_full_name+`')"><span class="fas fa-file-download"></span></button></td>
+                    //     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this, '`+encode_full_name+`')"><span class="far fa-trash-alt"></span></button></td>
+                    //     <td class="filespath"><input name="file:`+full_name+`" type="text" style="width:500px" value='`+full_name+`'> </td>
+                    //     {% if obj_type == "submission" %}
+                    //     <td><img style="height:30px; width:30px" src="../newfilecheck/?file_path=`+encode_full_name+`"/></td>
+                    //     {% endif %}
+                    //     </tr>`);
                     
                     this.removeFile(file);
                 });
                 this.on("processing", function(file, xhr, data) {
-                    var deleteallbutton = document.getElementById("deleteallbutton");
-                    if(deleteallbutton) {
-                        deleteallbutton.disabled = true;
-                    }
-                    var downloadallbutton = document.getElementById("downloadallbutton");
-                    if(downloadallbutton) {
-                        downloadallbutton.disabled = true;
-                    }
-                    var submitbutton = document.getElementById("submit_fileslist");
-                    if(submitbutton) {
-                        submitbutton.disabled = true;
-                    }
+                    // var deleteallbutton = document.getElementById("deleteallbutton");
+                    // if(deleteallbutton) {
+                    //     deleteallbutton.disabled = true;
+                    // }
+                    // var downloadallbutton = document.getElementById("downloadallbutton");
+                    // if(downloadallbutton) {
+                    //     downloadallbutton.disabled = true;
+                    // }
+                    // var submitbutton = document.getElementById("submit_fileslist");
+                    // if(submitbutton) {
+                    //     submitbutton.disabled = true;
+                    // }
 
                     //deleteallbutton.style.display = "none";
                 });
                 this.on("queuecomplete", function(file, xhr, data) {
-                    var deleteallbutton = document.getElementById("deleteallbutton");
-                    if(deleteallbutton) {
-                        deleteallbutton.disabled = false;
-                        deleteallbutton.style.visibility = 'visible';
-                    }
-                    var downloadallbutton = document.getElementById("downloadallbutton");
-                    if(downloadallbutton) {
-                        downloadallbutton.disabled = false;
-                        downloadallbutton.style.visibility = 'visible';
-                    }
-                    var submitbutton = document.getElementById("submit_fileslist");
-                    if(submitbutton) {
-                        submitbutton.disabled = false;
-                        submitbutton.style.visibility = 'visible';
-                    }
+                    // var deleteallbutton = document.getElementById("deleteallbutton");
+                    // if(deleteallbutton) {
+                    //     deleteallbutton.disabled = false;
+                    //     deleteallbutton.style.visibility = 'visible';
+                    // }
+                    // var downloadallbutton = document.getElementById("downloadallbutton");
+                    // if(downloadallbutton) {
+                    //     downloadallbutton.disabled = false;
+                    //     downloadallbutton.style.visibility = 'visible';
+                    // }
+                    // var submitbutton = document.getElementById("submit_fileslist");
+                    // if(submitbutton) {
+                    //     submitbutton.disabled = false;
+                    //     submitbutton.style.visibility = 'visible';
+                    // }
                     //deleteallbutton.style.display = "block"; 
                 });
                 this.on("sending", function(file, xhr, data) {
@@ -114,6 +120,5 @@
                 });
             }
         };
-
     </script>
 {% endif %}

@@ -33,6 +33,11 @@
         {% else %}
         config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}})
         {% endif %}
+        $.extend(config, {
+            "initComplete": function(settings, json) {
+                document.getElementById('files_count_text').textContent = '('+$('#file_table').DataTable().page.info().recordsTotal+')';
+            }
+        });
         $('#file_table').DataTable(config)
     } );
 </script>
