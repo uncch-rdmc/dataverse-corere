@@ -196,6 +196,7 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
+            'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table
             }

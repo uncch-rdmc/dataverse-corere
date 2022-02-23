@@ -17,7 +17,7 @@
     $(document).ready(function() {
         {% comment %}Add our UI components specific to CORE2 {% endcomment %}
         {% if obj_type == "submission" %}
-        config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}})
+        config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}}, true, '{{ file_download_url }}')
         fourth_column =                 {
                     data: 'newness',
                     render: function(data,type,row,meta){
@@ -31,13 +31,16 @@
         fourth_column_def = { "width": "33px", "targets": 3 }
         config['columnDefs'].push(fourth_column_def)
         {% else %}
-        config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}})
+        config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}}, false, '{{ file_download_url }}')
         {% endif %}
+        {% if not read_only %}
         $.extend(config, {
             "initComplete": function(settings, json) {
                 document.getElementById('files_count_text').textContent = '('+$('#file_table').DataTable().page.info().recordsTotal+')';
             }
         });
+        {% endif %}
         $('#file_table').DataTable(config)
     } );
+    console.log("HEY")
 </script>
