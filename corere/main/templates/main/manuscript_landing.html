@@ -35,12 +35,12 @@
     
     function fixButtonGroupCurve() {
         //{% comment %} needs as we make buttons invisible, otherwise groups end up with non-rounded edges {% endcomment %}
-        $('.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
-        $('.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
             'border-top-left-radius': '3px',
             'border-bottom-left-radius': '3px',
         });
-        $('.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
             'border-top-right-radius': '3px',
             'border-bottom-right-radius': '3px',
         });

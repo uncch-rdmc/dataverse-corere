@@ -50,11 +50,16 @@ table.dataTable tr.selected td.select-checkbox:after, table.dataTable tr.selecte
 }
 
 table.filetable {
-    //Target th & td, overriding bootstrap's _tables.scss
+    //Target th & td, overriding bootstrap's _tables.scss. Makes rows thinner mostly
     > :not(caption) > * > * {
         padding: 0.25rem;
         vertical-align: middle;
               }
+    .sorting:before, .sorting:after {
+        top: 2px;
+        font-size:.9rem;
+        // padding-top: 20px;
+    }
 }
 
 .page-title {
@@ -344,6 +349,13 @@ select {
     padding: 1rem;
     padding-right: 2rem;
   }
+
+select.custom-select {
+    background-position-x: calc(100% + 2px);
+    background-position-y: 2.5px;
+    padding-right: 1rem;
+    margin-right: 0;
+}
 
 .table-bordered {
     border: 1px solid #dee2e6;   
