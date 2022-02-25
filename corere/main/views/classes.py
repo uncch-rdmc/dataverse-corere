@@ -314,11 +314,16 @@ class GenericManuscriptView(GenericCorereObjectView):
                 try: #If it already exists from the user going between the form pages
                     latest_sub = self.object.get_latest_submission()
                     if latest_sub._status == m.Submission.Status.RETURNED:
-                        return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                        # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                        submission = m.Submission.objects.create(manuscript=self.object)
+                        print(submission)
+                        return redirect('submission_uploadfiles', id=submission.id)
                     else:
-                        return redirect('submission_edit', id=latest_sub.id)
+                        return redirect('submission_uploadfiles', id=latest_sub.id)
                 except m.Submission.DoesNotExist:
-                    return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    submission = m.Submission.objects.create(manuscript=self.object)
+                    return redirect('submission_uploadfiles', id=submission.id)
             else:
                 return redirect(self.redirect)
         else:
@@ -786,7 +791,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
                 #and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
                 ):
-                self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
+                self.form.save()#girderToken=request.COOKIES.get('girderToken'))
+                
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
@@ -910,11 +916,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get('back_save'):
-                    return redirect('manuscript_update', id=self.object.manuscript.id)
+                    return redirect('submission_notebook', id=self.object.id)
 
                 if request.POST.get('submit_continue'):
                     messages.add_message(request, messages.SUCCESS, self.msg)
-                    return redirect('submission_uploadfiles', id=self.object.id)
+                    return _helper_submit_submission_and_redirect(request, self.object)
 
                 return redirect(self.redirect)
 
@@ -990,7 +996,7 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_title = _("submission_create_pageTitle")
-    page_help_text = _("submission_edit_helpText")
+    page_help_text = _("submission_info_helpText")
     template = 'main/form_object_submission.html'
     create = True
 
@@ -1001,11 +1007,11 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
-    page_help_text = _("submission_edit_helpText") #Sometimes overwritten by GenericSubmissionFormView
+    page_help_text = _("submission_info_helpText") #Sometimes overwritten by GenericSubmissionFormView
     template = 'main/form_object_submission.html'
 
     def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_edit_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
+        self.page_title = _("submission_info_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
         return super().dispatch(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
@@ -1147,7 +1153,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
-            'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized()}
+            'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(), 'manuscript_id': self.object.manuscript.id}
 
         # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
         #     if(self.object.manuscript.is_containerized()):
@@ -1161,6 +1167,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
+#TODO-BETA1: maybe?
+            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView
+
             errors = []
             changes_for_git = []
             try: #File Renaming
@@ -1246,7 +1255,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                 errors.append(_('submission_noFiles_error'))
             
-            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'manuscript_id': self.object.manuscript.id,
                 'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                 "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
@@ -1712,7 +1721,10 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             if self.form:
                 if self.form.is_valid():
                     self.form.save() #This saves any launch issues reported by the author, for the curation team to review.
-            return _helper_submit_submission_and_redirect(request, self.object)
+#TODO-BETA1: Instead we need to redirect to info here and do this method in info
+            # return _helper_submit_submission_and_redirect(request, self.object)
+            return redirect('submission_info', id=self.object.id)
+
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
 

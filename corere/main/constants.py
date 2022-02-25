@@ -47,5 +47,5 @@ def perm_path(perm):
     return 'main.'+perm
 
 progress_list_manuscript = ['Create Manuscript', 'Upload Files', 'Invite Author']
-progress_list_container_submission = ['Update Manuscript', 'Add Submission Info', 'Upload Files', 'Run Code']
-progress_list_external_submission = ['Update Manuscript', 'Add Submission Info', 'Upload Files']
+progress_list_container_submission = ['Update Manuscript', 'Upload Files', 'Run Code', 'Add Submission Info']
+progress_list_external_submission = ['Update Manuscript', 'Upload Files', 'Add Submission Info']

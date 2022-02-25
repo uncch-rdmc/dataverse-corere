@@ -319,7 +319,7 @@ class Submission(AbstractCreateUpdateModel):
             else:
                 self.version_id = prev_max_version_id + 1
         
-        girderToken = kwargs.pop('girderToken', None)
+        girderToken = kwargs.pop('girderToken', None) #this is unused now. If you remove it you have to stop it from coming in or you'll have errors
         super(Submission, self).save(*args, **kwargs)
 
         if(first_save):

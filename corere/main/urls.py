@@ -24,7 +24,7 @@ urlpatterns = [
     path('manuscript/<int:id>/unassigncurator/<int:user_id>/', users.unassign_curator, name="manuscript_unassigncurator"),
     path('manuscript/<int:id>/assignverifier/', users.assign_verifier, name="manuscript_assignverifier"),
     path('manuscript/<int:id>/unassignverifier/<int:user_id>/', users.unassign_verifier, name="manuscript_unassignverifier"),
-    path('manuscript/<int:manuscript_id>/createsubmission/', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
+    # path('manuscript/<int:manuscript_id>/createsubmission/', classes.SubmissionCreateView.as_view(), name="manuscript_createsubmission"),
     path('manuscript/<int:id>/deletefile/', classes.ManuscriptDeleteFileView.as_view(), name="manuscript_deletefile"),
     path('manuscript/<int:id>/downloadfile/', classes.ManuscriptDownloadFileView.as_view(), name="manuscript_downloadfile"),
     path('manuscript/<int:id>/downloadall/', classes.ManuscriptDownloadAllFilesView.as_view(), name="manuscript_downloadall"),
@@ -35,7 +35,7 @@ urlpatterns = [
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
-    path('submission/<int:id>/edit/', classes.SubmissionEditView.as_view(), name="submission_edit"),
+    path('submission/<int:id>/info/', classes.SubmissionEditView.as_view(), name="submission_info"),
     #path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path('submission/<int:id>/uploader/', classes.SubmissionUploaderView.as_view(), name="submission_uploader"),

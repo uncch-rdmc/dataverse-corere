@@ -59,8 +59,10 @@
     {% csrf_token %}
     
     {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" %}
-        <input type=button value="Back" onclick="location.href='../edit/'">
+        
         {% if obj_type == 'submission' %}
+            <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
+            {% comment %} #TODO-BETA1: these options probably should all go away, we just need one submit {% endcomment %}
             {% if skip_docker %}
                 <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
             {% elif not containerized %}
@@ -70,6 +72,7 @@
             {% endif %}
             
         {% else %}
+            <input type=button value="Back" onclick="location.href='../edit/'">
             <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
         {% endif %}
     {% else %}

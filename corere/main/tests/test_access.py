@@ -283,9 +283,9 @@ class TestUrls(TestCase):
         # resp = self.client.get(url)
         # self.assertEqual(resp.status_code, 302)
 
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id}))
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 302)
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 302)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 302)
@@ -439,9 +439,9 @@ class TestUrls(TestCase):
         # resp = self.client.get(url)
         # self.assertEqual(resp.status_code, 404)
 
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id}))
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 404)
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 404)
@@ -631,9 +631,9 @@ class TestUrls(TestCase):
         # resp = self.client.get(url)
         # self.assertEqual(resp.status_code, 200)
 
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id}))
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.get(reverse("submission_edit", kwargs={'id':submission.id+1})) #id we know hasn't been created
+        resp = self.client.get(reverse("submission_info", kwargs={'id':submission.id+1})) #id we know hasn't been created
         self.assertEqual(resp.status_code, 404)
         resp = self.client.get(reverse("submission_read", kwargs={'id':submission.id}))
         self.assertEqual(resp.status_code, 200)
