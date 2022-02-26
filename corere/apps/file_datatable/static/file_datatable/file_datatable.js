@@ -1,4 +1,5 @@
 function create_file_table_config(table_path, readonly, is_submission, file_download_url) {
+    //buttons are hidden by default, to be managed by your page
     top_buttons = [
         {
             text: '<span class="fas fa-file-download"></span> Download All',
@@ -14,7 +15,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_down
             },
         },         
     ]
-    if(!readonly && !is_submission) {
+    if(!readonly && is_submission) {
         top_buttons.push({
             text: '<span class="far fa-trash-alt"></span> Delete All',
             name: 'deleteall',

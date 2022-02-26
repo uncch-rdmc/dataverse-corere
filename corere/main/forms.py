@@ -332,30 +332,30 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
-            if("high_performance" in self.data.keys()):
-                machine_type = self.cleaned_data.get('machine_type')
-                if(not machine_type):
-                    self.add_error('machine_type', 'This field is required.')
+            # if("high_performance" in self.data.keys()):
+            #     machine_type = self.cleaned_data.get('machine_type')
+            #     if(not machine_type):
+            #         self.add_error('machine_type', 'This field is required.')
 
-                scheduler = self.cleaned_data.get('scheduler')
-                if(not scheduler):
-                    self.add_error('scheduler', 'This field is required.')
+            #     scheduler = self.cleaned_data.get('scheduler')
+            #     if(not scheduler):
+            #         self.add_error('scheduler', 'This field is required.')
 
-                platform = self.cleaned_data.get('platform')
-                if(not platform):
-                    self.add_error('platform', 'This field is required.')
+            #     platform = self.cleaned_data.get('platform')
+            #     if(not platform):
+            #         self.add_error('platform', 'This field is required.')
 
-                processor_reqs = self.cleaned_data.get('processor_reqs')
-                if(not processor_reqs):
-                    self.add_error('processor_reqs', 'This field is required.')
+            #     processor_reqs = self.cleaned_data.get('processor_reqs')
+            #     if(not processor_reqs):
+            #         self.add_error('processor_reqs', 'This field is required.')
 
-                host_url = self.cleaned_data.get('host_url')
-                if(not host_url):
-                    self.add_error('host_url', 'This field is required.')
+            #     host_url = self.cleaned_data.get('host_url')
+            #     if(not host_url):
+            #         self.add_error('host_url', 'This field is required.')
 
-                memory_reqs = self.cleaned_data.get('memory_reqs')
-                if(not memory_reqs):
-                    self.add_error('memory_reqs', 'This field is required.')
+            #     memory_reqs = self.cleaned_data.get('memory_reqs')
+            #     if(not memory_reqs):
+            #         self.add_error('memory_reqs', 'This field is required.')
 
             validation_errors.extend(self.instance.can_begin_return_problems())
 

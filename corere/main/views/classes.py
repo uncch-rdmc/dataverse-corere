@@ -510,6 +510,13 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
             raise Http404()
         g.delete_manuscript_file(self.object, file_path)
         
+        folder_path, file_name = file_path.rsplit('/',1)
+        folder_path = folder_path + '/'
+        try:
+            m.GitFile.objects.get(parent_manuscript=self.object, path=folder_path, name=file_name).delete()
+        except m.GitFile.DoesNotExist:
+            logger.warning("While deleting file " + file_path + " on manuscript " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
         return HttpResponse(status=200)
 
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
