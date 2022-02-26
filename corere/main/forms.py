@@ -199,7 +199,7 @@ class ManuscriptFormHelperMain(FormHelper):
             #     Div('qdr_review',css_class='col-md-6',),
             #     css_class='row',
             # ),
-            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions',
+            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions','exemption_override',
             HTML("""
                 <hr><h5 class='cblue'>Environment Info</h5>
             """),
@@ -248,7 +248,7 @@ class ManuscriptFormHelperEditor(FormHelper):
             #     Div('qdr_review', css_class='col-md-6',),
             #     css_class='row',
             # ),
-            'qual_analysis', 'qdr_review', 'contents_restricted', 'contents_restricted_sharing','other_exemptions'
+            'qual_analysis', 'qdr_review', 'contents_restricted', 'contents_restricted_sharing','other_exemptions','exemption_override'
         )
 
 #------------- Base Manuscript -------------
@@ -258,7 +258,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions',
+            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions', 'exemption_override',
             'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
@@ -385,6 +385,7 @@ class ManuscriptForm_Author(ManuscriptBaseForm):
         self.fields['pub_id'].disabled = True
         self.fields['qdr_review'].disabled = True
         self.fields['qual_analysis'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
     def __init__ (self, *args, **kwargs):
@@ -402,6 +403,7 @@ class ManuscriptForm_Editor(ManuscriptBaseForm):
         self.fields['host_url'].disabled = True
         self.fields['processor_reqs'].disabled = True
         self.fields['memory_reqs'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Curator(ManuscriptBaseForm):
 
@@ -411,6 +413,7 @@ class ManuscriptForm_Curator(ManuscriptBaseForm):
         self.fields['compute_env'].disabled = True
         self.fields['qual_analysis'].disabled = True
         self.fields['qdr_review'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Verifier(ManuscriptBaseForm):
 
@@ -428,6 +431,7 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['subject'].disabled = True
         self.fields['compute_env'].disabled = True
         self.fields['other_exemptions'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 ManuscriptForms = {
     "Admin": ManuscriptForm_Admin,
@@ -439,10 +443,11 @@ ManuscriptForms = {
 
 class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        fields = ['pub_name','pub_id','qual_analysis','contents_restricted', 'contents_restricted_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
+        fields = ['pub_name','pub_id','qual_analysis','contents_restricted', 'contents_restricted_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info','exemption_override']
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['exemption_override'].disabled = True
         # self.fields['description'].disabled = True
         # self.fields['subject'].disabled = True
         # self.fields['contact_first_name'].disabled = True

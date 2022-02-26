@@ -130,6 +130,12 @@
             })
         }
 
+        var exemption_override_check = document.getElementById('id_exemption_override');
+        if (!exemption_override_check.checked) {
+            var exemption_override_div = document.getElementById('div_id_exemption_override');
+            exemption_override_div.style.display = "none";
+        }
+
     })
 </script>
 {% include "main/page_title.html" %}    

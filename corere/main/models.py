@@ -693,6 +693,8 @@ class Manuscript(AbstractCreateUpdateModel):
     contents_restricted = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?')
     contents_restricted_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
     other_exemptions = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Exemptions', help_text='Are there any other exemptions to the verification workflow that the curation team should know about?')
+    
+    exemption_override = models.BooleanField(default=False, verbose_name='Exemption Override', help_text='The curation team has decided to deploy this manuscript inside Whole Tale, even with potential issues.')
 
     operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
     packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
@@ -835,7 +837,7 @@ class Manuscript(AbstractCreateUpdateModel):
         return self._status == Manuscript.Status.COMPLETED
 
     def is_containerized(self):
-        if not self.compute_env or self.compute_env == 'Other' or self.high_performance or self.contents_restricted_sharing:
+        if not self.compute_env or self.compute_env == 'Other' or ((self.high_performance or self.contents_restricted_sharing) and not self.exemption_override):
             return False
         return True
 
