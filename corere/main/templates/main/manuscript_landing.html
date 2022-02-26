@@ -329,7 +329,7 @@
     {% endif %}
 
     {% if editSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Edit Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Edit Submission</button>    
     {% endif %}
 
     {% comment %} 
@@ -341,7 +341,7 @@
     {% endcomment %}
 
     {% if reviewSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Review Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
     {% endif %}
     {% if generateReportButton %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('generatereport')">Generate Report</button>    

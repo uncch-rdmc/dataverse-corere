@@ -220,7 +220,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
             self.form = f.ManuscriptForms[self.role_name]
-            if self.request.user.is_superuser or self.object.has_submissions():
+            if self.request.user.is_superuser or not self.create:
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
@@ -250,7 +250,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
-        if self.request.user.is_superuser or self.object.has_submissions():
+        if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
@@ -276,7 +276,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        if self.request.user.is_superuser or self.object.has_submissions():
+        if self.request.user.is_superuser or not self.create:
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
@@ -339,7 +339,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
 
-        if self.request.user.is_superuser or self.object.has_submissions():
+        if self.request.user.is_superuser or not self.create:
             context['author_formset'] = self.author_formset
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset
@@ -1206,14 +1206,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
-                if self.object.manuscript.is_containerized() == 'Other':
+                if not self.object.manuscript.is_containerized():
                     self.msg = "Your submission has been submitted." #TODO: Improve message
                     messages.add_message(request, messages.INFO, self.msg)
 
                     return _helper_submit_submission_and_redirect(request, self.object)
 
                 if list(self.files_dict_list):
-                    if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
+                    if settings.CONTAINER_DRIVER == 'wholetale':
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale

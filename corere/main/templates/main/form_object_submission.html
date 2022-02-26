@@ -5,6 +5,15 @@
 
 {% load static %}
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
+<script type="text/javascript">
+    $(function () {
+        var launch_issues_text_box = document.getElementById('id_launch_issues');
+        if (launch_issues_text_box.value.trim() == "") {
+            var launch_issues_text_box_div = document.getElementById('div_id_launch_issues');
+            launch_issues_text_box_div.style.display = "none";
+        }
+    })
+</script>
 
 {% include "main/page_title.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">

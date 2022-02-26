@@ -320,19 +320,17 @@ class ManuscriptBaseForm(forms.ModelForm):
                 self.add_error('software_info', 'This field is required.')
 
             validation_errors = [] #we store all the "generic" errors and raise them at once
-#TODO: FIX AND RE-ENABLE AFTER MEETING
-            # if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
-            #     ):
-            #     validation_errors.append(ValidationError("You must specify an author."))
+            if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
+                ):
+                validation_errors.append(ValidationError("You must specify an author."))
 
 
 
-            # if(self.data['data_source_formset-0-text'] == ""):
-            #     validation_errors.append(ValidationError("You must specify a data source."))
+            if(self.data['data_source_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a data source."))
 
-#TODO: FIX AND RE-ENABLE AFTER MEETING
-            # if(self.data['keyword_formset-0-text'] == ""):
-            #     validation_errors.append(ValidationError("You must specify a keyword."))    
+            if(self.data['keyword_formset-0-text'] == ""):
+                validation_errors.append(ValidationError("You must specify a keyword."))    
 
             if("high_performance" in self.data.keys()):
                 machine_type = self.cleaned_data.get('machine_type')
