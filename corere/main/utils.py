@@ -83,7 +83,7 @@ def get_pretty_user_list_by_group_prefix(group):
             user_list_pretty += [user.first_name + ' ' + user.last_name + ' (' +user.email +')']
     return user_list_pretty
 
-#TODO: Write one of these for manuscript? Even there really isn't logic/
+#TODO: Write one of these for manuscript? Even there really isn't logic?
 def get_progress_bar_html_submission(progress_step_text, submission):
     if(submission._status == m.Submission.Status.NEW or submission._status == m.Submission.Status.REJECTED_EDITOR or submission._status == m.Submission.Status.RETURNED):
         if(submission.manuscript.is_containerized()):
@@ -98,17 +98,13 @@ def generate_progress_bar_html(step_list, last_active_step):
     for step in step_list:
         if step == last_active_step:
             hit_active_step = True
-        list_html += '<li class="progtrckr-'+('todo' if hit_active_step else 'done') +'">'+step+'</li>'
+            list_html += '<li class="progtrckr-current"><b><span class="progtrckr-text">'+step+'</span></b><div class="progress-circle-current"></div></li>'
+        else:
+            if hit_active_step:
+                list_html += '<li class="progtrckr-todo"><span class="progtrckr-text">'+step+'</span><div class="progress-circle-todo"></div></li>'
+            else:   
+                list_html += '<li class="progtrckr-done"><span class="progtrckr-text">'+step+'</span><div class="progress-circle-done"></div></li>'
 
-
+    list_html += '<li class="progtrckr-todo"></li>' # adds an empty bar at the end
     list_html += '</ol>'
     return list_html
-
-
-# <ol class="progtrckr" data-progtrckr-steps="5">
-#     <li class="progtrckr-done">Order Processing</li>
-#     <li class="progtrckr-done">Pre-Production</li>
-#     <li class="progtrckr-done">In Production</li>
-#     <li class="progtrckr-done">Shipped</li>
-#     <li class="progtrckr-todo">Delivered</li>
-# </ol>

@@ -254,7 +254,7 @@ ol.progtrckr {
 }
 ol.progtrckr li {
     display: table-cell;
-    text-align: center;
+    text-align: right;
     line-height: 3em;
 }
 
@@ -268,40 +268,64 @@ ol.progtrckr[data-progtrckr-steps="8"] li { width: 12%; }
 ol.progtrckr[data-progtrckr-steps="9"] li { width: 11%; }
 
 ol.progtrckr li.progtrckr-done {
-    color: black;
-    border-bottom: 4px solid yellowgreen;
+    color: yellowgreen;
+    border-bottom: 4px solid rgb(0, 153, 255);
 }
 ol.progtrckr li.progtrckr-todo {
     color: silver; 
     border-bottom: 4px solid silver;
 }
+ol.progtrckr li.progtrckr-current {
+    color: rgb(0, 153, 255); 
+    border-bottom: 4px solid rgb(0, 153, 255);
+}
 
 ol.progtrckr li:after {
     content: "\00a0\00a0";
 }
-ol.progtrckr li:before {
-    position: relative;
-    bottom: -2.5em;
-    float: left;
-    left: 50%;
-    line-height: 1em;
+
+div.progress-circle-todo {
+    width: 25px;
+    height: 25px;
+    border: 2px solid silver;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
 }
-ol.progtrckr li.progtrckr-done:before {
-    content: "\2713";
-    color: white;
+
+div.progress-circle-current {
+    width: 25px;
+    height: 25px;
+    border: 2px solid rgb(0, 153, 255);
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
+}
+
+div.progress-circle-done {
+    width: 25px;
+    height: 25px;
+    border: 2px solid yellowgreen;
+    border-radius: 50%;
     background-color: yellowgreen;
-    height: 1.2em;
-    width: 1.2em;
-    line-height: 1.2em;
-    border: none;
-    border-radius: 1.2em;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3.25 -4 35 35"><path d="M9 21.035l-9-8.638 2.791-2.87 6.156 5.874 12.21-12.436 2.843 2.817z"/></svg>');
+    // background-color: yellowgreen;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
 }
-ol.progtrckr li.progtrckr-todo:before {
-    content: "\039F";
-    color: silver;
-    background-color: white;
-    font-size: 1.5em;
-    bottom: -1.6em;
+
+span.progtrckr-text {
+    display: block;
+    text-align: center;
+    margin-left: auto; 
+    //TODO: This new margin and width only work the case with 4 elements?
+    width: 200px;
+    margin-right: -87.5px;
 }
 
 div.sectional {
