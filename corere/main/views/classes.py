@@ -803,7 +803,18 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset
+
+            #We re-init the note formset to not show the validation errors. There may be an easier and more efficient way
+            checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by('path','name')
+
+            context['note_formset'] = f.NoteSubmissionFormset(instance=self.object, prefix="note_formset", 
+                form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files})
+
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset
         if(self.curation_formset is not None):
