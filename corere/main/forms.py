@@ -193,6 +193,7 @@ class ManuscriptFormHelperMain(FormHelper):
             ),
             HTML("""
                 <hr><h5 class='cblue'>Exemptions</h5>
+                <h6><i><span style="color:#666666; margin-left:1px;">Used by the CORE2 team to decide whether the Manuscript is exempt from parts or all of the CORE2 process  </span></i></h6><br>
             """),
             # Div(
             #     Div('qual_analysis',css_class='col-md-6',),
@@ -647,6 +648,7 @@ class AuthorForm_Verifier(AuthorBaseForm):
         self.fields["identifier"].disabled = True
         #self.fields["position"].disabled = True
 
+
 class BaseAuthorManuscriptFormset(BaseInlineFormSet):
     pass
     # def clean(self):
@@ -691,27 +693,67 @@ class NoteForm(forms.ModelForm):
         fields = ['text','scope','creator','note_replied_to','note_reference']
         labels = label_gen(model, fields)
 
-    SCOPE_OPTIONS = (('public','Public'),('private','Private'))
+    SCOPE_OPTIONS = (('public','All Roles'),('private','Curators/Verifiers'))
 
     scope = forms.ChoiceField(widget=forms.RadioSelect,
                                         choices=SCOPE_OPTIONS, required=False)
 
     note_reference = forms.CharField(label='File/Category', widget=forms.Select()) #TODO: This should actually be populated during the init
 
+    # creator = forms.CharField(label='Creator')
+
     #Checker is for passing prefeteched django-guardian permissions
     #https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
     #Other args are also passed in for performance improvements across all the notes
     def __init__ (self, *args, checkers, manuscript, submission, sub_files, **kwargs):
+        #We have to populate the value of the creator before the super because it is based off an existing field
+        #We are basing of an existing field so it correctly populates the default value for creating new notes (to the users name)
+        #The best way found to do this was to do it before the super, otherwise it becomes uneditable?
+        user = CrequestMiddleware.get_request().user
+        curator_verifier = True
+        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+            curator_verifier = False
+
+#NOTE: If the user is an editor/author and there are multiple editors/authors, the additional editors/authors will be made generic (due to this code and the choices code below)
+            instance = kwargs.get('instance', None)
+            if instance and instance.creator:
+                if instance.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists():
+                    kwargs.update(initial={'creator': 'Curator'})
+                elif instance.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists():
+                    kwargs.update(initial={'creator': 'Verifier'})
+                elif instance.creator != user:
+                    if instance.creator.groups.filter(name=c.GROUP_ROLE_EDITOR).exists():
+                        kwargs.update(initial={'creator': 'Editor'})
+                    elif instance.creator.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists():
+                        kwargs.update(initial={'creator': 'Author'})
+                    else:
+                        print("This shouldn't happen but we'll 404 to test")
+                        raise Http404()
+
         super(NoteForm, self).__init__(*args, **kwargs)
 
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
-        user = CrequestMiddleware.get_request().user
+        #user = CrequestMiddleware.get_request().user
         path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
 
-        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+        if(not curator_verifier):
             self.fields.pop('scope')
+           
+            #We have to get the choice id of the user from the original dropdown so it'll be correctly added later
+            #TODO: Maybe instead we could just override the info on save, because we only allow saving our own notes anyways
+            user_key = None
+            for choice in self.fields['creator'].widget.choices:
+                if choice[1] == str(user):
+                    user_key = choice[0]
+            user_kv = self.fields['creator'].widget.choices
+            #Set list contents for Creator user if we need to preserve curator/verifier anonymity. Even if a dropdown is disabled all the options are populated
+            if user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript): #Check for editor
+                self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
+            else:
+                self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
+            
         else:       
             #Populate scope field depending on existing roles
             role_count = 0
@@ -724,9 +766,11 @@ class NoteForm(forms.ModelForm):
                 self.fields['scope'].initial = 'private'
 
         self.fields['creator'].disabled = True
+        
         if(self.instance.id): #if based off existing note
             if(self.instance.creator != user): #If the user is not the creator of the note
                 for fkey, fval in self.fields.items():
+                    fval.disabled = True #not sure this is doing anything
                     fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
 
         #Initialize note_reference
@@ -752,8 +796,9 @@ class NoteForm(forms.ModelForm):
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
-            if(self.cleaned_data['creator'] != user):
-                pass #Do not save
+            if(self.cleaned_data['creator'] != user): #Works even though we mess with creator during init above, because we always keep your name
+                return #Do not save
+
         super(NoteForm, self).save(commit, *args, **kwargs)
         if('scope' in self.changed_data):
             #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
@@ -773,6 +818,10 @@ class NoteForm(forms.ModelForm):
                     #At this point we've saved already, maybe we shouldn't?
                     logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
                     raise Http404()
+        else:
+            for role in c.get_roles():
+                group = Group.objects.get(name=role)
+                assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
         if('note_reference' in self.changed_data):
             #TODO: If we open up notes to other types again, we need to check if submission is set here
             files = self.instance.parent_submission.submission_files.all()
@@ -810,6 +859,31 @@ class BaseNoteFormSet(BaseInlineFormSet):
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
         return self._queryset
+
+    # def clean(self):
+    #     print("IN NOTE FORMSET CLEAN BEFORE SUPER")
+    #     user = CrequestMiddleware.get_request().user
+    #     print(type(self.forms))
+    #     print(self.forms)
+    #     forms_copy = self.forms #We need a different list to be able to iterate while deleting
+    #     for form in forms_copy:
+    #         print(form.__dict__)
+    #         if form.instance.id and form.instance.creator != user:
+    #             print("FORM REMOVED FROM LIST IN CLEAN")
+    #             print("")
+    #             self.forms.remove(form)
+    #     print(self.forms)
+    #     # super().clean()
+    #     # print(type(self.forms))
+    #     # for form in self.forms:
+    #     #     if form.instance.id and form.instance.creator != user:
+    #     #         self.forms.remove(form)
+    #     #NOTE: This code below deleting the actual model objects. We just want to remove the object from the list....
+    #     # for form in self.forms:
+    #     #     if form.instance.id and form.instance.creator != user:
+    #     #         form.instance.delete()
+    #         # print(form.__dict__)
+    #         # print("")
 
 class NoteFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):

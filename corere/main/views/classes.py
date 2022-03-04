@@ -848,8 +848,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 #     self.v_metadata_badge_formset.save()
                 # if(self.v_metadata_audit_formset): 
                 #     self.v_metadata_audit_formset.save()
-                if(self.note_formset is not None and self.note_formset.is_valid()):
-                    self.note_formset.save()
+                if self.note_formset is not None:
+                    if self.note_formset.is_valid():
+                        self.note_formset.save()
+                    else:
+                        for fr in self.note_formset.forms:
+                            if(fr.is_valid()):
+                                fr.save(True)
 
                 try:
                     #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
@@ -882,13 +887,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             # Else, we do it after curator approval because that's the next step.
                             wtc = w.WholeTaleCorere(admin=True)
                             tale_original = self.object.submission_tales.get(original_tale=None)    
-                            print("tale_original")
-                            print(tale_original.__dict__)
-                            print("tale version_name")
-                            print(w.get_tale_version_name(self.object.version_id))
+                            # print("tale_original")
+                            # print(tale_original.__dict__)
+                            # print("tale version_name")
+                            # print(w.get_tale_version_name(self.object.version_id))
                             result = wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
-                            print("create_tale_version result")
-                            print(result)
+                            # print("create_tale_version result")
+                            # print(result)
 
                     ### Messaging ###
                     if(status != None):
@@ -946,16 +951,21 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 #     logger.debug(self.v_metadata_badge_formset.errors)
                 # if(self.v_metadata_audit_formset): 
                 #     logger.debug(self.v_metadata_audit_formset.errors)
+
         else:
-            if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
-                self.note_formset.save()
+            if self.note_formset is not None:
+                if self.note_formset.is_valid():
+                    self.note_formset.save()
+                else:
+                    for fr in self.note_formset.forms:
+                        if(fr.is_valid()):
+                            fr.save(True)
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
             # 'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
     
-
         context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         # if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
         #     if(self.object.manuscript.is_containerized()):

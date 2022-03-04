@@ -672,8 +672,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
     pub_name = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, verbose_name='Does this manuscript include qualitative analysis')
-    qdr_review = models.BooleanField(default=False, verbose_name='Does this manuscript need verification of qualitative results by QDR?')
+    qual_analysis = models.BooleanField(default=False, verbose_name='Does this manuscript include qualitative analysis?', help_text='TODO')
+    qdr_review = models.BooleanField(default=False, verbose_name='Does this manuscript need verification of qualitative results by QDR?', help_text='TODO')
     contact_first_name = models.CharField(max_length=150, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
@@ -688,10 +688,10 @@ class Manuscript(AbstractCreateUpdateModel):
     compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
     
     # Was a part of submission
-    high_performance = models.BooleanField(default=False, verbose_name='Does this manuscript require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, verbose_name='Does this manuscript contain GIS data and mapping?')
-    contents_restricted = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?')
-    contents_restricted_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')  
+    high_performance = models.BooleanField(default=False, verbose_name='Does this manuscript require a high-performance compute environment?', help_text='TODO')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this manuscript contain GIS data and mapping?', help_text='TODO')
+    contents_restricted = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?', help_text='TODO')
+    contents_restricted_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?', help_text='TODO')  
     other_exemptions = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Exemptions', help_text='Are there any other exemptions to the verification workflow that the curation team should know about?')
     
     exemption_override = models.BooleanField(default=False, verbose_name='Exemption Override', help_text='The curation team has decided to deploy this manuscript inside Whole Tale, even with potential issues.')
