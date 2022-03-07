@@ -62,6 +62,9 @@ def index(request):
 @login_required
 def manuscript_landing(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
+    if(not has_transition_perm(manuscript.view_noop, request.user)):
+        raise Http404()
+
     # manuscript_avail_buttons = []
     # if(has_transition_perm(manuscript.edit_noop, request.user)):
     #     manuscript_avail_buttons.append('editManuscript')
