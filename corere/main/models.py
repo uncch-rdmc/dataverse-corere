@@ -1070,7 +1070,7 @@ class Note(AbstractCreateUpdateModel):
         CURATION = 'curation', 'Curation'
         VERIFICATION = 'verification', 'Verification'
 
-    text    = models.TextField(verbose_name='Note Text')
+    text    = models.TextField(blank=False, null=False, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')

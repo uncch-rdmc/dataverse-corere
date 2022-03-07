@@ -699,6 +699,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
         if not self.read_only:
+            if self.note_formset is not None:
+                if self.note_formset.is_valid():
+                    self.note_formset.save()
+                else:
+                    for fr in self.note_formset.forms:
+                        if(fr.is_valid()):
+                            fr.save(True)
+
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
                 and (self.verification_formset is None or self.verification_formset.is_valid()) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 ):
@@ -710,14 +718,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.curation_formset.save()
                 if(self.verification_formset):
                     self.verification_formset.save()
-                
-                if self.note_formset is not None:
-                    if self.note_formset.is_valid():
-                        self.note_formset.save()
-                    else:
-                        for fr in self.note_formset.forms:
-                            if(fr.is_valid()):
-                                fr.save(True)
+
                 try:
                     status = None
                     if request.POST.get('submit_progress_edition'):
@@ -787,7 +788,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 if(self.verification_formset):
                     logger.debug(self.verification_formset.errors)
 
-        else:
+                    #     print(self.note_formset.__dict__)
+
+        else: #readonly
             if self.note_formset is not None:
                 if self.note_formset.is_valid():
                     self.note_formset.save()

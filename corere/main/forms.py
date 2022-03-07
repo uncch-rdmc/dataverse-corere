@@ -691,6 +691,7 @@ class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
         fields = ['text','scope','creator','note_replied_to','note_reference']
+        required = ['text']
         labels = label_gen(model, fields)
 
     SCOPE_OPTIONS = (('public','All Roles'),('private','Curators/Verifiers'))
@@ -796,49 +797,50 @@ class NoteForm(forms.ModelForm):
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
-            if(self.cleaned_data['creator'] != user): #Works even though we mess with creator during init above, because we always keep your name
-                return #Do not save
+            if(self.cleaned_data['id']):
+                if(self.cleaned_data['creator'] != user): #Works even though we mess with creator during init above, because we always keep your name
+                    return #Do not save
 
-        super(NoteForm, self).save(commit, *args, **kwargs)
-        if('scope' in self.changed_data):
-            #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
-            for role in c.get_roles():
-                group = Group.objects.get(name=role)
-                remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            if(self.cleaned_data['scope'] == 'public'):
+            super(NoteForm, self).save(commit, *args, **kwargs)
+            if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
+                #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
                 for role in c.get_roles():
                     group = Group.objects.get(name=role)
-                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            else:
-                if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
-                    for role in c.get_private_roles():
+                    remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                if(self.cleaned_data['scope'] == 'public'):
+                    for role in c.get_roles():
                         group = Group.objects.get(name=role)
                         assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
                 else:
-                    #At this point we've saved already, maybe we shouldn't?
-                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
-                    raise Http404()
-        else:
-            for role in c.get_roles():
-                group = Group.objects.get(name=role)
-                assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-        if('note_reference' in self.changed_data):
-            #TODO: If we open up notes to other types again, we need to check if submission is set here
-            files = self.instance.parent_submission.submission_files.all()
-            file_full_paths = []
-            for file in files:
-                file_full_paths = file_full_paths + [file.path+file.name]
-            self.instance.ref_file_type = ''
-            self.instance.ref_file = None
+                    if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
+                        for role in c.get_private_roles():
+                            group = Group.objects.get(name=role)
+                            assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                    else:
+                        #At this point we've saved already, maybe we shouldn't?
+                        logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
+                        raise Http404()
+            else:
+                for role in c.get_roles():
+                    group = Group.objects.get(name=role)
+                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+            if(not self.cleaned_data['id'] or 'note_reference' in self.changed_data):
+                #TODO: If we open up notes to other types again, we need to check if submission is set here
+                files = self.instance.parent_submission.submission_files.all()
+                file_full_paths = []
+                for file in files:
+                    file_full_paths = file_full_paths + [file.path+file.name]
+                self.instance.ref_file_type = ''
+                self.instance.ref_file = None
 
-            if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
-                self.instance.ref_file_type = self.cleaned_data['note_reference']
-            elif(self.cleaned_data['note_reference'] in file_full_paths):
-                file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
-                file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
-                self.instance.ref_file = file
+                if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
+                    self.instance.ref_file_type = self.cleaned_data['note_reference']
+                elif(self.cleaned_data['note_reference'] in file_full_paths):
+                    file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
+                    file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
+                    self.instance.ref_file = file
 
-            self.instance.save()
+                self.instance.save()
 
 class BaseNoteFormSet(BaseInlineFormSet):
     #only allow deleting of user-owned notes. we also disable the checkbox via JS
