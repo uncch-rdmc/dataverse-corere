@@ -271,6 +271,20 @@ SIMPLE_HISTORY_REVERT_DISABLED=True
 EXPLORER_CONNECTIONS = { 'Default': 'readonly' }
 EXPLORER_DEFAULT_CONNECTION = 'readonly'
 #EXPLORER_NO_PERMISSION_VIEW = 'explorer.views.auth.safe_login_view_wrapper'
+EXPLORER_SQL_BLACKLIST = (
+    'ALTER',
+    'CREATE TABLE',
+    'DELETE',
+    'DROP',
+    'GRANT',
+    'INSERT INTO',
+    'OWNER TO',
+    'RENAME ',
+    #'REPLACE',
+    'SCHEMA',
+    'TRUNCATE',
+    'UPDATE',
+)
 
 WHOLETALE_BASE_URL = os.environ["WHOLETALE_BASE_URL"]
 WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
