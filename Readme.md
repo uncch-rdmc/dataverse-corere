@@ -143,7 +143,7 @@ Register your application with Globus for auth (https://auth.globus.org/v2/web/d
 
 Before going live in production, make sure to go into the admin interface and correct set your default Site. Go to sites, select the only object and change the domain and display name to match the server info
 
-Note that the default configuration enables an sql dashboard for read-only queries. This uses the same user as write access, but with a read flag enabled. If you wish to make this more restrictive or remove it, see `https://django-sql-dashboard.datasette.io/` for more info.
+Note that the default configuration enables an sql-explorer for read-only queries. This uses the same user as write access, but with a read flag enabled. If you wish to make this more restrictive or remove it, see `https://django-sql-explorer.readthedocs.io/`.
 
 ## Usage
 

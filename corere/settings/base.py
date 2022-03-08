@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'guardian',
     'simple_history',
     'corere.main',
-    'django_sql_dashboard'
+    'explorer'
 ]
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting' #to allow our custom override of default widgets
@@ -129,7 +129,7 @@ DATABASES = {
         'PORT': '5432',
     },
     #Used for admin sql queries
-    "dashboard": {
+    "readonly": {
         "ENGINE": "django.db.backends.postgresql_psycopg2",
         "NAME": os.environ["POSTGRES_DB"],
         "USER": os.environ["POSTGRES_USER"],
@@ -267,6 +267,10 @@ OAUTHPROXY_COOKIE_SECRET = os.environ["OAUTHPROXY_COOKIE_SECRET"]
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 SIMPLE_HISTORY_REVERT_DISABLED=True
+
+EXPLORER_CONNECTIONS = { 'Default': 'readonly' }
+EXPLORER_DEFAULT_CONNECTION = 'readonly'
+#EXPLORER_NO_PERMISSION_VIEW = 'explorer.views.auth.safe_login_view_wrapper'
 
 WHOLETALE_BASE_URL = os.environ["WHOLETALE_BASE_URL"]
 WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
