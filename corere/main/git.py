@@ -113,7 +113,6 @@ def _delete_file(repo_path, file_full_path):
         if os.path.exists(file_full_path):
             os.remove(file_full_path)
             file_full_folder = file_full_path.rsplit('/', 1)[0]
-            print(file_full_folder)
             try:
                 os.removedirs(file_full_folder) #deletes empty folders recursively. Will never delete repo_path as there is a git folder
             except OSError:
@@ -179,7 +178,6 @@ def download_all_submission_files(submission):
 def download_all_manuscript_files(manuscript):
     branch_name = 'master'
     repo_path = get_manuscript_repo_path(manuscript)
-    print(repo_path)
     repo = git.Repo(repo_path)
 
     tempf = tempfile.TemporaryFile()
