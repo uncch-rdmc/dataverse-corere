@@ -802,15 +802,14 @@ class NoteForm(forms.ModelForm):
                     return #Do not save
 
             super(NoteForm, self).save(commit, *args, **kwargs)
-            print(self.cleaned_data)
-            print(self.changed_data)
+            # print(self.cleaned_data)
+            # print(self.changed_data)
             if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
                 #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
                 for role in c.get_roles():
                     group = Group.objects.get(name=role)
                     remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-                if(not 'scope' in self.cleaned_data or self.cleaned_data['scope'] == 'public'): #Scope isn't in the form for author/editors
-                    print("HEY")
+                if(not 'scope' in self.cleaned_data or self.cleaned_data['scope'] == 'public'): #Scope isn't in the form for author/editors, which defaults to public
                     for role in c.get_roles():
                         group = Group.objects.get(name=role)
                         assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
