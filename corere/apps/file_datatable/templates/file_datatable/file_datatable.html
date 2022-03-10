@@ -22,7 +22,7 @@
                     data: 'newness',
                     render: function(data,type,row,meta){
                         encoded = encodeURIComponent(row[0]+row[1])
-                        button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'"/></td>'
+                        button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/></td>'
 
                         return button;
                     }
