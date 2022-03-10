@@ -824,7 +824,7 @@ class Manuscript(AbstractCreateUpdateModel):
                     latest_sub = self.get_latest_submission()
                     tale.submission = latest_sub
                     tale.save()
-                    wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self)) #Upload existing files. Only should actually do anything when is_containerized changes because we check for tale existence.
+                    wtc.upload_files(tale.wt_id, g.get_submission_files_path(self)) #Upload existing files. Only should actually do anything when is_containerized changes because we check for tale existence.
                     if latest_sub._status == Submission.Status.NEW or latest_sub._status == Submission.Status.REJECTED_EDITOR:
                         wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, wtm_group_author)
                 except Submission.DoesNotExist:
@@ -853,6 +853,7 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_landing_url(self):
         return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
+    #Note: When slug uses this function, it removes the parenthesis and replaces spaces with underscore
     def get_display_name(self):
         try:
             return self.pub_id + " (" + self.contact_last_name + ")"

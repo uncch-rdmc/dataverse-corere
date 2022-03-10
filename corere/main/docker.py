@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 #TODO: Better error checking. stderr has concents even when its successful.
 def build_repo2docker_image(manuscript):
     logger.debug("Begin build_repo2docker_image for manuscript: " + str(manuscript.id))
-    path = g.get_submission_repo_path(manuscript)
+    path = g.get_submission_files_path(manuscript)
     sub_version = manuscript.get_max_submission_version_id()
     image_name = ("jupyter-" + str(manuscript.id) + "-" + manuscript.slug + "-version" + str(sub_version))[:128] + ":" + settings.DOCKER_GEN_TAG + "-" + str(manuscript.id) 
     run_string = "jupyter-repo2docker --no-run --json-logs --image-name '" + image_name + "' '" + path + "'"

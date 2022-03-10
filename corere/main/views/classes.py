@@ -437,6 +437,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
                 logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
+            print(changes_for_git)
             g.rename_manuscript_files(self.object, changes_for_git)
 
             if not errors and request.POST.get('submit_continue'):
@@ -1049,7 +1050,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
                             wtc.delete_tale_files(tale.wt_id)
-                            wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self.object.manuscript))
+                            wtc.upload_files(tale.wt_id, g.get_submission_files_path(self.object.manuscript))
                             wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
                             try: #If instance model object already exists, delete it
                                 wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
