@@ -6,6 +6,7 @@ from corere.main.models import Manuscript, User, CorereInvitation
 from django.contrib.auth.decorators import login_required
 from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
 from django.contrib import messages
+from django.utils.safestring import mark_safe
 from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import Permission, Group
@@ -411,8 +412,8 @@ def account_user_details(request):
 
 def logout_view(request):
     logout(request)
-    msg = _("user_loggedOut_banner")
-    messages.add_message(request, messages.INFO, msg)
+    msg = _("user_loggedOut_banner") + ' <a href="https://auth.globus.org/v2/web/logout">click here</a>.'
+    messages.add_message(request, messages.INFO,  mark_safe(msg))
     return redirect('/')
 
 @login_required()
@@ -449,7 +450,7 @@ def invite_user_not_author(request, role, role_text):
                 ### Messaging ###
                 msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                 new_user = helper_create_user_and_invite(request, email, first_name, last_name, role)
-                messages.add_message(request, messages.INFO, 'You have invited {0} to CoReRe as an {1}!'.format(email, role_text))
+                messages.add_message(request, messages.INFO, 'You have invited {0} to CORE2 as an {1}!'.format(email, role_text))
                 ### End Messaging ###
             else:
                 logger.debug(form.errors) #TODO: DO MORE?

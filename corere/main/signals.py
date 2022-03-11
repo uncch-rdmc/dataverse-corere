@@ -4,7 +4,7 @@ from corere.main import models as m
 from django.contrib.auth import get_user_model
 #from .models import Manuscript
 
-# Currently For creation of groups with permissions in CoReRe
+# Currently For creation of groups with permissions in CORE2
 
 # First we get the out-of-the-box model permissions we will assign to our new groups
 # NOTE: these permissions define when a group should be able to perform an action on ALL instances of a model

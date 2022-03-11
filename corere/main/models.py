@@ -74,7 +74,7 @@ class User(AbstractUser):
     # This model inherits these fields from abstract user:
     # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
 
-    # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
+    # See apps.py/signals.py for the instantiation of CORE2's default User groups/permissions
 
     #invite_key = models.CharField(max_length=64, blank=True)
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)

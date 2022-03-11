@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 from django.http import HttpRequest
 
 class Command(BaseCommand):
-    help = "Create a test user for each of the 4 roles in CoReRe."
+    help = "Create a test user for each of the 4 roles in CORE2."
 
     def add_arguments(self, parser):
         parser.add_argument('--testlocal', action='store_true', help='Creates test users for OAuth login')

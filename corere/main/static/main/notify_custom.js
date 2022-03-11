@@ -19,7 +19,7 @@ function fill_notification_badge(data) {
             badges[i].innerHTML = data.unread_count;
         }
     }
-    //Custom query to update CoReRe badges
+    //Custom query to update CORE2 badges
     //this code also exists in the header to update when the page loads
     //TODO: Use notify_badge_class?
     $( "span.notification_count").filter(function() {

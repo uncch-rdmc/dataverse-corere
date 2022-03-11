@@ -1,8 +1,16 @@
 {% extends "main/layout_registration.html" %}
 {% load static compress %}
+{% load bootstrap_msg_class_lvls %}
 {% block content %}
-
-<div class="jumbotron">
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {{ message.tags|bootstrap_alert_lvl }} alert-dismissible fade show " role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+<div class="jumbotron full">
     <h1 class="display-4">Welcome to Confirmable Reproducible Research!</h1>
     <p>
         The main goal of the project is to make these verification tools cost-effective and easily accessible, so journals may implement and enforce more rigorous data policies. This will oblige researchers to in turn adopt more transparent practices and promote reproducible research of the highest quality and integrity throughout the scientific community.
