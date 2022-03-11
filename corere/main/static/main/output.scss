@@ -6,9 +6,9 @@
 
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
-// #content {
-
-// }
+$base-color: #6c97d8;
+$progress-reached: #2e64d8;
+$progress-done-circle: yellowgreen;
 
 //makes file metadata description the correct height for formsets. Needed to override our new default textarea
 textarea.shortarea {
@@ -108,7 +108,7 @@ body.full {
 }
 
 .navbar {
-    background: #7386D5;
+    background: $base-color;
 }
 
 .btn-primary {
@@ -142,12 +142,12 @@ body.full {
 }
 
 .cblue {
-    color: #7386D5;
+    color: $base-color;
     // display:block;
 }
 
 table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
-    background-color: #7386D5;
+    background-color: $base-color;
     opacity: .75;
 }
 
@@ -171,13 +171,13 @@ table.dataTable thead .sorting:before, table.dataTable thead .sorting_asc:before
 ul.pagination {
     float: right;
     a {
-        color: #7386D5;
+        color: $base-color;
     }
 
     .page-item.active .page-link {
         color: #fff;
-        background-color: #7386D5;
-        border-color: #7386D5;
+        background-color: $base-color;
+        border-color: $base-color;
     }
 }
 
@@ -188,7 +188,7 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
 .dropdown-menu a:hover
 {
   color: #fff;
-  background-color: #7386D5;
+  background-color: $base-color;
   border-color: #fff;
 }
 .notification_count{
@@ -215,24 +215,24 @@ td.custom-control {
 }
 
 .tooltip-icon {
-    color: #7386D5;
+    color: $base-color;
     margin-left: 2px;
     font-size: .9rem;
 }
 .tooltip-inner {
-    background-color: #7386D5;
+    background-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, .tooltip.bs-tooltip-bottom .arrow::before {
-    border-bottom-color: #7386D5;
+    border-bottom-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, .tooltip.bs-tooltip-top .arrow::before {
-    border-top-color: #7386D5;
+    border-top-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, .tooltip.bs-tooltip-left .arrow::before {
-    border-left-color: #7386D5;
+    border-left-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, .tooltip.bs-tooltip-right .arrow::before {
-    border-right-color: #7386D5;
+    border-right-color: $base-color;
 }
 
 //TODO: Enanabling the commented out lines gets iframe to size right, but then the form buttons get hidden. Figure out later.
@@ -269,15 +269,15 @@ ol.progtrckr[data-progtrckr-steps="9"] li { width: 11%; }
 
 ol.progtrckr li.progtrckr-done {
     color: yellowgreen;
-    border-bottom: 4px solid rgb(0, 153, 255);
+    border-bottom: 4px solid $progress-reached;
 }
 ol.progtrckr li.progtrckr-todo {
     color: silver; 
     border-bottom: 4px solid silver;
 }
 ol.progtrckr li.progtrckr-current {
-    color: rgb(0, 153, 255); 
-    border-bottom: 4px solid rgb(0, 153, 255);
+    color: $progress-reached; 
+    border-bottom: 4px solid $progress-reached;
 }
 
 ol.progtrckr li:after {
@@ -298,7 +298,7 @@ div.progress-circle-todo {
 div.progress-circle-current {
     width: 25px;
     height: 25px;
-    border: 2px solid rgb(0, 153, 255);
+    border: 2px solid $progress-reached;
     border-radius: 50%;
     background-color: #FFFFFF;
     margin-bottom: -63px;
@@ -309,11 +309,11 @@ div.progress-circle-current {
 div.progress-circle-done {
     width: 25px;
     height: 25px;
-    border: 2px solid yellowgreen;
+    border: 2px solid $progress-done-circle;
     border-radius: 50%;
-    background-color: yellowgreen;
+    background-color: $progress-done-circle;
     background-image: url('data:image/svg+xml;utf8,<svg fill="white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3.25 -4 35 35"><path d="M9 21.035l-9-8.638 2.791-2.87 6.156 5.874 12.21-12.436 2.843 2.817z"/></svg>');
-    // background-color: yellowgreen;
+    // background-color: $progress-done-circle;
     margin-bottom: -63px;
     margin-left: auto; 
     margin-right: 0;
@@ -469,7 +469,7 @@ select.custom-select {
 // #sidebar {
 //     min-width: 250px;
 //     max-width: 250px;
-//     background: #7386D5;
+//     background: $base-color;
 //     color: #fff;
 //     transition: all 0.6s cubic-bezier(0.945, 0.020, 0.270, 0.665);
 //     transform-origin: bottom left;
@@ -501,7 +501,7 @@ select.custom-select {
 //     display: block;
 // }
 // #sidebar ul li a:hover {
-//     color: #7386D5;
+//     color: $base-color;
 //     background: #fff;
 // }
 
@@ -543,7 +543,7 @@ select.custom-select {
 
 // a.download {
 //     background: #fff;
-//     color: #7386D5;
+//     color: $base-color;
 // }
 
 // a.article, a.article:hover {
