@@ -163,12 +163,12 @@ class Edition(AbstractCreateUpdateModel):
 class Curation(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new', '---'
-        INCOM_MATERIALS = 'incom_materials', 'Incomplete Materials'
+        INCOM_MATERIALS = 'incomplete_materials', 'Incomplete Materials'
         MAJOR_ISSUES = 'major_issues', 'Major Issues'
         MINOR_ISSUES = 'minor_issues', 'Minor Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", verbose_name='Details')
     needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
@@ -220,10 +220,10 @@ class Verification(AbstractCreateUpdateModel):
         NOT_ATTEMPTED = 'not_attempted', 'Not Attempted'
         MINOR_ISSUES = 'minor_issues', 'Minor Issues'
         MAJOR_ISSUES = 'major_issues', 'Major Issues'
-        SUCCESS_W_MOD = 'success_w_mod', 'Success with Modification'
+        SUCCESS_W_MOD = 'success_with_modification', 'Success with Modification'
         SUCCESS = 'success', 'Success'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
     report = models.TextField(default="", verbose_name='Details')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
@@ -285,10 +285,10 @@ class Submission(AbstractCreateUpdateModel):
         IN_PROGRESS_CURATION = 'in_progress_curation'
         IN_PROGRESS_VERIFICATION = 'in_progress_verification'
         REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
-        REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approve'
+        REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approval'
         RETURNED = 'returned'
 
-    _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
     version_id = models.IntegerField(verbose_name='Version number')
     files_changed = models.BooleanField(default=True)
@@ -648,8 +648,8 @@ class Keyword(models.Model):
 class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new', 'New'
-        AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
-        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Author Resubmission'
+        AWAITING_INITIAL = 'awaiting_initial', 'Awaiting Initial Submission'
+        AWAITING_RESUBMISSION = 'awaiting_resubmission', 'Awaiting Author Resubmission'
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
@@ -710,7 +710,7 @@ class Manuscript(AbstractCreateUpdateModel):
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
     
     class Meta:
         permissions = [
@@ -1012,9 +1012,9 @@ class GitFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
         CODE = 'code', 'Code'
         DATA = 'data', 'Data'
-        DOC_README = 'doc_readme', 'Documentation - Readme'
-        DOC_CODEBOOK = 'doc_codebook', 'Documentation - Codebook'
-        DOC_OTHER = 'doc_other', 'Documentation - Other'
+        DOC_README = 'documentation_readme', 'Documentation - Readme'
+        DOC_CODEBOOK = 'documentation_codebook', 'Documentation - Codebook'
+        DOC_OTHER = 'documentation_other', 'Documentation - Other'
         #UNSET = '-','-'
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
@@ -1024,7 +1024,7 @@ class GitFile(AbstractCreateUpdateModel):
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
     date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, null=True, blank=True, choices=FileTag.choices, verbose_name='file type')
+    tag = models.CharField(max_length=32, null=True, blank=True, choices=FileTag.choices, verbose_name='file type')
     description = models.CharField(max_length=1024, null=True, blank=True, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
@@ -1082,11 +1082,11 @@ class Note(AbstractCreateUpdateModel):
     #Instead of being parents, these refer to which file or category of the submission a note refers to.
     #The idea is that we want to show all these notes on the submission page, but then give the ability to specify what part of the submission they are related to
     ref_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='ref_notes')
-    ref_file_type = models.CharField(max_length=14, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
+    ref_file_type = models.CharField(max_length=32, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
     
     #Instead of having notes attached to edition/curation/verification, we have all notes on submission but track when during the process the note was made.
     #We could have inferred this from the author, but that really stinks for testing as an admin (who can have multiple roles)
-    ref_cycle = models.CharField(max_length=12, choices=RefCycle.choices) 
+    ref_cycle = models.CharField(max_length=32, choices=RefCycle.choices) 
     
     def save(self, *args, **kwargs):
         refs = 0
