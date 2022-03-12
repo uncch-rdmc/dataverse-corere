@@ -321,6 +321,7 @@
 <div class="my-1 dt-buttons btn-group flex-wrap">    
     {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
+    {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_files_noop' as m_edit_files_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
@@ -353,7 +354,9 @@
 
     {% if m_edit_flag %} 
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
+    {% endif %}
+    {% if m_edit_files_flag %}
+       <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
     {% endif %}
 
     <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">

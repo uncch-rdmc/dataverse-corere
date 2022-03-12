@@ -394,7 +394,7 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
     template = 'main/form_upload_files.html'
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'edit_files_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
                 
     def dispatch(self, request, *args, **kwargs):
@@ -460,7 +460,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
 #Supports the ajax uploader performing file uploads
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'edit_files_noop'
     http_method_names = ['post']
 
     #TODO: Should we making sure these files are safe?
@@ -493,7 +493,7 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
 class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['get']
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
         file_path = request.GET.get('file_path')
@@ -504,7 +504,7 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
 
 class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['post']
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'edit_files_noop'
 
     def post(self, request, *args, **kwargs):
         file_path = request.GET.get('file_path')
@@ -538,7 +538,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 

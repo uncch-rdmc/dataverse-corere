@@ -714,7 +714,8 @@ class Manuscript(AbstractCreateUpdateModel):
     
     class Meta:
         permissions = [
-            #TODO: This includes default CRUD permissions. We could switch it to be explicit (other objects too)
+            #NOTE: THIS LIST DOES NOT INCLUDE THE DEFAULT CRUD PERMISSIONS ADDED AUTOMATICALLY BY DJANGO. We could switch it to be explicit (other objects too)
+            (c.PERM_MANU_CHANGE_M_FILES, 'Can manage files for a manuscript'),
             (c.PERM_MANU_ADD_AUTHORS, 'Can manage authors on manuscript'),
             (c.PERM_MANU_REMOVE_AUTHORS, 'Can manage authors on manuscript'), # we needed more granularity for authors
             (c.PERM_MANU_MANAGE_EDITORS, 'Can manage editors on manuscript'),
@@ -756,6 +757,7 @@ class Manuscript(AbstractCreateUpdateModel):
             editor_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)
             group_manuscript_editor, created = Group.objects.get_or_create(name=editor_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_CHANGE_M_FILES, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
@@ -770,7 +772,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
             curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
             group_manuscript_curator, created = Group.objects.get_or_create(name=curator_group_name)
-            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self) 
+            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self)
+            assign_perm(c.PERM_MANU_CHANGE_M_FILES, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_CURATE, group_manuscript_curator, self) 
 
@@ -952,6 +955,12 @@ class Manuscript(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
     def edit_noop(self):
+        return self._status
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M_FILES,instance))
+    def edit_files_noop(self):
         return self._status
 
     #-----------------------

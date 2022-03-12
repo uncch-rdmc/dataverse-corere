@@ -14,8 +14,9 @@ def populate_models(sender, **kwargs):
     from django.contrib.auth.models import Group
     from django.contrib.auth.models import Permission
     perm_manuscript_add = Permission.objects.get(codename=c.PERM_MANU_ADD_M)
-    perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
-    perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
+    # perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
+    # perm_manuscript_change_files = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M_FILES)
+    #perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
     perm_manuscript_view = Permission.objects.get(codename=c.PERM_MANU_VIEW_M)
 
     perm_manuscript_add_authors = Permission.objects.get(codename=c.PERM_MANU_ADD_AUTHORS)

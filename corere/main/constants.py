@@ -24,6 +24,7 @@ def get_private_roles():
 #Manuscript perm strings
 PERM_MANU_ADD_M = 'add_manuscript'
 PERM_MANU_CHANGE_M = 'change_manuscript'
+PERM_MANU_CHANGE_M_FILES = 'change_manuscript_files'
 PERM_MANU_DELETE_M = 'delete_manuscript'
 PERM_MANU_VIEW_M = 'view_manuscript'
 PERM_MANU_ADD_AUTHORS = 'add_authors_on_manuscript'
