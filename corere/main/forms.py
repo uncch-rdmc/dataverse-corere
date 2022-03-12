@@ -182,7 +182,7 @@ class ManuscriptFormHelperMain(FormHelper):
 
         self.layout = Layout(
             HTML("""
-                <h5 class='cblue'>General Info</h5>
+                <h5 class='title-text'>General Info</h5>
             """),
             'pub_name','pub_id','description','subject', 'additional_info',
             Div(
@@ -192,7 +192,7 @@ class ManuscriptFormHelperMain(FormHelper):
                 css_class='row',
             ),
             HTML("""
-                <hr><h5 class='cblue'>Exemptions</h5>
+                <hr><h5 class='title-text'>Exemptions</h5>
                 <h6><i><span style="color:#666666; margin-left:1px;">Used by the CORE2 team to decide whether the Manuscript is exempt from parts or all of the CORE2 process  </span></i></h6><br>
             """),
             # Div(
@@ -202,7 +202,7 @@ class ManuscriptFormHelperMain(FormHelper):
             # ),
             'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions','exemption_override',
             HTML("""
-                <hr><h5 class='cblue'>Environment Info</h5>
+                <hr><h5 class='title-text'>Environment Info</h5>
             """),
             'compute_env','compute_env_other',
             'operating_system', 'packages_info', 'software_info', 
@@ -232,7 +232,7 @@ class ManuscriptFormHelperEditor(FormHelper):
 
         self.layout = Layout(
             HTML("""
-                <h5 class='cblue'>General Info</h5>
+                <h5 class='title-text'>General Info</h5>
             """),
             'pub_name','pub_id','additional_info',
             Div(
@@ -242,7 +242,7 @@ class ManuscriptFormHelperEditor(FormHelper):
                 css_class='row',
             ),
             HTML("""
-                <hr><h5 class='cblue'>Exemptions</h5>
+                <hr><h5 class='title-text'>Exemptions</h5>
             """),
             # Div(
             #     Div('qual_analysis', css_class='col-md-6',),

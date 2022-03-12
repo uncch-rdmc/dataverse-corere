@@ -7,7 +7,9 @@
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
 $base-color: #6c97d8;
-$progress-reached: #2e64d8;
+$title-color: darken($base-color, 28%);
+
+$progress-reached: $base-color;
 $progress-done-circle: yellowgreen;
 
 //makes file metadata description the correct height for formsets. Needed to override our new default textarea
@@ -141,8 +143,8 @@ body.full {
     padding-top: 10px;
 }
 
-.cblue {
-    color: $base-color;
+.title-text {
+    color: $title-color;
     // display:block;
 }
 

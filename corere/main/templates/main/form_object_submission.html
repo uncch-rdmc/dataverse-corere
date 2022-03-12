@@ -21,19 +21,19 @@
     {% crispy form helper %}
 
     {% if verification_formset %}
-        <h5 class="cblue">Verifier Review</h5>
+        <h5 class="title-text">Verifier Review</h5>
         {{ verification_formset.non_form_errors }}
         {% crispy verification_formset helper %}
         <hr>
     {% endif %}
     {% if curation_formset %}
-        <h5 class="cblue">Curator Review</h5>
+        <h5 class="title-text">Curator Review</h5>
         {{ curation_formset.non_form_errors }}
         {% crispy curation_formset helper %}
         <hr>
     {% endif %}
     {% if edition_formset %}
-        <h5 class="cblue">Editor Review</h5>
+        <h5 class="title-text">Editor Review</h5>
         {{ edition_formset.non_form_errors }}
         {% crispy edition_formset helper %}
         <hr>

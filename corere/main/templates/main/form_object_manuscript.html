@@ -144,25 +144,25 @@
     {% crispy form manuscript_helper %}
     <hr>
     {% if author_formset %}
-        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
+        <h5 class="title-text">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="cblue">Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
+        <h5 class="title-text">Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
     {% endif %}
     {% if keyword_formset %}
-        <h5 class="cblue">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h5 class="title-text">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
     {% endif %}
     {% if v_metadata_formset %}
-        <h5 class="cblue">Verification Metadata</h5>
+        <h5 class="title-text">Verification Metadata</h5>
         {{ v_metadata_formset.non_form_errors }}
         {% crispy v_metadata_formset helper %}
         <hr>  

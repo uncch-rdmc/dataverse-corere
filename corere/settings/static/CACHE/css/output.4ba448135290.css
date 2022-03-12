@@ -33,7 +33,7 @@
  * Datatables (we don't have direct control of the html, so a lot of overrides)
  */
 /* line 39, corere/main/static/main/output.scss */
-.cblue h5 {
+.title-text h5 {
   color: #7386D5;
   display: block; }
 
