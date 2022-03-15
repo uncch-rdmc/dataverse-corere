@@ -333,14 +333,6 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">Update Submission</button>    
     {% endif %}
 
-    {% comment %} 
-    
-    which buttons were post before?
-    - /progress/ (unused?)
-    - /generatereport/
-    - /finish/
-    {% endcomment %}
-
     {% if reviewSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
     {% endif %}
@@ -351,8 +343,7 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
     {% endif %}
 
-
-    {% if m_edit_flag %} 
+    {% if m_edit_flag and not editSubmissionButton %} 
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
     {% endif %}
     {% if m_edit_files_flag %}
