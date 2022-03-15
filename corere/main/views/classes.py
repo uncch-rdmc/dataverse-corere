@@ -652,7 +652,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
 
-        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+        if not self.read_only:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -804,11 +805,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
-           
-        context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+        
+        if not self.read_only: #should never hit post if read_only but yea
+            context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         
         if(self.note_formset is not None):
-
             #We re-init the note formset to not show the validation errors. There may be an easier and more efficient way
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
                 ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
@@ -997,8 +998,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(), 'manuscript_id': self.object.manuscript.id}
-
-        context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
+        
+        if not self.read_only:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
 
@@ -1096,7 +1098,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
                 "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
 
-            context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
+            if not self.read_only: #should never hit post if read_only but yea
+                context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
                 context['errors']= errors
@@ -1552,7 +1555,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         else:
             context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
-        context['progress_bar_html'] = get_progress_bar_html_submission('Run Code', self.object)
+        if not self.read_only:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Run Code', self.object)
 
         return render(request, self.template, context)
 
