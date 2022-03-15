@@ -5,17 +5,27 @@
 {% if not read_only %}
 {% include "main/file_upload.html" %}
 {% else %}
-<input type=button value="Home" onClick="location.href='..';">
+<!-- <input type=button value="Home" onClick="location.href='..';"> -->
 {% endif %}
 
 <div class="accordion" style="padding-bottom:10px" id="uploadAccordionPanels">
     <div class="accordion-item">
       <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+        {% if obj_type == 'submission' and read_only %}
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="true" aria-controls="panelsStayOpen-collapseTwo">
+        {% else %}
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+        {% endif %}
+        <!-- <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo"> -->
           Files&nbsp<span id="files_count_text"></span>
         </button>
       </h2>
-      <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        {% if obj_type == 'submission' and read_only %}
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        {% else %}
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapsed" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        {% endif %}
+
         <div class="accordion-body">                
           <div id="files_list_holder">
             {% include "main/file_list.html" %}

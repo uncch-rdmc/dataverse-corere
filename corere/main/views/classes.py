@@ -985,7 +985,10 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     model = m.Submission
 
     def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
+        if self.read_only:
+            self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+        else:
+            self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -1099,6 +1102,17 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 context['errors']= errors
 
             return render(request, self.template, context)
+
+
+class SubmissionReadFilesView(SubmissionUploadFilesView):
+    transition_method_name = 'view_noop'
+    form = f.GitFileReadOnlyFileFormSet
+    read_only = True
+
+    # def dispatch(self, request, *args, **kwargs):
+    #     #TODO: I'm not sure if this title actually does anything
+    #     self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+    #     return super().dispatch(request, *args, **kwargs)
 
 #Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1233,7 +1247,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     template = 'main/file_list.html' #I think this is not actually used here
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
