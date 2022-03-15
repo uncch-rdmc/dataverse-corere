@@ -16,14 +16,13 @@
         {% else %}
             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
         {% endif %}
-        <!-- <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo"> -->
-          Files&nbsp<span id="files_count_text"></span>
+        Files&nbsp<span id="files_count_text"></span>
         </button>
       </h2>
         {% if obj_type == 'submission' and read_only %}
             <div id="panelsStayOpen-collapseTwo" class="accordion-collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
         {% else %}
-            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapsed" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
         {% endif %}
 
         <div class="accordion-body">                
@@ -70,11 +69,8 @@
     {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
         {% if obj_type == 'submission' %}
             <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
-            {% comment %} #TODO-BETA1: these options probably should all go away, we just need one submit {% endcomment %}
-            {% if skip_docker %}
-                <input type="button" name="submit_continue" value="Submit"  onClick="if (confirm('Docker is disabled for this installation, so by clicking submit this submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
-            {% elif not containerized %}
-                <input type="button" name="submit_continue" value="Submit" onClick="if (confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?')) {document.getElementById('submit_continue_fileslist').click();}">
+            {% if skip_docker or not containerized %}
+                <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()" >
             {% else %}
                 <input type="button" name="submit_continue" value="Launch Notebook" onclick="document.getElementById('submit_continue_fileslist').click()" >
             {% endif %}

@@ -1038,20 +1038,10 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             g.rename_submission_files(self.object.manuscript, changes_for_git)
 
             if not errors and request.POST.get('submit_continue'):
-                if (settings.SKIP_DOCKER):
-                    self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
-                    messages.add_message(request, messages.INFO, self.msg)
-
-                    return _helper_submit_submission_and_redirect(request, self.object)
-
-                if not self.object.manuscript.is_containerized():
-                    self.msg = "Your submission has been submitted." #TODO: Improve message
-                    messages.add_message(request, messages.INFO, self.msg)
-
-                    return _helper_submit_submission_and_redirect(request, self.object)
-
                 if list(self.files_dict_list):
-                    if settings.CONTAINER_DRIVER == 'wholetale':
+                    if settings.SKIP_DOCKER or not self.object.manuscript.is_containerized():
+                        return redirect('submission_info', id=self.object.id)
+                    elif settings.CONTAINER_DRIVER == 'wholetale':
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
