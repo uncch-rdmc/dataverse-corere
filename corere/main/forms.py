@@ -325,8 +325,6 @@ class ManuscriptBaseForm(forms.ModelForm):
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
 
-
-
             if(self.data['data_source_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a data source."))
 

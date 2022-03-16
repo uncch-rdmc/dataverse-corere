@@ -6,7 +6,7 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEFAULT_AUTO_FIELD='django.db.models.AutoField' 
 
 LOGIN_URL = '/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/?login=true'
 LOGOUT_REDIRECT_URL = '/'
 
 #MEDIA_ROOT = os.environ["MEDIA_ROOT"]

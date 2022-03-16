@@ -24,8 +24,11 @@ def index(request):
     if request.user.is_authenticated:
         if settings.CONTAINER_DRIVER == "wholetale":
             girderToken = request.GET.get("girderToken", None) #provided by wt ouath redirect
+
             #If no girderToken, we send the user to Whole Tale / Globus to get it.
-            if not (girderToken or request.COOKIES.get('girderToken')):
+            #If coming from login, we automatically grab the girder token
+            if not (girderToken or (request.COOKIES.get('girderToken') and not request.GET.get('login', ''))):
+                print("INDEX 2A")
                 if request.is_secure():
                     protocol = "https"
                 else:
@@ -55,6 +58,7 @@ def index(request):
         if girderToken:
             #TODO-WT: If samesite isn't needed we should remove samesite/secure
             response.set_cookie(key="girderToken", value=girderToken, secure=True, samesite='None')
+
         return response
     else:
         return render(request, "main/login.html")
@@ -190,7 +194,7 @@ def manuscript_landing(request, id=None):
             'GROUP_ROLE_VERIFIER': c.GROUP_ROLE_VERIFIER,
             'GROUP_ROLE_CURATOR': c.GROUP_ROLE_CURATOR,
             # 'manuscript_avail_buttons': json.dumps(manuscript_avail_buttons),
-            'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
+            # 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
             'page_title': _("manuscript_landing_pageTitle"),
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
             'editSubmissionButton': editSubmissionButton,
