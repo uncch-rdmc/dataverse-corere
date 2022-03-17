@@ -28,13 +28,10 @@ def get_submission_files_list(manuscript):
     return _get_files_list(manuscript, get_submission_files_path(manuscript))
 
 def _get_files_list(manuscript, path):
-    # print("Manuscript: " + str(manuscript))
-    # print("Path: " + path)
-    # print("Repo Name: " + repo_name)
-    # print("============================")
     try:
-        repo = git.Repo(path)
-        return helper_list_paths(repo.head.commit.tree, path, path)
+        repo = git.Repo(path+"..")
+        #calling repo.head.commit.tree[0] starts us from inside our additional folder level used for zipping
+        return helper_list_paths(repo.head.commit.tree[0], path, path)
     except git.exc.NoSuchPathError:
         raise Http404()
 
@@ -100,13 +97,23 @@ def delete_manuscript_file(manuscript, file_path):
     # if(not file_path == '/.git'):
     _delete_file(repo_path, repo_path + files_folder + file_path)
 
+    #We recreate our "inside the repo" directory incase our delete recursively deleted it
+    files_path = get_manuscript_files_path(manuscript)
+    os.makedirs(files_path, exist_ok=True)
+
 def delete_submission_file(manuscript, file_path):
     repo_path = get_submission_repo_path(manuscript)
     files_folder = get_submission_files_path(manuscript, relative=True)
     # if(not file_path == '/.git'):
     _delete_file(repo_path, repo_path + files_folder + file_path)
 
+    #We recreate our "inside the repo" directory incase our delete recursively deleted it
+    #TODO: This is likely slow when called many times (e.g. delete all). If we have performance issues we should only call it once at the end of many deletes
+    files_path = get_submission_files_path(manuscript)
+    os.makedirs(files_path, exist_ok=True)
+
 #delete file from filesystem, create commit for file
+#TODO: This currently will delete the 
 def _delete_file(repo_path, file_full_path):
     repo = git.Repo(repo_path)
     if(repo_path in os.path.realpath(file_full_path)):
@@ -221,8 +228,9 @@ def create_submission_branch(submission):
     repo = git.Repo(get_submission_repo_path(submission.manuscript))
     repo.create_head(helper_get_submission_branch_name(submission))
 
+#Lists the paths of all the files. Used only to delete_all currently
+#When initially called, repo_path and rel_path should be the same.
 #TODO: This actually returns a generator, we should probably name it differently or switch it to a list
-# When initially called, repo_path and rel_path should be the same.
 def helper_list_paths(root_tree, repo_path, rel_path):
     for blob in root_tree.blobs:
         #Split off the system path from the return. 
