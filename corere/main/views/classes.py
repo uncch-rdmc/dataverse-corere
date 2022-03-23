@@ -588,6 +588,105 @@ class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
     def get(self, request, *args, **kwargs):
         return g.download_all_manuscript_files(self.object)
 
+class ManuscriptUploadToDataverseView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get','post']
+    transition_method_name = 'publish' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+    page_title = "Upload To Dataverse" #_("manuscript_edit_pageTitle")
+    page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse" #_("manuscript_edit_helpText")
+
+    def get(self, request, *args, **kwargs):
+        import corere.main.dataverse as dv
+        dv.test_py_dv()
+
+        return super().get(request, *args, **kwargs)
+
+    # def post(self, request, *args, **kwargs):
+    #     if self.request.user.is_superuser or not self.create:
+    #         self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
+    #         self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
+    #         self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
+    #         # self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
+
+    #     if(isinstance(self.object, m.Manuscript)):
+    #         manuscript_display_name = self.object.get_display_name()
+    #     else:
+    #         manuscript_display_name = self.object.manuscript.get_display_name()
+
+    #     if not self.read_only and self.form.is_valid() \
+    #         and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) \
+    #         and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            
+    #         self.form.save()
+    #         if(self.author_formset):
+    #             self.author_formset.save()
+    #         if(self.data_source_formset):
+    #             self.data_source_formset.save()
+    #         if(self.keyword_formset):
+    #             self.keyword_formset.save()
+    #         # if(self.v_metadata_formset):
+    #         #     self.v_metadata_formset.save()
+
+    #         if request.POST.get('submit_continue'):
+    #             messages.add_message(request, messages.SUCCESS, self.msg)
+    #             #return redirect('manuscript_addauthor', id=self.object.id)
+    #             return redirect('manuscript_uploadfiles', id=self.object.id)
+
+    #         #This logic needs a different way of detecting whether to go to the edit of a submission or creation
+    #         #We should get the latest submission and check its status?
+    #         elif request.POST.get('submit_continue_submission'):
+    #             messages.add_message(request, messages.SUCCESS, self.msg)
+
+    #             try: #If it already exists from the user going between the form pages
+    #                 latest_sub = self.object.get_latest_submission()
+    #                 if latest_sub._status == m.Submission.Status.RETURNED:
+    #                     # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+    #                     submission = m.Submission.objects.create(manuscript=self.object)
+    #                     print(submission)
+    #                     return redirect('submission_uploadfiles', id=submission.id)
+    #                 else:
+    #                     return redirect('submission_uploadfiles', id=latest_sub.id)
+    #             except m.Submission.DoesNotExist:
+    #                 # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+    #                 submission = m.Submission.objects.create(manuscript=self.object)
+    #                 return redirect('submission_uploadfiles', id=submission.id)
+    #         else:
+    #             return redirect(self.redirect)
+    #     else:
+    #         logger.debug(self.form.errors)      
+    #         logger.debug(self.author_formset.errors)
+    #         logger.debug(self.data_source_formset.errors)
+    #         logger.debug(self.keyword_formset.errors)  
+    #         # logger.debug(self.v_metadata_formset.errors)  
+
+    #     context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
+    #         'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper}
+
+    #     if not self.create:
+    #         context['manuscript_display_name'] = manuscript_display_name
+
+    #     if self.request.user.is_superuser or not self.create:
+    #         context['author_formset'] = self.author_formset
+    #         context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
+    #         context['data_source_formset'] = self.data_source_formset
+    #         context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
+    #         context['keyword_formset'] = self.keyword_formset
+    #         context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+    #         # context['v_metadata_formset'] = self.v_metadata_formset
+
+    #     if(self.from_submission):
+    #         #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
+    #         progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
+    #         context['progress_bar_html'] = progress_bar_html
+    #     elif(self.create or self.object._status == m.Manuscript.Status.NEW):
+    #         progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
+    #         context['progress_bar_html'] = progress_bar_html
+
+    #     if(self.form_helper):
+    #         context['manuscript_helper'] = self.form_helper
+
+    #     return render(request, self.template, context)
 
 ############################################# SUBMISSION #############################################
 

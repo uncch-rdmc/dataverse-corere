@@ -653,6 +653,7 @@ class Manuscript(AbstractCreateUpdateModel):
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
+        PUBLISHED = 'published', 'Completed And Published'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -975,12 +976,26 @@ class Manuscript(AbstractCreateUpdateModel):
     def view_noop(self):
         return self._status
 
+    #-----------------------
+
+    def can_publish(self):
+        return True
+
+    @transition(field=_status, source=[Status.COMPLETED, Status.PUBLISHED], target=Status.PUBLISHED, conditions=[can_publish],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    def publish(self):
+        pass #Here add any additional actions related to the state change
+
+#-----------------------
+
 @receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
 def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+
+####################################################
 
 #Class related to locally hosted docker containers
 class LocalContainerInfo(models.Model):

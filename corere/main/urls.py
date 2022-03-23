@@ -33,6 +33,7 @@ urlpatterns = [
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
     path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
+    path('manuscript/<int:id>/dataverseupload/', classes.ManuscriptUploadToDataverseView.as_view(), name="manuscript_dataverseupload"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/info/', classes.SubmissionEditView.as_view(), name="submission_info"),

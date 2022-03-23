@@ -683,6 +683,16 @@ ReadOnlyAuthorFormSet = inlineformset_factory(
     can_delete=False,
 )
 
+############# Manuscript Publish Dataverse Forms #############
+#TODO: Maybe move up with other manuscript forms? Depends on how different this ends up being..
+#      We might just include the manuscript form and eventually a file/file-metadata form here?
+
+class PublishManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
+    pass
+
+    def save(self, commit=True, *args, **kwargs):
+        pass
+
 ############# Note Forms ############# (PROBABLY COLLAPSE INTO TOP)
 
 class NoteForm(forms.ModelForm):

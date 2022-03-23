@@ -21,3 +21,5 @@ export OAUTHPROXY_COOKIE_SECRET=
 
 #Only used if using wholetale, for administrative tasks
 export WHOLETALE_ADMIN_GIRDER_API_KEY=""
+
+export DATAVERSE_API_KEY=""
