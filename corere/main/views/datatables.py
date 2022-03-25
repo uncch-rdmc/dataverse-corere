@@ -260,9 +260,11 @@ class SubmissionJson(CorereBaseDatatableView):
                     if(dominant_corere_group.name.startswith("Author")):
                         if(has_transition_perm(submission.edit_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
                             avail_buttons.append('launchSubmissionContainer')
+                            avail_buttons.append('downloadContainerFiles')
                     else: 
                         if(has_transition_perm(submission.view_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
                             avail_buttons.append('launchSubmissionContainer')
+                            avail_buttons.append('downloadContainerFiles')
 
             return avail_buttons
 

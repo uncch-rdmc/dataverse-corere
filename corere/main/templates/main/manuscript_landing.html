@@ -128,7 +128,6 @@
                             text: 'View Files',
                             name: 'viewSubmissionFiles',
                             action: function ( e, dt, node, config ) {
-
                                 window.location.href = "/submission/"+submission_id+"/viewfiles/";
                             },
                             init: function ( dt, node, config ) {
@@ -140,7 +139,6 @@
                             text: 'Launch Container',
                             name: 'launchSubmissionContainer',
                             action: function ( e, dt, node, config ) {
-
                                 window.location.href = "/submission/"+submission_id+"/notebook/";
                             },
                             init: function ( dt, node, config ) {
@@ -148,7 +146,17 @@
                                 },
                             enabled: false
                         },
-
+                        {
+                            text: 'Download Container Files',
+                            name: 'downloadContainerFiles',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/wtdownloadall/";
+                            },
+                            init: function ( dt, node, config ) {
+                                    node.css("display", "none");
+                                },
+                            enabled: false
+                        },
                         {
                             text: 'Hand-off to Editors',
                             name: 'progressSubmission',
@@ -361,6 +369,7 @@
         {% if launchContainerCurrentSubButton %}
             {% if wholetale %}
             <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/wtdownloadall/')">Download Container Files</a></li>
             {% else %}
             <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
             {% endif %}

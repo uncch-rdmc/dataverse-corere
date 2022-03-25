@@ -126,11 +126,18 @@ class WholeTale:
     def delete_instance(self, instance_id):
         return self.gc.delete(f"/instance/{instance_id}")
 
-    def download_files(self, path, folder_id=None):
-        if folder_id is None:
-            folder_id = self.tale["workspaceId"]  # otherwise it should be version
+    def download_tale(self, tale_id):
+        tale = self.gc.get(f"/tale/{tale_id}")
+        return self.download_folder_zip(tale['workspaceId'])
 
-        self.gc.downloadFolderRecursive(folder_id, path)
+    def download_folder_zip(self, folder_id, mimeFilter=None):
+        return self.gc.get(f"/folder/{folder_id}/download", jsonResp=False)#, parameters={"mimeFilter": mimeFilter})
+
+    # def download_files(self, path, folder_id):
+    #     if folder_id is None:
+    #         folder_id = self.tale["workspaceId"]  # otherwise it should be version
+
+    #     return self.gc.downloadFolderRecursive(folder_id, path)
 
     def get_images(self):
         return self.gc.get("/image")
