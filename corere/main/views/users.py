@@ -447,7 +447,7 @@ def invite_user_not_author(request, role, role_text):
                 first_name = form.cleaned_data['first_name']
                 last_name = form.cleaned_data['last_name']
                 
-                if User.objects.get(email=email):
+                if User.objects.filter(email=email):
                     messages.error(request, "Email provided already exists in CORE2")
                     return render(request, 'main/form_user_details.html', {'form': form, 'helper': helper, 'page_title': "Invite {0}".format(role_text.capitalize())})
 
