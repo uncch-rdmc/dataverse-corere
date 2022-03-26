@@ -17,7 +17,9 @@ django-datatables-view==1.19.1
 django-fsm==2.8.0
 django-guardian==2.4.0
 
-#Custom django-invitations (1.9.3) with minor change to pass the key forward to signup as we use it when creating an initial user
+#Custom django-invitations (1.9.3) with changes: 
+# - pass the key forward to signup as we use it when creating an initial user
+# - disable accepting invitation on initial url load, which disabled the key and broke the flow if you have to reload.
 git+https://github.com/OdumInstitute/django-invitations.git
 
 django-libsass==0.9

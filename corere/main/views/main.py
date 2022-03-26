@@ -28,7 +28,6 @@ def index(request):
             #If no girderToken, we send the user to Whole Tale / Globus to get it.
             #If coming from login, we automatically grab the girder token
             if not (girderToken or (request.COOKIES.get('girderToken') and not request.GET.get('login', ''))):
-                print("INDEX 2A")
                 if request.is_secure():
                     protocol = "https"
                 else:
