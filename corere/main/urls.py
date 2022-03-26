@@ -58,6 +58,7 @@ urlpatterns = [
 
     path('logout/', users.logout_view, name="logout"),
     path('account_associate_oauth/<str:key>/', users.account_associate_oauth, name="account_associate_oauth"),
+    path('account_associate_error/', users.account_associate_error, name="account_associate_error"),
     path('account_user_details/', users.account_user_details, name="account_user_details"),
     path('account_complete_oauth/', users.account_complete_oauth, name="account_complete_oauth"),
     path('notifications/', users.notifications, name="notifications"),

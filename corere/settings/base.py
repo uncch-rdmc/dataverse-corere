@@ -82,8 +82,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corere.main.middleware.BaseMiddleware',
+    'corere.main.utils.UserAlreadyAssociatedMiddleware',
 ]
-
+      
 #To have django-debug-toolbar show
 INTERNAL_IPS = [
     '127.0.0.1',
@@ -246,7 +247,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_user',
     'corere.main.utils.social_pipeline_return_session_user',
     'social_core.pipeline.user.get_username',
-    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.associate_user'
     # 'social_core.pipeline.social_auth.load_extra_data',
     #'social_core.pipeline.user.user_details',
     )

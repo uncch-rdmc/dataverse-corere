@@ -340,6 +340,10 @@ def account_associate_oauth(request, key=None):
 
     return render(request, 'main/new_user_oauth.html')
 
+def account_associate_error(request, key=None):
+    logout(request)
+    return render(request, 'main/new_user_error.html')
+
 #If Whole Tale is enabled, redirect user to the Whole Tale Globus authorization. Otherwise just continue to account_user_details
 #TODO: Should we restrict at all when this page is accessed?
 @login_required()
