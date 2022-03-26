@@ -447,6 +447,10 @@ def invite_user_not_author(request, role, role_text):
                 first_name = form.cleaned_data['first_name']
                 last_name = form.cleaned_data['last_name']
                 
+                if User.objects.get(email=email):
+                    messages.error(request, "Email provided already exists in CORE2")
+                    return render(request, 'main/form_user_details.html', {'form': form, 'helper': helper, 'page_title': "Invite {0}".format(role_text.capitalize())})
+
                 ### Messaging ###
                 msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                 new_user = helper_create_user_and_invite(request, email, first_name, last_name, role)
@@ -463,9 +467,6 @@ def invite_user_not_author(request, role, role_text):
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
     from django.contrib.sites.models import Site
     from django.contrib.sites.shortcuts import get_current_site
-
-    if User.objects.get(email=email):
-        raise Http404("Email address for user already exists")
 
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()

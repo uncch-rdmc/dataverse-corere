@@ -1,9 +1,5 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
 <h3>Not Found</h3>
-{% if exception != "" %}
-{{ exception }}
-{% elif %}
 The requested resource was not found on this server.
-{% endif %}
 {% endblock content %}
