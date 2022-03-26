@@ -463,6 +463,10 @@ def invite_user_not_author(request, role, role_text):
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
     from django.contrib.sites.models import Site
     from django.contrib.sites.shortcuts import get_current_site
+
+    if User.objects.get(email=email):
+        raise Http404("Email address for user already exists")
+
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email
