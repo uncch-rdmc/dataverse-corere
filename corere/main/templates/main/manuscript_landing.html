@@ -89,7 +89,6 @@
                                 enabled: createSubButton
                             },
                         {% endif %}
-
                         {
                             text: 'Edit/Progress',
                             name: 'editSubmission',
@@ -349,6 +348,10 @@
     {% endif %}
     {% if returnSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
+    {% endif %}
+
+    {% if publishManuscriptButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Publish In Dataverse</button>    
     {% endif %}
 
     {% if m_edit_flag and not editSubmissionButton %} 

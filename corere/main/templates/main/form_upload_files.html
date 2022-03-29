@@ -66,7 +66,10 @@
 </script>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% if m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
+    {% if publish %}
+        <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">
+        <input type="button" name="submit_publish" value="Publish" onclick="document.getElementById('submit_continue_fileslist').click()" >
+    {% elif m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
         {% if obj_type == 'submission' %}
             <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
             {% if skip_docker or not containerized %}
@@ -84,7 +87,7 @@
     {% endif %}
 
 </form>
-{% if obj_type == "submission" and not read_only and containerized%}
+{% if obj_type == "submission" and not read_only and containerized and not publish %}
 <br>
 <p style="color:gray"><i>By click Launch Notebook, you will be sent to the next step where your files will be sent to Whole Tale to launch a web environment to run your code. If you need to upload more files, you can do this through the environment or by coming back to this page and uploading new files.</i></p>
 {% endif %}

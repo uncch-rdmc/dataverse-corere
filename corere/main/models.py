@@ -596,10 +596,11 @@ class Submission(AbstractCreateUpdateModel):
                 editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
                 editor_group.save()
 
-                curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
-                curator_group = Group.objects.get(name=curator_name)
-                curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
-                curator_group.save()
+                # Now that we are implementing a publish step, curators should not be locked out of editing ever
+                # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+                # curator_group = Group.objects.get(name=curator_name)
+                # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+                # curator_group.save()
 
                 verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
                 verifier_group = Group.objects.get(name=verifier_name)

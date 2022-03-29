@@ -33,12 +33,13 @@ urlpatterns = [
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
     path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
-    path('manuscript/<int:id>/dataverseupload/', classes.ManuscriptUploadToDataverseView.as_view(), name="manuscript_dataverseupload"),
+    path('manuscript/<int:id>/confirm/', classes.ManuscriptEditConfirmBeforePublishView.as_view(), name="manuscript_confirmbeforepublish"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/info/', classes.SubmissionEditView.as_view(), name="submission_info"),
     #path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
+    path('submission/<int:id>/confirmfiles/', classes.SubmissionCompleteFilesView.as_view(), name="submission_confirmfilesbeforepublish"),
     path('submission/<int:id>/uploader/', classes.SubmissionUploaderView.as_view(), name="submission_uploader"),
     path('submission/<int:id>/fileslist/', classes.SubmissionFilesListAjaxView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view/', classes.SubmissionReadView.as_view(), name="submission_read"),

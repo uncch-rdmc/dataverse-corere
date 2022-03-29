@@ -117,6 +117,7 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createSubmissionButton = False
     launchContainerCurrentSubButton = False
+    publishManuscriptButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
@@ -154,6 +155,8 @@ def manuscript_landing(request, id=None):
                 editSubmissionButton = True
             if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
+            if has_transition_perm(manuscript.publish, request.user):
+                publishManuscriptButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
@@ -204,6 +207,7 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
+            'publishManuscriptButton': publishManuscriptButton,
             'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table

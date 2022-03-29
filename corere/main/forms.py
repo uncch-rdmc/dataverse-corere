@@ -356,7 +356,8 @@ class ManuscriptBaseForm(forms.ModelForm):
             #     if(not memory_reqs):
             #         self.add_error('memory_reqs', 'This field is required.')
 
-            validation_errors.extend(self.instance.can_begin_return_problems())
+            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.PUBLISHED):
+                validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
                 #If we don't raise the error here the formset errors don't raise up

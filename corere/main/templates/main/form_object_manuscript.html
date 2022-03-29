@@ -178,6 +178,9 @@
         {% elif m_status == "new" %}
             <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='..';}">
             <input type="submit" name="submit_continue" value="Save and Continue">
+        {% elif m_status == "completed" or m_status == "published" %}
+            <input type=button value="Home" onClick="location.href='..';">
+            <input type="submit" name="submit_confirm" value="Save and Confirm Files">
         {% else %}
             <input type=button value="Home" onClick="location.href='..';">
             <input type="submit" name="submit" value="Save">
