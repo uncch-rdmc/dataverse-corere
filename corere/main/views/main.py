@@ -27,8 +27,9 @@ def index(request):
 
             #If no girderToken, we send the user to Whole Tale / Globus to get it.
             #If coming from login, we automatically grab the girder token
-            if not (girderToken or (request.COOKIES.get('girderToken') and not request.GET.get('login', ''))):
-                print("INDEX 2A")
+            #TODO: We need to think of a holistic solution for our corere_admin to be functional in CORE2.
+            #      Currently we allow them to bypass this index redirect. They do not have whole tale so they run into errors with the workflow at some points.
+            if not (girderToken or (request.COOKIES.get('girderToken') and not request.GET.get('login', '')) or request.user.username == 'corere_admin'):
                 if request.is_secure():
                     protocol = "https"
                 else:

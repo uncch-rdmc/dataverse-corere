@@ -1,4 +1,4 @@
-import logging, os, requests, urllib, time, git, sseclient, threading, base64, json
+import logging, os, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -1661,17 +1661,10 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
 
-class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
-    parent_reference_name = 'manuscript'
-    parent_id_name = "manuscript_id"
-    parent_model = m.Manuscript
-    object_friendly_name = 'submission'
-    model = m.Submission
-    http_method_names = ['get']
-
+class SubmissionGenericWholeTalePermissionView(GenericCorereObjectView):
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
-    #Code is same as in SubmissionNotebookView
+    #Code was same as in SubmissionNotebookView, but that needed more customization
     def dispatch(self, request, *args, **kwargs):
         if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
@@ -1698,6 +1691,36 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
 
         return super().dispatch(request, *args, **kwargs)
 
+# The downside to this approach is we download it to CORE2 before providing it to the user
+# We could just generate the download url for the user and send them to Whole Tale directly for it.
+class SubmissionDownloadWholeTaleNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, SubmissionGenericWholeTalePermissionView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['get']
+
+    def get(self, request, *args, **kwargs):
+        if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
+            return Http404()
+
+        wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+        self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
+        self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object) #this will blow up and 404 if there is no dominant group, which we want
+        tale_zip = wtc.download_tale(self.wtm_tale.wt_id)
+        response = HttpResponse(tale_zip.content, content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="'+self.object.manuscript.slug + '_-_submission_' + str(self.object.version_id) + '_-_whole_tale_contents_' + self.dominant_group.corere_group.name.split()[0] + '.zip"'
+        return response
+
+class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, SubmissionGenericWholeTalePermissionView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['get']
+
     def get(self, request, *args, **kwargs):
         if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
@@ -1705,7 +1728,7 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
         return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user, request.COOKIES.get('girderToken')))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
-        
+
 def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderToken):
     stream = wtc.get_event_stream()
     client = sseclient.SSEClient(stream)

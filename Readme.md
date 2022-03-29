@@ -104,6 +104,8 @@ Start Django server
 python3 manage.py runsslserver
 ```
 
+Once CORE2 is running, be sure got to the admin console `/admin/sites/site/` and change the default site to match your domain info. This will be used to populate the address in emails.
+
 Configure CORE2 roles for the admin user:
 * Goto https://localhost:8000/admin
 * Select Users 

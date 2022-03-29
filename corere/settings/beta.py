@@ -1,7 +1,7 @@
 from .base import *
 
 #We enable debug for verbose errors, but we don't care about the other tools
-DEBUG = True
+DEBUG = False
 
 #SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

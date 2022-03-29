@@ -340,6 +340,10 @@ def account_associate_oauth(request, key=None):
 
     return render(request, 'main/new_user_oauth.html')
 
+def account_associate_error(request, key=None):
+    logout(request)
+    return render(request, 'main/new_user_error.html')
+
 #If Whole Tale is enabled, redirect user to the Whole Tale Globus authorization. Otherwise just continue to account_user_details
 #TODO: Should we restrict at all when this page is accessed?
 @login_required()
@@ -447,6 +451,10 @@ def invite_user_not_author(request, role, role_text):
                 first_name = form.cleaned_data['first_name']
                 last_name = form.cleaned_data['last_name']
                 
+                if User.objects.filter(email=email):
+                    messages.error(request, "Email provided already exists in CORE2")
+                    return render(request, 'main/form_user_details.html', {'form': form, 'helper': helper, 'page_title': "Invite {0}".format(role_text.capitalize())})
+
                 ### Messaging ###
                 msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                 new_user = helper_create_user_and_invite(request, email, first_name, last_name, role)
@@ -463,6 +471,7 @@ def invite_user_not_author(request, role, role_text):
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
     from django.contrib.sites.models import Site
     from django.contrib.sites.shortcuts import get_current_site
+
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
     new_user = User()
     new_user.email = email

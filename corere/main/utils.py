@@ -4,7 +4,9 @@ from corere.main import constants as c
 from corere.main import models as m
 from django.http import Http404
 from django.contrib.auth.models import Group
-#from corere.main.models import Manuscript, User
+from django.shortcuts import redirect
+from social_core.exceptions import AuthAlreadyAssociated
+from social_django.middleware import SocialAuthExceptionMiddleware
 
 # For use by the python-social-auth library pipeline.
 # With our sign-up flow a user account is created when the user is invited.
@@ -14,6 +16,15 @@ def social_pipeline_return_session_user(request, **kwargs):
     if(not request.user.is_anonymous):
         kwargs['user'] = request.user
     return kwargs
+
+#This whole middleware process mostly works. The one problem I've run into is that if the user is sent to error (and logged out), they can push the back button, click register again, and it'll work
+#I don't really understand why. Going to the url again directly via the email works as expected.
+#I'm leaving this as is because the worst that happens is that a user breaks their account and runs into issues using Whole Tale / signing in again.
+#Also this may be fixed if I create a middleware to check if logged in globus matches the globus in wholetale their wt_id is for.
+class UserAlreadyAssociatedMiddleware(SocialAuthExceptionMiddleware):
+    def process_exception(self, request, exception):
+        if isinstance(exception, AuthAlreadyAssociated):
+            return redirect("account_associate_error")
 
 # This check is a port of the method in django-fsm
 # but it removes the other checks so that we can only check permissions first
