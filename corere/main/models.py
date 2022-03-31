@@ -403,9 +403,16 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### django-fsm (workflow) related functions #####
 
+#TODO: We need the ability to edit the submission (files) upon manuscript completion if you are a curator???
+#      Instead of altering edit_noop, we could extend the delete functions instead... but then we'd ahve to change the links...
+
+    # @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
+    #     permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR, Status.RETURNED], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)  
+                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.PUBLISHED))))
     def edit_noop(self):
         return self._status
 

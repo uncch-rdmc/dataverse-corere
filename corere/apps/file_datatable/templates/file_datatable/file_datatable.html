@@ -18,18 +18,20 @@
         {% comment %}Add our UI components specific to CORE2 {% endcomment %}
         {% if obj_type == "submission" %}
         config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}}, true, '{{ file_download_url }}')
-        fourth_column =                 {
-                    data: 'newness',
-                    render: function(data,type,row,meta){
-                        encoded = encodeURIComponent(row[0]+row[1])
-                        button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/></td>'
+            {% comment %}{% if not publish %} //Disabled because it broke column formatting, maybe try later  {% endcomment %}
+            fourth_column =                 {
+                        data: 'newness',
+                        render: function(data,type,row,meta){
+                            encoded = encodeURIComponent(row[0]+row[1])
+                            button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/></td>'
 
-                        return button;
-                    }
-                },
-        config['columns'].push(fourth_column)
-        fourth_column_def = { "width": "33px", "targets": 3 }
-        config['columnDefs'].push(fourth_column_def)
+                            return button;
+                        }
+                    },
+            config['columns'].push(fourth_column)
+            fourth_column_def = { "width": "33px", "targets": 3 }
+            config['columnDefs'].push(fourth_column_def)
+            {% comment %}{% endif %} {% endcomment %}
         {% else %}
         config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}}, false, '{{ file_download_url }}')
         {% endif %}
