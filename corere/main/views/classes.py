@@ -219,7 +219,10 @@ class GenericManuscriptView(GenericCorereObjectView):
                 # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
-            self.form = f.ManuscriptForms[self.role_name]
+            if(self.publish):
+                self.form = f.ManuscriptFormPublish
+            else:
+                self.form = f.ManuscriptForms[self.role_name]
             if self.request.user.is_superuser or not self.create:
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
@@ -229,6 +232,8 @@ class GenericManuscriptView(GenericCorereObjectView):
         if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
             self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
+        if(self.publish):
+            self.form_helper = f.ManuscriptFormHelperPublish()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
 
@@ -550,31 +555,31 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
-#NOTE: This is unused and disabled in URLs. Probably should delete.
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-#This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
-class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    http_method_names = ['post']
+# #NOTE: This is unused and disabled in URLs. Probably should delete.
+# #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+# #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
+# class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#     http_method_names = ['post']
 
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.begin, request.user): 
-                print(str(self.object))
-                logger.error("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.begin()
-                self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             if not fsm_check_transition_perm(self.object.begin, request.user): 
+#                 print(str(self.object))
+#                 logger.error("PermissionDenied")
+#                 raise Http404()
+#             try:
+#                 self.object.begin()
+#                 self.object.save()
+#             except TransitionNotAllowed as e:
+#                 logger.error("TransitionNotAllowed: " + str(e))
+#                 raise
 
-        except (TransitionNotAllowed):
-            ### Messaging ###
-            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
-            messages.add_message(request, messages.ERROR, self.msg)
-            ### End Messaging ###
-        return redirect('/manuscript/'+str(self.object.id))
+#         except (TransitionNotAllowed):
+#             ### Messaging ###
+#             self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
+#             messages.add_message(request, messages.ERROR, self.msg)
+#             ### End Messaging ###
+#         return redirect('/manuscript/'+str(self.object.id))
 
 class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
     template = 'main/manuscript_report.html'
@@ -600,6 +605,7 @@ class ManuscriptEditConfirmBeforePublishView(LoginRequiredMixin, GetOrGenerateOb
     object_friendly_name = 'manuscript'
     page_title = "Upload To Dataverse" #_("manuscript_edit_pageTitle")
     page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse" #_("manuscript_edit_helpText")
+    publish = True
 
 ############################################# SUBMISSION #############################################
 
@@ -1000,6 +1006,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
             self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+        elif self.publish:
+            self.page_title = _("submission_completeFiles_pageTitle").format()
+            self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent,installation=self.object.manuscript.dataverse_installation.name)
         else:
             self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
@@ -1014,7 +1023,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         if self.publish:
             context['publish'] = self.publish
 
-        if not self.read_only:
+        if not self.read_only and not self.publish:
             context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
@@ -1106,7 +1115,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if self.publish:
                 context['publish'] = self.publish
 
-            if not self.read_only: #should never hit post if read_only but yea
+            if not self.read_only and not self.publish: #should never hit post if read_only but yea
                 context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
@@ -1129,6 +1138,7 @@ class SubmissionReadFilesView(SubmissionUploadFilesView):
 class SubmissionCompleteFilesView(SubmissionUploadFilesView):
     transition_on_parent = True
     transition_method_name = 'publish'
+    #page_help_text = _("submission_completeFiles_helpText") #set in SubmissionUploadFilesView, as we pass arguments to it
     publish = True #tell parent view to pass m_status even though is a sub
     pass
 

@@ -49,6 +49,7 @@ admin.site.register(m.Curation, GuardedModelAdminCustom)
 admin.site.register(m.Verification, GuardedModelAdminCustom)
 admin.site.register(m.Note, GuardedModelAdminCustom)
 admin.site.register(m.GitFile, GuardedModelAdminCustom)
+admin.site.register(m.DataverseInstallation, GuardedModelAdminCustom) #TODO: IS this the right admin class?
 #admin.site.register(m.VerificationMetadata, GuardedModelAdminCustom)
 #admin.site.register(m.VerificationMetadataSoftware, GuardedModelAdminCustom)
 admin.site.register(m.VerificationMetadataBadge, GuardedModelAdminCustom)
