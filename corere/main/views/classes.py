@@ -6,6 +6,7 @@ from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
 from corere.main import wholetale_corere as w
+from corere.main import dataverse as dv
 from corere.apps.wholetale import models as wtm
 from corere.main import git as g
 from .. import constants as c 
@@ -1031,36 +1032,44 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView
+            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView #The comment/code before this may be unneeded now that we always do manuscript edit first
 
             errors = []
-            changes_for_git = []
-            try: #File Renaming
-                with transaction.atomic(): #to ensure we only save if there are no errors
-                    for key, value in request.POST.items():
-                        if(key.startswith("file:")):
-                            skey = key.removeprefix("file:")
-                            if(skey != value):
-                                error_text = _helper_sanitary_file_check(value)
-                                if(error_text):
-                                    raise ValueError(error_text)
-                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                before_path = "/"+before_path
-                                gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
-                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path                      
-                                gfile.name=after_name
-                                gfile.path=after_path
-                                gfile.save()
-                                changes_for_git.append({"old":skey, "new":value})
-                                self.object.files_changed = True
-                                self.object.save()
-            except ValueError as e:
-                errors.append(str(e))
-                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
-                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-            g.rename_submission_files(self.object.manuscript, changes_for_git)
+            ## TODO: Use this code and then remove after implementing ajax based datatable file renaming
+
+            # changes_for_git = []
+            #
+            # try: #File Renaming
+            #     with transaction.atomic(): #to ensure we only save if there are no errors
+            #         for key, value in request.POST.items():
+            #             if(key.startswith("file:")):
+            #                 skey = key.removeprefix("file:")
+            #                 if(skey != value):
+            #                     error_text = _helper_sanitary_file_check(value)
+            #                     if(error_text):
+            #                         raise ValueError(error_text)
+            #                     before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     before_path = "/"+before_path
+            #                     gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
+            #                     after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     after_path = "/" + after_path                      
+            #                     gfile.name=after_name
+            #                     gfile.path=after_path
+            #                     gfile.save()
+            #                     changes_for_git.append({"old":skey, "new":value})
+            #                     self.object.files_changed = True
+            #                     self.object.save()
+            # except ValueError as e:
+            #     errors.append(str(e))
+            #     #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+            #     logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+
+            # g.rename_submission_files(self.object.manuscript, changes_for_git)
+
+#TODO-DATAVERSE
+            if not errors and request.POST.get('submit_publish'):
+                dv.publish_manuscript_data_to_dataverse(self.object.manuscript)
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):

@@ -23,6 +23,3 @@ export SERVER_ADDRESS="localhost:8000"
 
 #Only used if using wholetale
 export WHOLETALE_BASE_URL="wholetale.org"
-
-#Including protocol, excluding trailing slash
-export DATAVERSE_BASE_URL=""

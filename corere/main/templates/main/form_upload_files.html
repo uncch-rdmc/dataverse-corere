@@ -68,7 +68,7 @@
     {% csrf_token %}
     {% if publish %}
         <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">
-        <input type="button" name="submit_publish" value="Publish" onclick="document.getElementById('submit_continue_fileslist').click()" >
+        <input type="button" name="submit_publish" value="Publish" onclick="document.getElementById('submit_publish_fileslist').click()" >
     {% elif m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
         {% if obj_type == 'submission' %}
             <input type=button value="Back" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
