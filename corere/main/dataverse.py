@@ -1,30 +1,24 @@
 import json
 import pyDataverse.api as pyd
 from corere.main import models as m
+from corere.main import git as g
 from django.conf import settings
 
-# def test_py_dv():
-#     #MetricsApi(base_url, api_token=None
-#     # print(pyd.__dict__)
-#     #metrics = pyd.MetricsApi(settings.DATAVERSE_BASE_URL, api_token=settings.DATAVERSE_API_KEY) #{"status":"ERROR","message":"queryParameter User-Agent not supported for this endpont"}
-#     native_api = pyd.NativeApi(settings.DATAVERSE_BASE_URL, api_token=settings.DATAVERSE_API_KEY)
-#     #This is very slow
-#     print(str(native_api.get_children()))
-
+#Note: this publishes the data for the approved submission
 def publish_manuscript_data_to_dataverse(manuscript):
-    #TODO: URL / API_KEY need to be pulled from the connected info to the manuscript
-    #      - Remove these from the environment settings
     native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     dataset_json = build_dataset_json(manuscript)
     print(dataset_json)
 
     dataverse = 'core2dev'
-    native_api.create_dataset(dataverse, dataset_json, pid=None, publish=False, auth=True) #dataverse is either the alias or the id
+    dataset_pid = native_api.create_dataset(dataverse, dataset_json, pid=None, publish=False, auth=True).json()['data']['persistentId'] #dataverse is either the alias or the id
 
-    # native_api.upload_datafile(identifier, filename, json_str=None, is_pid=True)
-    # native_api.upload_datafile_metadata(identifier, json_str=None, is_filepid=False)
+    submission = manuscript.get_latest_submission()
+    submission_files = submission.submission_files.all().order_by('path','name')
+    files_root_path = g.get_submission_files_path(manuscript)
 
-
+    for git_file in submission_files:        
+        native_api.upload_datafile(dataset_pid, files_root_path + git_file.full_path, json_str=None, is_pid=True)
 
 #from dataverse guides:
 # To create a dataset, you must supply a JSON file that contains at least the following required metadata fields:

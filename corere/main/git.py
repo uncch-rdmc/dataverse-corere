@@ -134,12 +134,12 @@ def _delete_file(repo_path, file_full_path):
     repo.index.remove(file_full_path)
     repo.index.commit("delete file: " + file_full_path)
 
-def download_manuscript_file(manuscript, file_path):
+def get_manuscript_file(manuscript, file_path, response=False):
     repo_path = get_manuscript_repo_path(manuscript)
     files_folder = get_manuscript_files_path(manuscript, relative=True)
-    return _download_file(repo_path, files_folder, file_path, 'master')
+    return _get_file(repo_path, files_folder, file_path, 'master', response)
 
-def download_submission_file(submission, file_path):
+def get_submission_file(submission, file_path, response=False):
     repo_path = get_submission_repo_path(submission.manuscript)
     files_folder = get_submission_files_path(submission.manuscript, relative=True)
 
@@ -149,9 +149,9 @@ def download_submission_file(submission, file_path):
         branch_name = 'master'
     else:
         branch_name = helper_get_submission_branch_name(submission)
-    return _download_file(repo_path, files_folder, file_path, branch_name)
+    return _get_file(repo_path, files_folder, file_path, branch_name, response)
 
-def _download_file(repo_path, files_folder, file_path, branch_name):
+def _get_file(repo_path, files_folder, file_path, branch_name, response):
     repo = git.Repo(repo_path)
     branch_commit = repo.commit(branch_name)
     if(file_path[0] == '/'):
@@ -159,10 +159,13 @@ def _download_file(repo_path, files_folder, file_path, branch_name):
     file_path = files_folder + file_path
     file = branch_commit.tree / file_path 
 
-    with io.BytesIO(file.data_stream.read()) as f:
-        response = HttpResponse(f.read(), content_type=file.mime_type)
-        response['Content-Disposition'] = 'attachment; filename="'+ file.name +'"'
-        return response
+    if response:
+        with io.BytesIO(file.data_stream.read()) as f:
+            response = HttpResponse(f.read(), content_type=file.mime_type)
+            response['Content-Disposition'] = 'attachment; filename="'+ file.name +'"'
+            return response
+    else:
+        return file
 
 def download_all_submission_files(submission):
     max_version_id = submission.manuscript.get_max_submission_version_id()

@@ -511,7 +511,7 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         if(not file_path):
             raise Http404()
 
-        return g.download_manuscript_file(self.object, file_path)
+        return g.get_manuscript_file(self.object, file_path, True)
 
 class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['post']
@@ -1205,7 +1205,7 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         if(not file_path):
             raise Http404()
 
-        return g.download_submission_file(self.object, file_path)
+        return g.get_submission_file(self.object, file_path, True)
 
 class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']

@@ -1247,9 +1247,10 @@ class CorereInvitation(Invitation):
 ############### DATAVERSE ################
 
 class DataverseInstallation(models.Model):
-    name = models.CharField(max_length=200, verbose_name='Display Name')
+    name = models.CharField(max_length=200, verbose_name='Installation Name')
     url = models.URLField(max_length=200, verbose_name='URL')
     api_token = models.CharField(max_length=200, verbose_name='API Token')
+    username = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='User Name', help_text='User that owns the API token. We store this only for informational purposes.')
     # address, access token, pretty name
 
     def __str__(self):
