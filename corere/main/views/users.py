@@ -225,9 +225,9 @@ def assign_curator(request, id=None):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-    if manuscript.skip_edition:
-        manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
-        manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
+    # if manuscript.skip_edition:
+    #     manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
+    #     manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
     if request.method == 'POST':
         if form.is_valid():
             users_to_add = list(form.cleaned_data['users_to_add'])
@@ -237,9 +237,9 @@ def assign_curator(request, id=None):
                     logger.warn("User {0} attempted to add user id {1} from group {2} when they don't have the base role (probably by hacking the form".format(request.user.id, u.id, group_substring))
                     raise Http404()
                 manu_curator_group.user_set.add(u)
-                if manuscript.skip_edition:
-                    manu_author_group.user_set.add(u)
-                    manu_editor_group.user_set.add(u)
+                # if manuscript.skip_edition:
+                #     manu_author_group.user_set.add(u)
+                #     manu_editor_group.user_set.add(u)
 
                 ### Messaging ###
                 msg = _("user_addAsRoleToManuscript_banner").format(role="curator", email=u.email, manuscript_display_name=manuscript.get_display_name())
@@ -265,18 +265,18 @@ def unassign_curator(request, id=None, user_id=None):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
-        if manuscript.skip_edition:
-            manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
-            manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
+        # if manuscript.skip_edition:
+        #     manu_author_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX+ " " + str(manuscript.id))
+        #     manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
         try:
             user = manu_curator_group.user_set.get(id=user_id)
         except User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_curator_group.user_set.remove(user)
-        if manuscript.skip_edition:
-            manu_author_group.user_set.remove(u)
-            manu_editor_group.user_set.remove(u)
+        # if manuscript.skip_edition:
+        #     manu_author_group.user_set.remove(u)
+        #     manu_editor_group.user_set.remove(u)
 
         return redirect('/manuscript/'+str(id)+'/assigncurator')
 
