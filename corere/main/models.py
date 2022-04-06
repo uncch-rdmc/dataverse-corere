@@ -722,8 +722,9 @@ class Manuscript(AbstractCreateUpdateModel):
 
     dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse in the installation targeted for the dataset created with the manuscript info.')
     dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
-    dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after publish to Dataverse.')
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
+    #TODO: Delete this, the url can be derived from the doi
+    #dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after publish to Dataverse.')
 
     class Meta:
         permissions = [

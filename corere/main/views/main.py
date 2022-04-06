@@ -189,6 +189,8 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_dataset_doi": manuscript.dataverse_doi,
+            "manuscript_dataverse_installation_url": manuscript.dataverse_installation.url,
             "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.has_submissions()),
             "files_dict_list": manuscript.get_gitfiles_pathname(combine=True),

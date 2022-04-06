@@ -4,24 +4,10 @@ from corere.main import models as m
 from corere.main import git as g
 from django.conf import settings
 
-#TODO:
-#   x Actually use our defined dataverse instead of hardcoded
-#   - If a dataset is re-published, what do we do? Wipe out the old one?
-#       - For now I'm going to leave the old one. We should probably report the old PID in a banner message so it can be found.
-#       - Gotta handle the case where you republish but to a different spot or the existing spot was deleted in DV
-#   x Fill out correct dataset json
-#       x This involves storing multiple authors etc, I need to figure out how I'm doing that
-#       x I need to enable some additional fields in the json like keywords
-#   - When publishing a dataset, return to the manuscript landing page
-#   - Include the dataset PID on the landing page somewhere
-#   - Catch exception when attempting to publish to dataverse (not install) that api key does not have access too
-
 #Note: this publishes the data for the approved submission
 def publish_manuscript_data_to_dataverse(manuscript):
     native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     dataset_json = build_dataset_json(manuscript)
-
-    print(dataset_json)
 
     dataset_pid = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True).json()['data']['persistentId'] #dataverse is either the alias or the id
 
@@ -34,7 +20,9 @@ def publish_manuscript_data_to_dataverse(manuscript):
         file_id = file_response.json()['data']['files'][0]['dataFile']['id']
         native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
 
-
+    manuscript.dataverse_doi = dataset_pid
+    manuscript.publish()
+    manuscript.save()
 
 #TODO: Maybe add data sources as kindOfData . Not sure they are a match though
 # Converts manuscript fields and hardcoded data to a dictionary that is then converted to json

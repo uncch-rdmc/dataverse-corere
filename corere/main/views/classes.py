@@ -22,6 +22,7 @@ from django.views import View
 from corere.main import git as g
 from django.http import HttpResponse, StreamingHttpResponse
 from django.db.models import Max
+from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -208,6 +209,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     from_submission = False
     create = False
     form_helper = None
+    publish = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -1067,9 +1069,20 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
             # g.rename_submission_files(self.object.manuscript, changes_for_git)
 
-#TODO-DATAVERSE
             if not errors and request.POST.get('submit_publish'):
-                dv.publish_manuscript_data_to_dataverse(self.object.manuscript)
+                old_doi = self.object.manuscript.dataverse_doi
+                #TODO: This url will be bad if the publisher changes the dataverse targeted, because the change will have happened in the previous form.
+                old_dv_url = self.object.manuscript.dataverse_installation.url
+                try:
+                    dv.publish_manuscript_data_to_dataverse(self.object.manuscript)
+                    if old_doi != self.object.manuscript.dataverse_doi:
+                        self.msg= 'You have republished the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
+
+                except Exception as e: #for now we catch all exceptions and present them as a message
+                    self.msg= 'An error has occurred attempting to publish to dataverse: ' + str(e)
+                    messages.add_message(request, messages.ERROR, self.msg)
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):

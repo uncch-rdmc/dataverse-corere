@@ -313,6 +313,9 @@
 <p id="manuscript_overview"> 
     <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
     Title: {{manuscript_pub_name}}<br>
+    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+    {% if manuscript_dataset_doi %}Dataset: <a href="{{manuscript_dataverse_installation_url}}/dataset.xhtml?persistentId={{manuscript_dataset_doi}}">{{manuscript_dataset_doi}}</a><br>{% endif %}
+    {% endif %}
     {% if manuscript_compute_env %}Compute Environment: {{manuscript_compute_env}}<br>{% endif %}
     QDR Review: {{manuscript_qdr_review}}<br>
     Corresponding Author: {{manuscript_corresponding_author}}<br>
