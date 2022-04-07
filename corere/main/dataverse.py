@@ -24,7 +24,6 @@ def upload_manuscript_data_to_dataverse(manuscript):
     manuscript.dataverse_upload()
     manuscript.save()
 
-#TODO: Maybe add data sources as kindOfData . Not sure they are a match though
 # Converts manuscript fields and hardcoded data to a dictionary that is then converted to json
 def build_dataset_json(manuscript):
 
