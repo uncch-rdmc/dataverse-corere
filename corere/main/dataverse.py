@@ -4,8 +4,8 @@ from corere.main import models as m
 from corere.main import git as g
 from django.conf import settings
 
-#Note: this publishes the data for the approved submission
-def publish_manuscript_data_to_dataverse(manuscript):
+#Note: this uploads the data for the approved submission
+def upload_manuscript_data_to_dataverse(manuscript):
     native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     dataset_json = build_dataset_json(manuscript)
 
@@ -21,7 +21,7 @@ def publish_manuscript_data_to_dataverse(manuscript):
         native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
 
     manuscript.dataverse_doi = dataset_pid
-    manuscript.publish()
+    manuscript.dataverse_upload()
     manuscript.save()
 
 #TODO: Maybe add data sources as kindOfData . Not sure they are a match though

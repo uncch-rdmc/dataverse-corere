@@ -412,7 +412,7 @@ class Submission(AbstractCreateUpdateModel):
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR, Status.RETURNED], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: ((instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)  
-                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.PUBLISHED))))
+                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.UPLOADED_EXTERNAL))))
     def edit_noop(self):
         return self._status
 
@@ -603,7 +603,7 @@ class Submission(AbstractCreateUpdateModel):
                 editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
                 editor_group.save()
 
-                # Now that we are implementing a publish step, curators should not be locked out of editing ever
+                # Now that we are implementing a dataverse_upload step, curators should not be locked out of editing ever
                 # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
                 # curator_group = Group.objects.get(name=curator_name)
                 # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
@@ -661,7 +661,7 @@ class Manuscript(AbstractCreateUpdateModel):
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
-        PUBLISHED = 'published', 'Completed And Published'
+        UPLOADED_EXTERNAL = 'uploaded_external', 'Completed And Uploaded To Dataverse'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -724,7 +724,7 @@ class Manuscript(AbstractCreateUpdateModel):
     dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
     dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     #TODO: Delete this, the url can be derived from the doi
-    #dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after publish to Dataverse.')
+    #dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after dataverse_upload to Dataverse.')
 
     class Meta:
         permissions = [
@@ -991,12 +991,12 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    def can_publish(self):
+    def can_dataverse_upload(self):
         return True
 
-    @transition(field=_status, source=[Status.COMPLETED, Status.PUBLISHED], target=Status.PUBLISHED, conditions=[can_publish],
+    @transition(field=_status, source=[Status.COMPLETED, Status.UPLOADED_EXTERNAL], target=Status.UPLOADED_EXTERNAL, conditions=[can_dataverse_upload],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
-    def publish(self):
+    def dataverse_upload(self):
         pass #Here add any additional actions related to the state change
 
 #-----------------------

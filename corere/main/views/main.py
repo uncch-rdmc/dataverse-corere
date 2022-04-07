@@ -117,7 +117,7 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createSubmissionButton = False
     launchContainerCurrentSubButton = False
-    publishManuscriptButton = False
+    dataverseUploadManuscriptButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
@@ -153,9 +153,9 @@ def manuscript_landing(request, id=None):
                     pass
             if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
-            if has_transition_perm(manuscript.publish, request.user):
-                publishManuscriptButton = True
-            if not (reviewSubmissionButton or publishManuscriptButton) and has_transition_perm(latestSubmission.edit_noop, request.user):
+            if has_transition_perm(manuscript.dataverse_upload, request.user):
+                dataverseUploadManuscriptButton = True
+            if not (reviewSubmissionButton or dataverseUploadManuscriptButton) and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
@@ -208,7 +208,7 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
-            'publishManuscriptButton': publishManuscriptButton,
+            'dataverseUploadManuscriptButton': dataverseUploadManuscriptButton,
             'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table

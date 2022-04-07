@@ -353,8 +353,8 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
     {% endif %}
 
-    {% if publishManuscriptButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Publish In Dataverse</button>    
+    {% if dataverseUploadManuscriptButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Upload To Dataverse</button>    
     {% endif %}
 
     {% if m_edit_flag and not editSubmissionButton %} 

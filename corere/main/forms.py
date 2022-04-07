@@ -250,14 +250,14 @@ class ManuscriptFormHelperEditor(FormHelper):
             'qual_analysis', 'qdr_review', 'contents_restricted', 'contents_restricted_sharing','other_exemptions','exemption_override'
         )
 
-class ManuscriptFormHelperPublish(FormHelper):
+class ManuscriptFormHelperDataverseUpload(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_tag = False
 
         self.layout = Layout(
             HTML("""
-                <h5 class='title-text'>Publish Info</h5>
+                <h5 class='title-text'>Dataverse Info</h5>
             """),
             'dataverse_installation','dataverse_parent',
             HTML("""
@@ -305,7 +305,7 @@ class ManuscriptFormHelperPublish(FormHelper):
 #------------- Base Manuscript -------------
 
 class ManuscriptBaseForm(forms.ModelForm):
-    publish = False
+    dataverse_upload = False
     class Meta:
         abstract = True
         model = m.Manuscript
@@ -382,8 +382,8 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
-            # if(self.instance._status == m.Manuscript.Status.COMPLETED or self.instance._status == m.Manuscript.Status.PUBLISHED)
-            if self.publish:
+            # if(self.instance._status == m.Manuscript.Status.COMPLETED or self.instance._status == m.Manuscript.Status.UPLOADED_EXTERNAL)
+            if self.dataverse_upload:
                 dataverse_installation = self.cleaned_data.get('dataverse_installation')
                 if(not dataverse_installation):
                     self.add_error('dataverse_installation', 'This field is required.')
@@ -417,7 +417,7 @@ class ManuscriptBaseForm(forms.ModelForm):
             #     if(not memory_reqs):
             #         self.add_error('memory_reqs', 'This field is required.')
 
-            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.PUBLISHED):
+            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.UPLOADED_EXTERNAL):
                 validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
@@ -513,12 +513,12 @@ class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
         # self.fields['contact_last_name'].disabled = True
         # self.fields['contact_email'].disabled = True
 
-############# Manuscript Publish Dataverse Forms #############
+############# Manuscript Upload To Dataverse Forms #############
 #TODO: Maybe move up with other manuscript forms? Depends on how different this ends up being..
 #      We might just include the manuscript form and eventually a file/file-metadata form here?
 
-class ManuscriptFormPublish(ManuscriptBaseForm):
-    publish = True
+class ManuscriptFormDataverseUpload(ManuscriptBaseForm):
+    dataverse_upload = True
     pass
 
 

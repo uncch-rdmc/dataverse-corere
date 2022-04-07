@@ -18,7 +18,7 @@
         {% comment %}Add our UI components specific to CORE2 {% endcomment %}
         {% if obj_type == "submission" %}
         config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}}, true, '{{ file_download_url }}')
-            {% comment %}{% if not publish %} //Disabled because it broke column formatting, maybe try later  {% endcomment %}
+            {% comment %}{% if not dataverse_upload %} //Disabled because it broke column formatting, maybe try later  {% endcomment %}
             fourth_column =                 {
                         data: 'newness',
                         render: function(data,type,row,meta){
