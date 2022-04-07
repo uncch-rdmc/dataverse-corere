@@ -36,32 +36,42 @@ def build_dataset_json(manuscript):
 
     citation_authors_dict_array = []
     for author in manuscript.manuscript_authors.all().order_by('id'):
-        author_dict = {
-                        "authorName": {
-                            "typeName": "authorName",
-                            "multiple": False,
-                            "typeClass": "primitive",
-                            "value": author.last_name + ", " + author.first_name #"LastAuthor1, FirstAuthor1"
-                        },
-                        # "authorAffiliation": {
-                        #     "typeName": "authorAffiliation",
-                        #     "multiple": False,
-                        #     "typeClass": "primitive",
-                        #     "value": "AuthorAffiliation1"
-                        # },
-                        "authorIdentifierScheme": {
-                            "typeName": "authorIdentifierScheme",
-                            "multiple": False,
-                            "typeClass": "controlledVocabulary",
-                            "value": author.identifier_scheme #"ORCID"
-                        },
-                        "authorIdentifier": {
-                            "typeName": "authorIdentifier",
-                            "multiple": False,
-                            "typeClass": "primitive",
-                            "value": author.identifier #"AuthorIdentifier1"
+        if author.identifier_scheme:
+            author_dict = {
+                            "authorName": {
+                                "typeName": "authorName",
+                                "multiple": False,
+                                "typeClass": "primitive",
+                                "value": author.last_name + ", " + author.first_name #"LastAuthor1, FirstAuthor1"
+                            },
+                            # "authorAffiliation": {
+                            #     "typeName": "authorAffiliation",
+                            #     "multiple": False,
+                            #     "typeClass": "primitive",
+                            #     "value": "AuthorAffiliation1"
+                            # },
+                            "authorIdentifierScheme": {
+                                "typeName": "authorIdentifierScheme",
+                                "multiple": False,
+                                "typeClass": "controlledVocabulary",
+                                "value": author.identifier_scheme #"ORCID"
+                            },
+                            "authorIdentifier": {
+                                "typeName": "authorIdentifier",
+                                "multiple": False,
+                                "typeClass": "primitive",
+                                "value": author.identifier #"AuthorIdentifier1"
+                            }
                         }
-                    }
+        else:
+            author_dict = {
+                            "authorName": {
+                                "typeName": "authorName",
+                                "multiple": False,
+                                "typeClass": "primitive",
+                                "value": author.last_name + ", " + author.first_name #"LastAuthor1, FirstAuthor1"
+                            }
+                        }
         citation_authors_dict_array.append(author_dict)
 
     keywords_dict_array = []

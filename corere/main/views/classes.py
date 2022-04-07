@@ -1006,6 +1006,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    publish = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -1075,13 +1076,16 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 old_dv_url = self.object.manuscript.dataverse_installation.url
                 try:
                     dv.publish_manuscript_data_to_dataverse(self.object.manuscript)
-                    if old_doi != self.object.manuscript.dataverse_doi:
-                        self.msg= 'You have republished the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
+                    if old_doi and old_doi != self.object.manuscript.dataverse_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
+                        self.msg = 'You have republished the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    else: 
+                        self.msg = 'You have published the manuscript to Dataverse!'
                         messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
                     return redirect('manuscript_landing', id=self.object.manuscript.id)
 
                 except Exception as e: #for now we catch all exceptions and present them as a message
-                    self.msg= 'An error has occurred attempting to publish to dataverse: ' + str(e)
+                    self.msg= 'An error has occurred attempting to publish to Dataverse: ' + str(e)
                     messages.add_message(request, messages.ERROR, self.msg)
 
             if not errors and request.POST.get('submit_continue'):
@@ -1133,7 +1137,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'manuscript_id': self.object.manuscript.id,
                 'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
                 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'publish': self.publish,
-                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
+                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(),}
 
             if self.publish:
                 context['publish'] = self.publish
