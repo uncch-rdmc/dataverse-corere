@@ -139,7 +139,7 @@ As your user:
 
 ### Additional Functionality:
 
-Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). You will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. You will also need to register `http://localhost/auth/complete/globus/` for new user registration. Also make sure when copying the client id, to use the one named `Client ID`.
+Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). If you are using the local-container implementation via docker, you will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. You will also need to register `http://localhost/auth/complete/globus/` for new user registration. Also make sure when copying the client id, to use the one named `Client ID`.
 
 [Insert docker info here]
 

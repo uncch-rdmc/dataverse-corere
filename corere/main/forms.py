@@ -223,8 +223,6 @@ class ManuscriptFormHelperMain(FormHelper):
             ),
         )
 
-#TODO: What fields should be on here for the editor
-
 class ManuscriptFormHelperEditor(FormHelper):
      def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -252,15 +250,68 @@ class ManuscriptFormHelperEditor(FormHelper):
             'qual_analysis', 'qdr_review', 'contents_restricted', 'contents_restricted_sharing','other_exemptions','exemption_override'
         )
 
+class ManuscriptFormHelperDataverseUpload(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            HTML("""
+                <h5 class='title-text'>Dataverse Info</h5>
+            """),
+            'dataverse_installation','dataverse_parent',
+            HTML("""
+                <hr><h5 class='title-text'>General Info</h5>
+            """),
+            'pub_name','pub_id','description','subject', 'additional_info',
+            Div(
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
+                css_class='row',
+            ),
+            HTML("""
+                <hr><h5 class='title-text'>Exemptions</h5>
+                <h6><i><span style="color:#666666; margin-left:1px;">Used by the CORE2 team to decide whether the Manuscript is exempt from parts or all of the CORE2 process  </span></i></h6><br>
+            """),
+            # Div(
+            #     Div('qual_analysis',css_class='col-md-6',),
+            #     Div('qdr_review',css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions','exemption_override',
+            HTML("""
+                <hr><h5 class='title-text'>Environment Info</h5>
+            """),
+            'compute_env','compute_env_other',
+            'operating_system', 'packages_info', 'software_info', 
+            Div(
+                Div('machine_type', css_class='col-md-6',),
+                Div('scheduler', css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('platform', css_class='col-md-6',),
+                Div('host_url', css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('processor_reqs', css_class='col-md-6',),
+                Div('memory_reqs', css_class='col-md-6',),
+                css_class='row',
+            ),
+        )
+
 #------------- Base Manuscript -------------
 
 class ManuscriptBaseForm(forms.ModelForm):
+    dataverse_upload = False
     class Meta:
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
             'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions', 'exemption_override',
-            'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs']
+            'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs', 'dataverse_installation', 'dataverse_parent']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
@@ -331,6 +382,16 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
+            # if(self.instance._status == m.Manuscript.Status.COMPLETED or self.instance._status == m.Manuscript.Status.UPLOADED_EXTERNAL)
+            if self.dataverse_upload:
+                dataverse_installation = self.cleaned_data.get('dataverse_installation')
+                if(not dataverse_installation):
+                    self.add_error('dataverse_installation', 'This field is required.')
+
+                dataverse_parent = self.cleaned_data.get('dataverse_parent')
+                if(not dataverse_parent):
+                    self.add_error('dataverse_parent', 'This field is required.')
+
             # if("high_performance" in self.data.keys()):
             #     machine_type = self.cleaned_data.get('machine_type')
             #     if(not machine_type):
@@ -356,7 +417,8 @@ class ManuscriptBaseForm(forms.ModelForm):
             #     if(not memory_reqs):
             #         self.add_error('memory_reqs', 'This field is required.')
 
-            validation_errors.extend(self.instance.can_begin_return_problems())
+            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.UPLOADED_EXTERNAL):
+                validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
                 #If we don't raise the error here the formset errors don't raise up
@@ -450,6 +512,15 @@ class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
         # self.fields['contact_first_name'].disabled = True
         # self.fields['contact_last_name'].disabled = True
         # self.fields['contact_email'].disabled = True
+
+############# Manuscript Upload To Dataverse Forms #############
+#TODO: Maybe move up with other manuscript forms? Depends on how different this ends up being..
+#      We might just include the manuscript form and eventually a file/file-metadata form here?
+
+class ManuscriptFormDataverseUpload(ManuscriptBaseForm):
+    dataverse_upload = True
+    pass
+
 
 #------------- Data Source -------------
 

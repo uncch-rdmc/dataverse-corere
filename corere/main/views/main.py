@@ -117,6 +117,7 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createSubmissionButton = False
     launchContainerCurrentSubButton = False
+    dataverseUploadManuscriptButton = False
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
@@ -150,10 +151,12 @@ def manuscript_landing(request, id=None):
                         reviewSubmissionButton = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
-            if not reviewSubmissionButton and has_transition_perm(latestSubmission.edit_noop, request.user):
-                editSubmissionButton = True
             if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
+            if has_transition_perm(manuscript.dataverse_upload, request.user):
+                dataverseUploadManuscriptButton = True
+            if not (reviewSubmissionButton or dataverseUploadManuscriptButton) and has_transition_perm(latestSubmission.edit_noop, request.user):
+                editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
@@ -186,6 +189,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
+            "manuscript_dataset_doi": manuscript.dataverse_doi,
             "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.has_submissions()),
             "files_dict_list": manuscript.get_gitfiles_pathname(combine=True),
@@ -204,10 +208,14 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
+            'dataverseUploadManuscriptButton': dataverseUploadManuscriptButton,
             'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table
             }
+
+    if manuscript.dataverse_installation:
+        args['manuscript_dataverse_installation_url'] = manuscript.dataverse_installation.url
 
     if settings.CONTAINER_DRIVER == "wholetale":
         args['wholetale'] = True

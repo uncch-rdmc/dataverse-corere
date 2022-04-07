@@ -37,6 +37,7 @@ jupyter-repo2docker==2022.2.0
 libsass==0.21.0
 oauthlib==3.2.0
 psycopg2-binary==2.9.3
+pydataverse==0.3.1
 pycparser==2.21
 PyJWT==2.3.0
 python-jose==3.3.0

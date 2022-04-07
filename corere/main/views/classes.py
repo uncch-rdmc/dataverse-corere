@@ -6,6 +6,7 @@ from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
 from corere.main import wholetale_corere as w
+from corere.main import dataverse as dv
 from corere.apps.wholetale import models as wtm
 from corere.main import git as g
 from .. import constants as c 
@@ -21,6 +22,7 @@ from django.views import View
 from corere.main import git as g
 from django.http import HttpResponse, StreamingHttpResponse
 from django.db.models import Max
+from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -207,6 +209,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     from_submission = False
     create = False
     form_helper = None
+    dataverse_upload = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
@@ -219,7 +222,10 @@ class GenericManuscriptView(GenericCorereObjectView):
                 # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
-            self.form = f.ManuscriptForms[self.role_name]
+            if(self.dataverse_upload):
+                self.form = f.ManuscriptFormDataverseUpload
+            else:
+                self.form = f.ManuscriptForms[self.role_name]
             if self.request.user.is_superuser or not self.create:
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
@@ -229,6 +235,8 @@ class GenericManuscriptView(GenericCorereObjectView):
         if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
             self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
+        if(self.dataverse_upload):
+            self.form_helper = f.ManuscriptFormHelperDataverseUpload()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
 
@@ -305,6 +313,11 @@ class GenericManuscriptView(GenericCorereObjectView):
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
+
+            if request.POST.get('submit_confirm'):
+                messages.add_message(request, messages.SUCCESS, self.msg)
+                #return redirect('manuscript_addauthor', id=self.object.id)
+                return redirect('submission_confirmfilesbeforedataverseupload', id=self.object.get_latest_submission().id)
 
             #This logic needs a different way of detecting whether to go to the edit of a submission or creation
             #We should get the latest submission and check its status?
@@ -500,7 +513,7 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         if(not file_path):
             raise Http404()
 
-        return g.download_manuscript_file(self.object, file_path)
+        return g.get_manuscript_file(self.object, file_path, True)
 
 class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['post']
@@ -545,31 +558,31 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
-#NOTE: This is unused and disabled in URLs. Probably should delete.
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-#This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
-class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    http_method_names = ['post']
+# #NOTE: This is unused and disabled in URLs. Probably should delete.
+# #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+# #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
+# class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#     http_method_names = ['post']
 
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.begin, request.user): 
-                print(str(self.object))
-                logger.error("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.begin()
-                self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             if not fsm_check_transition_perm(self.object.begin, request.user): 
+#                 print(str(self.object))
+#                 logger.error("PermissionDenied")
+#                 raise Http404()
+#             try:
+#                 self.object.begin()
+#                 self.object.save()
+#             except TransitionNotAllowed as e:
+#                 logger.error("TransitionNotAllowed: " + str(e))
+#                 raise
 
-        except (TransitionNotAllowed):
-            ### Messaging ###
-            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
-            messages.add_message(request, messages.ERROR, self.msg)
-            ### End Messaging ###
-        return redirect('/manuscript/'+str(self.object.id))
+#         except (TransitionNotAllowed):
+#             ### Messaging ###
+#             self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
+#             messages.add_message(request, messages.ERROR, self.msg)
+#             ### End Messaging ###
+#         return redirect('/manuscript/'+str(self.object.id))
 
 class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
     template = 'main/manuscript_report.html'
@@ -588,6 +601,14 @@ class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
     def get(self, request, *args, **kwargs):
         return g.download_all_manuscript_files(self.object)
 
+class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get','post']
+    transition_method_name = 'dataverse_upload' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+    page_title = "Upload To Dataverse" #_("manuscript_edit_pageTitle")
+    page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse" #_("manuscript_edit_helpText")
+    dataverse_upload = True
 
 ############################################# SUBMISSION #############################################
 
@@ -972,6 +993,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
 #         return super().dispatch(request, *args, **kwargs)
 
+#NOTE: The template connected to this does not use dataverse_upload currently, could be removed
 #This is for the upload files page. The ajax uploader uses a different class
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
@@ -984,10 +1006,14 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    dataverse_upload = False
 
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
             self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+        elif self.dataverse_upload:
+            self.page_title = _("submission_completeFiles_pageTitle").format()
+            self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent,installation=self.object.manuscript.dataverse_installation.name)
         else:
             self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)
@@ -996,46 +1022,71 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'dataverse_upload': self.dataverse_upload,
             'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(), 'manuscript_id': self.object.manuscript.id}
         
-        if not self.read_only:
+        if self.dataverse_upload:
+            context['dataverse_upload'] = self.dataverse_upload
+
+        if not self.read_only and not self.dataverse_upload:
             context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView
+            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView #The comment/code before this may be unneeded now that we always do manuscript edit first
 
             errors = []
-            changes_for_git = []
-            try: #File Renaming
-                with transaction.atomic(): #to ensure we only save if there are no errors
-                    for key, value in request.POST.items():
-                        if(key.startswith("file:")):
-                            skey = key.removeprefix("file:")
-                            if(skey != value):
-                                error_text = _helper_sanitary_file_check(value)
-                                if(error_text):
-                                    raise ValueError(error_text)
-                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                before_path = "/"+before_path
-                                gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
-                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path                      
-                                gfile.name=after_name
-                                gfile.path=after_path
-                                gfile.save()
-                                changes_for_git.append({"old":skey, "new":value})
-                                self.object.files_changed = True
-                                self.object.save()
-            except ValueError as e:
-                errors.append(str(e))
-                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
-                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-            g.rename_submission_files(self.object.manuscript, changes_for_git)
+            ## TODO: Use this code and then remove after implementing ajax based datatable file renaming
+
+            # changes_for_git = []
+            #
+            # try: #File Renaming
+            #     with transaction.atomic(): #to ensure we only save if there are no errors
+            #         for key, value in request.POST.items():
+            #             if(key.startswith("file:")):
+            #                 skey = key.removeprefix("file:")
+            #                 if(skey != value):
+            #                     error_text = _helper_sanitary_file_check(value)
+            #                     if(error_text):
+            #                         raise ValueError(error_text)
+            #                     before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     before_path = "/"+before_path
+            #                     gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
+            #                     after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     after_path = "/" + after_path                      
+            #                     gfile.name=after_name
+            #                     gfile.path=after_path
+            #                     gfile.save()
+            #                     changes_for_git.append({"old":skey, "new":value})
+            #                     self.object.files_changed = True
+            #                     self.object.save()
+            # except ValueError as e:
+            #     errors.append(str(e))
+            #     #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+            #     logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+
+            # g.rename_submission_files(self.object.manuscript, changes_for_git)
+
+            if not errors and request.POST.get('submit_dataverse_upload'):
+                old_doi = self.object.manuscript.dataverse_doi
+                #TODO: This url will be bad if the dataverse_uploader changes the dataverse targeted, because the change will have happened in the previous form.
+                old_dv_url = self.object.manuscript.dataverse_installation.url
+                try:
+                    dv.upload_manuscript_data_to_dataverse(self.object.manuscript)
+                    if old_doi and old_doi != self.object.manuscript.dataverse_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
+                        self.msg = 'You have uploaded the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    else: 
+                        self.msg = 'You have uploaded the manuscript data to Dataverse, creating a new dataset.'
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
+
+                except Exception as e: #for now we catch all exceptions and present them as a message
+                    self.msg= 'An error has occurred attempting to upload to Dataverse: ' + str(e)
+                    messages.add_message(request, messages.ERROR, self.msg)
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):
@@ -1085,10 +1136,13 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'manuscript_id': self.object.manuscript.id,
                 'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
-                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
+                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'dataverse_upload': self.dataverse_upload,
+                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(),}
 
-            if not self.read_only: #should never hit post if read_only but yea
+            if self.dataverse_upload:
+                context['dataverse_upload'] = self.dataverse_upload
+
+            if not self.read_only and not self.dataverse_upload: #should never hit post if read_only but yea
                 context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
@@ -1106,6 +1160,14 @@ class SubmissionReadFilesView(SubmissionUploadFilesView):
     #     #TODO: I'm not sure if this title actually does anything
     #     self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
     #     return super().dispatch(request, *args, **kwargs)
+
+#TODO: This needs to pass m_status but isn't
+class SubmissionCompleteFilesView(SubmissionUploadFilesView):
+    transition_on_parent = True
+    transition_method_name = 'dataverse_upload'
+    #page_help_text = _("submission_completeFiles_helpText") #set in SubmissionUploadFilesView, as we pass arguments to it
+    dataverse_upload = True #tell parent view to pass m_status even though is a sub
+    pass
 
 #Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1160,7 +1222,7 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         if(not file_path):
             raise Http404()
 
-        return g.download_submission_file(self.object, file_path)
+        return g.get_submission_file(self.object, file_path, True)
 
 class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']

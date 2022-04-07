@@ -403,9 +403,16 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### django-fsm (workflow) related functions #####
 
+#TODO: We need the ability to edit the submission (files) upon manuscript completion if you are a curator???
+#      Instead of altering edit_noop, we could extend the delete functions instead... but then we'd ahve to change the links...
+
+    # @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
+    #     permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR, Status.RETURNED], target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)  
+                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.UPLOADED_EXTERNAL))))
     def edit_noop(self):
         return self._status
 
@@ -596,10 +603,11 @@ class Submission(AbstractCreateUpdateModel):
                 editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
                 editor_group.save()
 
-                curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
-                curator_group = Group.objects.get(name=curator_name)
-                curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
-                curator_group.save()
+                # Now that we are implementing a dataverse_upload step, curators should not be locked out of editing ever
+                # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+                # curator_group = Group.objects.get(name=curator_name)
+                # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+                # curator_group.save()
 
                 verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
                 verifier_group = Group.objects.get(name=verifier_name)
@@ -653,6 +661,7 @@ class Manuscript(AbstractCreateUpdateModel):
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
         COMPLETED = 'completed', 'Completed'
+        UPLOADED_EXTERNAL = 'uploaded_external', 'Completed And Uploaded To Dataverse'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -677,7 +686,6 @@ class Manuscript(AbstractCreateUpdateModel):
     contact_first_name = models.CharField(max_length=150, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
-    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     description = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
     additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
@@ -711,7 +719,13 @@ class Manuscript(AbstractCreateUpdateModel):
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
     _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-    
+
+    dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse in the installation targeted for the dataset created with the manuscript info.')
+    dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
+    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
+    #TODO: Delete this, the url can be derived from the doi
+    #dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after dataverse_upload to Dataverse.')
+
     class Meta:
         permissions = [
             #NOTE: THIS LIST DOES NOT INCLUDE THE DEFAULT CRUD PERMISSIONS ADDED AUTOMATICALLY BY DJANGO. We could switch it to be explicit (other objects too)
@@ -975,12 +989,26 @@ class Manuscript(AbstractCreateUpdateModel):
     def view_noop(self):
         return self._status
 
+    #-----------------------
+
+    def can_dataverse_upload(self):
+        return True
+
+    @transition(field=_status, source=[Status.COMPLETED, Status.UPLOADED_EXTERNAL], target=Status.UPLOADED_EXTERNAL, conditions=[can_dataverse_upload],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    def dataverse_upload(self):
+        pass #Here add any additional actions related to the state change
+
+#-----------------------
+
 @receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
 def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+
+####################################################
 
 #Class related to locally hosted docker containers
 class LocalContainerInfo(models.Model):
@@ -1216,6 +1244,31 @@ class CorereInvitation(Invitation):
             instance=self,
             invite_url_sent=invite_url,
             inviter=self.inviter)
+
+############### DATAVERSE ################
+
+class DataverseInstallation(models.Model):
+    name = models.CharField(max_length=200, verbose_name='Installation Name')
+    url = models.URLField(max_length=200, verbose_name='URL')
+    api_token = models.CharField(max_length=200, verbose_name='API Token')
+    username = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='User Name', help_text='User that owns the API token. We store this only for informational purposes.')
+    # address, access token, pretty name
+
+    def __str__(self):
+        return '{0} ({1})'.format(self.name, self.url)
+
+# class VerificationMetadataAudit(models.Model):
+#     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+#     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+#     url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='URL')
+#     organization = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Organization')
+#     verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Verified Results')
+#     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
+#     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
+#     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+#     #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+#     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+
 
 ############### POST-SAVE ################
 
