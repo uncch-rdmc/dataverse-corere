@@ -34,7 +34,7 @@ def build_dataset_json(manuscript):
     # It may be possible to build these dictionary-lists inline using comprehension (see https://stackoverflow.com/questions/19121722/), 
     # but it seems less crazy to just do it beforehand and append in the sections
 
-    citation_authors_dict_array = []
+    citation_authors_dict_list = []
     for author in manuscript.manuscript_authors.all().order_by('id'):
         if author.identifier_scheme:
             author_dict = {
@@ -72,9 +72,9 @@ def build_dataset_json(manuscript):
                                 "value": author.last_name + ", " + author.first_name #"LastAuthor1, FirstAuthor1"
                             }
                         }
-        citation_authors_dict_array.append(author_dict)
+        citation_authors_dict_list.append(author_dict)
 
-    keywords_dict_array = []
+    keywords_dict_list = []
     for keyword in manuscript.manuscript_keywords.all().order_by('id'):
         keyword_dict = {
                             "keywordValue": {
@@ -96,8 +96,11 @@ def build_dataset_json(manuscript):
                             #     "value": "http://KeywordVocabularyURL1.org"
                             # }
                         }
-        keywords_dict_array.append(keyword_dict)
+        keywords_dict_list.append(keyword_dict)
 
+    data_sources_array = []
+    for data_source in manuscript.manuscript_data_sources.all().order_by('id'):
+        data_sources_array.append(data_source.text)
 
     full_dataset_dict = {
         "datasetVersion": {
@@ -172,7 +175,7 @@ def build_dataset_json(manuscript):
                             "typeName": "author",
                             "multiple": True,
                             "typeClass": "compound",
-                            "value": citation_authors_dict_array
+                            "value": citation_authors_dict_list
                                 # [
                                 # {
                                 #     "authorName": {
@@ -348,7 +351,7 @@ def build_dataset_json(manuscript):
                             "typeName": "keyword",
                             "multiple": True,
                             "typeClass": "compound",
-                            "value": keywords_dict_array
+                            "value": keywords_dict_list
                     # [
                     #             {
                     #                 "keywordValue": {
@@ -915,15 +918,12 @@ def build_dataset_json(manuscript):
                     #             "OtherReferences2"
                     #         ]
                     #     },
-                    #     {
-                    #         "typeName": "dataSources",
-                    #         "multiple": True,
-                    #         "typeClass": "primitive",
-                    #         "value": [
-                    #             "DataSources1",
-                    #             "DataSources2"
-                    #         ]
-                    #     },
+                        {
+                            "typeName": "dataSources",
+                            "multiple": True,
+                            "typeClass": "primitive",
+                            "value": data_sources_array
+                        },
                     #     {
                     #         "typeName": "originOfSources",
                     #         "multiple": False,
