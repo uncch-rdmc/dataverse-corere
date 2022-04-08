@@ -1,0 +1,176 @@
+{% load static %}
+{% load i18n %}
+{% comment %} {% load verbose_names %} {% endcomment %}
+{% load alias %}
+{% block content %}
+<link href='http://fonts.googleapis.com/css?family=Raleway:600' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Calibri:normal,bold' rel='stylesheet' type='text/css'>
+<style type="text/css">
+    .bg-grey-print{
+        background: #DDDDDD;
+        /* box-shadow:  inset 0 0 0 1000px #DDDDDD !important; */
+    }
+    .table-bordered {
+        /* border: 1px solid #dee2e6;
+        border-width: 1px; */
+        width:100%;
+    }
+    table, th, td {
+        border-color: inherit;
+        border-style: solid;
+        border-width: 1px;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        /* font-family: Calibri; */
+    }
+    td {
+        font-family: Calibri;
+    }
+    td:first-child, th, p {
+        font-family: Raleway;
+        color: #0D2340;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    th, td {
+        padding: 5px;
+    }
+
+</style>
+<br>
+<p style="text-align:center;" ><img style="width:50%;height:50%;" src="{% static 'main/OdumInstituteReportHeader186.png' %}" /></p>
+<p style="text-align:center;font-size:1.4em;" class="bg-grey-print">DATA REPLICATION VERIFICATION REPORT</p>
+
+<table class="table table-bordered" id="table_manuscript_info">
+    <tr>
+        <td style="width: 25%">Manuscript Number</td>
+        <td style="width: 75%"><b>{{manuscript.pub_id}}</b></td>
+    </tr>
+    <tr>
+        <td>Article Title</td>
+        <td><b>{{manuscript.pub_name}}</b></td>
+    </tr>
+    <tr>
+        <td>Corresponding Author</td>
+        <td><b>{{manuscript.contact_last_name}}{% if manuscript.contact_last_name %},{% endif %} {{manuscript.contact_first_name}}</b></td>
+    </tr>
+    <tr>
+        <td>Dataverse DOI</td>
+        <td><b>{{manuscript.dataverse_doi}}</b></td>
+    </tr>
+</table>
+
+<table class="table table-bordered" id="table_submissions_info">
+{% for submission in manuscript.manuscript_submissions.all %}
+    <tr>
+        <th colspan="2" class="bg-grey-print">Submission {{submission.version_id}}</th>
+    </tr>
+    <tr>
+        <td style="width: 25%">Editor Submission Date</td>
+        <td style="width: 75%">{{submission.submission_edition.created_at|date:"SHORT_DATE_FORMAT"}}</td>
+    </tr>
+    <tr>
+        <td>Verification Date</td>
+        <td>{% if submission.submission_verification %} {{submission.submission_verification.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_curation %} {{submission.submission_curation.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_edition %} {{submission.submission_edition.updated_at|date:"SHORT_DATE_FORMAT"}} {% endif %}</td>
+    </tr>
+    <tr>
+        <td>Open Data</td>
+        <td>{{submission.contents_restricted}}</td>
+    </tr>
+    {% if submission.submission_curation %}{% comment %} this if is probably unneeded if we only show completed submissions that passed edition {% endcomment %}
+    <tr>
+        <td>Data Curation Result</td>
+        <td><b>{{submission.submission_curation.get__status_display}}</b></td>
+    </tr>
+    <tr>
+        <td>Data Curation Notes</td>
+        {% with general_notes=submission.get_public_curator_notes_general category_notes=submission.get_public_curator_notes_category file_notes=submission.get_public_curator_notes_file%}     
+        <td>
+            General:
+            <ul>
+                <li>{{submission.submission_curation.report}}</li>
+                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+            </ul>
+            {% comment %} Category notes listed by category {% endcomment %}
+            {% alias "" as previous_note_category %}
+            {% for note in category_notes %}
+                {% if note.ref_file_type != previous_note_category %}
+                    {% if previous_note_category != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.get_ref_file_type_display}}:<ul>
+                    {% alias note.ref_file_type as previous_note_category %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+
+            {% comment %} File notes listed by file {% endcomment %}
+            {% alias "" as previous_note_file %}
+            {% for note in file_notes %}
+                {% if note.ref_file.name != previous_note_file %}
+                    {% if previous_note_file != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.ref_file.name}}:<ul>
+                    {% alias note.ref_file.name as previous_note_file %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+        </td>
+        {% endwith %}
+    </tr>
+    {% endif %}
+    {% if submission.submission_verification %}
+    <tr>
+        <td>Replication Result</td>
+        <td><b>{{submission.submission_verification.get__status_display}}</b></td>
+    </tr>
+    <tr>
+        <td>Replication Notes</td>
+        {% with general_notes=submission.get_public_verifier_notes_general category_notes=submission.get_public_verifier_notes_category file_notes=submission.get_public_verifier_notes_file%}     
+        <td>
+            General:
+            <ul>
+                <li>{{submission.submission_verification.report}}</li>
+                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+            </ul>
+            Code Executability:
+            <ul><li>{{submission.submission_verification.code_executability}}</li></ul>
+            {% comment %} Category notes listed by category {% endcomment %}
+            {% alias "" as previous_note_category %}
+            {% for note in category_notes %}
+                {% if note.ref_file_type != previous_note_category %}
+                    {% if previous_note_category != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.get_ref_file_type_display}}:<ul>
+                    {% alias note.ref_file_type as previous_note_category %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+
+            {% comment %} File notes listed by file {% endcomment %}
+            {% alias "" as previous_note_file %}
+            {% for note in file_notes %}
+                {% if note.ref_file.name != previous_note_file %}
+                    {% if previous_note_file != '' %}
+                        </ul>
+                    {% endif %}
+                    {{note.ref_file.name}}:<ul>
+                    {% alias note.ref_file.name as previous_note_file %}
+                {% endif %}
+                <li>{{note.text}}</li>
+            {% endfor %}</ul>
+            <i>Please note: Tables and figures appearing in appendices were verified only for successful execution of analysis code and not for accuracy of results.</i>
+        </td>
+        {% endwith %}
+    </tr>
+    {% endif %}
+{% endfor %}
+</table>
+
+<!-- <table class="table table-bordered" id="table_citation_info">
+{% comment %} we don't even store anything related to citation {% endcomment %}
+</table> -->
+
+{% endblock %}

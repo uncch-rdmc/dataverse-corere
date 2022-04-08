@@ -31,6 +31,7 @@ urlpatterns = [
     #path('manuscript/<int:id>/notebook/', main.open_notebook, name="manuscript_notebook"), #This is disabled, but we used it for internal container mode so we should look at it again when needed
     #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
+    path('manuscript/<int:id>/reportdownload/', classes.ManuscriptReportDownloadView.as_view(), name="manuscript_reportdownload"),
     path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
     path('manuscript/<int:id>/confirm/', classes.ManuscriptEditConfirmBeforeDataverseUploadView.as_view(), name="manuscript_confirmbeforedataverseupload"),
