@@ -39,7 +39,7 @@
 </style>
 <br>
 <p style="text-align:center;" ><img style="width:50%;height:50%;" src="{% static 'main/OdumInstituteReportHeader186.png' %}" /></p>
-<p style="text-align:center;font-size:1.4em;" class="bg-grey-print">DATA REPLICATION VERIFICATION REPORT</p>
+<p style="text-align:center;font-size:1.3em;" class="bg-grey-print">DATA REPLICATION VERIFICATION REPORT</p>
 
 <table class="table table-bordered" id="table_manuscript_info">
     <tr>
@@ -58,6 +58,10 @@
         <td>Dataverse DOI</td>
         <td><b>{{manuscript.dataverse_doi}}</b></td>
     </tr>
+    <tr>
+        <td>Open Data</td>
+        <td><b>{{ manuscript.contents_restricted|yesno:"False,True" }}</b></td>
+    </tr>
 </table>
 
 <table class="table table-bordered" id="table_submissions_info">
@@ -72,10 +76,6 @@
     <tr>
         <td>Verification Date</td>
         <td>{% if submission.submission_verification %} {{submission.submission_verification.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_curation %} {{submission.submission_curation.updated_at|date:"SHORT_DATE_FORMAT"}} {% elif submission.submission_edition %} {{submission.submission_edition.updated_at|date:"SHORT_DATE_FORMAT"}} {% endif %}</td>
-    </tr>
-    <tr>
-        <td>Open Data</td>
-        <td>{{submission.contents_restricted}}</td>
     </tr>
     {% if submission.submission_curation %}{% comment %} this if is probably unneeded if we only show completed submissions that passed edition {% endcomment %}
     <tr>

@@ -1242,6 +1242,7 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 
 #------------- Curation -------------
 
+#If changing this, see the EditionDisabled version below
 class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
@@ -1260,20 +1261,10 @@ class CurationBaseForm(forms.ModelForm):
         if form_data['_status'] == m.Curation.Status.NEW:
             self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW.label + '.']
 
+#### There are two versions of these forms, one for when edition is disabled and one when it isn't, to collect the editor_submit_date ####
+
 class CurationForm_Admin(CurationBaseForm):
     pass
-
-# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
-# class CurationForm_Author(ReadOnlyFormMixin, CurationBaseForm):
-#     class Meta:
-#         model = m.Curation
-#         fields = []
-
-# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
-# class CurationForm_Editor(ReadOnlyFormMixin, CurationBaseForm):
-#     class Meta:
-#         model = m.Curation
-#         fields = []
 
 class CurationForm_Curator(CurationBaseForm):
     pass

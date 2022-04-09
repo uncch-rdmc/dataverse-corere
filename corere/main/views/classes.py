@@ -585,60 +585,31 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #             ### End Messaging ###
 #         return redirect('/manuscript/'+str(self.object.id))
 
-class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    template = 'main/manuscript_report.html'
 
-    def get(self, request, *args, **kwargs):
-        return render(request, self.template, {'manuscript': self.object})
+#TODO: Delete this and manuscript_report.html. Holding onto these for a bit incase we need to use them to display the content not as a pdf (though the style is stale)
+# class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#     template = 'main/manuscript_report.html'
+
+#     def get(self, request, *args, **kwargs):
+#         return render(request, self.template, {'manuscript': self.object})
+
+
 
 #This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
 #PDFView acts like a TemplateView
 #Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
 #TODO: This needs to check perms on the manuscript!
-
 class ManuscriptReportDownloadView(LoginRequiredMixin, PDFView):
     template_name = 'main/manuscript_report_download.html'
+    prompt_download = True
+    download_name = "verification_report.pdf"
 
     def get_context_data(self, *args, **kwargs):
         """Pass some extra context to the template."""
         context = super().get_context_data(*args, **kwargs)
-
         context['manuscript'] = get_object_or_404(m.Manuscript, id=kwargs.get('id'))
 
         return context
-
-# #TODO: move these imports
-# from django_weasyprint import WeasyTemplateResponseMixin
-# from django_weasyprint.views import WeasyTemplateResponse
-# from django.views.generic import DetailView
-# #TODO: This needs to check perms on the manuscript!
-# class ManuscriptReportDownloadView(WeasyTemplateResponseMixin, DetailView):
-#     pdf_filename = 'test.pdf'
-#     model = m.Manuscript
-#     template_name = 'main/manuscript_report_download.html'
-
-#     def get_context_data(self, *args, **kwargs):
-#         """Pass some extra context to the template."""
-#         context = super().get_context_data(*args, **kwargs)
-
-#         context['manuscript'] = get_object_or_404(m.Manuscript, id=kwargs.get('id'))
-
-#         return context
-
-#TODO: Maybe change base views around... there is a lot of cruft doing this
-
-# #TODO: move these imports
-# from weasyprint import HTML, CSS
-# class ManuscriptReportDownloadView(ManuscriptReportView):
-
-#     #TODO: There is definitely a better way to do this then stealing from http_response
-#     def get(self, request, *args, **kwargs):
-#         http_response = render(request, self.template, {'manuscript': self.object})
-#         print(http_response._container[0])
-
-#         HTML(string=http_response._container[0]).write_pdf('/tmp/weasyprint-website.pdf')
-
-#         return render(request, self.template, {'manuscript': self.object})
 
 #TODO: This might need a TransitionPermissionMixin
 class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
