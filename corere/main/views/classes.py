@@ -669,7 +669,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             pass
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                if self.object._status !=  m.Submission.Status.IN_PROGRESS_CURATION: #We show our later edit form with only certain fields editable
+                    self.curation_formset = f.EditOutOfPhaseCurationFormset
+                else:
+                    self.curation_formset = f.CurationSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_curationReview_helpText")
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
@@ -678,7 +681,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             pass
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
-                self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                if self.object._status !=  m.Submission.Status.IN_PROGRESS_VERIFICATION: #We show our later edit form with only certain fields editable
+                    self.verification_formset = f.EditOutOfPhaseVerificationFormset
+                else:
+                    self.verification_formset = f.VerificationSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_verificationReview_helpText")
             elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
@@ -706,6 +712,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
             context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset", 
                 form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files}) #TODO: This was set to `= formset`, maybe can delete that variable now?
+        
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):

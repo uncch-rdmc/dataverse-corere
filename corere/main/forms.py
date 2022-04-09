@@ -1251,7 +1251,6 @@ class CurationBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(CurationBaseForm, self).__init__(*args, **kwargs)
-        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
 
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
@@ -1294,6 +1293,20 @@ ReadOnlyCurationSubmissionFormset = inlineformset_factory(
     m.Curation, 
     extra=0,
     form=ReadOnlyCurationForm,
+    can_delete = False,
+)
+
+class EditOutOfPhaseCurationForm(CurationBaseForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(EditOutOfPhaseCurationForm, self).__init__(*args, **kwargs)
+        self.fields['_status'].disabled = True
+        self.fields['needs_verification'].disabled = True
+
+EditOutOfPhaseCurationFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=0,
+    form=EditOutOfPhaseCurationForm,
     can_delete = False,
 )
 
@@ -1360,6 +1373,19 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
     m.Verification, 
     extra=0,
     form=ReadOnlyVerificationForm,
+    can_delete = False,
+)
+
+class EditOutOfPhaseVerificationForm(VerificationBaseForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(EditOutOfPhaseVerificationForm, self).__init__(*args, **kwargs)
+        self.fields['_status'].disabled = True
+
+EditOutOfPhaseVerificationFormset = inlineformset_factory(
+    m.Submission, 
+    m.Verification, 
+    extra=0,
+    form=EditOutOfPhaseVerificationForm,
     can_delete = False,
 )
 

@@ -141,13 +141,13 @@ def manuscript_landing(request, id=None):
                     pass
 
                 try:
-                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user):
+                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user) and latestSubmission._status == m.Submission.Status.IN_PROGRESS_CURATION:
                         reviewSubmissionButton = True
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
-                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user):
+                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user) and latestSubmission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION:
                         reviewSubmissionButton = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass

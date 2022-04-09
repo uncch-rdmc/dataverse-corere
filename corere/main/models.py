@@ -193,9 +193,10 @@ class Curation(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == Submission.Status.IN_PROGRESS_CURATION ):
-            return True
-        return False
+        return True
+        # if(self.submission._status == Submission.Status.IN_PROGRESS_CURATION ):
+        #     return True
+        # return False
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
@@ -251,13 +252,14 @@ class Verification(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION ):
-            return True
-        return False
+        return True
+        # if(self.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION ):
+        #     return True
+        # return False
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript) or user.has_any_perm(c.PERM_MANU_CURATE, instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -676,7 +678,7 @@ class Manuscript(AbstractCreateUpdateModel):
         MATHEMATICS = 'mathematics', 'Mathematical Sciences'
         HEALTH = 'health', 'Medicine, Health and Life Sciences'
         PHYSICS = 'physics', 'Physics'
-        SOCIAL = 'social', 'Social Sciences'
+        SOCIAL = 'social', 'Social Sciences' 
         OTHER = 'other', 'Other'
 
     pub_name = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
