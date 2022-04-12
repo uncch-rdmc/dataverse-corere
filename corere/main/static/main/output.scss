@@ -392,6 +392,17 @@ select.custom-select {
     width:160px;
 }
 
+//This fixing of the date widget doesn't scale quite right with margin as fixed and width as a percent
+//But its good enough for now
+.selectdatewidget {
+    display: inline-block; 
+    width: 32.5%; 
+    margin-right:10px;
+}
+.selectdatewidget:nth-child(3) {
+    margin-right:0px !important;
+}
+
 //Add back bootstrap 3 tiny buttons, for our grid. We aren't targeting mobile anyways
 // .btn-group-xs > .btn, .btn-xs {
 //     padding: .25rem .4rem;

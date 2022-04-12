@@ -258,6 +258,7 @@ class Verification(AbstractCreateUpdateModel):
         # return False
 
     #Does not actually change status, used just for permission checking
+    #NOTE: Eventually we may want edit to work if you are an admin, not if you have curate (so non-admin curators are restricted)
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript) or user.has_any_perm(c.PERM_MANU_CURATE, instance.submission.manuscript))
     def edit_noop(self):
@@ -297,7 +298,8 @@ class Submission(AbstractCreateUpdateModel):
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
     launch_issues = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Container Launch Issues', help_text='Issues faced when attempting to launch the container')
-    
+    editor_submit_date = models.DateField(verbose_name='Editor Submit Date', blank=True, null=True, help_text='The date when editors submitted the submission. Only used when editor use of CORE2 for a manuscript is disabled.')
+
     class Meta:
         default_permissions = ()
         ordering = ['version_id']

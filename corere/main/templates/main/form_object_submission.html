@@ -30,8 +30,14 @@
         <h5 class="title-text">Curator Review</h5>
         {{ curation_formset.non_form_errors }}
         {% crispy curation_formset helper %}
+        {% if submission_editor_date_formset %}
+            <!-- <h5 class="title-text">Curator Review</h5> -->
+            {{ submission_editor_date_formset.non_form_errors }}
+            {% crispy submission_editor_date_formset helper %}
+        {% endif %}
         <hr>
     {% endif %}
+
     {% if edition_formset %}
         <h5 class="title-text">Editor Review</h5>
         {{ edition_formset.non_form_errors }}

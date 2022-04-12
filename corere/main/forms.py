@@ -1,4 +1,4 @@
-import logging, os, copy, sys, re
+import logging, os, copy, sys, re, datetime
 from django import forms
 from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
 from django.contrib.postgres.fields import ArrayField
@@ -14,11 +14,12 @@ from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div, HTML
+from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div, HTML, MultiWidgetField
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 from django.http import Http404
 from corere.apps.wholetale import models as wtm
+from django.forms.widgets import SelectDateWidget
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -867,6 +868,8 @@ class NoteForm(forms.ModelForm):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
             if(self.cleaned_data['id']):
+#TODO-BETA1: Add ability here for curator to edit other notes
+# - We also probably need to change the scope reset below
                 if(self.cleaned_data['creator'] != user): #Works even though we mess with creator during init above, because we always keep your name
                     return #Do not save
 
@@ -1173,6 +1176,43 @@ class SubmissionEmptyForm(forms.ModelForm):
         fields = []
         labels = label_gen(model, fields)
 
+#------------- Submission Editor Date -------------
+
+class SubmissionEditorDateForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = ['editor_submit_date']
+        labels = label_gen(model, fields)
+        widgets = {
+            'editor_submit_date': SelectDateWidget(years=range(2020, datetime.date.today().year+1)),
+        }
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(SubmissionEditorDateForm, self).__init__(*args, **kwargs)
+    #     self.layout = Layout(
+    #         MultiWidgetField('editor_submit_date', attrs=({'style': 'width: 33%; display: inline-block;'}))
+    #     )
+
+
+SubmissionEditorDateFormset = inlineformset_factory(
+    m.Manuscript, 
+    m.Submission, 
+    extra=0,
+    form=SubmissionEditorDateForm,
+    can_delete = False,
+)
+
+
+# This form is only used when editors are no directly using CORE2 for a manuscript, to collect the date that the submission was sent to the curation team.
+
+#TODO: Soooo... we need like a bunch more version of this form
+# - We need a version with the "editor submission date" field (when edition disabled)
+#   - Maybe need to make this role based... so a version for admin and verifier?
+# - We need a version with "editor submission date" but also EditOutOfPhase...
+# ...
+# - I should look up ways to better do this that doesn't cause the forms to grow exponentially?
+#   - One option would be to make the "Editor Submission Date" on a separate form entirely  
+
 #------------- Edition -------------
 
 class EditionBaseForm(forms.ModelForm):
@@ -1183,7 +1223,7 @@ class EditionBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(EditionBaseForm, self).__init__(*args, **kwargs)
-        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
         # self.helper = FormHelper(self)
         # self.helper.form_show_errors = False
         # self.form_show_errors = False
