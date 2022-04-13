@@ -724,7 +724,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
         if(self.submission_editor_date_formset is not None):
-            context['submission_editor_date_formset'] = self.submission_editor_date_formset(instance=self.object.manuscript, prefix="submission_editor_date_formset")
+            context['submission_editor_date_formset'] = self.submission_editor_date_formset(queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
@@ -751,7 +751,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.curation_formset):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.submission_editor_date_formset):
-            self.submission_editor_date_formset = self.submission_editor_date_formset(request.POST, instance=self.object.manuscript, prefix="submission_editor_date_formset")
+            self.submission_editor_date_formset = self.submission_editor_date_formset(request.POST, queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
 

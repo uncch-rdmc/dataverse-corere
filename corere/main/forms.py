@@ -1,6 +1,6 @@
 import logging, os, copy, sys, re, datetime
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet, modelformset_factory
 from django.contrib.postgres.fields import ArrayField
 #from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitFile
 #from invitations.models import Invitation
@@ -1194,8 +1194,16 @@ class SubmissionEditorDateForm(forms.ModelForm):
     #     )
 
 
-SubmissionEditorDateFormset = inlineformset_factory(
-    m.Manuscript, 
+# SubmissionEditorDateFormset = inlineformset_factory(
+#     m.Manuscript, 
+#     m.Submission, 
+#     extra=0,
+#     form=SubmissionEditorDateForm,
+#     can_delete = False,
+# )
+
+#This really doesn't need to be a formset because we only use one, but it makes the form logic more consistent
+SubmissionEditorDateFormset = modelformset_factory(
     m.Submission, 
     extra=0,
     form=SubmissionEditorDateForm,
