@@ -405,6 +405,9 @@ class Submission(AbstractCreateUpdateModel):
         else:
             return values_list
 
+    # def _remove_submission_edit_perms(self):
+
+
     ##### django-fsm (workflow) related functions #####
 
 #TODO: We need the ability to edit the submission (files) upon manuscript completion if you are a curator???
@@ -416,7 +419,7 @@ class Submission(AbstractCreateUpdateModel):
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR, Status.RETURNED], target=RETURN_VALUE(), conditions=[],
         permission=lambda instance, user: ((instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)  
-                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.UPLOADED_EXTERNAL))))
+                                            or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.COMPLETED_REPORTED))))
     def edit_noop(self):
         return self._status
 
@@ -540,13 +543,19 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def review_curation(self):
-        try:
-            if(self.submission_curation.needs_verification == True):
+        try: 
+            if self.submission_curation.needs_verification == True:
                 return self.Status.IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
         
         g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+
+        #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
+        if self.submission_curation._status == Curation.Status.NO_ISSUES: #We've already checked that it doesn't need verification above
+            self.manuscript._status = Manuscript.Status.COMPLETED
+            self.manuscript.save()
+
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -562,24 +571,65 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_VERIFY, instance.manuscript)))
     def review_verification(self):
-        try:
-            if(self.submission_verification._status == Verification.Status.SUCCESS): #just checking the object exists, crude
+        try: #just checking the object exists, crude
+            if self.submission_verification._status == Verification.Status.SUCCESS: 
                 pass
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_VERIFICATION
         
         g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+
+        #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
+        if self.submission_curation._status == Curation.Status.NO_ISSUES and self.submission_verification._status == Verification.Status.SUCCESS:
+                self.manuscript._status = Manuscript.Status.COMPLETED
+                self.manuscript.save()
+
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
     
     def can_send_report(self):
+        if not (self.manuscript._status == Manuscript.Status.COMPLETED and self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_doi):
+            # If final submission and dataverse info isn't populated, you can't send the final report
+            return False
         return True
 
-    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_send_report],
+#TODO: Set manuscript status if completed to COMPLETED_REPORTED
+
+    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=RETURN_VALUE(), conditions=[can_send_report],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def send_report(self):
-        pass
+        #TODO: Actually send a report here. If edition enabled
+
+        if self.manuscript._status == Manuscript.Status.COMPLETED:
+            # Rename existing groups (add completed suffix) when done for clean-up and reporting
+            author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
+            author_group = Group.objects.get(name=author_name)
+            author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
+            author_group.save()
+
+            editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
+            editor_group = Group.objects.get(name=editor_name)
+            editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
+            editor_group.save()
+
+            # Now that we are implementing a dataverse_upload step, curators should not be locked out of editing ever
+            # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+            # curator_group = Group.objects.get(name=curator_name)
+            # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+            # curator_group.save()
+
+            verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
+            verifier_group = Group.objects.get(name=verifier_name)
+            verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
+            verifier_group.save()
+
+            self.manuscript._status = Manuscript.Status.COMPLETED_REPORTED
+            self.manuscript.save()
+
+            return Status.RETURNED
+
+        return Status.REVIEWED_REPORT_AWAITING_APPROVAL
 
     #-----------------------
     
@@ -591,36 +641,6 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_finish_submission],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
     def finish_submission(self):
-        if(self.submission_curation._status == Curation.Status.NO_ISSUES):
-            if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
-                self.manuscript._status = Manuscript.Status.COMPLETED
-                ## We decided to leave completed manuscripts in the list and toggle their visibility
-
-                # Rename existing groups (add completed suffix) when done for clean-up and reporting
-                author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
-                author_group = Group.objects.get(name=author_name)
-                author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
-                author_group.save()
-
-                editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
-                editor_group = Group.objects.get(name=editor_name)
-                editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
-                editor_group.save()
-
-                # Now that we are implementing a dataverse_upload step, curators should not be locked out of editing ever
-                # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
-                # curator_group = Group.objects.get(name=curator_name)
-                # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
-                # curator_group.save()
-
-                verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
-                verifier_group = Group.objects.get(name=verifier_name)
-                verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
-                verifier_group.save()
-
-                self.manuscript.save()
-                return
-            
         self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
         self.manuscript.save()
         return
@@ -664,8 +684,9 @@ class Manuscript(AbstractCreateUpdateModel):
         AWAITING_RESUBMISSION = 'awaiting_resubmission', 'Awaiting Author Resubmission'
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
-        COMPLETED = 'completed', 'Completed'
-        UPLOADED_EXTERNAL = 'uploaded_external', 'Completed And Uploaded To Dataverse'
+        COMPLETED = 'completed', 'Completed' #TODO: Maybe rename this to "Approved?". Technically its not completed when this is set because we still need to send the report and upload to dataverse
+        # UPLOADED_EXTERNAL = 'uploaded_external', 'Completed And Uploaded To Dataverse'
+        COMPLETED_REPORTED = 'completed_reported', 'Completed And Reported'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -998,10 +1019,20 @@ class Manuscript(AbstractCreateUpdateModel):
     def can_dataverse_upload(self):
         return True
 
-    @transition(field=_status, source=[Status.COMPLETED, Status.UPLOADED_EXTERNAL], target=Status.UPLOADED_EXTERNAL, conditions=[can_dataverse_upload],
+    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_upload],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
     def dataverse_upload(self):
-        pass #Here add any additional actions related to the state change
+        return self._status
+
+    #-----------------------
+
+    def can_send_final_report(self):
+        return True
+
+    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=Status.COMPLETED_REPORTED, conditions=[can_send_final_report],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    def send_final_report(self):
+        return self._status
 
 #-----------------------
 

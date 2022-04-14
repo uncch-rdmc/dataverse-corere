@@ -383,7 +383,6 @@ class ManuscriptBaseForm(forms.ModelForm):
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
-            # if(self.instance._status == m.Manuscript.Status.COMPLETED or self.instance._status == m.Manuscript.Status.UPLOADED_EXTERNAL)
             if self.dataverse_upload:
                 dataverse_installation = self.cleaned_data.get('dataverse_installation')
                 if(not dataverse_installation):
@@ -418,7 +417,7 @@ class ManuscriptBaseForm(forms.ModelForm):
             #     if(not memory_reqs):
             #         self.add_error('memory_reqs', 'This field is required.')
 
-            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.UPLOADED_EXTERNAL):
+            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.COMPLETED_REPORTED):
                 validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
