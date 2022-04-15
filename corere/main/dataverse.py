@@ -1,8 +1,36 @@
-import json
+import json, datetime, re
 import pyDataverse.api as pyd
 from corere.main import models as m
 from corere.main import git as g
 from django.conf import settings
+
+#Goes to the dataset for the manuscript, grabs the citation information and updates the manuscript
+def update_citation_data(manuscript):
+    # native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
+    # native_dataset_json = native_api.get_dataset(manuscript.dataverse_fetched_doi).json()['data']    
+    #print(native_dataset_json)
+
+    search_api = pyd.SearchApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
+    search_dataset_json = search_api.search('dsPersistentId:"'+manuscript.dataverse_fetched_doi+'"',auth=True).json()['data']
+    print(search_dataset_json)
+    try:
+        #TODO: Eventually we may need to grab all the publications, but for now we assume there will only be one
+        manuscript.dataverse_fetched_article_citation = search_dataset_json['items'][0]['publications'][0]['citation'] + " " + search_dataset_json['items'][0]['publications'][0]['url']
+    except Exception:
+        pass #We are ok with publications not existing
+
+    try:
+        manuscript.dataverse_fetched_data_citation = re.sub('<[^<]+?>', '', search_dataset_json['items'][0]['citationHtml']) #re.sub removes link html
+    except Exception:
+        raise ValueError("Unable to get 'citationHtml' from dataset json.")
+
+    try:
+        manuscript.dataverse_fetched_publish_date = datetime.datetime.strptime(search_dataset_json['items'][0]['published_at'], "%Y-%m-%dT%H:%M:%S%z")
+    except Exception:
+        raise ValueError("Unable to get 'published_at' from dataset json. Maybe the dataset has not been published.")
+
+    manuscript.save()
+
 
 #Note: this uploads the data for the approved submission
 def upload_manuscript_data_to_dataverse(manuscript):
@@ -20,13 +48,15 @@ def upload_manuscript_data_to_dataverse(manuscript):
         file_id = file_response.json()['data']['files'][0]['dataFile']['id']
         native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
 
-    manuscript.dataverse_doi = dataset_pid
-    manuscript.dataverse_upload()
+    manuscript.dataverse_fetched_doi = dataset_pid
+    manuscript.dataverse_fetched_article_citation = ""
+    manuscript.dataverse_fetched_data_citation = ""
+    manuscript.dataverse_fetched_publish_date = None
+    # manuscript.dataverse_upload_noop()
     manuscript.save()
 
 # Converts manuscript fields and hardcoded data to a dictionary that is then converted to json
 def build_dataset_json(manuscript):
-
     # The approach I've taken for this is to take the whole dataset-create-new-all-default-fields.json from https://guides.dataverse.org/en/latest/api/native-api.html#
     # and just comment out the unused parts. It takes up a lot of space but it means we can easily enable more as we expand.
 
@@ -1644,89 +1674,3 @@ def build_dataset_json(manuscript):
     }
     
     return json.dumps(full_dataset_dict)
-
-
-
-#simple dataset dict/json example:
-# dataset_dict = {
-#         "datasetVersion": {
-#             "metadataBlocks": {
-#                 "citation": {
-#                     "displayName": "Citation Metadata",
-#                     "fields": [
-#                         {
-#                             "value": "Darwin's Finches",
-#                             "typeClass": "primitive",
-#                             "multiple": False,
-#                             "typeName": "title"
-#                         },
-#                         {
-#                             "value": [
-#                                 {
-#                                     "authorName": {
-#                                         "value": "Finch, Fiona",
-#                                         "typeClass": "primitive",
-#                                         "multiple": False,
-#                                         "typeName": "authorName"
-#                                     },
-#                                     "authorAffiliation": {
-#                                         "value": "Birds Inc.",
-#                                         "typeClass": "primitive",
-#                                         "multiple": False,
-#                                         "typeName": "authorAffiliation"
-#                                     }
-#                                 }
-#                             ],
-#                             "typeClass": "compound",
-#                             "multiple": True,
-#                             "typeName": "author"
-#                         },
-#                         {
-#                             "value": [
-#                                 {
-#                                     "datasetContactEmail": {
-#                                         "typeClass": "primitive",
-#                                         "multiple": False,
-#                                         "typeName": "datasetContactEmail",
-#                                         "value": "finch@mailinator.com"
-#                                     },
-#                                     "datasetContactName": {
-#                                         "typeClass": "primitive",
-#                                         "multiple": False,
-#                                         "typeName": "datasetContactName",
-#                                         "value": "Finch, Fiona"
-#                                     }
-#                                 }
-#                             ],
-#                             "typeClass": "compound",
-#                             "multiple": True,
-#                             "typeName": "datasetContact"
-#                         },
-#                         {
-#                             "value": [
-#                                 {
-#                                     "dsDescriptionValue": {
-#                                         "value": "Darwin's finches (also known as the Galápagos finches) are a group of about fifteen species of passerine birds.",
-#                                         "multiple": False,
-#                                         "typeClass": "primitive",
-#                                         "typeName": "dsDescriptionValue"
-#                                     }
-#                                 }
-#                             ],
-#                             "typeClass": "compound",
-#                             "multiple": True,
-#                             "typeName": "dsDescription"
-#                         },
-#                         {
-#                             "value": [
-#                                 "Medicine, Health and Life Sciences"
-#                             ],
-#                             "typeClass": "controlledVocabulary",
-#                             "multiple": True,
-#                             "typeName": "subject"
-#                         }
-#                     ]
-#                 }
-#             }
-#         }
-#     }

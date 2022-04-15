@@ -353,8 +353,11 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
     {% endif %}
 
-    {% if dataverseUploadManuscriptButton %}
+    {% if dataverseUploadManuscriptButtonMain %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Upload To Dataverse</button>    
+    {% endif %}
+    {% if dataversePullCitationButtonMain %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/pullcitation/'">Fetch Dataset Info</button>    
     {% endif %}
 
     {% if m_edit_flag and not editSubmissionButton %} 
@@ -365,7 +368,7 @@
     {% endif %}
 
     <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-        Details
+        More Actions
     </button>
     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
         {% comment %} Maybe make view not show up when you can edit? {% endcomment %}
@@ -380,6 +383,13 @@
             <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
             {% endif %}
         {% endif %}
+        {% if dataverseUploadManuscriptButtonMore %}
+            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/confirm/">Reupload To Dataverse</a></li>
+        {% endif %}
+        {% if dataversePullCitationButtonMore %}
+            <li><a class="dropdown-item" href='/manuscript/{{manuscript_id}}/pullcitation/'>Fetch Dataset Info</a></li>
+        {% endif %}
+    
     </ul>
 
     {% if request.user|has_group:GROUP_ROLE_CURATOR %} 

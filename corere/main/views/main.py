@@ -117,7 +117,11 @@ def manuscript_landing(request, id=None):
     latest_submission_id = None
     createSubmissionButton = False
     launchContainerCurrentSubButton = False
-    dataverseUploadManuscriptButton = False
+    dataverseUploadManuscriptButtonMain = False
+    dataverseUploadManuscriptButtonMore = False
+    dataversePullCitationButtonMain = False
+    dataversePullCitationButtonMore = False
+
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
@@ -153,9 +157,20 @@ def manuscript_landing(request, id=None):
                     pass
             if has_transition_perm(latestSubmission.send_report, request.user):
                 generateReportButton = True
-            if has_transition_perm(manuscript.dataverse_upload, request.user):
-                dataverseUploadManuscriptButton = True
-            if not (reviewSubmissionButton or dataverseUploadManuscriptButton) and has_transition_perm(latestSubmission.edit_noop, request.user):
+            if has_transition_perm(manuscript.dataverse_upload_noop, request.user):
+                if has_transition_perm(manuscript.dataverse_pull_citation_noop, request.user):
+                    if has_transition_perm(manuscript.send_final_report, request.user):
+                        dataversePullCitationButtonMore = True
+                        generateReportButton = True #TODO-BETA1: Is this the right button? How am I handling the final generateReport?
+                    else:
+                        dataversePullCitationButtonMain = True
+                    dataverseUploadManuscriptButtonMore = True
+                else:
+                    dataverseUploadManuscriptButtonMain = True
+
+
+#TODO-BETA1: Check in on this logic again... does it match what we are doing on the backend?
+            if not (reviewSubmissionButton or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
@@ -189,7 +204,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
-            "manuscript_dataset_doi": manuscript.dataverse_doi,
+            "manuscript_dataset_doi": manuscript.dataverse_fetched_doi,
             "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.has_submissions()),
             "files_dict_list": manuscript.get_gitfiles_pathname(combine=True),
@@ -208,7 +223,10 @@ def manuscript_landing(request, id=None):
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
-            'dataverseUploadManuscriptButton': dataverseUploadManuscriptButton,
+            'dataverseUploadManuscriptButtonMain': dataverseUploadManuscriptButtonMain,
+            'dataverseUploadManuscriptButtonMore': dataverseUploadManuscriptButtonMore,
+            'dataversePullCitationButtonMain': dataversePullCitationButtonMain,
+            'dataversePullCitationButtonMore': dataversePullCitationButtonMore,
             'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table

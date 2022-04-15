@@ -589,7 +589,7 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
     
     def can_send_report(self):
-        if not (self.manuscript._status == Manuscript.Status.COMPLETED and self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_doi):
+        if not (self.manuscript._status == Manuscript.Status.COMPLETED and self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_fetched_doi):
             # If final submission and dataverse info isn't populated, you can't send the final report
             return False
         return True
@@ -747,9 +747,10 @@ class Manuscript(AbstractCreateUpdateModel):
 
     dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse in the installation targeted for the dataset created with the manuscript info.')
     dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
-    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
-    #TODO: Delete this, the url can be derived from the doi
-    #dataverse_dataset_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='The URL of the dataset after dataverse_upload to Dataverse.')
+    dataverse_fetched_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
+    dataverse_fetched_data_citation = models.TextField(default="", verbose_name='Dataverse Data Citation', help_text='The data citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_article_citation = models.TextField(default="", verbose_name='Dataverse Article Citation', help_text='The article citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_publish_date = models.DateField(verbose_name='Dataset Publish Date', blank=True, null=True, help_text='The date the dataset in Dataverse was published')
 
     class Meta:
         permissions = [
@@ -1016,18 +1017,33 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    def can_dataverse_upload(self):
+    def can_dataverse_upload_noop(self):
         return True
 
-    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_upload],
+    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_upload_noop],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
-    def dataverse_upload(self):
+    def dataverse_upload_noop(self):
+        return self._status
+
+    #-----------------------
+
+    def can_dataverse_pull_citation_noop(self):
+        if self.dataverse_fetched_doi:
+            return True
+        return False
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_pull_citation_noop],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance))
+    def dataverse_pull_citation_noop(self):
         return self._status
 
     #-----------------------
 
     def can_send_final_report(self):
-        return True
+        if self.dataverse_fetched_data_citation and self.dataverse_fetched_publish_date:
+            return True
+        return False
 
     @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=Status.COMPLETED_REPORTED, conditions=[can_send_final_report],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
