@@ -589,12 +589,15 @@ class Submission(AbstractCreateUpdateModel):
     #-----------------------
     
     def can_send_report(self):
-        if not (self.manuscript._status == Manuscript.Status.COMPLETED and self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_fetched_doi):
-            # If final submission and dataverse info isn't populated, you can't send the final report
+        if self.manuscript._status == Manuscript.Status.COMPLETED:
+            #Because we the dataverse upload steps don't change status, we check that their results exists.
+            if self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_fetched_doi and self.manuscript.dataverse_fetched_data_citation and self.manuscript.dataverse_fetched_publish_date:
+                return True
             return False
-        return True
-
-#TODO: Set manuscript status if completed to COMPLETED_REPORTED
+        if self.manuscript._status == Manuscript.Status.COMPLETED_REPORTED:
+            return False
+        else:
+            return True 
 
     @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=RETURN_VALUE(), conditions=[can_send_report],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
@@ -1040,15 +1043,17 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    def can_send_final_report(self):
-        if self.dataverse_fetched_data_citation and self.dataverse_fetched_publish_date:
-            return True
-        return False
+    ## This is done by the submission
 
-    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=Status.COMPLETED_REPORTED, conditions=[can_send_final_report],
-                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
-    def send_final_report(self):
-        return self._status
+    # def can_send_final_report(self):
+    #     if self.dataverse_fetched_data_citation and self.dataverse_fetched_publish_date:
+    #         return True
+    #     return False
+
+    # @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=Status.COMPLETED_REPORTED, conditions=[can_send_final_report],
+    #             permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    # def send_final_report(self):
+    #     return #self._status
 
 #-----------------------
 

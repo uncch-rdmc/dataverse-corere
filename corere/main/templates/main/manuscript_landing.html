@@ -179,11 +179,11 @@
                         },
                         {
                             text: 'Send Report',
-                            name: 'generateReportForSubmission',
+                            name: 'sendReportForSubmission',
                             action: function ( e, dt, node, config ) {
                                 var headers = new Headers();
                                 headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                fetch('/submission/'+submission_id+'/generatereport/', {
+                                fetch('/submission/'+submission_id+'/sendreport/', {
                                     method: 'POST',
                                     headers: headers, 
                                     credentials: 'include'
@@ -346,8 +346,8 @@
     {% if reviewSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
     {% endif %}
-    {% if generateReportButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('generatereport')">Generate Report</button>    
+    {% if sendReportButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('sendreport')">Send Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    

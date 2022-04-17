@@ -112,7 +112,7 @@ def manuscript_landing(request, id=None):
 
     editSubmissionButton = False
     reviewSubmissionButton = False
-    generateReportButton = False
+    sendReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
     createSubmissionButton = False
@@ -156,20 +156,22 @@ def manuscript_landing(request, id=None):
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
             if has_transition_perm(latestSubmission.send_report, request.user):
-                generateReportButton = True
+                sendReportButton = True
+
             if has_transition_perm(manuscript.dataverse_upload_noop, request.user):
-                if has_transition_perm(manuscript.dataverse_pull_citation_noop, request.user):
-                    if has_transition_perm(manuscript.send_final_report, request.user):
-                        dataversePullCitationButtonMore = True
-                        generateReportButton = True #TODO-BETA1: Is this the right button? How am I handling the final generateReport?
-                    else:
-                        dataversePullCitationButtonMain = True
+                if manuscript._status == m.Manuscript.Status.COMPLETED_REPORTED:
+                    dataversePullCitationButtonMore = True
                     dataverseUploadManuscriptButtonMore = True
                 else:
-                    dataverseUploadManuscriptButtonMain = True
+                    if has_transition_perm(manuscript.dataverse_pull_citation_noop, request.user):
+                        if sendReportButton: #Final Report because other perms were true
+                            dataversePullCitationButtonMore = True
+                        else:
+                            dataversePullCitationButtonMain = True
+                        dataverseUploadManuscriptButtonMore = True
+                    else:
+                        dataverseUploadManuscriptButtonMain = True
 
-
-#TODO-BETA1: Check in on this logic again... does it match what we are doing on the backend?
             if not (reviewSubmissionButton or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
@@ -219,7 +221,7 @@ def manuscript_landing(request, id=None):
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
             'editSubmissionButton': editSubmissionButton,
             'reviewSubmissionButton': reviewSubmissionButton,
-            'generateReportButton': generateReportButton,
+            'sendReportButton': sendReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,

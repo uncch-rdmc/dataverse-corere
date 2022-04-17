@@ -470,8 +470,8 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # cannot generate report or return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -955,8 +955,8 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # can generate report but not return it
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 302)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -1432,8 +1432,8 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # Editor cannot generate report but can return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -1907,8 +1907,8 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # cannot generate report or return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 

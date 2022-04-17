@@ -1458,7 +1458,7 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 #             messages.add_message(request, messages.ERROR, self.msg)
 #         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
