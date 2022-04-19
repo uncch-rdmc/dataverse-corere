@@ -171,8 +171,8 @@ class TransitionPermissionMixin(object):
             transition_method = getattr(parent_object, self.transition_method_name)
         else:
             transition_method = getattr(self.object, self.transition_method_name)
-        logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
-        logger.debug(str(transition_method))
+        # logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
+        # logger.debug(str(transition_method))
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
@@ -598,7 +598,7 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
 #PDFView acts like a TemplateView
 #Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
-#TODO: This needs to check perms on the manuscript!
+#TODO-BETA1: This needs to check perms on the manuscript!
 class ManuscriptReportDownloadView(LoginRequiredMixin, PDFView):
     template_name = 'main/manuscript_report_download.html'
     prompt_download = True
@@ -623,12 +623,30 @@ class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
 
 class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['get','post']
-    transition_method_name = 'dataverse_upload' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    transition_method_name = 'dataverse_upload_noop' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
     model = m.Manuscript
     object_friendly_name = 'manuscript'
     page_title = "Upload To Dataverse" #_("manuscript_edit_pageTitle")
     page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse" #_("manuscript_edit_helpText")
     dataverse_upload = True
+
+class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get']
+    transition_method_name = 'dataverse_pull_citation_noop' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            dv.update_citation_data(self.object)
+            self.msg= 'Information from dataset ' + self.object.dataverse_fetched_doi + ' has been fetched. Information can be confirmed by viewing the <a href="./reportdownload">verification report</a>.'
+            messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+
+        except Exception as e: #for now we catch all exceptions and present them as a message
+            self.msg= 'An error has occurred attempting to pull citation data from Dataverse: ' + str(e)
+            messages.add_message(request, messages.ERROR, self.msg)
+
+        return redirect('manuscript_landing', id=self.object.id)
 
 ############################################# SUBMISSION #############################################
 
@@ -1112,12 +1130,12 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             # g.rename_submission_files(self.object.manuscript, changes_for_git)
 
             if not errors and request.POST.get('submit_dataverse_upload'):
-                old_doi = self.object.manuscript.dataverse_doi
+                old_doi = self.object.manuscript.dataverse_fetched_doi
                 #TODO: This url will be bad if the dataverse_uploader changes the dataverse targeted, because the change will have happened in the previous form.
                 old_dv_url = self.object.manuscript.dataverse_installation.url
                 try:
                     dv.upload_manuscript_data_to_dataverse(self.object.manuscript)
-                    if old_doi and old_doi != self.object.manuscript.dataverse_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
+                    if old_doi and old_doi != self.object.manuscript.dataverse_fetched_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
                         self.msg = 'You have uploaded the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
                         messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
                     else: 
@@ -1203,9 +1221,9 @@ class SubmissionReadFilesView(SubmissionUploadFilesView):
     #     return super().dispatch(request, *args, **kwargs)
 
 #TODO: This needs to pass m_status but isn't
-class SubmissionCompleteFilesView(SubmissionUploadFilesView):
+class SubmissionCompleteFilesBeforeDataverseUploadView(SubmissionUploadFilesView):
     transition_on_parent = True
-    transition_method_name = 'dataverse_upload'
+    transition_method_name = 'dataverse_upload_noop'
     #page_help_text = _("submission_completeFiles_helpText") #set in SubmissionUploadFilesView, as we pass arguments to it
     dataverse_upload = True #tell parent view to pass m_status even though is a sub
     pass
@@ -1440,7 +1458,7 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 #             messages.add_message(request, messages.ERROR, self.msg)
 #         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript

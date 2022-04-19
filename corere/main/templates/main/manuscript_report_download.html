@@ -57,7 +57,7 @@
     </tr>
     <tr>
         <td>Dataverse DOI</td>
-        <td><b>{{manuscript.dataverse_doi}}</b></td>
+        <td><b>{{manuscript.dataverse_fetched_doi}}</b></td>
     </tr>
     <tr>
         <td>Open Data</td>
@@ -176,8 +176,24 @@
 {% endfor %}
 </table>
 
-<!-- <table class="table table-bordered" id="table_citation_info">
-{% comment %} we don't even store anything related to citation {% endcomment %}
-</table> -->
+{% if manuscript.dataverse_fetched_doi %}
+<table class="table table-bordered" id="table_citation_info">
+    <tr>
+        <th colspan="2" class="bg-grey-print">CITATION INFORMATION</th>
+    </tr>
+    <tr>
+        <td style="width: 25%">Dataset Publish Date</td>
+        <td style="width: 75%"><b>{% if manuscript.dataverse_fetched_publish_date %}{{manuscript.dataverse_fetched_publish_date|date:"SHORT_DATE_FORMAT"}}{% endif %}</b></td>
+    </tr>
+    <tr>
+        <td>Data Citation</td>
+        <td><b>{{manuscript.dataverse_fetched_data_citation}}</b></td>
+    </tr>
+    <tr>
+        <td>Article Citation</td>
+        <td><b>{{manuscript.dataverse_fetched_article_citation}}</b></td>
+    </tr>
+</table>
+{% endif %}
 
 {% endblock %}

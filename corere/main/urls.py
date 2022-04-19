@@ -35,12 +35,13 @@ urlpatterns = [
     path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
     path('manuscript/<int:id>/confirm/', classes.ManuscriptEditConfirmBeforeDataverseUploadView.as_view(), name="manuscript_confirmbeforedataverseupload"),
+    path('manuscript/<int:id>/pullcitation/', classes.ManuscriptPullCitationFromDataverseView.as_view(), name="manuscript_pullcitationfromdataverse"),
 
     #TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
     path('submission/<int:id>/info/', classes.SubmissionEditView.as_view(), name="submission_info"),
     #path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path('submission/<int:id>/uploadfiles/', classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
-    path('submission/<int:id>/confirmfiles/', classes.SubmissionCompleteFilesView.as_view(), name="submission_confirmfilesbeforedataverseupload"),
+    path('submission/<int:id>/confirmfiles/', classes.SubmissionCompleteFilesBeforeDataverseUploadView.as_view(), name="submission_confirmfilesbeforedataverseupload"),
     path('submission/<int:id>/uploader/', classes.SubmissionUploaderView.as_view(), name="submission_uploader"),
     path('submission/<int:id>/fileslist/', classes.SubmissionFilesListAjaxView.as_view(),name="submission_fileslist"),
     path('submission/<int:id>/view/', classes.SubmissionReadView.as_view(), name="submission_read"),
@@ -50,7 +51,7 @@ urlpatterns = [
     path('submission/<int:id>/downloadfile/', classes.SubmissionDownloadFileView.as_view(), name="submission_downloadfile"),
     path('submission/<int:id>/downloadall/', classes.SubmissionDownloadAllFilesView.as_view(), name="submission_downloadall"),
     #path('submission/<int:id>/progress/', classes.SubmissionProgressView.as_view(), name="submission_progress"),
-    path('submission/<int:id>/generatereport/', classes.SubmissionGenerateReportView.as_view(), name="submission_generatereport"),
+    path('submission/<int:id>/sendreport/', classes.SubmissionSendReportView.as_view(), name="submission_sendreport"),
     path('submission/<int:id>/finish/', classes.SubmissionFinishView.as_view(), name="submission_finish"),
     path('submission/<int:id>/notebook/', classes.SubmissionNotebookView.as_view(), name="submission_notebook"),
     path('submission/<int:id>/notebooklogin/', classes.SubmissionNotebookRedirectView.as_view(), name="submission_notebooklogin"), #Technically this page is more than login, but login is a good user facing name

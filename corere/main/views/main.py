@@ -112,12 +112,16 @@ def manuscript_landing(request, id=None):
 
     editSubmissionButton = False
     reviewSubmissionButton = False
-    generateReportButton = False
+    sendReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
     createSubmissionButton = False
     launchContainerCurrentSubButton = False
-    dataverseUploadManuscriptButton = False
+    dataverseUploadManuscriptButtonMain = False
+    dataverseUploadManuscriptButtonMore = False
+    dataversePullCitationButtonMain = False
+    dataversePullCitationButtonMore = False
+
     submission_count = manuscript.manuscript_submissions.count()
 
     if has_transition_perm(manuscript.add_submission_noop, request.user) :
@@ -152,10 +156,23 @@ def manuscript_landing(request, id=None):
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
             if has_transition_perm(latestSubmission.send_report, request.user):
-                generateReportButton = True
-            if has_transition_perm(manuscript.dataverse_upload, request.user):
-                dataverseUploadManuscriptButton = True
-            if not (reviewSubmissionButton or dataverseUploadManuscriptButton) and has_transition_perm(latestSubmission.edit_noop, request.user):
+                sendReportButton = True
+
+            if has_transition_perm(manuscript.dataverse_upload_noop, request.user):
+                if manuscript._status == m.Manuscript.Status.COMPLETED_REPORTED:
+                    dataversePullCitationButtonMore = True
+                    dataverseUploadManuscriptButtonMore = True
+                else:
+                    if has_transition_perm(manuscript.dataverse_pull_citation_noop, request.user):
+                        if sendReportButton: #Final Report because other perms were true
+                            dataversePullCitationButtonMore = True
+                        else:
+                            dataversePullCitationButtonMain = True
+                        dataverseUploadManuscriptButtonMore = True
+                    else:
+                        dataverseUploadManuscriptButtonMain = True
+
+            if not (reviewSubmissionButton or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
@@ -189,7 +206,7 @@ def manuscript_landing(request, id=None):
             "manuscript_curators": manuscript_curators,
             "manuscript_verifiers": manuscript_verifiers,
             "manuscript_status": manuscript.get__status_display(),
-            "manuscript_dataset_doi": manuscript.dataverse_doi,
+            "manuscript_dataset_doi": manuscript.dataverse_fetched_doi,
             "manuscript_updated": manuscript.updated_at.strftime("%b %d %Y %H:%M"),
             "manuscript_has_submissions": (manuscript.has_submissions()),
             "files_dict_list": manuscript.get_gitfiles_pathname(combine=True),
@@ -204,11 +221,14 @@ def manuscript_landing(request, id=None):
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
             'editSubmissionButton': editSubmissionButton,
             'reviewSubmissionButton': reviewSubmissionButton,
-            'generateReportButton': generateReportButton,
+            'sendReportButton': sendReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
             'launchContainerCurrentSubButton': launchContainerCurrentSubButton,
-            'dataverseUploadManuscriptButton': dataverseUploadManuscriptButton,
+            'dataverseUploadManuscriptButtonMain': dataverseUploadManuscriptButtonMain,
+            'dataverseUploadManuscriptButtonMore': dataverseUploadManuscriptButtonMore,
+            'dataversePullCitationButtonMain': dataversePullCitationButtonMain,
+            'dataversePullCitationButtonMore': dataversePullCitationButtonMore,
             'file_download_url' : "/manuscript/"+str(manuscript.id)+"/downloadfile/?file_path=",
             "obj_id": id, #for file table
             "obj_type": "manuscript" #for file table
