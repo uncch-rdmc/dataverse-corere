@@ -29,32 +29,5 @@
     
 </form>
 
-<script>
-    tables = document.getElementsByClassName("notes-table")
-    {% comment %} 
-    Goes through each note and checks if the author is our user. If not, disables the delete checkbox
-    We do this before the other script to remove the delete option from new notes.
-    {% endcomment %}
-    for (let table of tables) {
-        for( let elem of table.firstElementChild.childNodes){
-            if(elem.tagName == 'TR') {
-                if(elem.firstElementChild.tagName == 'TD'){
-                    creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
-                    if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
-                        for(let celem of elem.childNodes) {
-                            if(celem.tagName == 'TD') {
-                                if(celem.id.endsWith('DELETE')) {
-                                    celem.firstElementChild.firstElementChild.style.display = 'none'
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-</script>
-
 {% endblock content %}
 

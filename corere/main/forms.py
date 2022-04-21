@@ -779,12 +779,12 @@ class NoteForm(forms.ModelForm):
         #We have to populate the value of the creator before the super because it is based off an existing field
         #We are basing of an existing field so it correctly populates the default value for creating new notes (to the users name)
         #The best way found to do this was to do it before the super, otherwise it becomes uneditable?
+        #Note that this creator field is anonymized if the viewing user is not a curator/verifier
         user = CrequestMiddleware.get_request().user
         curator_verifier = True
         if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
             curator_verifier = False
-
-#NOTE: If the user is an editor/author and there are multiple editors/authors, the additional editors/authors will be made generic (due to this code and the choices code below)
+            #NOTE: If the user is an editor/author and there are multiple editors/authors, the additional editors/authors will be made generic (due to this code and the choices code below)
             instance = kwargs.get('instance', None)
             if instance and instance.creator:
                 if instance.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists():
@@ -819,29 +819,27 @@ class NoteForm(forms.ModelForm):
                     user_key = choice[0]
             user_kv = self.fields['creator'].widget.choices
             #Set list contents for Creator user if we need to preserve curator/verifier anonymity. Even if a dropdown is disabled all the options are populated
+            #TODO: This if statement seems pointless, its the same list. I think we meant to keep the author name visible for the editor but then that got lost
             if user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript): #Check for editor
                 self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
             else:
                 self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
             
-        else:       
-            #Populate scope field depending on existing roles
-            role_count = 0
-            for checker in checkers:
-                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
-                    role_count += 1
-            if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
-                self.fields['scope'].initial = 'public'
-            else:
+        else:
+            if self.instance.is_private(checkers=checkers):
                 self.fields['scope'].initial = 'private'
+            else:
+                self.fields['scope'].initial = 'public'
 
         self.fields['creator'].disabled = True
         
         if(self.instance.id): #if based off existing note
-            if(self.instance.creator != user): #If the user is not the creator of the note
+            #if self.instance.creator != user and not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.fields['scope'] and self.fields['scope'].initial == 'private'):
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
                 for fkey, fval in self.fields.items():
+                    #self.deny_edit = True
                     fval.disabled = True #not sure this is doing anything
-                    fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+                    fval.widget.attrs['disabled'] = True #you have to disable this way for scope to disable
 
         #Initialize note_reference
         #Note: I tried moving this to classes.py to not repeat it, but it didn't get faster. So leaving it here.
@@ -866,17 +864,18 @@ class NoteForm(forms.ModelForm):
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
-            if(self.cleaned_data['id']):
-#TODO-BETA1: Add ability here for curator to edit other notes
-# - We also probably need to change the scope reset below
-                if(self.cleaned_data['creator'] != user): #Works even though we mess with creator during init above, because we always keep your name
+            #if(self.cleaned_data['id']):
+            if self.instance.id:
+                if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
+                # if self.cleaned_data['creator'] != user: #Works even though we mess with creator during init above, because we always keep your name
+                #     if not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.instance.is_private(checkers=self.checkers)):
                     return #Do not save
 
             super(NoteForm, self).save(commit, *args, **kwargs)
-            # print(self.cleaned_data)
-            # print(self.changed_data)
-            if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
-                #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
+
+            # if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
+            if(not self.instance.id or 'scope' in self.changed_data):
+                #Somewhat inefficient, but we just delete all view perms and readd new ones. Safest.
                 for role in c.get_roles():
                     group = Group.objects.get(name=role)
                     remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
@@ -893,11 +892,15 @@ class NoteForm(forms.ModelForm):
                         #At this point we've saved already, maybe we shouldn't?
                         logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
                         raise Http404()
-            else:
-                for role in c.get_roles():
-                    group = Group.objects.get(name=role)
-                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            if(not self.cleaned_data['id'] or 'note_reference' in self.changed_data):
+
+#TODO: I think this code is setting notes to public when it shouldn't? I don't understand the case for this code at all so it is disabled
+            # else:
+            #     for role in c.get_roles():
+            #         group = Group.objects.get(name=role)
+            #         assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+
+            if(not self.instance.id or 'note_reference' in self.changed_data):
+            # if(not self.cleaned_data['id'] or 'note_reference' in self.changed_data):
                 #TODO: If we open up notes to other types again, we need to check if submission is set here
                 files = self.instance.parent_submission.submission_files.all()
                 file_full_paths = []
@@ -922,7 +925,9 @@ class BaseNoteFormSet(BaseInlineFormSet):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
         user = CrequestMiddleware.get_request().user
         for i, form in enumerate(deleted_forms):
-            if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            note = m.Note.objects.get(id=form.instance.id)
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, note):
+            # if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
 
         return deleted_forms
