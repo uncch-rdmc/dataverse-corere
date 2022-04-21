@@ -598,7 +598,7 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
 #PDFView acts like a TemplateView
 #Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
-#TODO-BETA1: This needs to check perms on the manuscript!
+#TODO-BETA1: This needs to check perms on the manuscript!!!!
 class ManuscriptReportDownloadView(LoginRequiredMixin, PDFView):
     template_name = 'main/manuscript_report_download.html'
     prompt_download = True
@@ -723,6 +723,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         if not self.read_only:
             context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+
+        context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -887,6 +889,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if not self.read_only: #should never hit post if read_only but yea
             context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         
+        context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS
+
         if(self.note_formset is not None):
             #We re-init the note formset to not show the validation errors. There may be an easier and more efficient way
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),

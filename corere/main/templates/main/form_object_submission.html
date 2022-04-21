@@ -116,32 +116,37 @@
 {% comment %} WHY ISN'T THIS IN note_list.html {% endcomment%}
 <script>
     {% comment %} 
-    Goes through each note and checks if the author is our user. If not, disables the delete checkbox
-    We do this before the other script to remove the delete option from new notes.
+    // Goes through each note and checks if the author is our user. If not, disables the delete checkbox
+    // We do this before the other script to remove the delete option from new notes.
+    // 
+    // We also pass in whether the user is a curator and keep delete checkbox if so.
+    // Technically in the backend we use a perm on each note but since we always assign that perm to curators this is a way around having to pass all that info
     {% endcomment %}
-    for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
-        if(elem.tagName == 'TR') {
-            if(elem.firstElementChild.tagName == 'TD'){
-                creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
 
-                if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
-                    for(let celem of elem.childNodes) {
-                        if(celem.tagName == 'TD') {
-                            if(celem.id.endsWith('DELETE')) {
-                                celem.firstElementChild.firstElementChild.style.display = 'none'
+    if('False' == '{{is_manu_curator}}')
+        for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
+            if(elem.tagName == 'TR') {
+                if(elem.firstElementChild.tagName == 'TD'){
+                    creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
+
+                    if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
+                        for(let celem of elem.childNodes) {
+                            if(celem.tagName == 'TD') {
+                                if(celem.id.endsWith('DELETE')) {
+                                    celem.firstElementChild.firstElementChild.style.display = 'none'
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
     {% comment %}
-    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
-    This was required to set the field to be the username. 
-    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
-    That being said, this is pretty brittle as well.
+    // Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
+    // This was required to set the field to be the username. 
+    // Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
+    // That being said, this is pretty brittle as well.
     {% endcomment %}
 
     var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;

@@ -405,9 +405,6 @@ class Submission(AbstractCreateUpdateModel):
         else:
             return values_list
 
-    # def _remove_submission_edit_perms(self):
-
-
     ##### django-fsm (workflow) related functions #####
 
 #TODO: We need the ability to edit the submission (files) upon manuscript completion if you are a curator???
@@ -597,6 +594,7 @@ class Submission(AbstractCreateUpdateModel):
         if self.manuscript._status == Manuscript.Status.COMPLETED_REPORTED:
             return False
         else:
+            print("CAN SEND")
             return True 
 
     @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=RETURN_VALUE(), conditions=[can_send_report],
@@ -630,9 +628,9 @@ class Submission(AbstractCreateUpdateModel):
             self.manuscript._status = Manuscript.Status.COMPLETED_REPORTED
             self.manuscript.save()
 
-            return Status.RETURNED
+            return self.Status.RETURNED
 
-        return Status.REVIEWED_REPORT_AWAITING_APPROVAL
+        return self.Status.REVIEWED_REPORT_AWAITING_APPROVAL
 
     #-----------------------
     
@@ -1206,9 +1204,30 @@ class Note(AbstractCreateUpdateModel):
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
             assign_perm(c.PERM_NOTE_CHANGE_N, local.user, self) 
-            assign_perm(c.PERM_NOTE_DELETE_N, local.user, self) 
 
-    #TODO: If implementing fsm can_edit, base it upon the creator of the note
+            curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
+            group_manuscript_curator = Group.objects.get(name=curator_group_name)
+            assign_perm(c.PERM_NOTE_CHANGE_N, group_manuscript_curator, self)
+
+            #Note: We don't assign the rest of view perms here because they are handled in the form save  and there is logic in there that changes the scope based on public/private
+            #      Eventually we may want to move that logic into the model
+
+    def is_private(self, checkers=None):
+        role_count = 0
+        if checkers:
+            for checker in checkers:
+                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self)):
+                    role_count += 1
+        else:
+            #TODO: Implement doing this code without using prefetched perms, when needed. See this for more prefetch info https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
+            #.. also search code for checkers and look for what we grab in classes.py
+            raise Exception("IMPLEMENTATION INCOMPLETE")
+
+        if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
+            return False
+        else:
+            return True
+
 
 #NOTE: Disabled as part of the manuscript/submission models rework. I'm pretty sure we don't want this as the authors won't fill it out
 

@@ -38,9 +38,9 @@ PERM_MANU_CURATE = 'curate_manuscript'
 PERM_MANU_VERIFY = 'verify_manuscript'
 
 #Note perm strings
-PERM_NOTE_ADD_N = 'add_note'
+#PERM_NOTE_ADD_N = 'add_note'
 PERM_NOTE_CHANGE_N = 'change_note'
-PERM_NOTE_DELETE_N = 'delete_note'
+#PERM_NOTE_DELETE_N = 'delete_note'
 PERM_NOTE_VIEW_N = 'view_note'
 
 #You need the perm path when checking non-object perms
