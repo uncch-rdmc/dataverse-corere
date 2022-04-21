@@ -598,23 +598,24 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
 #PDFView acts like a TemplateView
 #Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
-#TODO-BETA1: This needs to check perms on the manuscript!!!!
-class ManuscriptReportDownloadView(LoginRequiredMixin, PDFView):
+class ManuscriptReportDownloadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, PDFView):
     template_name = 'main/manuscript_report_download.html'
     prompt_download = True
+    transition_method_name = 'view_noop'
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
     download_name = "verification_report.pdf"
 
     def get_context_data(self, *args, **kwargs):
         """Pass some extra context to the template."""
         context = super().get_context_data(*args, **kwargs)
-        context['manuscript'] = get_object_or_404(m.Manuscript, id=kwargs.get('id'))
+        context['manuscript'] = self.object #get_object_or_404(m.Manuscript, id=kwargs.get('id'))
 
         return context
 
-#TODO: This might need a TransitionPermissionMixin
-class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']
-    # transition_method_name = 'view_noop'
+    transition_method_name = 'view_noop'
     model = m.Manuscript
     object_friendly_name = 'manuscript'
 
