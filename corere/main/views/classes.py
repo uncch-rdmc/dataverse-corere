@@ -695,11 +695,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_curationReview_helpText")
+
+                if self.object.manuscript.skip_edition:
+                    self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+                #We may need a read_only SubmissionEditorDateFormset for here
 
-            if self.object.manuscript.skip_edition:
-                self.submission_editor_date_formset = f.SubmissionEditorDateFormset
         except (m.Curation.DoesNotExist, KeyError):
             pass
         try:
@@ -772,6 +774,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.curation_formset):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.submission_editor_date_formset):
+            print("POST LOAD EDITOR DATE")
             self.submission_editor_date_formset = self.submission_editor_date_formset(request.POST, queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
@@ -787,19 +790,26 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         if(fr.is_valid()):
                             fr.save(True)
 
+            #NOTE: The user.is_superuser and extra verification formset valid checks are in here to handle editing out of phase by curator-admins.
+            #      Curator-admins need to be able to edit their curation while a verification is happening, and without this verification validation will stop saving.
+            #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.
+            #NOTE: We are assigning the form save results to the object (submission) because otherwise a stale version was being used to transition and the editor date was getting lost
+            #      This code will break if both self.form and self.submission_editor_date_formset actually have changes at the same time. But right now self.form is not really used
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
-                and (self.verification_formset is None or self.verification_formset.is_valid()) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
+                and ((self.verification_formset is None or self.verification_formset.is_valid())
+                     or (request.user.is_superuser)) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 ):
-                self.form.save()#girderToken=request.COOKIES.get('girderToken'))
+                self.object = self.form.save()#girderToken=request.COOKIES.get('girderToken'))
                 
+                if(self.submission_editor_date_formset):
+                    self.object = self.submission_editor_date_formset.save()[0]
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
                     self.curation_formset.save()
-                if(self.submission_editor_date_formset):
-                    self.submission_editor_date_formset.save()
                 if(self.verification_formset):
-                    self.verification_formset.save()
+                    if self.verification_formset and self.verification_formset.is_valid():
+                        self.verification_formset.save()
 
                 try:
                     status = None
@@ -816,11 +826,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         status = self.object.review_curation()
                         self.object.save()
                     elif request.POST.get('submit_progress_verification'):
-                        if not fsm_check_transition_perm(self.object.review_verification, request.user):
-                            logger.debug("PermissionDenied")
-                            raise Http404()
-                        status = self.object.review_verification()
-                        self.object.save()
+                        if self.verification_formset and self.verification_formset.is_valid():
+                            if not fsm_check_transition_perm(self.object.review_verification, request.user):
+                                logger.debug("PermissionDenied")
+                                raise Http404()
+                            status = self.object.review_verification()
+                            self.object.save()
                         
                     if ((self.object.manuscript.skip_edition and request.POST.get('submit_progress_curation'))
                         or (not self.object.manuscript.skip_edition and request.POST.get('submit_progress_edition'))):
@@ -844,6 +855,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             #Send message/notification to verifiers that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
                             notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                        elif(status == m.Submission.Status.REVIEWED_AWAITING_REPORT):
+                            #Send message/notification to curators that the submission is ready for its report to be returned, This can happen when a verifier finishes verifying, or a curator finishes curating and skips verification
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectReviewed_notification_forCurator").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
                                 send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
@@ -871,8 +889,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.submission_editor_date_formset.errors)
                 if(self.verification_formset):
                     logger.debug(self.verification_formset.errors)
-
-                    #     print(self.note_formset.__dict__)
 
         else: #readonly
             if self.note_formset is not None:
