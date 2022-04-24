@@ -590,7 +590,6 @@ class Submission(AbstractCreateUpdateModel):
         if self.manuscript._status == Manuscript.Status.COMPLETED_REPORTED:
             return False
         else:
-            print("CAN SEND")
             return True 
 
     @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=RETURN_VALUE(), conditions=[can_send_report],

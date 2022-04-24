@@ -66,23 +66,24 @@ def get_role_name_for_form(user, manuscript, session, create):
     group_base_string = " Manuscript " + str(manuscript.id)
     group_string = session.get("active_role","") + group_base_string
 
-    if "active_role" in session and user.groups.filter(name=group_string).exists():
-        return session["active_role"]
+    ## Disabled use of session to change form presentation. Its not very useful and causes testing confusion
+    # if "active_role" in session and user.groups.filter(name=group_string).exists():
+    #     return session["active_role"]
+    # else:
+    logger.info("User "+ user.username +" active_role is not available for them on manuscript " + str(manuscript.id) + ". This may be because they have different roles for different manuscripts.")
+    if user.is_superuser:
+        return "Admin"
+    elif user.groups.filter(name="Curator"+group_base_string).exists():
+        return "Curator"
+    elif user.groups.filter(name="Verifier"+group_base_string).exists():
+        return "Verifier"
+    elif user.groups.filter(name="Editor"+group_base_string).exists():
+        return "Editor"
+    elif user.groups.filter(name="Author"+group_base_string).exists():
+        return "Author"
     else:
-        logger.info("User "+ user.username +" active_role is not available for them on manuscript " + str(manuscript.id) + ". This may be because they have different roles for different manuscripts.")
-        if user.is_superuser:
-            return "Admin"
-        elif user.groups.filter(name="Curator"+group_base_string).exists():
-            return "Curator"
-        elif user.groups.filter(name="Verifier"+group_base_string).exists():
-            return "Verifier"
-        elif user.groups.filter(name="Editor"+group_base_string).exists():
-            return "Editor"
-        elif user.groups.filter(name="Author"+group_base_string).exists():
-            return "Author"
-        else:
-            logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
-            raise Http404()
+        logger.error("User "+user.username+" requested role for manuscript "+ str(manuscript.id) +" that they have no roles on")
+        raise Http404()
     
 def get_pretty_user_list_by_group_prefix(group):
     userset = Group.objects.get(name__startswith=group).user_set.all()

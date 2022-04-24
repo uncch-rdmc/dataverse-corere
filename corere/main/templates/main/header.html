@@ -25,7 +25,8 @@
             {% if request.user|has_group:"Role Curator" %} 
               <a class="dropdown-item" href="/site_actions">Site Actions</a>
             {% endif%}
-            {% if request.user|groups_contain_count_no_completed:"Role" > 1 or request.user.is_superuser %}
+            {% comment %} The code utilizing this is also disabled, see utils.get_role_name_for_form{% endcomment %}
+            {% comment %} {% if request.user|groups_contain_count_no_completed:"Role" > 1 or request.user.is_superuser %}
               <div class="dropdown-divider"></div>
               {% if request.user|has_group:"Role Author" %} 
                 {% if request.session.active_role == "Author" %} 
@@ -62,7 +63,7 @@
                   <a class="dropdown-item" href="/switch_role?role=Admin&next={{request.path_info}}">Switch to Admin Role</a>
                 {% endif %}   
               {% endif%}
-            {% endif%}
+            {% endif%} {% endcomment %}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="/logout">Logout</a>
           </div>

@@ -668,14 +668,17 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     curation_formset = None
     verification_formset = None
     submission_editor_date_formset = None
+    can_progress = False
 
     def dispatch(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
                 self.form = f.SubmissionForms[role_name]
+                self.can_progress = True
             elif(has_transition_perm(self.object.view_noop, request.user)):
                 self.form = f.ReadOnlySubmissionForm
+                self.can_progress = False
         except (m.Submission.DoesNotExist, KeyError):
             pass
         try:
@@ -683,16 +686,20 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_editionReview_helpText")
+                self.can_progress = True
             elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+                self.can_progress = False
         except (m.Edition.DoesNotExist, KeyError):
             pass
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 if self.object._status !=  m.Submission.Status.IN_PROGRESS_CURATION: #We show our later edit form with only certain fields editable
                     self.curation_formset = f.EditOutOfPhaseCurationFormset
+                    self.can_progress = False
                 else:
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                    self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_curationReview_helpText")
 
@@ -700,6 +707,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+                self.can_progress = False
                 #We may need a read_only SubmissionEditorDateFormset for here
 
         except (m.Curation.DoesNotExist, KeyError):
@@ -708,12 +716,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
                 if self.object._status !=  m.Submission.Status.IN_PROGRESS_VERIFICATION: #We show our later edit form with only certain fields editable
                     self.verification_formset = f.EditOutOfPhaseVerificationFormset
+                    self.can_progress = False
                 else:
                     self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                    self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_verificationReview_helpText")
             elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+                self.can_progress = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
@@ -722,9 +733,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     def get(self, request, *args, **kwargs):
         manuscript_display_name = self.object.manuscript.get_display_name()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
 
-        if not self.read_only:
+        if self.can_progress:
             context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
 
         context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS
@@ -774,7 +785,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.curation_formset):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
         if(self.submission_editor_date_formset):
-            print("POST LOAD EDITOR DATE")
             self.submission_editor_date_formset = self.submission_editor_date_formset(request.POST, queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
@@ -792,7 +802,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
             #This code handles the case where a curator-admin needs to edit their curation while a verification is available. If they don't change the verification, they can still save the curation.
             hide_v_errors = False
-            if not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user)):
+            if not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or (hasattr(self.object, 'submission_curation') and has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
                 if self.verification_formset and self.verification_formset[0].changed_data == []:
                     if not request.POST.get('submit_progress_verification'):
                         hide_v_errors = True
@@ -906,9 +916,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id}
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
         
-        if not self.read_only: #should never hit post if read_only but yea
+        if not self.can_progress:
             context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         
         context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS

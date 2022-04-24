@@ -55,6 +55,9 @@
     {% if read_only %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit" value="Save">
+    {% elif not can_progress %}
+        <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
+        <input type="submit" name="submit" value="Save">
     {% elif verification_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit" value="Save" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
