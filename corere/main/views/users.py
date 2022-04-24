@@ -75,7 +75,7 @@ def invite_assign_author(request, id=None):
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_display_name=manuscript.get_display_name())
                 if(u != new_user):
                     notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-                    send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                    send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))
@@ -129,7 +129,7 @@ def add_author(request, id=None):
             notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_display_name=manuscript.get_display_name())
             if(not new_user):
                 notify.send(request.user, verb='assigned', recipient=user, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[user.email], context={ 'notification_msg':notification_msg, 'user_email':user.email} )
+                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[user.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':user.email} )
 
             msg = _("manuscript_submitted_banner").format(manuscript_display_name=manuscript.get_display_name(), manuscript_id=manuscript.id)
             messages.add_message(request, messages.INFO, msg)
@@ -189,7 +189,7 @@ def assign_editor(request, id=None):
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="editor", email=request.user.email, manuscript_display_name=manuscript.get_display_name())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))
@@ -247,7 +247,7 @@ def assign_curator(request, id=None):
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="curator", email=request.user.email, manuscript_display_name=manuscript.get_display_name())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))
@@ -306,7 +306,7 @@ def assign_verifier(request, id=None):
                 logger.info(msg)
                 notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="verifier", email=request.user.email, manuscript_display_name=manuscript.get_display_name())
                 notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_email':u.email} )
+                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
                 ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))

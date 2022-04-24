@@ -855,21 +855,21 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
-                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                         elif(status == m.Submission.Status.IN_PROGRESS_VERIFICATION):
                             #Send message/notification to verifiers that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
                             notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
-                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                         elif(status == m.Submission.Status.REVIEWED_AWAITING_REPORT):
                             #Send message/notification to curators that the submission is ready for its report to be returned, This can happen when a verifier finishes verifying, or a curator finishes curating and skips verification
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
                             notification_msg = _("submission_objectReviewed_notification_forCurator").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
-                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     ### End Messaging ###
 
                 except TransitionNotAllowed as e:
@@ -1033,7 +1033,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #                     notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
 #                     notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
 #                     for u in recipients: #We have to loop to get the user model fields
-#                         send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+#                         send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
 #                     ## End Messaging ###
 
 #                     # self.msg = _("submission_submitted_banner")
@@ -1545,7 +1545,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         notification_msg = _("manuscript_update_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
-                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     else:
                         #If not complete, send message to author about submitting again
                         self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
@@ -1554,7 +1554,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
-                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                 ### End Messaging ###
 
             except TransitionNotAllowed as e:
@@ -1888,7 +1888,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=submission.manuscript.id, object_title=submission.manuscript.get_display_name(), object_url=submission.manuscript.get_landing_url())
         notify.send(request.user, verb='passed', recipient=recipients, target=submission.manuscript, public=False, description=notification_msg)
         for u in recipients: #We have to loop to get the user model fields
-            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
         ## End Messaging ###
 
         # self.msg = _("submission_submitted_banner")
