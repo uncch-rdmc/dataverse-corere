@@ -343,7 +343,7 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">Update Submission</button>    
     {% endif %}
 
-    {% if reviewSubmissionButton %}
+    {% if reviewSubmissionButtonMain %}
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
     {% endif %}
     {% if sendReportButton %}
@@ -372,6 +372,9 @@
     </button>
     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
         {% comment %} Maybe make view not show up when you can edit? {% endcomment %}
+        {% if reviewSubmissionButtonMore%}
+            <li><a class="dropdown-item" href="/submission/{{latest_submission_id}}/info/">Review Submission</a></li> 
+        {% endif %}
         <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
         <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/reportdownload/">Download Report</a></li>

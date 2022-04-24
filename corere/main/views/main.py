@@ -111,7 +111,8 @@ def manuscript_landing(request, id=None):
     #Submission button logic in top button row. Original from datatables.py
 
     editSubmissionButton = False
-    reviewSubmissionButton = False
+    reviewSubmissionButtonMain = False
+    reviewSubmissionButtonMore = False
     sendReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
@@ -133,28 +134,6 @@ def manuscript_landing(request, id=None):
 
             #TODO: I want a different label for edit/review even if they are the same page in the end
 
-            if (has_transition_perm(latestSubmission.add_edition_noop, request.user)
-                or has_transition_perm(latestSubmission.add_curation_noop, request.user)
-                or has_transition_perm(latestSubmission.add_verification_noop, request.user)):
-                reviewSubmissionButton = True
-            else:
-                try:
-                    if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
-                        reviewSubmissionButton = True
-                except m.Submission.submission_edition.RelatedObjectDoesNotExist:
-                    pass
-
-                try:
-                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_CURATION
-                        reviewSubmissionButton = True
-                except m.Submission.submission_curation.RelatedObjectDoesNotExist:
-                    pass
-
-                try:
-                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION
-                        reviewSubmissionButton = True
-                except m.Submission.submission_verification.RelatedObjectDoesNotExist:
-                    pass
             if has_transition_perm(latestSubmission.send_report, request.user):
                 sendReportButton = True
 
@@ -171,11 +150,48 @@ def manuscript_landing(request, id=None):
                         dataverseUploadManuscriptButtonMore = True
                     else:
                         dataverseUploadManuscriptButtonMain = True
-
-            if not (reviewSubmissionButton or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
-                editSubmissionButton = True
             if has_transition_perm(latestSubmission.finish_submission, request.user):
                 returnSubmissionButton = True
+            if (has_transition_perm(latestSubmission.add_edition_noop, request.user)
+                or has_transition_perm(latestSubmission.add_curation_noop, request.user)
+                or has_transition_perm(latestSubmission.add_verification_noop, request.user)):
+                if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
+                    reviewSubmissionButtonMore = True
+                else:
+                    reviewSubmissionButtonMain = True
+            else:
+                try:
+                    if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
+                        if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
+                            reviewSubmissionButtonMore = True
+                        else:
+                            reviewSubmissionButtonMain = True
+                except m.Submission.submission_edition.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_CURATION
+                        if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
+                            reviewSubmissionButtonMore = True
+                        else:
+                            reviewSubmissionButtonMain = True
+                except m.Submission.submission_curation.RelatedObjectDoesNotExist:
+                    pass
+
+                try:
+                    if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION
+                        if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
+                            reviewSubmissionButtonMore = True
+                        else:
+                            reviewSubmissionButtonMain = True
+                except m.Submission.submission_verification.RelatedObjectDoesNotExist:
+                    pass
+            if manuscript._status == m.Manuscript.Status.COMPLETED_REPORTED:
+                reviewSubmissionButtonMore = False
+                reviewSubmissionButtonMain = False
+                editSubmissionButton = False #Edit only via bottom menu
+            if not (returnSubmissionButton or sendReportButton or reviewSubmissionButtonMain or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
+                editSubmissionButton = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
             if latestSubmission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
                 dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
@@ -220,7 +236,8 @@ def manuscript_landing(request, id=None):
             'page_title': _("manuscript_landing_pageTitle"),
             'create_sub_allowed': str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
             'editSubmissionButton': editSubmissionButton,
-            'reviewSubmissionButton': reviewSubmissionButton,
+            'reviewSubmissionButtonMain': reviewSubmissionButtonMain,
+            'reviewSubmissionButtonMore': reviewSubmissionButtonMore,
             'sendReportButton': sendReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
