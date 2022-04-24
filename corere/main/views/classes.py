@@ -790,26 +790,31 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         if(fr.is_valid()):
                             fr.save(True)
 
+            #This code handles the case where a curator-admin needs to edit their curation while a verification is available. If they don't change the verification, they can still save the curation.
+            hide_v_errors = False
+            if not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user)):
+                if self.verification_formset and self.verification_formset[0].changed_data == []:
+                    if not request.POST.get('submit_progress_verification'):
+                        hide_v_errors = True
+
             #NOTE: The user.is_superuser and extra verification formset valid checks are in here to handle editing out of phase by curator-admins.
             #      Curator-admins need to be able to edit their curation while a verification is happening, and without this verification validation will stop saving.
-            #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.
-            #NOTE: We are assigning the form save results to the object (submission) because otherwise a stale version was being used to transition and the editor date was getting lost
-            #      This code will break if both self.form and self.submission_editor_date_formset actually have changes at the same time. But right now self.form is not really used
+            #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.        
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
-                and ((self.verification_formset is None or self.verification_formset.is_valid())
-                     or (request.user.is_superuser)) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
+                and (self.verification_formset is None or self.verification_formset.is_valid() or hide_v_errors) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 ):
-                self.object = self.form.save()#girderToken=request.COOKIES.get('girderToken'))
-                
+                self.form.save()
+
                 if(self.submission_editor_date_formset):
-                    self.object = self.submission_editor_date_formset.save()[0]
+                    o_id = self.object.id
+                    self.submission_editor_date_formset.save()
+                    self.object = self.model.objects.get(id=o_id) #We re-fetch the object here to ensure that the saves below don't wipe out the date. Not quite sure why this is needed
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
                     self.curation_formset.save()
-                if(self.verification_formset):
-                    if self.verification_formset and self.verification_formset.is_valid():
-                        self.verification_formset.save()
+                if(self.verification_formset and self.verification_formset.is_valid()):
+                    self.verification_formset.save()
 
                 try:
                     status = None
