@@ -864,8 +864,11 @@ class NoteForm(forms.ModelForm):
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
+            had_id = False
             #if(self.cleaned_data['id']):
+            
             if self.instance.id:
+                had_id = True
                 if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
                 # if self.cleaned_data['creator'] != user: #Works even though we mess with creator during init above, because we always keep your name
                 #     if not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.instance.is_private(checkers=self.checkers)):
@@ -874,7 +877,7 @@ class NoteForm(forms.ModelForm):
             super(NoteForm, self).save(commit, *args, **kwargs)
 
             # if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
-            if(not self.instance.id or 'scope' in self.changed_data):
+            if(not had_id or 'scope' in self.changed_data):
                 #Somewhat inefficient, but we just delete all view perms and readd new ones. Safest.
                 for role in c.get_roles():
                     group = Group.objects.get(name=role)
@@ -886,7 +889,9 @@ class NoteForm(forms.ModelForm):
                 else:
                     if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
                         for role in c.get_private_roles():
+                            print(self.instance)
                             group = Group.objects.get(name=role)
+                            print(group.__dict__)
                             assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
                     else:
                         #At this point we've saved already, maybe we shouldn't?

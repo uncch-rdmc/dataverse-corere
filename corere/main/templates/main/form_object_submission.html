@@ -61,7 +61,7 @@
     {% elif verification_formset %}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit" value="Save" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
-        <input type="submit" name="submit_progress_verification" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
+        <input type="submit" name="submit_progress_verification" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing the status will be locked. Is this ok?');">
     {% elif curation_formset %}
         {% comment %}cases to add: curation issues and no verification, curation issues and verification, no curation issues and no verification, no curation issues and no verification{%endcomment%}
         <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';">

@@ -360,7 +360,7 @@
     <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/pullcitation/'">Fetch Dataset Info</button>    
     {% endif %}
 
-    {% if m_edit_flag and not editSubmissionButton %} 
+    {% if m_edit_flag %} 
         <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
     {% endif %}
     {% if m_edit_files_flag %}

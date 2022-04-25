@@ -177,8 +177,8 @@
                 column_settings.visible = false;
             } else if(columns[c][0] === 'pub_name') {
                 column_settings.render = function ( data, type, row ) {
-                    return type === 'display' && data.length > 25 ?
-                        data.substr( 0, 25 ) +'…' :
+                    return type === 'display' && data.length > 60 ?
+                        data.substr( 0, 60 ) +'…' :
                         data;
                 }
             }

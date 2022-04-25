@@ -988,14 +988,18 @@ class Manuscript(AbstractCreateUpdateModel):
     #-----------------------
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CHANGE_M,instance)
+                                          and ((instance._status == instance.Status.NEW or instance._status == instance.Status.AWAITING_INITIAL or instance._status == instance.Status.AWAITING_RESUBMISSION)
+                                                or user.is_superuser)))
     def edit_noop(self):
         return self._status
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M_FILES,instance))
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CHANGE_M,instance)
+                                          and ((instance._status == instance.Status.NEW or instance._status == instance.Status.AWAITING_INITIAL or instance._status == instance.Status.AWAITING_RESUBMISSION)
+                                                or user.is_superuser)))
     def edit_files_noop(self):
         return self._status
 
@@ -1200,11 +1204,12 @@ class Note(AbstractCreateUpdateModel):
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
             assign_perm(c.PERM_NOTE_CHANGE_N, local.user, self) 
 
-            curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
+            #We assign non-admin curators the ability to change all notes. Maybe that should just be admins though?
+            curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self.manuscript)
             group_manuscript_curator = Group.objects.get(name=curator_group_name)
             assign_perm(c.PERM_NOTE_CHANGE_N, group_manuscript_curator, self)
 
-            #Note: We don't assign the rest of view perms here because they are handled in the form save  and there is logic in there that changes the scope based on public/private
+            #Note: We don't assign the rest of view perms here because they are handled in the form save and there is logic in there that changes the scope based on public/private
             #      Eventually we may want to move that logic into the model
 
     def is_private(self, checkers=None):
