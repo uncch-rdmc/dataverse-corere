@@ -459,7 +459,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 else:
                     errors.append(_('manuscript_noFiles_error'))
                 
-            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscriptt, 'Upload Files')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_display_name': self.object.get_display_name(), 
                 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
