@@ -542,7 +542,8 @@ class Submission(AbstractCreateUpdateModel):
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
         
-        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+        if not settings.SKIP_GIT:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
 
         #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
         if self.submission_curation._status == Curation.Status.NO_ISSUES: #We've already checked that it doesn't need verification above
@@ -570,7 +571,8 @@ class Submission(AbstractCreateUpdateModel):
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_VERIFICATION
         
-        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+        if not settings.SKIP_GIT:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
 
         #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
         if self.submission_curation._status == Curation.Status.NO_ISSUES and self.submission_verification._status == Verification.Status.SUCCESS:

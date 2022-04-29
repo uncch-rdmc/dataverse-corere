@@ -336,35 +336,35 @@
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
     {% if createSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/update/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
+    <button type="button" class="btn btn-secondary buttons-collection" id="createSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
 
     {% if editSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">Update Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="editSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">Update Submission</button>    
     {% endif %}
 
     {% if reviewSubmissionButtonMain %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="reviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'">Review Submission</button>    
     {% endif %}
     {% if sendReportButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('sendreport')">Send Report</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')">Send Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
     {% endif %}
 
     {% if dataverseUploadManuscriptButtonMain %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Upload To Dataverse</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="dataverseUploadManuscriptButtonMain" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">Upload To Dataverse</button>    
     {% endif %}
     {% if dataversePullCitationButtonMain %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/pullcitation/'">Fetch Dataset Info</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="dataversePullCitationButtonMain" onclick="location.href='/manuscript/{{manuscript_id}}/pullcitation/'">Fetch Dataset Info</button>    
     {% endif %}
 
     {% if m_edit_flag %} 
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
+        <button type="button" class="btn btn-secondary buttons-collection" id="editManuscriptButton" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
     {% endif %}
     {% if m_edit_files_flag %}
-       <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
+       <button type="button" class="btn btn-secondary buttons-collection" id="editManuscriptFilesButton" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
     {% endif %}
 
     <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
@@ -372,27 +372,26 @@
     </button>
     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
         {% comment %} Maybe make view not show up when you can edit? {% endcomment %}
-        {% if reviewSubmissionButtonMore%}
-            <li><a class="dropdown-item" href="/submission/{{latest_submission_id}}/info/">Review Submission</a></li> 
+        {% if reviewSubmissionButtonMore %}
+            <li><a class="dropdown-item" id="reviewSubmissionButtonLinkMore" href="/submission/{{latest_submission_id}}/info/">Review Submission</a></li> 
         {% endif %}
-        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
+        <li><a class="dropdown-item" id="viewManuscriptButtonLinkMore" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
-        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/reportdownload/">Download Report</a></li>
+        <li><a class="dropdown-item" id="reportDownloadButtonLinkMore" href="/manuscript/{{manuscript_id}}/reportdownload/">Download Report</a></li>
         {% if launchContainerCurrentSubButton %}
             {% if wholetale %}
-            <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
-            <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/wtdownloadall/')">Download Container Files</a></li>
+            <li><a class="dropdown-item" id="launchContainerButtonLinkMore" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" id="downloadContainerButtonLinkMore" onclick="window.open('/submission/{{latest_submission_id}}/wtdownloadall/')">Download Container Files</a></li>
             {% else %}
-            <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" id="launchContainerButtonLinkMore" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
             {% endif %}
         {% endif %}
         {% if dataverseUploadManuscriptButtonMore %}
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/confirm/">Reupload To Dataverse</a></li>
+            <li><a class="dropdown-item" id="dataverseUploadManuscriptButtonLinkMore" href="/manuscript/{{manuscript_id}}/confirm/">Reupload To Dataverse</a></li>
         {% endif %}
         {% if dataversePullCitationButtonMore %}
-            <li><a class="dropdown-item" href='/manuscript/{{manuscript_id}}/pullcitation/'>Fetch Dataset Info</a></li>
+            <li><a class="dropdown-item" id="dataversePullCitationButtonLinkMore" href='/manuscript/{{manuscript_id}}/pullcitation/'>Fetch Dataset Info</a></li>
         {% endif %}
-    
     </ul>
 
     {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
@@ -400,10 +399,10 @@
             Access
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a></li> 
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a></li>
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a></li>
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a></li>
+            <li><a class="dropdown-item" id="" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a></li> 
+            <li><a class="dropdown-item" id="" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a></li>
+            <li><a class="dropdown-item" id="" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a></li>
+            <li><a class="dropdown-item" id="" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a></li>
         </ul>
     {% endif %}
     </div>    

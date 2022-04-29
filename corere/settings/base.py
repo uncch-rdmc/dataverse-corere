@@ -298,3 +298,6 @@ WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
 #SESSION_COOKIE_SAMESITE = 'None'
 
 SKIP_EDITION = False
+
+#This is a selenium-only flag, do not use in a real environment
+SKIP_GIT = False
