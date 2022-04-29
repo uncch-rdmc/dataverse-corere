@@ -30,7 +30,6 @@ django-rest-framework-social-oauth2==1.1.0
 django-simple-history==3.0.0
 django-sql-explorer==2.4.1
 django-templated-email==3.0.0
-#django-weasyprint==2.1.0
 djangorestframework==3.13.1
 girder-client==3.1.8
 gitpython==3.1.27
@@ -55,4 +54,5 @@ social-auth-core==4.2.0
 sseclient-py==1.7.2
 sqlparse==0.4.2
 urllib3==1.26.8
-#weasyprint==54.3
+#We require this slightly over version explicitly to ensure CORE2 uses the right version of libpango when running django-renderpdf. This was an issue on our test server
+weasyprint==52.5 

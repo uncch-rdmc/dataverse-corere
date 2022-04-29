@@ -207,22 +207,19 @@ class LoggingInTestCase(LiveServerTestCase):
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
 
-        ##### MANUSCRIPT LANDING / GENERATE REPORT / RETURN SUBMISSION #####
+        ##### MANUSCRIPT LANDING / CONFIRM DATAVERSE NEXT STEP #####
 
-        time.sleep(500000)
-        manuscript_send_report_button = selenium.find_element_by_id('sendReportButton')
-        manuscript_send_report_button.send_keys(Keys.RETURN)
-        time.sleep(.5) #Needed to wait for this button to appear on the same page
-        manuscript_return_submission_button = selenium.find_element_by_id('returnSubmissionButton')
-        manuscript_return_submission_button.send_keys(Keys.RETURN)
+        dataverse_upload_manuscript_button = selenium.find_element_by_id('dataverseUploadManuscriptButtonMain')
+        dataverse_upload_manuscript_button.send_keys(Keys.RETURN)
+
+        #time.sleep(500000)
 
 
 
 
 
 
-
-
+        
 
 
 
