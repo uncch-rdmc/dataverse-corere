@@ -5,5 +5,4 @@ django-debug-toolbar==3.2.4
 graphviz==0.19.1 #for visualizing state transitions
 mock==4.0.3
 selenium==4.1.3
-selenium-requests==1.4.1
-selenium-wire==4.6.3 #gives ability to inspect request/response
+selenium-requests==1.4.1 #ability to do non-get requests in selenium

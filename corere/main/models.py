@@ -1,5 +1,4 @@
-import logging
-import uuid
+import logging, uuid, pytz
 # from . import constants as c
 from django.conf import settings
 from django.db import models
@@ -85,7 +84,7 @@ class User(AbstractUser):
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
     #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
     #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
-    last_oauthproxy_forced_signin = models.DateTimeField(default=datetime(1900, 1, 1))
+    last_oauthproxy_forced_signin = models.DateTimeField(default=datetime(1900, 1, 1, tzinfo=pytz.UTC))
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both

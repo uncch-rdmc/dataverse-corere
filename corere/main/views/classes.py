@@ -1592,7 +1592,7 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
 
     def get(self, request, *args, **kwargs):
         if 'postauth' in request.GET:
-            request.user.last_oauthproxy_forced_signin = datetime.now()
+            request.user.last_oauthproxy_forced_signin = datetime.now() #maybe change to timezone.now() https://stackoverflow.com/questions/18622007/
             request.user.save()
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)

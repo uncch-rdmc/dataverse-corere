@@ -1,7 +1,6 @@
 import time, unittest
 from django.test import LiveServerTestCase
-from seleniumrequests.request import RequestsSessionMixin
-from seleniumwire.webdriver import Chrome
+from seleniumrequests import Chrome
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -12,18 +11,13 @@ from corere.main import models as m
 from corere.main import constants as c
 from corere.apps.wholetale import models as wtm
 
-# Combines selenium-wire and selenium-requests functionality.
-# If you need to test another browser, create another one of these
-class RequestWireWebDriver_Chrome(Chrome, RequestsSessionMixin):
-    pass
-
 # Part of this testing is based upon finding elements. If they aren't available, the test errors out.
 # TODO: Future tests streamline login: https://stackoverflow.com/questions/22494583/login-with-code-when-using-liveservertestcase-with-django
 class LoggingInTestCase(LiveServerTestCase):
     def setUp(self):
         self.options = Options()
         self.options.headless = True
-        self.selenium = RequestWireWebDriver_Chrome(options=self.options)
+        self.selenium = Chrome(options=self.options)
         m.User.objects.create_superuser('admin', 'admin@test.test', 'password')
 
         #We need add the other option for compute env with the current implementation
@@ -268,7 +262,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### CURATOR_ADMIN LOGIN #####
 
-        c_selenium = RequestWireWebDriver_Chrome(options=self.options)
+        c_selenium = Chrome(options=self.options)
 
         c_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", c_selenium.title)
@@ -301,7 +295,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER1 LOGIN #####
 
-        v1_selenium = RequestWireWebDriver_Chrome(options=self.options)
+        v1_selenium = Chrome(options=self.options)
 
         v1_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v1_selenium.title)
@@ -334,7 +328,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER1 LOGIN #####
 
-        v2_selenium = RequestWireWebDriver_Chrome(options=self.options)
+        v2_selenium = Chrome(options=self.options)
 
         v2_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v2_selenium.title)
@@ -401,21 +395,6 @@ class LoggingInTestCase(LiveServerTestCase):
         #TODO: Test not logged in user
         self.assertEqual(manuscript._status, m.Manuscript.Status.NEW)
 
-
-        # Re-defining these lists every time is going to get way too cumbersome
-        # Can we create a few default lists that we can then override the parameters for to test things?
-        # ... or will that be too much of a problem when debugging?
-        # Cases:
-        # - General:
-        #   - No access (unauthenticated)
-        #   - General user (no site actions?)
-        #   - Full access (admin)
-        # - Manuscript:
-        #   - No access (unauth, unassigned)
-        #   - ...
-        # 
-        # - Maybe we should mostly just do inheritance off the "no access" 
-
         #assert_dict_sub_both = {'info': 404}
         #time.sleep(500000)
         self.check_access(v1_selenium, assert_dict=g_dict_normal_access)
@@ -439,7 +418,7 @@ class LoggingInTestCase(LiveServerTestCase):
         #       - Ideal is when there is a sub/manuscript status change? But is that too messy?
         #         - Maybe we should create a separate function that calls all our endpoints (pass browser (e.g. user), manuscript or submission)
 
-        time.sleep(500000)
+        #time.sleep(500000)
 
     # Not a test but a helper
     # assert_dict example: {'edit': 200, 'update': 500}
@@ -458,18 +437,18 @@ class LoggingInTestCase(LiveServerTestCase):
 
         for url_post, status_dict in assert_dict.items():
             full_url = self.live_server_url + url_pre + url_post
-
-            for method, response_code in status_dict.items():
+            for method, status_code in status_dict.items():
                 # print(full_url)
-                browser.request(method, full_url)
-                print(method)
-                print(str(response_code))
-                print(response) #Test, maybe we could get rid of wire? at least in here?
-                print("=======================")
-                for request in browser.requests:
-                    if request.url == full_url:
-                        self.assertEqual(request.response.status_code, status, msg=full_url)
-                        del browser.requests
+                try:
+                    response = browser.request(method, full_url)
+                except Exception as e:
+                    print("Error in check_access request. URL: {}, Method: {}".format(full_url, method))
+                    raise e
+                # print(method)
+                # print(str(status_code))
+                # print(response) #Test, maybe we could get rid of wire? at least in here?
+                # print("=======================")
+                self.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
 
 
 
@@ -488,10 +467,10 @@ class LoggingInTestCase(LiveServerTestCase):
 
 ##### General Access #####
 
-g_dict_no_access = { #'': 200, #blows up due to oauth code
+g_dict_no_access = { #'': {'GET': 200}, #blows up due to oauth code
     'manuscript_table/': {'GET': 404}, 
     'manuscript/create/': {'GET': 403}, 
-    #'account_user_details/': 200, #blow up due to oauth code
+    #'account_user_details/': {'GET': 200}, #blow up due to oauth code
     'notifications/': {'GET': 404}, 
     'site_actions/': {'GET': 404}, 
     'site_actions/inviteeditor/': {'GET': 404}, 
@@ -509,10 +488,10 @@ g_dict_normal_editor_access = g_dict_normal_access.copy()
 g_dict_normal_editor_access.update({
     'manuscript/create/': {'GET': 200}, 
 })
-g_dict_admin_access = { #'': 200, #blows up due to oauth code
+g_dict_admin_access = { #'': {'GET': 200}, #blows up due to oauth code
     'manuscript_table/': {'GET': 200}, 
     'manuscript/create/': {'GET': 200}, 
-    #'account_user_details/': 200, #blow up due to oauth code
+    #'account_user_details/': {'GET': 200}, #blow up due to oauth code
     'notifications/': {'GET': 200}, 
     'site_actions/': {'GET': 200}, 
     'site_actions/inviteeditor/': {'GET': 200}, 
@@ -522,34 +501,55 @@ g_dict_admin_access = { #'': 200, #blows up due to oauth code
 }
 
 m_dict_no_access = {
-    '': 404,
-    'submission_table': 404,
-    'edit': 404, 
-    'update': 404,
-    'uploadfiles': 404,
-    'uploader': 404,
-    'fileslist': 404,
-    'view': 404,
-    'viewfiles': 404,
-    'inviteassignauthor': 404,
-    'addauthor': 404,
-    #'unassignauthor': 404, #this needs a user id
-    'assigneditor': 404,
-    #'unassigneditor': 404, #this needs a user id
-    'assigncurator': 404,
-    #'unassigncurator': 404, #this needs a user id
-    'assignverifier': 404,
-    #'unassignverifier': 404, #this needs a user id
-    'deletefile': 404,
-    'downloadfile': 404,
-    'downloadall': 404,
-    'reportdownload': 404,
-    'deletenotebook': 404,
-    'file_table': 404,
-    'confirm': 404,
-    'pullcitation': 404
+    '': {'GET': 404},
+    #'submission_table': {'GET': 404}, #TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
+    'edit/': {'GET': 404}, 
+    'update/': {'GET': 404},
+    'uploadfiles/': {'GET': 404},
+    'uploader/': {'GET': 404},
+    'fileslist/': {'GET': 404},
+    'view/': {'GET': 404},
+    'viewfiles/': {'GET': 404},
+    'inviteassignauthor/': {'GET': 404},
+    'addauthor/': {'GET': 404},
+    #'unassignauthor/': {'GET': 404}, #this needs a user id
+    'assigneditor/': {'GET': 404},
+    #'unassigneditor/': {'GET': 404}, #this needs a user id
+    'assigncurator/': {'GET': 404},
+    #'unassigncurator/': {'GET': 404}, #this needs a user id
+    'assignverifier/': {'GET': 404},
+    #'unassignverifier/': {'GET': 404}, #this needs a user id
+    'deletefile/': {'GET': 404},
+    'downloadfile/': {'GET': 404},
+    'downloadall/': {'GET': 404},
+    'reportdownload/': {'GET': 404},
+    #'deletenotebook/': {'GET': 404}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
+    #'file_table/': {'GET': 404},  #TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
+    'confirm/': {'GET': 404},
+    'pullcitation/': {'GET': 404}
     }
 
+s_dict_no_access = {
+    'info/': {'GET': 404},
+    'uploadfiles/': {'GET': 404},
+    'confirmfiles/': {'GET': 404},
+    'uploader/': {'GET': 404},
+    'fileslist/': {'GET': 404},
+    'view/': {'GET': 404},
+    'viewfiles/': {'GET': 404},
+    'deletefile/': {'GET': 404},
+    'deleteallfiles/': {'GET': 404},
+    'downloadfile/': {'GET': 404},
+    'downloadall/': {'GET': 404},
+    'sendreport/': {'GET': 404},
+    'finish/': {'GET': 404},
+    'notebook/': {'GET': 404},
+    'notebooklogin/': {'GET': 404},
+    'newfilecheck/': {'GET': 404},
+    'wtstream/': {'GET': 404},
+    'wtdownloadall/': {'GET': 404},
+    'file_table/': {'GET': 404}
+}
 
 
 

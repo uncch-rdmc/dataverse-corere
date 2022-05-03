@@ -2,6 +2,7 @@
 
 import autoslug.fields
 import datetime
+import pytz
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
@@ -192,7 +193,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='historicaluser',
             name='last_oauthproxy_forced_signin',
-            field=models.DateTimeField(default=datetime.datetime(1900, 1, 1, 0, 0)),
+            field=models.DateTimeField(default=datetime.datetime(1900, 1, 1, 0, 0, tzinfo=pytz.UTC)),
         ),
         migrations.AddField(
             model_name='historicaluser',
@@ -272,7 +273,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='last_oauthproxy_forced_signin',
-            field=models.DateTimeField(default=datetime.datetime(1900, 1, 1, 0, 0)),
+            field=models.DateTimeField(default=datetime.datetime(1900, 1, 1, 0, 0, tzinfo=pytz.UTC)),
         ),
         migrations.AddField(
             model_name='user',
