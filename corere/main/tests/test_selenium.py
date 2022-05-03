@@ -1,21 +1,29 @@
-from django.test import LiveServerTestCase
-from seleniumwire import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support import expected_conditions as EC
 import time, unittest
+from django.test import LiveServerTestCase
+from seleniumrequests.request import RequestsSessionMixin
+from seleniumwire.webdriver import Chrome
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
 
 from corere.main import models as m
 from corere.main import constants as c
 from corere.apps.wholetale import models as wtm
 
+# Combines selenium-wire and selenium-requests functionality.
+# If you need to test another browser, create another one of these
+class RequestWireWebDriver_Chrome(Chrome, RequestsSessionMixin):
+    pass
 
 # Part of this testing is based upon finding elements. If they aren't available, the test errors out.
 # TODO: Future tests streamline login: https://stackoverflow.com/questions/22494583/login-with-code-when-using-liveservertestcase-with-django
 class LoggingInTestCase(LiveServerTestCase):
     def setUp(self):
-        self.selenium = webdriver.Chrome()
+        self.options = Options()
+        self.options.headless = True
+        self.selenium = RequestWireWebDriver_Chrome(options=self.options)
         m.User.objects.create_superuser('admin', 'admin@test.test', 'password')
 
         #We need add the other option for compute env with the current implementation
@@ -30,6 +38,7 @@ class LoggingInTestCase(LiveServerTestCase):
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
     # TODO: Hardcode no edition setting
+    # TODO: UNDO THIS SKIP
     @unittest.skip("testing others now")
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
@@ -202,8 +211,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
 
-        manuscript_review_submission = selenium.find_element_by_id
-        ('reviewSubmissionButtonMain')
+        manuscript_review_submission = selenium.find_element_by_id('reviewSubmissionButtonMain')
         manuscript_review_submission.send_keys(Keys.RETURN)
 
         ##### VERIFIER REVIEW - NO ISSUES #####
@@ -229,6 +237,7 @@ class LoggingInTestCase(LiveServerTestCase):
     # This uses selenium-wire to get responses, which is technically bad form for selenium but is helpful for us
     # Not tested: Edition, Dataverse, Files, Whole Tale
     # TODO: Hardcode no edition setting
+    #@unittest.skip("testing others now")
     def test_3_user_workflow_with_access_checks(self):
         admin_selenium = self.selenium
 
@@ -259,7 +268,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### CURATOR_ADMIN LOGIN #####
 
-        c_selenium = webdriver.Chrome()
+        c_selenium = RequestWireWebDriver_Chrome(options=self.options)
 
         c_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", c_selenium.title)
@@ -292,7 +301,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER1 LOGIN #####
 
-        v1_selenium = webdriver.Chrome()
+        v1_selenium = RequestWireWebDriver_Chrome(options=self.options)
 
         v1_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v1_selenium.title)
@@ -325,7 +334,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER1 LOGIN #####
 
-        v2_selenium = webdriver.Chrome()
+        v2_selenium = RequestWireWebDriver_Chrome(options=self.options)
 
         v2_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v2_selenium.title)
@@ -391,12 +400,26 @@ class LoggingInTestCase(LiveServerTestCase):
 
         #TODO: Test not logged in user
         self.assertEqual(manuscript._status, m.Manuscript.Status.NEW)
-        assert_dict_manu_both = {'edit': 404, 'update': 404}
-        assert_dict_gen_both = {'manuscript_table': 404, 'manuscript/create': 404}
+
+
+        # Re-defining these lists every time is going to get way too cumbersome
+        # Can we create a few default lists that we can then override the parameters for to test things?
+        # ... or will that be too much of a problem when debugging?
+        # Cases:
+        # - General:
+        #   - No access (unauthenticated)
+        #   - General user (no site actions?)
+        #   - Full access (admin)
+        # - Manuscript:
+        #   - No access (unauth, unassigned)
+        #   - ...
+        # 
+        # - Maybe we should mostly just do inheritance off the "no access" 
+
         #assert_dict_sub_both = {'info': 404}
         #time.sleep(500000)
-        self.check_access(v1_selenium, manuscript=manuscript, assert_dict=assert_dict_manu_both)
-        self.check_access(v1_selenium, assert_dict=assert_dict_gen_both)
+        self.check_access(v1_selenium, assert_dict=g_dict_normal_access)
+        self.check_access(v1_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
 
         ##### ASSIGN AUTHOR (SELF) TO MANUSCRIPT #####
 
@@ -433,24 +456,99 @@ class LoggingInTestCase(LiveServerTestCase):
         else:
             url_pre = '/'
 
-        for url_post, status in assert_dict.items():
-            full_url = self.live_server_url + url_pre + url_post + '/'
-            # print(full_url)
-            browser.get(full_url)
-            for request in browser.requests:
-                if request.url == full_url:
-                    self.assertEqual(request.response.status_code, status, msg=full_url)
-                    del browser.requests
+        for url_post, status_dict in assert_dict.items():
+            full_url = self.live_server_url + url_pre + url_post
+
+            for method, response_code in status_dict.items():
+                # print(full_url)
+                browser.request(method, full_url)
+                print(method)
+                print(str(response_code))
+                print(response) #Test, maybe we could get rid of wire? at least in here?
+                print("=======================")
+                for request in browser.requests:
+                    if request.url == full_url:
+                        self.assertEqual(request.response.status_code, status, msg=full_url)
+                        del browser.requests
 
 
 
 
 
-        
+###############################
+##### ACCESS DICTIONARIES #####
+###############################
 
+# These dictionaries are used with check_access to test endpoints throughout the workflow.
+# We use "inheritance" to define some of the dictionaries as slight alterations of other ones.
+# These dictionaries don't check everything, as some endpoints progress code when called.
 
+#TODO: What are we doing about get/post/put/delete
+#      - Nested dictionary
 
+##### General Access #####
 
+g_dict_no_access = { #'': 200, #blows up due to oauth code
+    'manuscript_table/': {'GET': 404}, 
+    'manuscript/create/': {'GET': 403}, 
+    #'account_user_details/': 200, #blow up due to oauth code
+    'notifications/': {'GET': 404}, 
+    'site_actions/': {'GET': 404}, 
+    'site_actions/inviteeditor/': {'GET': 404}, 
+    'site_actions/invitecurator/': {'GET': 404}, 
+    'site_actions/inviteverifier/': {'GET': 404}, 
+    'user_table/': {'GET': 404}
+}
+g_dict_normal_access = g_dict_no_access.copy()
+g_dict_normal_access.update({
+    'manuscript_table/': {'GET': 200},
+    'notifications/': {'GET': 200}, 
+    'user_table/': {'GET': 200}
+})
+g_dict_normal_editor_access = g_dict_normal_access.copy()
+g_dict_normal_editor_access.update({
+    'manuscript/create/': {'GET': 200}, 
+})
+g_dict_admin_access = { #'': 200, #blows up due to oauth code
+    'manuscript_table/': {'GET': 200}, 
+    'manuscript/create/': {'GET': 200}, 
+    #'account_user_details/': 200, #blow up due to oauth code
+    'notifications/': {'GET': 200}, 
+    'site_actions/': {'GET': 200}, 
+    'site_actions/inviteeditor/': {'GET': 200}, 
+    'site_actions/invitecurator/': {'GET': 200}, 
+    'site_actions/inviteverifier/': {'GET': 200}, 
+    'user_table/': {'GET': 200}
+}
+
+m_dict_no_access = {
+    '': 404,
+    'submission_table': 404,
+    'edit': 404, 
+    'update': 404,
+    'uploadfiles': 404,
+    'uploader': 404,
+    'fileslist': 404,
+    'view': 404,
+    'viewfiles': 404,
+    'inviteassignauthor': 404,
+    'addauthor': 404,
+    #'unassignauthor': 404, #this needs a user id
+    'assigneditor': 404,
+    #'unassigneditor': 404, #this needs a user id
+    'assigncurator': 404,
+    #'unassigncurator': 404, #this needs a user id
+    'assignverifier': 404,
+    #'unassignverifier': 404, #this needs a user id
+    'deletefile': 404,
+    'downloadfile': 404,
+    'downloadall': 404,
+    'reportdownload': 404,
+    'deletenotebook': 404,
+    'file_table': 404,
+    'confirm': 404,
+    'pullcitation': 404
+    }
 
 
 

@@ -5,9 +5,10 @@ from corere.main.views import datatables, main, users, classes
 urlpatterns = [ 
     path('', main.index, name="index"),
     path('manuscript_table/', datatables.ManuscriptJson.as_view(), name="manuscript_table"),
+    path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
+
     path('manuscript/<int:id>/', main.manuscript_landing, name="manuscript_landing"),
     path('manuscript/<int:manuscript_id>/submission_table/', datatables.SubmissionJson.as_view(), name="submission_table"),
-    path('manuscript/create/', classes.ManuscriptCreateView.as_view(), name="manuscript_create"),
     path('manuscript/<int:id>/edit/', classes.ManuscriptEditView.as_view(), name="manuscript_edit"),
     path('manuscript/<int:id>/update/', classes.ManuscriptUpdateView.as_view(), name="manuscript_update"), #almost same as edit but part of create submission flow
     path('manuscript/<int:id>/uploadfiles/', classes.ManuscriptUploadFilesView.as_view(), name="manuscript_uploadfiles"),
@@ -70,7 +71,7 @@ urlpatterns = [
     path('site_actions/inviteeditor/', users.invite_editor, name="inviteeditor"),
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
-    path('switch_role/', main.switch_role, name="switch_role"),
+    #path('switch_role/', main.switch_role, name="switch_role"),
 
     path('user_table/', datatables.UserJson.as_view(), name="user_table"),
     
