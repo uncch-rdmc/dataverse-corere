@@ -219,10 +219,10 @@ class GenericManuscriptView(GenericCorereObjectView):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
-            if self.request.user.is_superuser or self.object.has_submissions():
-                self.author_formset = f.ReadOnlyAuthorFormSet
-                self.data_source_formset = f.ReadOnlyDataSourceFormSet
-                self.keyword_formset = f.ReadOnlyKeywordFormSet
+            #if self.request.user.is_superuser or self.object.has_submissions(): #NOTE: This was disabled because verifiers couldn't view the manuscript. My understanding is these should be visible to all
+            self.author_formset = f.ReadOnlyAuthorFormSet
+            self.data_source_formset = f.ReadOnlyDataSourceFormSet
+            self.keyword_formset = f.ReadOnlyKeywordFormSet
                 # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
@@ -263,6 +263,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
         if self.request.user.is_superuser or not self.create:
+            logger.debug("OBJECT YEA: " + str(self.object))
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
@@ -1283,10 +1284,10 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         if not self.read_only:
             file = request.FILES.get('file')
             fullRelPath = request.POST.get('fullPath','')
-            print(file)
-            print(fullRelPath)
+            # print(file)
+            # print(fullRelPath)
             path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-            print(path)
+            # print(path)
             if gitfiles := m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
                 g.delete_submission_file(self.object.manuscript, fullRelPath+file.name)
                 gitfiles[0].delete()    

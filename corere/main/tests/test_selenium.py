@@ -1,6 +1,5 @@
 import time, unittest
-from django.test import LiveServerTestCase
-#from seleniumrequests import Chrome
+from django.test import LiveServerTestCase, override_settings
 from seleniumwire import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -8,12 +7,14 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
 
+from corere.main.tests.selenium_access_utils import *
 from corere.main import models as m
 from corere.main import constants as c
 from corere.apps.wholetale import models as wtm
 
 # Part of this testing is based upon finding elements. If they aren't available, the test errors out.
 # TODO: Future tests streamline login: https://stackoverflow.com/questions/22494583/login-with-code-when-using-liveservertestcase-with-django
+
 class LoggingInTestCase(LiveServerTestCase):
     def setUp(self):
         self.options = Options()
@@ -234,10 +235,15 @@ class LoggingInTestCase(LiveServerTestCase):
     # ...
     # This code does deep access tests as the manuscript/submission status changes
     # TODO: Hardcode no edition setting
+    # TODO: This test downloads zips, do we need to get rid of them?
     #@unittest.skip("testing others now")
     def test_3_user_workflow_with_access_checks(self):
         admin_selenium = self.selenium
-
+        c_selenium = webdriver.Chrome(options=self.options)
+        v_in_selenium = webdriver.Chrome()#(options=self.options)
+        v_out_selenium= webdriver.Chrome(options=self.options)
+        anon_selenium = webdriver.Chrome(options=self.options)
+        
         ##### ADMIN LOGIN #####
 
         admin_selenium.get(self.live_server_url + "/admin")
@@ -264,8 +270,6 @@ class LoggingInTestCase(LiveServerTestCase):
         role_e.user_set.add(curator_admin) 
 
         ##### CURATOR_ADMIN LOGIN #####
-
-        c_selenium = webdriver.Chrome(options=self.options) #webdriver.Chrome()
 
         c_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", c_selenium.title)
@@ -299,8 +303,6 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER IN LOGIN #####
 
-        v_in_selenium = webdriver.Chrome(options=self.options)
-
         v_in_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v_in_selenium.title)
         current_url = v_in_selenium.current_url
@@ -333,8 +335,6 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER_OUT LOGIN #####
 
-        v_out_selenium= webdriver.Chrome(options=self.options)
-
         v_out_selenium.get(self.live_server_url + "/admin")
         self.assertIn("Log in", v_out_selenium.title)
         current_url = v_out_selenium.current_url
@@ -347,12 +347,6 @@ class LoggingInTestCase(LiveServerTestCase):
         admin_login_submit.send_keys(Keys.RETURN)
 
         self.assertIn("ion | Django site admin", v_out_selenium.title)
-
-        ##### ANON BROWSER (NO LOGIN) #####
-
-        # This non-logged-in browser has no access to the system
-        anon_selenium = webdriver.Chrome(options=self.options)
-        #anon_selenium.get(self.live_server_url+"/manuscript/create/") #If we don't go to a page once, we can run into cookie issues while testing later
 
         #############################################
         ##### CURATOR_ADMIN MANUSCRIPT CREATION #####
@@ -401,37 +395,21 @@ class LoggingInTestCase(LiveServerTestCase):
         group_manuscript_verifier = m.Group.objects.get(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(manuscript.id)) 
         group_manuscript_verifier.user_set.add(verifier_in) 
         
+        ##### TEST GENERAL CORE2 ACCESS #####
+
+        check_access(self, anon_selenium, assert_dict=g_dict_no_access_anon)
+        check_access(self, c_selenium, assert_dict=g_dict_admin_access)
+        check_access(self, v_in_selenium, assert_dict=g_dict_normal_access)
+        check_access(self, v_out_selenium, assert_dict=g_dict_normal_access)
+
         ##### TEST ACCESS MANUSCRIPT : NEW #####
 
-        #TODO: When should I be testing g_dict? Not every phase :P
         self.assertEqual(manuscript._status, m.Manuscript.Status.NEW)
 
-        self.check_access(anon_selenium, assert_dict=g_dict_no_access_anon)
-        self.check_access(anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
-
-        #TODO: I need to figure out how I'm handling pages that are only available at certain phases
-        #      ...
-        #      I could create separate dictionaries for each phase at the bottom
-        #      I could interweave the changes in the tests
-        #      ...
-        #      I think the former is better, capturing all the logic in one place?
-
-        # ALSO
-
-        #TODO SATURDAY
-        # - Implement a different way to do non-get requests in selenium
-        #   - https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
-        #     - It looks like you can eval javascript to do other request types...
-
-
-        self.check_access(c_selenium, assert_dict=g_dict_admin_access)
-        #time.sleep(500000)
-        self.check_access(c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
-        # At this point both verifiers should be the same
-        self.check_access(v_in_selenium, assert_dict=g_dict_normal_access)
-        self.check_access(v_in_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
-        self.check_access(v_out_selenium, assert_dict=g_dict_normal_access)
-        self.check_access(v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, v_in_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         ##### ASSIGN AUTHOR (SELF) TO MANUSCRIPT #####
 
@@ -446,222 +424,19 @@ class LoggingInTestCase(LiveServerTestCase):
         manuscript_create_submit_continue = c_selenium.find_element_by_id('createSubmissionButton')
         manuscript_create_submit_continue.send_keys(Keys.RETURN)
 
+        manuscript = m.Manuscript.objects.latest('updated_at')
+        self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_INITIAL)
+
+        check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, v_in_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
+        #TODO: Right now our verifier without access seems to have the same access abilities as our one with access. That souldn't happen
+        # check_access(self, v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        # check_access(self, c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+
         # TODO create submission etc
         #     - When are we testing access for the two verifiers?
         #       - Ideal is when there is a sub/manuscript status change? But is that too messy?
         #         - Maybe we should create a separate function that calls all our endpoints (pass browser (e.g. user), manuscript or submission)
-
-        #time.sleep(500000)
-
-    ## Old check_access using selenium_requests which didn't work great
-    ## Not a test, but a helper
-    ## assert_dict example: {'edit': 200, 'update': 500}
-    # def check_access(self, browser, manuscript=None, submission=None, assert_dict=None):
-    #     if assert_dict == None:
-    #         raise Exception('assert_dict must be set for check_access')            
-    #     if manuscript != None and submission != None:
-    #         raise Exception('both manuscript and submission cannot be set at the same time for check_access')
-
-    #     if manuscript != None:
-    #         url_pre = '/manuscript/' + str(manuscript.id) + '/'
-    #     elif submission != None:
-    #         url_pre = '/submission/' + str(submission.id) + '/'
-    #     else:
-    #         url_pre = '/'
-
-    #     for url_post, status_dict in assert_dict.items():
-    #         full_url = self.live_server_url + url_pre + url_post
-    #         for method, status_code in status_dict.items():
-    #             print(full_url)
-    #             print("...")
-    #             try:
-    #                 response = browser.request(method, full_url)
-    #             except Exception as e:
-    #                 print("Error in check_access request. URL: {}, Method: {}".format(full_url, method))
-    #                 raise e
-    #             if status_code == 302:
-    #                 #If we expect a 302, we look for it in the history
-    #                 if response.history:
-    #                     self.assertEqual(response.history[0].status_code, status_code, msg="Checking 302 status in history. URL: {}, Method: {}".format(full_url, method))
-    #                     self.assertEqual(response.status_code, 200, msg="Checking 200 status on current page. URL: {}, Method: {}".format(full_url, method))
-    #                 else: 
-    #                     print(full_url)
-    #                     #time.sleep(500000)
-    #                     self.fail("Checking 302 status, there was no history. This means that there was no 302. Status: {}, URL: {}, Method: {}".format(response.status_code, full_url, method))
-    #             else:
-    #                 # print(response.__dict__)
-    #                 # print(response.history[0].status_code)
-    #                 self.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
-
-    # Not a test, but a helper
-    # assert_dict example: {'edit': 200, 'update': 500}
-    def check_access(self, browser, manuscript=None, submission=None, assert_dict=None):
-        if assert_dict == None:
-            raise Exception('assert_dict must be set for check_access')            
-        if manuscript != None and submission != None:
-            raise Exception('both manuscript and submission cannot be set at the same time for check_access')
-
-        if manuscript != None:
-            url_pre = '/manuscript/' + str(manuscript.id) + '/'
-        elif submission != None:
-            url_pre = '/submission/' + str(submission.id) + '/'
-        else:
-            url_pre = '/'
-
-        del browser.requests #clear previous built up requests
-
-        for url_post, status_dict in assert_dict.items():
-            full_url = self.live_server_url + url_pre + url_post
-            for method, status_code in status_dict.items():
-                print(full_url)
-                print("...")
-                
-                if method == 'GET':
-                    browser.get(full_url)
-                    
-                    for request in browser.requests:
-                        if(request.response):
-                            print("{} - {}".format(request.url, request.response.status_code))
-                    for request in browser.requests:
-                        if request.url == full_url and request.response:
-                            self.assertEqual(request.response.status_code, status_code, msg=full_url)
-                            del browser.requests
-                else:
-                    raise Exception("NO OTHER METHODS SUPPORTED")
-                # try:
-                #     response = browser.request(method, full_url)
-                # except Exception as e:
-                #     print("Error in check_access request. URL: {}, Method: {}".format(full_url, method))
-                #     raise e
-                # if status_code == 302:
-                #     #If we expect a 302, we look for it in the history
-                #     if response.history:
-                #         self.assertEqual(response.history[0].status_code, status_code, msg="Checking 302 status in history. URL: {}, Method: {}".format(full_url, method))
-                #         self.assertEqual(response.status_code, 200, msg="Checking 200 status on current page. URL: {}, Method: {}".format(full_url, method))
-                #     else: 
-                #         print(full_url)
-                #         #time.sleep(500000)
-                #         self.fail("Checking 302 status, there was no history. This means that there was no 302. Status: {}, URL: {}, Method: {}".format(response.status_code, full_url, method))
-                # else:
-                #     # print(response.__dict__)
-                #     # print(response.history[0].status_code)
-                #     self.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
-
-
-#TODO: How am I testing when a request gets a 200 but is sent to login?
-#      - I think a special "access code" constant that indicates to test for 200 but login
-#          - Does this mean we should test 200 without login for the other 200s?
-#      - We can test a 302 by looking for it in the history
-
-
-###############################
-##### ACCESS DICTIONARIES #####
-###############################
-
-# These dictionaries are used with check_access to test endpoints throughout the workflow.
-# We use "inheritance" to define some of the dictionaries as slight alterations of other ones.
-# These dictionaries don't check everything, as some endpoints progress code when called.
-
-#TODO: What are we doing about get/post/put/delete
-#      - Nested dictionary
-
-##### General Access #####
-
-# This is the parent of all general access dictionaries
-# We don't have a g_dict_no_access because that case does not exist. If you don't have general access you aren't logged in and should get 302'ed
-
-g_dict_admin_access = { #'': {'GET': 200}, #blows up due to oauth code
-    #'manuscript_table/': {'GET': 200}, 
-    'manuscript/create/': {'GET': 200}, #UNDO
-    #'account_user_details/': {'GET': 200}, #blow up due to oauth code
-    'notifications/': {'GET': 200}, 
-    'site_actions/': {'GET': 200}, 
-    'site_actions/inviteeditor/': {'GET': 200}, 
-    'site_actions/invitecurator/': {'GET': 200}, 
-    'site_actions/inviteverifier/': {'GET': 200}, 
-    'user_table/': {'GET': 200}
-}
-
-#Takes all the keys and sets their values to `{'GET': 302}`
-g_dict_no_access_anon = dict.fromkeys(g_dict_admin_access, {'GET': 302})
-
-g_dict_normal_access = g_dict_admin_access.copy()
-g_dict_normal_access.update({
-    # 'manuscript_table/': {'GET': 200},
-    # 'notifications/': {'GET': 200}, 
-    # 'user_table/': {'GET': 200}
-    'manuscript/create/': {'GET': 404}, 
-    'site_actions/': {'GET': 404}, 
-    'site_actions/inviteeditor/': {'GET': 404}, 
-    'site_actions/invitecurator/': {'GET': 404}, 
-    'site_actions/inviteverifier/': {'GET': 404}, 
-})
-
-g_dict_normal_editor_access = g_dict_normal_access.copy()
-g_dict_normal_editor_access.update({
-    'manuscript/create/': {'GET': 200}, 
-})
-
-##### Manuscript Access #####
-
-m_dict_no_access = {
-    '': {'GET': 404},
-    #'submission_table': {'GET': 404}, #TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
-    'edit/': {'GET': 404}, #TODO: No access anon gets 500?
-    'update/': {'GET': 404},
-    'uploadfiles/': {'GET': 404},
-    'uploader/': {'GET': 404},
-    'fileslist/': {'GET': 404},
-    'view/': {'GET': 404},
-    'viewfiles/': {'GET': 404},
-    'inviteassignauthor/': {'GET': 404},
-    'addauthor/': {'GET': 404},
-    #'unassignauthor/': {'GET': 404}, #this needs a user id
-    'assigneditor/': {'GET': 404},
-    #'unassigneditor/': {'GET': 404}, #this needs a user id
-    'assigncurator/': {'GET': 404},
-    #'unassigncurator/': {'GET': 404}, #this needs a user id
-    'assignverifier/': {'GET': 404},
-    #'unassignverifier/': {'GET': 404}, #this needs a user id
-    'deletefile/': {'GET': 404},
-    'downloadfile/': {'GET': 404},
-    'downloadall/': {'GET': 404},
-    'reportdownload/': {'GET': 404},
-    #'deletenotebook/': {'GET': 404}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
-    #'file_table/': {'GET': 404},  #TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
-    'confirm/': {'GET': 404},
-    'pullcitation/': {'GET': 404}
-    }
-
-m_dict_no_access_anon = dict.fromkeys(m_dict_no_access, {'GET': 302})
-
-#TODO: This is probably wrong, depending on the phase. If not, for verifiers a similar approach will definitely not work.
-#      We need a way to
-m_dict_admin_access = dict.fromkeys(m_dict_no_access, {'GET': 200})
-
-##### Submission Access #####
-
-s_dict_no_access = {
-    'info/': {'GET': 404},
-    'uploadfiles/': {'GET': 404},
-    'confirmfiles/': {'GET': 404},
-    'uploader/': {'GET': 404},
-    'fileslist/': {'GET': 404},
-    'view/': {'GET': 404},
-    'viewfiles/': {'GET': 404},
-    'deletefile/': {'GET': 404},
-    'deleteallfiles/': {'GET': 404},
-    'downloadfile/': {'GET': 404},
-    'downloadall/': {'GET': 404},
-    'sendreport/': {'GET': 404},
-    'finish/': {'GET': 404},
-    'notebook/': {'GET': 404},
-    'notebooklogin/': {'GET': 404},
-    'newfilecheck/': {'GET': 404},
-    'wtstream/': {'GET': 404},
-    'wtdownloadall/': {'GET': 404},
-    'file_table/': {'GET': 404}
-}
 
 
 
