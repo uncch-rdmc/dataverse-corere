@@ -1006,12 +1006,11 @@ class Manuscript(AbstractCreateUpdateModel):
 
     #-----------------------
 
-    #TODO: Address limitation with having only one manuscript version. If its being edited as part of a resubmission what do we do about viewing?
-    #      Do we just allow viewing whatever is there? Do we block it during certain states. Maybe it'll be less of an issue if we can put all versioned data in the submission?
-    #
+    #TODO: We may just want to allow viewing all the time if you have the perm? Otherwise the manuscripts table may send people to a 404?
+    #      I'm not sure what other logic might rely on view not working for new...
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: (#(instance._status == Status.NEW and user.has_any_perm(c.PERM_MANU_ADD_M,instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW and user.has_any_perm(c.PERM_MANU_CHANGE_M, instance)) or
                                             (instance._status != instance.Status.NEW and user.has_any_perm(c.PERM_MANU_VIEW_M, instance))) )
     def view_noop(self):
         return self._status

@@ -39,6 +39,9 @@ logger = logging.getLogger(__name__)
 ########################################## GENERIC + MIXINS ##########################################
 
 #TODO: "transition_method_name" is a bit misleading. We are (over)using transitions to do perm checks, but the no-ops aren't actually transitioning
+#TODO: It doesn't feel like we are using dispatch right. Its being used in our views to do actions after setup but before get/post. Maybe there is a better way?
+#      - Instead, I should create a function in each class with the generic setup needs and call them explicitly in get/post.
+#      - When I do this, I should then switch GetOrGenerateObjectMixin to happen on dispatch not setup
 
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
@@ -112,7 +115,7 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
 class GitFilesMixin(object):
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         self.files_dict_list = self.object.get_gitfiles_pathname(combine=True)
 
         if(isinstance(self.object, m.Manuscript)):
@@ -126,7 +129,7 @@ class GitFilesMixin(object):
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
 
-        return super(GitFilesMixin, self).setup(request, *args, **kwargs)
+        return super(GitFilesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -165,7 +168,7 @@ class GetOrGenerateObjectMixin(object):
 #TODO: Is this specifically for noop transitions? if so we should name it that way.
 class TransitionPermissionMixin(object):
     transition_on_parent = False
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if(self.transition_on_parent):
             parent_object = getattr(self.object, self.parent_reference_name)
             transition_method = getattr(parent_object, self.transition_method_name)
@@ -176,8 +179,8 @@ class TransitionPermissionMixin(object):
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
-        return super(TransitionPermissionMixin, self).setup(request, *args, **kwargs)    
-    pass
+        return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
+    # pass
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
