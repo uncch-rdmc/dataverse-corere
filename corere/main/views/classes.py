@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 #TODO: It doesn't feel like we are using dispatch right. Its being used in our views to do actions after setup but before get/post. Maybe there is a better way?
 #      - Instead, I should create a function in each class with the generic setup needs and call them explicitly in get/post.
 #      - When I do this, I should then switch GetOrGenerateObjectMixin to happen on dispatch not setup
-
+#      - When I do this, go to all TODO-DISPATCH notes and fix them, they are patched for this madness currently.
 #To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
     form = None
@@ -683,6 +683,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             elif(has_transition_perm(self.object.view_noop, request.user)):
                 self.form = f.ReadOnlySubmissionForm
                 self.can_progress = False
+            else: #TODO-DISPATCH: This else is added to stop a 500 error accessing without perms. Should be fixed with a correct perm check
+                raise Http404()
         except (m.Submission.DoesNotExist, KeyError):
             pass
         try:
@@ -1110,9 +1112,9 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     def dispatch(self, request, *args, **kwargs):
         if self.read_only:
             self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
-        elif self.dataverse_upload:
+        elif self.dataverse_upload and self.object.manuscript.dataverse_installation: #TODO-DISPATCH: if this fails it means the page is accessed out of phase. Could probably implement this better.
             self.page_title = _("submission_completeFiles_pageTitle").format()
-            self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent,installation=self.object.manuscript.dataverse_installation.name)
+            self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent, installation=self.object.manuscript.dataverse_installation.name)
         else:
             self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
         return super().dispatch(request, *args, **kwargs)

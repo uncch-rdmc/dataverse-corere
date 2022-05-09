@@ -9,6 +9,8 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
     if manuscript != None and submission != None:
         raise Exception('both manuscript and submission cannot be set at the same time for check_access')
 
+    current_url = browser.current_url #We get the url before testing to return the browser to at the end
+
     if manuscript != None:
         url_pre = '/manuscript/' + str(manuscript.id) + '/'
     elif submission != None:
@@ -37,6 +39,9 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                         del browser.requests
             else:
                 raise Exception("NO OTHER METHODS SUPPORTED")
+
+    browser.get(current_url)
+
             # try:
             #     response = browser.request(method, full_url)
             # except Exception as e:
@@ -61,9 +66,6 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
 ##### ACCESS DICTIONARIES #####
 ###############################
 ###############################
-
-#TODO: Rewrite these access dictionaries, 1 per role per type.
-#      ... Then we may go farther with state based versions updating certain pieces
 
 # These dictionaries are used with check_access to test endpoints throughout the workflow.
 # We use "inheritance" to define some of the dictionaries as slight alterations of other ones.
@@ -157,38 +159,6 @@ m_dict_verifier_access__out_of_phase.update({
     'file_table/': {'GET': 200},
 })
 
-# m_dict_verifier_access = {
-#     '': {'GET': 200},
-#     'submission_table/': {'GET': 200}, 
-#     'edit/': {'GET': 200}, #TODO: THIS IS ONLY AVAILABLE CONDITIONALLY, RE-ENABLE
-#     'update/': {'GET': 200},
-#     'uploadfiles/': {'GET': 200},
-#     'uploader/': {'GET': 405},
-#     'fileslist/': {'GET': 200},
-#     'view/': {'GET': 200},
-#     'viewfiles/': {'GET': 200},
-#     'inviteassignauthor/': {'GET': 200},
-#     'addauthor/': {'GET': 200},
-#     #'unassignauthor/': {'GET': 200}, #this needs a user id
-#     'assigneditor/': {'GET': 200},
-#     #'unassigneditor/': {'GET': 200}, #this needs a user id
-#     'assigncurator/': {'GET': 200},
-#     #'unassigncurator/': {'GET': 200}, #this needs a user id
-#     'assignverifier/': {'GET': 200},
-#     #'unassignverifier/': {'GET': 200}, #this needs a user id
-#     'deletefile/': {'GET': 405}, 
-#     'downloadfile/': {'GET': 404}, #TODO: Test with files to get actual 200
-#     'downloadall/': {'GET': 200},
-#     'reportdownload/': {'GET': 200},
-#     #'deletenotebook/': {'GET': 200}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
-#     'file_table/': {'GET': 200},
-#     'confirm/': {'GET': 404},
-#     'pullcitation/': {'GET': 404}
-# }
-
-#Enable if verifier new access changes from no access
-# m_dict_verifier_access_new = dict.fromkeys(m_dict_verifier_access, {'GET': 404})
-
 m_dict_admin_access = {
     '': {'GET': 200},
     'submission_table/': {'GET': 200},
@@ -222,10 +192,38 @@ m_dict_admin_access = {
 ##### Submission Access #####
 #############################
 
+#TODO: access on some of these change with phase
+s_dict_admin_access = {
+    'info/': {'GET': 200},
+    'uploadfiles/': {'GET': 200},
+    'confirmfiles/': {'GET': 404}, 
+    'uploader/': {'GET': 405},
+    'fileslist/': {'GET': 200},
+    'view/': {'GET': 200},
+    'viewfiles/': {'GET': 200},
+    'deletefile/': {'GET': 405},
+    'deleteallfiles/': {'GET': 405},
+    'downloadfile/': {'GET': 404}, #Needs a query string to not 404
+    'downloadall/': {'GET': 200},
+    'sendreport/': {'GET': 405},
+    'finish/': {'GET': 405},
+#    'notebook/': {'GET': 200},
+#    'notebooklogin/': {'GET': 200},
+    'newfilecheck/': {'GET': 404}, #Need a query string to not 404
+#    'wtstream/': {'GET': 200},
+#    'wtdownloadall/': {'GET': 200},
+    'file_table/': {'GET': 200} 
+}
+
+s_dict_admin_access__completed = s_dict_admin_access.copy()
+s_dict_admin_access__completed.update({
+    'confirmfiles/': {'GET': 200}  
+ })
+
 s_dict_no_access = {
     'info/': {'GET': 404},
     'uploadfiles/': {'GET': 404},
-    'confirmfiles/': {'GET': 404},
+    'confirmfiles/': {'GET': 404}, 
     'uploader/': {'GET': 404},
     'fileslist/': {'GET': 404},
     'view/': {'GET': 404},
@@ -234,12 +232,28 @@ s_dict_no_access = {
     'deleteallfiles/': {'GET': 404},
     'downloadfile/': {'GET': 404},
     'downloadall/': {'GET': 404},
-    'sendreport/': {'GET': 404},
-    'finish/': {'GET': 404},
-    'notebook/': {'GET': 404},
-    'notebooklogin/': {'GET': 404},
+    'sendreport/': {'GET': 405},
+    'finish/': {'GET': 405},
+#    'notebook/': {'GET': 404},
+#    'notebooklogin/': {'GET': 404},
     'newfilecheck/': {'GET': 404},
-    'wtstream/': {'GET': 404},
-    'wtdownloadall/': {'GET': 404},
-    'file_table/': {'GET': 404}
+#    'wtstream/': {'GET': 404},
+#    'wtdownloadall/': {'GET': 404},
+    'file_table/': {'GET': 404} 
 }
+
+s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {'GET': 302})
+
+s_dict_verifier_access__out_of_phase = s_dict_no_access.copy()
+s_dict_verifier_access__out_of_phase.update({
+    'file_table/': {'GET': 200}  #TODO: This should probably 404
+ })
+
+s_dict_verifier_access__in_phase = s_dict_no_access.copy()
+s_dict_verifier_access__in_phase.update({
+    'info/': {'GET': 200},
+    'view/': {'GET': 200},
+    'viewfiles/': {'GET': 200},
+    'downloadall/': {'GET': 200},
+    'file_table/': {'GET': 200} 
+ })
