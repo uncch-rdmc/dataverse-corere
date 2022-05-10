@@ -21,6 +21,7 @@ from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_h
 from django.utils.translation import gettext as _
 from django.db import IntegrityError
 from templated_email import send_templated_mail
+from django.views.decorators.http import require_http_methods
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 @login_required
 # @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 @permission_required_or_404(c.perm_path(c.PERM_MANU_CURATE), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     form = AuthorInviteAddForm(request.POST or None)
@@ -87,6 +89,7 @@ def invite_assign_author(request, id=None):
 #Called during initial manuscript creation
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+@require_http_methods(["GET", "POST"])
 def add_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
     manuscript = Manuscript.objects.get(pk=id)
@@ -148,6 +151,7 @@ def add_author(request, id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def unassign_author(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -165,6 +169,7 @@ def unassign_author(request, id=None, user_id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
     page_title = _("user_assignEditor_pageTitle")
@@ -200,6 +205,7 @@ def assign_editor(request, id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def unassign_editor(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -217,6 +223,7 @@ def unassign_editor(request, id=None, user_id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
     page_title = _("user_assignCurator_pageTitle")
@@ -258,6 +265,7 @@ def assign_curator(request, id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def unassign_curator(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -282,6 +290,7 @@ def unassign_curator(request, id=None, user_id=None):
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
     page_title = _("user_assignVerifier_pageTitle")
@@ -318,6 +327,7 @@ def assign_verifier(request, id=None):
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@require_http_methods(["GET", "POST"])
 def unassign_verifier(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
@@ -333,6 +343,7 @@ def unassign_verifier(request, id=None, user_id=None):
         manu_verifier_group.user_set.remove(user)
         return redirect('/manuscript/'+str(id)+'/assignverifier')
 
+@require_http_methods(["GET"])
 def account_associate_oauth(request, key=None):
     logout(request)
     user = get_object_or_404(User, invite__key=key)
@@ -340,6 +351,7 @@ def account_associate_oauth(request, key=None):
 
     return render(request, 'main/new_user_oauth.html')
 
+@require_http_methods(["GET"])
 def account_associate_error(request, key=None):
     logout(request)
     return render(request, 'main/new_user_error.html')
@@ -347,6 +359,7 @@ def account_associate_error(request, key=None):
 #If Whole Tale is enabled, redirect user to the Whole Tale Globus authorization. Otherwise just continue to account_user_details
 #TODO: Should we restrict at all when this page is accessed?
 @login_required()
+@require_http_methods(["GET"])
 def account_complete_oauth(request):
     if settings.CONTAINER_DRIVER == "wholetale":
         if request.is_secure():
@@ -366,6 +379,7 @@ def account_complete_oauth(request):
 
 #This view is the first one the users are sent to after accepting an invite and registering
 @login_required()
+@require_http_methods(["GET", "POST"])
 def account_user_details(request):
     helper = UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
@@ -414,6 +428,7 @@ def account_user_details(request):
             pass
     return response
 
+@require_http_methods(["GET"])
 def logout_view(request):
     logout(request)
     msg = _("user_loggedOut_banner") + ' <a href="https://auth.globus.org/v2/web/logout">click here</a>.'
@@ -421,26 +436,31 @@ def logout_view(request):
     return redirect('/')
 
 @login_required()
+@require_http_methods(["GET"])
 def notifications(request):
     return render(request, 'main/notifications.html', 
         {'page_title': _("notifications_pageTitle")})
 
 @login_required()
+@require_http_methods(["GET", "POST"])
 def invite_editor(request):
     role = Group.objects.get(name=c.GROUP_ROLE_EDITOR) 
     return invite_user_not_author(request, role, "editor")
 
 @login_required()
+@require_http_methods(["GET", "POST"])
 def invite_curator(request):
     role = Group.objects.get(name=c.GROUP_ROLE_CURATOR) 
     return invite_user_not_author(request, role, "curator")
 
 @login_required()
+@require_http_methods(["GET", "POST"])
 def invite_verifier(request):
     role = Group.objects.get(name=c.GROUP_ROLE_VERIFIER) 
     return invite_user_not_author(request, role, "verifier")
 
 @login_required()
+@require_http_methods(["GET", "POST"])
 def invite_user_not_author(request, role, role_text):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         form = UserInviteForm(request.POST or None)
@@ -467,6 +487,7 @@ def invite_user_not_author(request, role, role_text):
     else:
         raise Http404()
 
+#TODO: Inviting with a bad email address errors but only AFTER the new user is created, creating an orphan
 #TODO: Should most of this be added to the user save method?
 def helper_create_user_and_invite(request, email, first_name, last_name, role):
     from django.contrib.sites.models import Site
@@ -483,6 +504,7 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
     if request.user:
         new_user.invited_by=request.user
     new_user.set_unusable_password()
+    new_user.full_clean() #runs email validator among other things. not perfect because if this fails we get a 500, but better than orphan users
     new_user.save()
     role.user_set.add(new_user)
 

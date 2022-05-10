@@ -889,9 +889,9 @@ class NoteForm(forms.ModelForm):
                 else:
                     if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
                         for role in c.get_private_roles():
-                            print(self.instance)
+                            #print(self.instance)
                             group = Group.objects.get(name=role)
-                            print(group.__dict__)
+                            #print(group.__dict__)
                             assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
                     else:
                         #At this point we've saved already, maybe we shouldn't?

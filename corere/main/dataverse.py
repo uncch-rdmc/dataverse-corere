@@ -12,7 +12,7 @@ def update_citation_data(manuscript):
 
     search_api = pyd.SearchApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     search_dataset_json = search_api.search('dsPersistentId:"'+manuscript.dataverse_fetched_doi+'"',auth=True).json()['data']
-    print(search_dataset_json)
+    #print(search_dataset_json)
     try:
         #TODO: Eventually we may need to grab all the publications, but for now we assume there will only be one
         manuscript.dataverse_fetched_article_citation = search_dataset_json['items'][0]['publications'][0]['citation'] + " " + search_dataset_json['items'][0]['publications'][0]['url']

@@ -23,6 +23,7 @@ import notifications.urls
 handler400 = 'corere.main.views.errors.handler400'
 handler403 = 'corere.main.views.errors.handler403'
 handler404 = 'corere.main.views.errors.handler404'
+handler405 = 'corere.main.views.errors.handler405'
 handler500 = 'corere.main.views.errors.handler500'
 
 urlpatterns = [
@@ -39,7 +40,7 @@ urlpatterns = [
     #url(r'^select2/', include('django_select2.urls')), #if you use any "Auto" fields.
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and 'debug_toolbar.middleware.DebugToolbarMiddleware' in settings.MIDDLEWARE:
     import debug_toolbar
     urlpatterns += [
         path('__debug__/', include(debug_toolbar.urls)),

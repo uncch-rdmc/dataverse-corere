@@ -17,9 +17,11 @@ from guardian.shortcuts import assign_perm, remove_perm
 from corere.main.templatetags.auth_extras import has_group
 from django.utils.translation import gettext as _
 from django.contrib.auth.decorators import user_passes_test
+from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
+@require_http_methods(["GET"])
 def index(request):
     if request.user.is_authenticated:
         if settings.CONTAINER_DRIVER == "wholetale":
@@ -65,6 +67,7 @@ def index(request):
         return render(request, "main/login.html")
 
 @login_required
+@require_http_methods(["GET"])
 def manuscript_landing(request, id=None):
     manuscript = get_object_or_404(m.Manuscript, id=id)
     if(not has_transition_perm(manuscript.view_noop, request.user)):
@@ -267,6 +270,7 @@ def manuscript_landing(request, id=None):
     return render(request, "main/manuscript_landing.html", args)
 
 @login_required
+@require_http_methods(["GET"])
 def open_notebook(request, id=None):
     #TODO: This needs to be completely rethought. With WholeTale we are allowing previous versions and this doesn't think about that
     #TODO: Actually, we only use this for internal mode. I'm disabling the url on our urls.py for now
@@ -299,14 +303,16 @@ def open_notebook(request, id=None):
     else:
         raise Http404()
 
-@user_passes_test(lambda u: u.is_superuser)
-def delete_notebook_stack(request, id=None):
-    manuscript = get_object_or_404(m.Manuscript, id=id)
-    d.delete_manuscript_docker_stack_crude(manuscript)
-    messages.add_message(request, messages.INFO, "Manuscript #"+ str(id) + " notebook stack has been deleted")
-    return redirect("/")
+# @user_passes_test(lambda u: u.is_superuser)
+# #@require_http_methods(["GET", "POST"])
+# def delete_notebook_stack(request, id=None):
+#     manuscript = get_object_or_404(m.Manuscript, id=id)
+#     d.delete_manuscript_docker_stack_crude(manuscript)
+#     messages.add_message(request, messages.INFO, "Manuscript #"+ str(id) + " notebook stack has been deleted")
+#     return redirect("/")
 
 @login_required()
+@require_http_methods(["GET"])
 def site_actions(request):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
         return render(request, 'main/site_actions.html', {'page_title': "site_actions"})
@@ -315,6 +321,7 @@ def site_actions(request):
 
 #NOTE: if we use cookies for session this may no longer be safe
 @login_required()
+@require_http_methods(["GET"])
 def switch_role(request):
     role_string = request.GET.get('role', '')
     role_full_string = "Role " + role_string

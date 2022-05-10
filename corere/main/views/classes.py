@@ -95,7 +95,7 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        print(self.redirect)
+        #print(self.redirect)
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -124,7 +124,7 @@ class GitFilesMixin(object):
         elif(isinstance(self.object, m.Submission)):
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile/?file_path="
             self.file_download_url = "/submission/"+str(self.object.id)+"/downloadfile/?file_path="
-            print(self.file_download_url)
+            #print(self.file_download_url)
         else:
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
@@ -145,7 +145,6 @@ class GetOrGenerateObjectMixin(object):
         elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
-                print("The object create method I didn't want called after create got called")
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
                 if(self.parent_reference_name == "submission"):
                     setattr(self.object, "manuscript", self.object.submission.manuscript)
@@ -334,7 +333,7 @@ class GenericManuscriptView(GenericCorereObjectView):
                     if latest_sub._status == m.Submission.Status.RETURNED:
                         # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
                         submission = m.Submission.objects.create(manuscript=self.object)
-                        print(submission)
+                        #print(submission)
                         return redirect('submission_uploadfiles', id=submission.id)
                     else:
                         return redirect('submission_uploadfiles', id=latest_sub.id)
@@ -428,34 +427,35 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
             })
 
+    #TODO: Remove renaming code entirely after rewrite of file rename
     def post(self, request, *args, **kwargs):
         if not self.read_only:
             errors = []
-            changes_for_git = []
-            try: 
-                with transaction.atomic(): #to ensure we only save if there are no errors
-                    for key, value in request.POST.items():
-                        if(key.startswith("file:")):
-                            skey = key.removeprefix("file:")
-                            error_text = _helper_sanitary_file_check(value)
-                            if(error_text):
-                                raise ValueError(error_text)
-                            if(skey != value):
-                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                before_path = "/"+before_path
-                                gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
-                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path           
-                                gfile.name=after_name
-                                gfile.path=after_path
-                                gfile.save()
-                                changes_for_git.append({"old":skey, "new":value})
-            except ValueError as e:
-                errors.append(str(e))
-                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
-                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+            # changes_for_git = []
+            # try: 
+            #     with transaction.atomic(): #to ensure we only save if there are no errors
+            #         for key, value in request.POST.items():
+            #             if(key.startswith("file:")):
+            #                 skey = key.removeprefix("file:")
+            #                 error_text = _helper_sanitary_file_check(value)
+            #                 if(error_text):
+            #                     raise ValueError(error_text)
+            #                 if(skey != value):
+            #                     before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     before_path = "/"+before_path
+            #                     gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
+            #                     after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     after_path = "/" + after_path           
+            #                     gfile.name=after_name
+            #                     gfile.path=after_path
+            #                     gfile.save()
+            #                     changes_for_git.append({"old":skey, "new":value})
+            # except ValueError as e:
+            #     errors.append(str(e))
+            #     #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+            #     logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-            g.rename_manuscript_files(self.object, changes_for_git)
+            # g.rename_manuscript_files(self.object, changes_for_git)
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):
@@ -471,7 +471,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 }
 
             if(errors):
-                print(errors)
+                #print(errors)
                 context['errors']= errors
 
             return render(request, self.template, context)
@@ -484,30 +484,34 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            file = request.FILES.get('file')
-            fullPath = request.POST.get('fullPath','')
-            path = '/'+fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+            try:
+                file = request.FILES.get('file')
+                fullPath = request.POST.get('fullPath','')
+                path = '/'+fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
 
-            if gitfiles := m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
-                g.delete_manuscript_file(self.object, fullRelPath+file.name)
-                gitfiles[0].delete()    
-                #return HttpResponse('File already exists', status=409)
-            md5 = g.store_manuscript_file(self.object, file, path)
-            #Create new GitFile for uploaded manuscript file
-            git_file = m.GitFile()
-            #git_file.git_hash = '' #we don't store this currently
-            git_file.md5 = md5
-            git_file.name = file.name
-            git_file.path = path
-            git_file.size = file.size
-            git_file.parent_manuscript = self.object
-            git_file.save(force_insert=True)
+                if gitfiles := m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
+                    g.delete_manuscript_file(self.object, fullRelPath+file.name)
+                    gitfiles[0].delete()    
+                    #return HttpResponse('File already exists', status=409)
+                md5 = g.store_manuscript_file(self.object, file, path)
+                #Create new GitFile for uploaded manuscript file
+                git_file = m.GitFile()
+                #git_file.git_hash = '' #we don't store this currently
+                git_file.md5 = md5
+                git_file.name = file.name
+                git_file.path = path
+                git_file.size = file.size
+                git_file.parent_manuscript = self.object
+                git_file.save(force_insert=True)
 
-            #TODO: maybe centralize this flag setting to happen by the GitFile model
-            self.object.files_changed = True
-            self.object.save()
-            
-            return HttpResponse(status=200)
+                #TODO: maybe centralize this flag setting to happen by the GitFile model
+                self.object.files_changed = True
+                self.object.save()
+                
+                return HttpResponse(status=200)
+            except Exception as e: #TODO: Make more precise. Make sure to catch empty post
+                logger.error(str(e))
+                raise Http404()
 
 class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['get']
@@ -557,6 +561,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
     transition_method_name = 'view_noop'
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
         return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
@@ -1284,32 +1289,36 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
         if not self.read_only:
-            file = request.FILES.get('file')
-            fullRelPath = request.POST.get('fullPath','')
-            # print(file)
-            # print(fullRelPath)
-            path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-            # print(path)
-            if gitfiles := m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
-                g.delete_submission_file(self.object.manuscript, fullRelPath+file.name)
-                gitfiles[0].delete()    
-                #return HttpResponse('File already exists', status=409)
-            md5 = g.store_submission_file(self.object.manuscript, file, path)
-            #Create new GitFile for uploaded submission file
-            git_file = m.GitFile()
-            #git_file.git_hash = '' #we don't store this currently
-            git_file.md5 = md5
-            git_file.name = file.name
-            git_file.path = path
-            git_file.size = file.size
-            git_file.parent_submission = self.object
-            git_file.save(force_insert=True)
+            try:
+                file = request.FILES.get('file')
+                fullRelPath = request.POST.get('fullPath','')
+                # print(file)
+                # print(fullRelPath)
+                path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+                # print(path)
+                if gitfiles := m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
+                    g.delete_submission_file(self.object.manuscript, fullRelPath+file.name)
+                    gitfiles[0].delete()    
+                    #return HttpResponse('File already exists', status=409)
+                md5 = g.store_submission_file(self.object.manuscript, file, path)
+                #Create new GitFile for uploaded submission file
+                git_file = m.GitFile()
+                #git_file.git_hash = '' #we don't store this currently
+                git_file.md5 = md5
+                git_file.name = file.name
+                git_file.path = path
+                git_file.size = file.size
+                git_file.parent_submission = self.object
+                git_file.save(force_insert=True)
 
-            #TODO: maybe centralize this flag setting to happen by the GitFile model
-            self.object.files_changed = True
-            self.object.save()
+                #TODO: maybe centralize this flag setting to happen by the GitFile model
+                self.object.files_changed = True
+                self.object.save()
 
-            return HttpResponse(status=200)
+                return HttpResponse(status=200)
+            except Exception as e: #TODO: Make more precise. Make sure to catch empty post
+                logger.error(str(e))
+                raise Http404()
 
 class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']
@@ -1368,7 +1377,6 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
-        #print(list(g.get_submission_files_list(self.object.manuscript)))
         for b in g.get_submission_files_list(self.object.manuscript):
             g.delete_submission_file(self.object.manuscript, b)
 
@@ -1643,7 +1651,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')
                 if(not has_transition_perm(transition_method, request.user)):
-                    print(self.dominant_group.corere_group.__dict__)
+                    #print(self.dominant_group.corere_group.__dict__)
 
                     logger.debug("PermissionDenied")
                     raise Http404()

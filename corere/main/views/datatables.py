@@ -16,10 +16,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
+
 logger = logging.getLogger(__name__)
 
 #Shared across our various (non-file) datatables
 class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
+    http_method_names = ['get']
+
     # pull from source mostly, except when noted. 
     # Needed to disallow users from requesting columns from the model we do not wish to provide
     def extract_datatables_column_data(self):
@@ -88,6 +91,11 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
         # return qs[start:offset]
 
+    # def handle_exception(self, e):
+    #     print(logger.__dict__)
+    #     print("HANDLED EXCEPTION")
+    #     raise e
+
 
 def helper_manuscript_columns(user):
     columns = [['selected',''],['id','ID'],['pub_id','Pub ID'],['pub_name','Pub Name'],['_status','Status']]
@@ -102,6 +110,7 @@ def helper_manuscript_columns(user):
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     max_display_length = 500
 
     def get_columns(self):
@@ -143,6 +152,7 @@ def helper_submission_columns(user):
     return columns
 
 class SubmissionJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     model = m.Submission
     max_display_length = 500
 
@@ -309,6 +319,7 @@ def helper_user_columns(user):
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class UserJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     max_display_length = 500
 
     def get_columns(self):
@@ -346,6 +357,8 @@ class UserJson(CorereBaseDatatableView):
 ############ File Tables (based off the files_datatable app) ############
 
 class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    http_method_names = ['get']
+    
     def get_initial_queryset(self):
         manuscript_id = self.kwargs['id']
         try:
@@ -360,6 +373,8 @@ class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
             raise Http404()
 
 class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    http_method_names = ['get']
+
     def get_initial_queryset(self):
         submission_id = self.kwargs['id']
         try:

@@ -30,8 +30,11 @@ def get_submission_files_list(manuscript):
 def _get_files_list(manuscript, path):
     try:
         repo = git.Repo(path+"..")
-        #calling repo.head.commit.tree[0] starts us from inside our additional folder level used for zipping
-        return helper_list_paths(repo.head.commit.tree[0], path, path)
+        if 'head' in repo.__dict__:
+            return helper_list_paths(repo.head.commit.tree[0], path, path)
+        else:
+            yield from () #If no head (e.g. no commits) return empty list
+        #TODO: We may want to handle having a head but no files
     except git.exc.NoSuchPathError:
         raise Http404()
 

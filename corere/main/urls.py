@@ -33,7 +33,7 @@ urlpatterns = [
     #path('manuscript/<int:id>/progress/', classes.ManuscriptProgressView.as_view(), name="manuscript_progress"),
     # path('manuscript/<int:id>/report/', classes.ManuscriptReportView.as_view(), name="manuscript_report"),
     path('manuscript/<int:id>/reportdownload/', classes.ManuscriptReportDownloadView.as_view(), name="manuscript_reportdownload"),
-    path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
+    #path('manuscript/<int:id>/deletenotebook/', main.delete_notebook_stack, name="manuscript_delete_notebook"),
     path('manuscript/<int:id>/file_table/', datatables.ManuscriptFileJson.as_view(), name="manuscript_file_table"),
     path('manuscript/<int:id>/confirm/', classes.ManuscriptEditConfirmBeforeDataverseUploadView.as_view(), name="manuscript_confirmbeforedataverseupload"),
     path('manuscript/<int:id>/pullcitation/', classes.ManuscriptPullCitationFromDataverseView.as_view(), name="manuscript_pullcitationfromdataverse"),
@@ -73,6 +73,7 @@ urlpatterns = [
     path('site_actions/inviteverifier/', users.invite_verifier, name="inviteverifier"),
     #path('switch_role/', main.switch_role, name="switch_role"),
 
+    #TODO: We need to think better about how we handle this table. It exposes all users usernames (which are emails) and roles. There should probably be a different endpoint for just authors
     path('user_table/', datatables.UserJson.as_view(), name="user_table"),
     
 ]

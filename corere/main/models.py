@@ -25,6 +25,7 @@ from corere.apps.wholetale import models as wtm
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import EmailValidator
 #from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
@@ -78,7 +79,7 @@ class User(AbstractUser):
     #invite_key = models.CharField(max_length=64, blank=True)
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-    email = models.EmailField(unique=True, blank=False)
+    email = models.EmailField(unique=True, blank=False, validators=[EmailValidator])
     wt_id = models.CharField(max_length=24, blank=True, null=True, verbose_name='User ID in Whole Tale')
 
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page

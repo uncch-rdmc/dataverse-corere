@@ -35,7 +35,7 @@ class LoggingInTestCase(LiveServerTestCase):
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
     # TODO: Hardcode no edition setting
-    #@unittest.skip("testing others now")
+    @unittest.skip("This test is not required, all functionality is covered by test_3_user. Can be used if that fails to help isolate issues.")
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
 
@@ -222,9 +222,6 @@ class LoggingInTestCase(LiveServerTestCase):
 
         dataverse_upload_manuscript_button = selenium.find_element_by_id('dataverseUploadManuscriptButtonMain')
         dataverse_upload_manuscript_button.send_keys(Keys.RETURN)
-
-
-    #TODO: Test non-logged-in user?
 
     # This tests most of the flow, with actions done by an admin-curator and a non-admin verifier (with access).
     # This includes inviting the users to CORE2 via the UI
