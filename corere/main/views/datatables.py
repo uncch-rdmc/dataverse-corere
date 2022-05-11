@@ -1,10 +1,13 @@
-import logging
+import logging, json
 from django_datatables_view.base_datatable_view import BaseDatatableView
+from django_datatables_view.mixins import LazyEncoder
 from django.conf import settings
+from django.http import HttpResponse
 from corere.main import constants as c
 from corere.main import models as m
 from corere.main import wholetale_corere as w
 from corere.apps.file_datatable import views as fdtv
+from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm
 from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
@@ -16,6 +19,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
+from django.views.decorators.cache import cache_control
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +116,35 @@ def helper_manuscript_columns(user):
 class ManuscriptJson(CorereBaseDatatableView):
     http_method_names = ['get']
     max_display_length = 500
+
+    ### These two methods are copied from the JSONResponseMixin and slightly modified to allow caching
+    @cache_control(max_age=9999999)
+    def get(self, request, *args, **kwargs):
+        self.request = request
+
+        func_val = self.get_context_data(**kwargs)
+        if not self.is_clean:
+            assert isinstance(func_val, dict)
+            response = dict(func_val)
+            if "error" not in response and "sError" not in response:
+                response["result"] = "ok"
+            else:
+                response["result"] = "error"
+        else:
+            response = func_val
+
+        dump = json.dumps(response, cls=LazyEncoder)
+        return self.render_to_response(dump)
+
+    def get_json_response(self, content, **httpresponse_kwargs):
+        """Construct an `HttpResponse` object."""
+        response = HttpResponse(
+            content, content_type="application/json", **httpresponse_kwargs
+        )
+        #add_never_cache_headers(response)
+        return response
+
+
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
@@ -335,7 +368,10 @@ class UserJson(CorereBaseDatatableView):
         return super(UserJson, self).render_column(user, column[0])
 
     def get_initial_queryset(self):
-        return(m.User.objects.all())
+        if has_group(self.request.user, c.GROUP_ROLE_CURATOR) or has_group(self.request.user, c.GROUP_ROLE_VERIFIER):
+            return m.User.objects.all()
+        else:
+            raise Http404()
         # manuscript_id = self.kwargs['manuscript_id']
         # try:
         #     manuscript = m.Manuscript.objects.get(id=manuscript_id)

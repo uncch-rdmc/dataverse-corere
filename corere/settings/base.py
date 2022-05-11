@@ -179,14 +179,14 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'django_file': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'normal',
             'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/django.log",
             'interval': 1,
         },      
         'file': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'normal',
             'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/corere.log",
@@ -196,12 +196,12 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['django_file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
         'corere': {
             'handlers': ['file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
     },

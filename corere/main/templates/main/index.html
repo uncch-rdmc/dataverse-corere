@@ -1,18 +1,23 @@
 {% extends "main/layout_full.html" %}
 {% load i18n %}
 {% load auth_extras %}
+{% load manuscript_commit_timestamp %}
 {% block content %}
 
 {% comment %} Manuscript Table {% endcomment %}
 
 <script type="text/javascript">
     var search_completed_vis_toggle = true;
-    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
+    {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
+    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
     $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
-            cache: false,
+            cache: true,
+            headers: {
+                'Cache-Control': 'max-age=1000' 
+            },
             success: function (response) {
                 var [columns_config, button_index] = constructTableM(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
@@ -24,6 +29,10 @@
                     processing: true,
                     stateSave: true,
                     paging: true,
+                    cache: true,
+                    headers: {
+                        'Cache-Control': 'max-age=1000' 
+                    },
                     select: 'single',
                     columns: columns_config,
                     dom: 'Bfrtpl',
@@ -61,7 +70,7 @@
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 4 ).search( "Completed" ).draw();
+                                    table.columns( 4 ).search( "Completed|Completed And Reported'" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
@@ -158,7 +167,6 @@
                 {% endif %}
             }
         })
-
     });
 
     function constructTableM(columns) {

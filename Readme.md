@@ -47,6 +47,12 @@ Install dependencies:
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
+Start psql and run this action to store timestamps on rows (used for data caching):
+```
+ALTER SYSTEM SET track_commit_timestamp = on;
+```
+Then restart psql.
+
 For development, print emails to console by editing  `corere/settings/development.py`:
 ```
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

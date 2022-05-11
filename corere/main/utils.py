@@ -5,8 +5,10 @@ from corere.main import models as m
 from django.http import Http404
 from django.contrib.auth.models import Group
 from django.shortcuts import redirect
+from django.db import connection
 from social_core.exceptions import AuthAlreadyAssociated
 from social_django.middleware import SocialAuthExceptionMiddleware
+from datetime import datetime
 
 # For use by the python-social-auth library pipeline.
 # With our sign-up flow a user account is created when the user is invited.
@@ -120,3 +122,14 @@ def generate_progress_bar_html(step_list, last_active_step):
     list_html += '<li class="progtrckr-todo"></li>' # adds an empty bar at the end
     list_html += '</ol>'
     return list_html
+
+def get_newest_manuscript_commit_timestamp():
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT max(pg_xact_commit_timestamp(xmin)) FROM main_manuscript")
+            row = cursor.fetchone()
+        return row[0].timestamp()
+    except Exception as e:
+        print("exception getting manuscript timestamp. is this a fresh install?")
+        print(str(e))
+        return datetime.now() #If this fails (e.g. a fresh manuscript table or flag not set up in psql). This is used for caching so it'll just force a data reload.
