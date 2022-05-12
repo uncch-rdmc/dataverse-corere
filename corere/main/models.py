@@ -746,8 +746,8 @@ class Manuscript(AbstractCreateUpdateModel):
     dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse in the installation targeted for the dataset created with the manuscript info.')
     dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
     dataverse_fetched_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
-    dataverse_fetched_data_citation = models.TextField(default="", verbose_name='Dataverse Data Citation', help_text='The data citation pulled from the dataset connected to this manuscript (via DOI)')
-    dataverse_fetched_article_citation = models.TextField(default="", verbose_name='Dataverse Article Citation', help_text='The article citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_data_citation = models.TextField(default="", blank=True, null=True, verbose_name='Dataverse Data Citation', help_text='The data citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_article_citation = models.TextField(default="", blank=True, null=True, verbose_name='Dataverse Article Citation', help_text='The article citation pulled from the dataset connected to this manuscript (via DOI)')
     dataverse_fetched_publish_date = models.DateField(verbose_name='Dataset Publish Date', blank=True, null=True, help_text='The date the dataset in Dataverse was published')
 
     class Meta:

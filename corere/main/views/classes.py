@@ -39,11 +39,7 @@ logger = logging.getLogger(__name__)
 ########################################## GENERIC + MIXINS ##########################################
 
 #TODO: "transition_method_name" is a bit misleading. We are (over)using transitions to do perm checks, but the no-ops aren't actually transitioning
-#TODO: It doesn't feel like we are using dispatch right. Its being used in our views to do actions after setup but before get/post. Maybe there is a better way?
-#      - Instead, I should create a function in each class with the generic setup needs and call them explicitly in get/post.
-#      - When I do this, I should then switch GetOrGenerateObjectMixin to happen on dispatch not setup
-#      - When I do this, go to all TODO-DISPATCH notes and fix them, they are patched for this madness currently.
-#To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
+
 class GenericCorereObjectView(View):
     form = None
     form_dict = None
@@ -71,12 +67,12 @@ class GenericCorereObjectView(View):
     
     create = False #Used by default template
 
-    def dispatch(self, request, *args, **kwargs): 
+    def general(self, request, *args, **kwargs): 
         try:
             self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
         except TypeError as e: #Added so that progress and other calls that don't use forms can work. TODO: implement better
             pass
-        return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
+        #return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
     # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
@@ -84,6 +80,8 @@ class GenericCorereObjectView(View):
     #The generic get/post is used by submission file views.
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -95,7 +93,8 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        #print(self.redirect)
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -138,7 +137,7 @@ class GitFilesMixin(object):
 #Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
 class GetOrGenerateObjectMixin(object):
     #TODO: This gets called on every get, do we need to generate the messages this early?
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
             self.msg = _("generic_objectUpdated_banner").format(object_type=self.object_friendly_name, object_id=self.object.id)
@@ -151,7 +150,7 @@ class GetOrGenerateObjectMixin(object):
             self.msg = _("generic_objectCreated_banner").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
-        return super(GetOrGenerateObjectMixin, self).setup(request, *args, **kwargs)
+        return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
     
 # class ChooseRoleFormMixin(object):
 #     def dispatch(self, request, *args, **kwargs):
@@ -214,7 +213,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     form_helper = None
     dataverse_upload = False
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
@@ -243,9 +242,13 @@ class GenericManuscriptView(GenericCorereObjectView):
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
 
-        return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
+        super(GenericManuscriptView, self).general(request,*args, **kwargs)
+
+        #return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -288,6 +291,8 @@ class GenericManuscriptView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if self.request.user.is_superuser or not self.create:
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
@@ -414,12 +419,14 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     transition_method_name = 'edit_files_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
                 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.object._status == m.Manuscript.Status.NEW:
             self.page_help_text = _("manuscript_uploadFilesNew_helpText")
-        return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
+        return super(ManuscriptUploadFilesView, self).general(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
@@ -429,6 +436,8 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
     #TODO: Remove renaming code entirely after rewrite of file rename
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
             errors = []
             # changes_for_git = []
@@ -483,6 +492,8 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
             try:
                 file = request.FILES.get('file')
@@ -518,6 +529,8 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -529,6 +542,8 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     transition_method_name = 'edit_files_noop'
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -553,6 +568,8 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
     read_only = True
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list,
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
@@ -564,6 +581,8 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
@@ -629,6 +648,8 @@ class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
     object_friendly_name = 'manuscript'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return g.download_all_manuscript_files(self.object)
 
 class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
@@ -647,6 +668,8 @@ class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateO
     object_friendly_name = 'manuscript'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         try:
             dv.update_citation_data(self.object)
             self.msg= 'Information from dataset ' + self.object.dataverse_fetched_doi + ' has been fetched. Information can be confirmed by viewing the <a href="./reportdownload">verification report</a>.'
@@ -679,7 +702,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     submission_editor_date_formset = None
     can_progress = False
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
@@ -688,7 +711,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             elif(has_transition_perm(self.object.view_noop, request.user)):
                 self.form = f.ReadOnlySubmissionForm
                 self.can_progress = False
-            else: #TODO-DISPATCH: This else is added to stop a 500 error accessing without perms. Should be fixed with a correct perm check
+            else:
                 raise Http404()
         except (m.Submission.DoesNotExist, KeyError):
             pass
@@ -739,9 +762,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         manuscript_display_name = self.object.manuscript.get_display_name()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
@@ -777,6 +802,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
         manuscript_display_name = self.object.manuscript.get_display_name()
@@ -978,9 +1005,9 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSu
     page_help_text = _("submission_info_helpText") #Sometimes overwritten by GenericSubmissionFormView
     template = 'main/form_object_submission.html'
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         self.page_title = _("submission_info_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
@@ -988,9 +1015,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         self.page_title = _("submission_view_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
 
 ##### THESE FILE METADATA COLLECTING CLASSES ARE DISABLED FOR NOW. WE MAY WANT THEM EVENTUALLY TO COLLECT DESCRIPTION/TAGS FOR DATAVERSE ###
@@ -1114,17 +1141,19 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     model = m.Submission
     dataverse_upload = False
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.read_only:
             self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
-        elif self.dataverse_upload and self.object.manuscript.dataverse_installation: #TODO-DISPATCH: if this fails it means the page is accessed out of phase. Could probably implement this better.
+        elif self.dataverse_upload and self.object.manuscript.dataverse_installation:
             self.page_title = _("submission_completeFiles_pageTitle").format()
             self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent, installation=self.object.manuscript.dataverse_installation.name)
         else:
             self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
@@ -1140,6 +1169,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
             self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView #The comment/code before this may be unneeded now that we always do manuscript edit first
 
@@ -1262,10 +1293,10 @@ class SubmissionReadFilesView(SubmissionUploadFilesView):
     form = f.GitFileReadOnlyFileFormSet
     read_only = True
 
-    # def dispatch(self, request, *args, **kwargs):
+    # def general(self, request, *args, **kwargs):
     #     #TODO: I'm not sure if this title actually does anything
     #     self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
-    #     return super().dispatch(request, *args, **kwargs)
+    #     return super().general(request, *args, **kwargs)
 
 #TODO: This needs to pass m_status but isn't
 class SubmissionCompleteFilesBeforeDataverseUploadView(SubmissionUploadFilesView):
@@ -1273,7 +1304,6 @@ class SubmissionCompleteFilesBeforeDataverseUploadView(SubmissionUploadFilesView
     transition_method_name = 'dataverse_upload_noop'
     #page_help_text = _("submission_completeFiles_helpText") #set in SubmissionUploadFilesView, as we pass arguments to it
     dataverse_upload = True #tell parent view to pass m_status even though is a sub
-    pass
 
 #Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1288,6 +1318,8 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
             try:
                 file = request.FILES.get('file')
@@ -1328,6 +1360,8 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     object_friendly_name = 'submission'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -1342,6 +1376,8 @@ class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
     object_friendly_name = 'submission'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return g.download_all_submission_files(self.object)
 
 class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
@@ -1352,6 +1388,8 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -1377,6 +1415,8 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         for b in g.get_submission_files_list(self.object.manuscript):
             g.delete_submission_file(self.object.manuscript, b)
 
@@ -1405,6 +1445,8 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
@@ -1420,6 +1462,8 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
@@ -1466,17 +1510,19 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
     model = m.Submission
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         self.page_title = _("submission_reconcileFiles_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
         #here we need to get the list of files from WT, compare them to our files_dict_list, and return back the differences.
         #... or well maybe the info about the differences can be done with SubmissionFilesCheckNewness (probably will require expanding that method)
 
         pass
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
         pass
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
@@ -1517,6 +1563,8 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         try:
             if not fsm_check_transition_perm(self.object.send_report, request.user): 
                 logger.debug("PermissionDenied")
@@ -1544,6 +1592,8 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         try:
             if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
                 logger.debug("PermissionDenied")
@@ -1605,6 +1655,8 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if 'postauth' in request.GET:
             request.user.last_oauthproxy_forced_signin = datetime.now() #maybe change to timezone.now() https://stackoverflow.com/questions/18622007/
             request.user.save()
@@ -1626,7 +1678,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
@@ -1670,9 +1722,11 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 logger.debug("PermissionDenied")
                 raise Http404()
 
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
             'page_title': _("submission_notebook_pageTitle").format(submission_version=self.object.version_id),
             'page_help_text': self.page_help_text, "form": self.form,
@@ -1722,6 +1776,8 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         #TODO: This probably needs to handle what happens if the form isn't valid?
         if request.POST.get('submit'):
             if self.form:
@@ -1737,7 +1793,7 @@ class SubmissionGenericWholeTalePermissionView(GenericCorereObjectView):
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
     #Code was same as in SubmissionNotebookView, but that needed more customization
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.object.manuscript.is_containerized() == 'Other':
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
@@ -1761,7 +1817,7 @@ class SubmissionGenericWholeTalePermissionView(GenericCorereObjectView):
                 logger.debug("PermissionDenied")
                 raise Http404()
 
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
 # The downside to this approach is we download it to CORE2 before providing it to the user
 # We could just generate the download url for the user and send them to Whole Tale directly for it.
@@ -1774,6 +1830,8 @@ class SubmissionDownloadWholeTaleNotebookView(LoginRequiredMixin, GetOrGenerateO
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
 
@@ -1794,6 +1852,8 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
 
