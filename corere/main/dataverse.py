@@ -1,4 +1,4 @@
-import json, datetime, re
+import json, datetime, re, time
 import pyDataverse.api as pyd
 from corere.main import models as m
 from corere.main import git as g
@@ -37,16 +37,33 @@ def upload_manuscript_data_to_dataverse(manuscript):
     native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     dataset_json = build_dataset_json(manuscript)
 
-    dataset_pid = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True).json()['data']['persistentId'] #dataverse is either the alias or the id
+    create_dataset_response = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True).json()
+    print(create_dataset_response) #TODO: I need to handle erroring here better, I think some dataverses have stricter field requirements?
+
+    dataset_pid = create_dataset_response['data']['persistentId'] #dataverse is either the alias or the id
 
     submission = manuscript.get_latest_submission()
     submission_files = submission.submission_files.all().order_by('path','name')
     files_root_path = g.get_submission_files_path(manuscript)
 
-    for git_file in submission_files:        
+    for git_file in submission_files:    
+
+        lock_response = native_api.get_dataset_lock(dataset_pid).json()
+        while lock_response['data']: #If locked (usually tabular ingest) wait
+            print("LOCKED")
+            time.sleep(1)
+            lock_response = native_api.get_dataset_lock(dataset_pid).json()
+
         file_response = native_api.upload_datafile(dataset_pid, files_root_path + git_file.full_path, json_str=None, is_pid=True)
-        file_id = file_response.json()['data']['files'][0]['dataFile']['id']
-        native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
+        # print(git_file.full_path)
+        # print(file_response.json())
+        if file_response.json()['status'] == 'OK':
+            # print(file_response.json()['data'])
+            file_id = file_response.json()['data']['files'][0]['dataFile']['id']
+            native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
+            #time.sleep(10)
+        else:
+            raise Exception("Exception from dataverse during upload: " + file_response.json()['message']) #TODO: Handle this better?
 
     manuscript.dataverse_fetched_doi = dataset_pid
     manuscript.dataverse_fetched_article_citation = ""

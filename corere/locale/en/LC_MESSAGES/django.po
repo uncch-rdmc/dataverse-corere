@@ -191,7 +191,7 @@ msgstr "Review Submitted Files for Manuscript"
 
 #: corere/main/views/classes.py:1089
 msgid "submission_completeFiles_helpText"
-msgstr "Please confirm the submission files and then click 'Upload To Dataverse'. This will create a new dataset on dataverse {dataverse} installation {installation}."
+msgstr "Please confirm the submission files and then click 'Upload To Dataverse'. This will create a new dataset on dataverse {dataverse} installation {installation}. Uploading may take some time due to file size and the need to wait for ingest."
 
 #: corere/main/views/classes.py:1091
 msgid "submission_uploadFiles_pageTitle"

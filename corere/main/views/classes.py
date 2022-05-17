@@ -10,6 +10,7 @@ from corere.main import dataverse as dv
 from corere.apps.wholetale import models as wtm
 from corere.main import git as g
 from .. import constants as c 
+from html import unescape
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
@@ -534,6 +535,7 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
 
         return g.get_manuscript_file(self.object, file_path, True)
 
@@ -547,6 +549,7 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         g.delete_manuscript_file(self.object, file_path)
         
         folder_path, file_name = file_path.rsplit('/',1)
@@ -1224,6 +1227,8 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 except Exception as e: #for now we catch all exceptions and present them as a message
                     self.msg= 'An error has occurred attempting to upload to Dataverse: ' + str(e)
                     messages.add_message(request, messages.ERROR, self.msg)
+                    logger.error('An error has occurred attempting to upload manuscript {} to Dataverse: {}'.format(str(self.object.manuscript.id), str(e)))
+                    raise e #TODO: We should probably handle this error better, but since its only our curators this is ok for now
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):
@@ -1286,7 +1291,6 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 context['errors']= errors
 
             return render(request, self.template, context)
-
 
 class SubmissionReadFilesView(SubmissionUploadFilesView):
     transition_method_name = 'view_noop'
@@ -1365,6 +1369,7 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
 
         return g.get_submission_file(self.object, file_path, True)
 
@@ -1393,6 +1398,7 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         g.delete_submission_file(self.object.manuscript, file_path)
 
         folder_path, file_name = file_path.rsplit('/',1)
@@ -1467,6 +1473,7 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         folder_path, file_name = file_path.rsplit('/',1)
         folder_path = folder_path + '/'
         try:
