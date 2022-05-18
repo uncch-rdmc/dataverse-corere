@@ -417,7 +417,8 @@ class ManuscriptBaseForm(forms.ModelForm):
             #     if(not memory_reqs):
             #         self.add_error('memory_reqs', 'This field is required.')
 
-            if not (self.instance._status != m.Manuscript.Status.COMPLETED or self.instance._status != m.Manuscript.Status.COMPLETED_REPORTED):
+            if not (self.instance._status != m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH or self.instance._status != m.Manuscript.Status.PUBLISHED_TO_DATAVERSE
+                    or self.instance._status != m.Manuscript.Status.COMPLETED_REPORT_SENT):
                 validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:

@@ -164,7 +164,7 @@ class GetOrGenerateObjectMixin(object):
 
 #A mixin that calls Django fsm has_transition_perm for an object
 #It expects that the object has been grabbed already, for example by GetCreateObjectMixin    
-#TODO: Is this specifically for noop transitions? if so we should name it that way.
+
 class TransitionPermissionMixin(object):
     transition_on_parent = False
     def dispatch(self, request, *args, **kwargs):
@@ -666,7 +666,7 @@ class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGe
 
 class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['get']
-    transition_method_name = 'dataverse_pull_citation_noop' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    transition_method_name = 'dataverse_pull_citation' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
     model = m.Manuscript
     object_friendly_name = 'manuscript'
 
@@ -677,6 +677,8 @@ class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateO
             dv.update_citation_data(self.object)
             self.msg= 'Information from dataset ' + self.object.dataverse_fetched_doi + ' has been fetched. Information can be confirmed by viewing the <a href="./reportdownload">verification report</a>.'
             messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+            self.object.dataverse_pull_citation()
+            self.object.save()
 
         except Exception as e: #for now we catch all exceptions and present them as a message
             self.msg= 'An error has occurred attempting to pull citation data from Dataverse: ' + str(e)
@@ -1618,7 +1620,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
                 ### Messaging ###
                 if(self.object._status == m.Submission.Status.RETURNED):
-                    if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
+                    if(self.object.manuscript._status == m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH):
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
                         messages.add_message(request, messages.SUCCESS, self.msg)

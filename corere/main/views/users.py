@@ -11,6 +11,7 @@ from invitations.utils import get_invitation_model
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import Permission, Group
 from corere.main import constants as c
+from corere.main import models as m
 from corere.main import wholetale_corere as w
 from django.contrib.auth import login, logout
 from django.conf import settings
@@ -41,7 +42,7 @@ def invite_assign_author(request, id=None):
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
 
-    # if(manuscript.is_complete()): #or not(request.user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or request.user.is_superuser)):
+    # if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT): #or not(request.user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or request.user.is_superuser)):
     #     raise Http404()
 
     manu_author_group = Group.objects.get(name__startswith=group_substring + " " + str(manuscript.id))
@@ -99,7 +100,7 @@ def add_author(request, id=None):
     form_initial = {'first_name':manuscript.contact_first_name, 'last_name':manuscript.contact_last_name, 'email':manuscript.contact_email}
     form = AuthorAddForm(request.POST or None, initial=form_initial)
 
-    if(manuscript.is_complete()):
+    if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     if request.method == 'POST':
         if form.is_valid():
@@ -155,7 +156,7 @@ def add_author(request, id=None):
 def unassign_author(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
-        if(manuscript.is_complete()):
+        if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
         manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -174,7 +175,7 @@ def assign_editor(request, id=None):
     form = EditorAddForm(request.POST or None)
     page_title = _("user_assignEditor_pageTitle")
     manuscript = Manuscript.objects.get(pk=id)
-    if(manuscript.is_complete()):
+    if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
     manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -209,7 +210,7 @@ def assign_editor(request, id=None):
 def unassign_editor(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
-        if(manuscript.is_complete()):
+        if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
         manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -228,7 +229,7 @@ def assign_curator(request, id=None):
     form = CuratorAddForm(request.POST or None)
     page_title = _("user_assignCurator_pageTitle")
     manuscript = Manuscript.objects.get(pk=id)
-    if(manuscript.is_complete()):
+    if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
     manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -269,7 +270,7 @@ def assign_curator(request, id=None):
 def unassign_curator(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
-        if(manuscript.is_complete()):
+        if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
         manu_curator_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
@@ -295,7 +296,7 @@ def assign_verifier(request, id=None):
     form = VerifierAddForm(request.POST or None)
     page_title = _("user_assignVerifier_pageTitle")
     manuscript = Manuscript.objects.get(pk=id)
-    if(manuscript.is_complete()):
+    if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
     manu_verifier_group = Group.objects.get(name=group_substring + " " + str(manuscript.id))
@@ -331,7 +332,7 @@ def assign_verifier(request, id=None):
 def unassign_verifier(request, id=None, user_id=None):
     if request.method == 'POST':
         manuscript = Manuscript.objects.get(pk=id)
-        if(manuscript.is_complete()):
+        if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
         manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))

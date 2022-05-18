@@ -519,11 +519,11 @@ class LoggingInTestCase(LiveServerTestCase):
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         v_in_selenium.switch_to.alert.accept()           
 
-        ##### TEST ACCESS SUBMISSION : COMPLETED #####
+        ##### TEST ACCESS SUBMISSION : PENDING_DATAVERSE_PUBLISH #####
 
         time.sleep(.5) #wait for status to update in db
         manuscript = m.Manuscript.objects.latest('updated_at')
-        self.assertEqual(manuscript._status, m.Manuscript.Status.COMPLETED)
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH)
         submission = m.Submission.objects.latest('updated_at')
         self.assertEqual(submission._status, m.Submission.Status.REVIEWED_AWAITING_REPORT)
 

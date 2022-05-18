@@ -86,7 +86,7 @@ def manuscript_landing(request, id=None):
     #     manuscript_avail_buttons.append('progressManuscript')
     # #TODO: add launchNotebook once integration is better
     # # MAD: Should we change these to be transitions?
-    # if(not manuscript.is_complete()):
+    # if(not manuscript.is_approved()):
     #     if(request.user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript)):
     #         manuscript_avail_buttons.append('inviteassignauthor')
     #     if(request.user.has_any_perm(c.PERM_MANU_MANAGE_EDITORS, manuscript)):
@@ -141,11 +141,11 @@ def manuscript_landing(request, id=None):
                 sendReportButton = True
 
             if has_transition_perm(manuscript.dataverse_upload_noop, request.user):
-                if manuscript._status == m.Manuscript.Status.COMPLETED_REPORTED:
+                if manuscript._status == m.Manuscript.Status.PUBLISHED_TO_DATAVERSE or manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT:
                     dataversePullCitationButtonMore = True
                     dataverseUploadManuscriptButtonMore = True
                 else:
-                    if has_transition_perm(manuscript.dataverse_pull_citation_noop, request.user):
+                    if has_transition_perm(manuscript.dataverse_pull_citation, request.user):
                         if sendReportButton: #Final Report because other perms were true
                             dataversePullCitationButtonMore = True
                         else:
@@ -189,7 +189,7 @@ def manuscript_landing(request, id=None):
                             reviewSubmissionButtonMain = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
-            if manuscript._status == m.Manuscript.Status.COMPLETED_REPORTED:
+            if manuscript._status == m.Manuscript.Status.PUBLISHED_TO_DATAVERSE or manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT:
                 reviewSubmissionButtonMore = False
                 reviewSubmissionButtonMain = False
                 editSubmissionButton = False #Edit only via bottom menu

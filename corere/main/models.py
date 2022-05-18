@@ -547,7 +547,7 @@ class Submission(AbstractCreateUpdateModel):
 
         #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
         if self.submission_curation._status == Curation.Status.NO_ISSUES: #We've already checked that it doesn't need verification above
-            self.manuscript._status = Manuscript.Status.COMPLETED
+            self.manuscript._status = Manuscript.Status.PENDING_DATAVERSE_PUBLISH
             self.manuscript.save()
 
         return self.Status.REVIEWED_AWAITING_REPORT
@@ -576,20 +576,16 @@ class Submission(AbstractCreateUpdateModel):
 
         #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
         if self.submission_curation._status == Curation.Status.NO_ISSUES and self.submission_verification._status == Verification.Status.SUCCESS:
-                self.manuscript._status = Manuscript.Status.COMPLETED
+                self.manuscript._status = Manuscript.Status.PENDING_DATAVERSE_PUBLISH
                 self.manuscript.save()
 
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
     
+    # NOTE: This just checks the additional manuscript status requirements. send_report() enforces the submission status requirements
     def can_send_report(self):
-        if self.manuscript._status == Manuscript.Status.COMPLETED:
-            #Because we the dataverse upload steps don't change status, we check that their results exists.
-            if self.manuscript.dataverse_parent and self.manuscript.dataverse_installation and self.manuscript.dataverse_fetched_doi and self.manuscript.dataverse_fetched_data_citation and self.manuscript.dataverse_fetched_publish_date:
-                return True
-            return False
-        if self.manuscript._status == Manuscript.Status.COMPLETED_REPORTED:
+        if self.manuscript._status == Manuscript.Status.COMPLETED_REPORT_SENT or self.manuscript._status == Manuscript.Status.PENDING_DATAVERSE_PUBLISH:
             return False
         else:
             return True 
@@ -599,7 +595,7 @@ class Submission(AbstractCreateUpdateModel):
     def send_report(self):
         #TODO: Actually send a report here. If edition enabled
 
-        if self.manuscript._status == Manuscript.Status.COMPLETED:
+        if self.manuscript._status == Manuscript.Status.PUBLISHED_TO_DATAVERSE: #If final report being sent
             # Rename existing groups (add completed suffix) when done for clean-up and reporting
             author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
             author_group = Group.objects.get(name=author_name)
@@ -622,7 +618,7 @@ class Submission(AbstractCreateUpdateModel):
             verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
             verifier_group.save()
 
-            self.manuscript._status = Manuscript.Status.COMPLETED_REPORTED
+            self.manuscript._status = Manuscript.Status.COMPLETED_REPORT_SENT
             self.manuscript.save()
 
             return self.Status.RETURNED
@@ -682,9 +678,9 @@ class Manuscript(AbstractCreateUpdateModel):
         AWAITING_RESUBMISSION = 'awaiting_resubmission', 'Awaiting Author Resubmission'
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
-        COMPLETED = 'completed', 'Completed' #TODO: Maybe rename this to "Approved?". Technically its not completed when this is set because we still need to send the report and upload to dataverse
-        # UPLOADED_EXTERNAL = 'uploaded_external', 'Completed And Uploaded To Dataverse'
-        COMPLETED_REPORTED = 'completed_reported', 'Completed And Reported'
+        PENDING_DATAVERSE_PUBLISH = 'pending_dataverse_publish', 'Pending Dataverse Publish' #TODO: Maybe rename this to "Approved?". Technically its not completed when this is set because we still need to send the report and upload to dataverse
+        PUBLISHED_TO_DATAVERSE = 'published_to_dataverse', 'Published To Dataverse'
+        COMPLETED_REPORT_SENT = 'completed_report_sent', 'Completed Report Sent'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -874,9 +870,6 @@ class Manuscript(AbstractCreateUpdateModel):
             #TODO-WT: We aren't handling the case where a compute env is changed and then a user attempts to run a compute env for a previous submission with a different env.
             #         I think my best bet is to make a custom error for this? "The environment type for this manuscript has changed. You cannot run submissions from before this change took place."
 
-    def is_complete(self):
-        return self._status == Manuscript.Status.COMPLETED
-
     def is_containerized(self):
         if not self.compute_env or self.compute_env == 'Other' or ((self.high_performance or self.contents_restricted_sharing) and not self.exemption_override):
             return False
@@ -1021,23 +1014,26 @@ class Manuscript(AbstractCreateUpdateModel):
     def can_dataverse_upload_noop(self):
         return True
 
-    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_upload_noop],
+    @transition(field=_status, source=[Status.PENDING_DATAVERSE_PUBLISH, Status.PUBLISHED_TO_DATAVERSE, Status.COMPLETED_REPORT_SENT], target=RETURN_VALUE(), conditions=[can_dataverse_upload_noop],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
     def dataverse_upload_noop(self):
         return self._status
 
     #-----------------------
 
-    def can_dataverse_pull_citation_noop(self):
+    def can_dataverse_pull_citation(self):
         if self.dataverse_fetched_doi:
             return True
         return False
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=RETURN_VALUE(), conditions=[can_dataverse_pull_citation_noop],
+    @transition(field=_status, source=[Status.PENDING_DATAVERSE_PUBLISH, Status.PUBLISHED_TO_DATAVERSE, Status.COMPLETED_REPORT_SENT], target=RETURN_VALUE(), conditions=[can_dataverse_pull_citation],
         permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance))
-    def dataverse_pull_citation_noop(self):
-        return self._status
+    def dataverse_pull_citation(self):
+        if self._status == self.Status.PENDING_DATAVERSE_PUBLISH:
+            return self.Status.PUBLISHED_TO_DATAVERSE
+        else:
+            return self._status
 
     #-----------------------
 

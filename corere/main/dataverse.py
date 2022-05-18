@@ -38,7 +38,7 @@ def upload_manuscript_data_to_dataverse(manuscript):
     dataset_json = build_dataset_json(manuscript)
 
     create_dataset_response = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True).json()
-    print(create_dataset_response) #TODO: I need to handle erroring here better, I think some dataverses have stricter field requirements?
+    #print(create_dataset_response) #TODO: I need to handle erroring here better, I think some dataverses have stricter field requirements?
 
     dataset_pid = create_dataset_response['data']['persistentId'] #dataverse is either the alias or the id
 
@@ -47,10 +47,9 @@ def upload_manuscript_data_to_dataverse(manuscript):
     files_root_path = g.get_submission_files_path(manuscript)
 
     for git_file in submission_files:    
-
         lock_response = native_api.get_dataset_lock(dataset_pid).json()
-        while lock_response['data']: #If locked (usually tabular ingest) wait
-            print("LOCKED")
+        while lock_response['data']: #If locked (usually tabular ingest), wait
+            #print("LOCKED")
             time.sleep(1)
             lock_response = native_api.get_dataset_lock(dataset_pid).json()
 
@@ -61,7 +60,6 @@ def upload_manuscript_data_to_dataverse(manuscript):
             # print(file_response.json()['data'])
             file_id = file_response.json()['data']['files'][0]['dataFile']['id']
             native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
-            #time.sleep(10)
         else:
             raise Exception("Exception from dataverse during upload: " + file_response.json()['message']) #TODO: Handle this better?
 
