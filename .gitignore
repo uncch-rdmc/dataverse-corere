@@ -24,3 +24,6 @@ corere-cloudrun-service.yaml
 !/docker/secret.db.user.sample
 .vscode/.ropeproject/objectdb
 .vscode/.ropeproject/config.py
+pub_id-contact_last_name_-_manuscript.zip
+pub_id-contact_last_name_-_submission_1.zip
+verification_report.pdf

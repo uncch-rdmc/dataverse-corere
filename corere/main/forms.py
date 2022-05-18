@@ -185,7 +185,7 @@ class ManuscriptFormHelperMain(FormHelper):
             HTML("""
                 <h5 class='title-text'>General Info</h5>
             """),
-            'pub_name','pub_id','description','subject', 'additional_info',
+            'pub_name','pub_id','description','subject',
             Div(
                 Div('contact_first_name', css_class='col-md-6',),
                 Div('contact_last_name', css_class='col-md-6',),
@@ -233,7 +233,7 @@ class ManuscriptFormHelperEditor(FormHelper):
             HTML("""
                 <h5 class='title-text'>General Info</h5>
             """),
-            'pub_name','pub_id','additional_info',
+            'pub_name','pub_id',
             Div(
                 Div('contact_first_name', css_class='col-md-6',),
                 Div('contact_last_name', css_class='col-md-6',),
@@ -264,7 +264,7 @@ class ManuscriptFormHelperDataverseUpload(FormHelper):
             HTML("""
                 <hr><h5 class='title-text'>General Info</h5>
             """),
-            'pub_name','pub_id','description','subject', 'additional_info',
+            'pub_name','pub_id','description','subject',
             Div(
                 Div('contact_first_name', css_class='col-md-6',),
                 Div('contact_last_name', css_class='col-md-6',),
@@ -311,7 +311,7 @@ class ManuscriptBaseForm(forms.ModelForm):
         abstract = True
         model = m.Manuscript
         fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions', 'exemption_override',
+            'description', 'subject', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions', 'exemption_override',
             'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs', 'dataverse_installation', 'dataverse_parent']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
@@ -377,8 +377,8 @@ class ManuscriptBaseForm(forms.ModelForm):
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
 
-            if(self.data['data_source_formset-0-text'] == ""):
-                validation_errors.append(ValidationError("You must specify a data source."))
+            # if(self.data['data_source_formset-0-text'] == ""):
+            #     validation_errors.append(ValidationError("You must specify a data source."))
 
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
@@ -487,7 +487,6 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['contact_last_name'].disabled = True
         self.fields['contact_email'].disabled = True
         self.fields['description'].disabled = True
-        self.fields['additional_info'].disabled = True
         self.fields['subject'].disabled = True
         self.fields['compute_env'].disabled = True
         self.fields['other_exemptions'].disabled = True
@@ -503,7 +502,7 @@ ManuscriptForms = {
 
 class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        fields = ['pub_name','pub_id','qual_analysis','contents_restricted', 'contents_restricted_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info','exemption_override']
+        fields = ['pub_name','pub_id','qual_analysis','contents_restricted', 'contents_restricted_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','exemption_override']
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -536,20 +535,21 @@ class DataSourceBaseForm(forms.ModelForm):
         fields = ["text"]
         labels = label_gen(model, fields)
 
-    def is_valid(self):
-        result = super(DataSourceBaseForm, self).is_valid()
+    ## NOTE: Commented out because we no longer require Data Source
+    # def is_valid(self):
+    #     result = super(DataSourceBaseForm, self).is_valid()
 
-        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
-        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
-            validation_errors = [] #we store all the "generic" errors and raise them at once
-            if(self.data['data_source_formset-0-text'] == ""):
-                validation_errors.append(ValidationError("You must specify a data source."))
+    #     #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+    #     if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+    #         validation_errors = [] #we store all the "generic" errors and raise them at once
+    #         if(self.data['data_source_formset-0-text'] == ""):
+    #             validation_errors.append(ValidationError("You must specify a data source."))
 
-            if validation_errors:
-                result = True
-                raise ValidationError(validation_errors)
+    #         if validation_errors:
+    #             result = True
+    #             raise ValidationError(validation_errors)
 
-        return result
+    #     return result
 
 
 class DataSourceForm_Admin(DataSourceBaseForm):

@@ -68,7 +68,7 @@ class LoggingInTestCase(LiveServerTestCase):
         selenium.find_element_by_id('id_pub_id').send_keys('pub_id')
         selenium.find_element_by_id('id_description').send_keys('description')
         #selenium.find_element_by_id('id_subject').send_keys('test') #DROPDOWN FIX
-        selenium.find_element_by_id('id_additional_info').send_keys('additional_info')
+        #selenium.find_element_by_id('id_additional_info').send_keys('additional_info')
         selenium.find_element_by_id('id_contact_first_name').send_keys('contact_first_name')
         selenium.find_element_by_id('id_contact_last_name').send_keys('contact_last_name')
         selenium.find_element_by_id('id_contact_email').send_keys('contact_email@test.test')
@@ -356,7 +356,7 @@ class LoggingInTestCase(LiveServerTestCase):
         c_selenium.find_element_by_id('id_pub_name').send_keys('pub_name')
         c_selenium.find_element_by_id('id_pub_id').send_keys('pub_id')
         c_selenium.find_element_by_id('id_description').send_keys('description')
-        c_selenium.find_element_by_id('id_additional_info').send_keys('additional_info')
+        #c_selenium.find_element_by_id('id_additional_info').send_keys('additional_info')
         c_selenium.find_element_by_id('id_contact_first_name').send_keys('curatoradmin')
         c_selenium.find_element_by_id('id_contact_last_name').send_keys('contact_last_name')
         c_selenium.find_element_by_id('id_contact_email').send_keys('curatoradmin@test.test')

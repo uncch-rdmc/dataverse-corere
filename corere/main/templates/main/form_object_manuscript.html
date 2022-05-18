@@ -150,7 +150,7 @@
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="title-text">Data Sources{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
+        <h5 class="title-text">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
