@@ -348,6 +348,7 @@
     {% endif %}
     {% if sendReportButton %}
     <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')">Send Report</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="downloadReportButton" onclick="location.href='/manuscript/{{manuscript_id}}/reportdownload/'">Download Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
@@ -377,7 +378,9 @@
         {% endif %}
         <li><a class="dropdown-item" id="viewManuscriptButtonLinkMore" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
+        {% if not sendReportButton %}
         <li><a class="dropdown-item" id="reportDownloadButtonLinkMore" href="/manuscript/{{manuscript_id}}/reportdownload/">Download Report</a></li>
+        {% endif %}
         {% if launchContainerCurrentSubButton %}
             {% if wholetale %}
             <li><a class="dropdown-item" id="launchContainerButtonLinkMore" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
