@@ -1,4 +1,4 @@
-//pulled from 1.6.0 
+//pulled from 1.7.0 
 //modified to update badge and to return a better formatted list of notifications
 //also modified to delete a notification on alert click and refetch
 
@@ -59,7 +59,8 @@ function fill_notification_list(data) {
             //     message = message + " " + item.timestamp;
             // }
             return '<div class="alert alert-info alert-dismissible fade show " role="alert">'
-            +    '<button type="button" class="fas fa-fw mr-3 align-self-center close" data-dismiss="alert" aria-label="Close" onclick="'
+            +    message
+            +    '<button type="button" class="btn-close" data-dismiss="alert" aria-label="Close" onclick="'
             + `
               $.ajax({
                   url:'/inbox/notifications/mark-as-read/`+item.slug+`/',
@@ -68,12 +69,8 @@ function fill_notification_list(data) {
               fetch_api_data();
               `
             +'">'
-            +        '<span aria-hidden="true">&times;</span>'
             +    '</button>'
-            +    '<div>'+ message + '</div>'
             + '</div>'
-
-            //finish '<li>' + message + '</li>';
         }).join('')
 
         for (var i = 0; i < menus.length; i++){
@@ -95,7 +92,9 @@ function fetch_api_data() {
                 if (this.status === 200){
                     consecutive_misfires = 0;
                     var data = JSON.parse(r.responseText);
-                    registered_functions.forEach(function (func) { func(data); });
+                    for(var i = 0; i < registered_functions.length; i++) {
+                       registered_functions[i](data);
+                    }
                 }else{
                     consecutive_misfires++;
                 }

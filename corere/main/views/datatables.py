@@ -103,10 +103,9 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 def helper_manuscript_columns(user):
     columns = [['selected',''],['id','ID'],['pub_id','Pub ID'],['pub_name','Pub Name'],['_status','Status']]
-    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns.append(['users', "Users"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
+        columns.append(['users', "Users"])
         columns.append(['updated_at','Last Update Date'])
     return columns
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
@@ -117,7 +116,7 @@ class ManuscriptJson(CorereBaseDatatableView):
     http_method_names = ['get']
     max_display_length = 500
 
-    ### These two methods are copied from the JSONResponseMixin and slightly modified to allow caching
+    ### get() and get_json_response() are copied from the JSONResponseMixin and slightly modified to allow caching
     @cache_control(max_age=9999999)
     def get(self, request, *args, **kwargs):
         self.request = request
@@ -143,8 +142,6 @@ class ManuscriptJson(CorereBaseDatatableView):
         )
         #add_never_cache_headers(response)
         return response
-
-
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
