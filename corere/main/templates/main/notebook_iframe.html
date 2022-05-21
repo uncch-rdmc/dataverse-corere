@@ -13,6 +13,7 @@
         {% crispy form helper %}
     </div>
     <input id="file_note_form_back" type="submit" name="back" value="Back" style="display:none;">
+    <input type=button value="Home" id="file_note_form_home" onClick="location.href='/manuscript/{{manuscript_id}}/'" style="display:none;">
     {% if not read_only %}
         <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;">
         <input id="file_note_form_submit" type="submit" name="submit" value="Continue" style="display:none;"> 
@@ -34,7 +35,11 @@
     <div id="logdiv" class="rounded border" style="height:240px; overflow: scroll; padding-left:10px;">
 
     </div>
-    <form><button id="show_notebook_button" type="button" class="button btn-secondary btn-sm" onclick="show_iframe()" style="display:none; margin-top:10px;">Display Notebook</button></form>       
+    <form style="margin-top: 10px;">
+        <input type=button value="Home" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+        <input id="show_notebook_button" type="button" name="Download" value="Display Notebook" style="display:none;" onclick="show_iframe()"> 
+        {% comment %} <button id="show_notebook_button" type="button" class="button btn-secondary btn-sm" onclick="show_iframe()" style="display:none; margin-top:10px;">Display Notebook</button> {% endcomment %}
+    </form>       
 </div>
 
 <script type="text/javascript">
@@ -63,7 +68,7 @@
 
         var show_notebook_button = document.getElementById("show_notebook_button");
         if(show_notebook_button) {
-            show_notebook_button.style.display = 'block';
+            show_notebook_button.style.display = 'inline';
         }
     })
     .fail(function(data)
@@ -77,6 +82,10 @@
         if(notebookiframe) {
             notebookiframe.src = container_url
             notebookiframe.style.display = 'block';
+        }
+        var notebookinfotext = document.getElementById("notebook_info_text");
+        if(notebookinfotext) {
+            notebookinfotext.style.display = 'block';
         }
         var formlaunch = document.getElementById("file_note_form_launch");
         if(formlaunch) {
@@ -99,6 +108,11 @@
         if(formissues) {
             formissues.style.display = '';
         }
+        {% else %}
+        var formhome = document.getElementById("file_note_form_home");
+        if(formhome) {
+            formhome.style.display = '';
+        }
         {% endif %}
         var logandbuttondiv = document.getElementById("logandbuttondiv");
         if(logandbuttondiv) {
@@ -116,10 +130,15 @@
                 formlaunch.onclick = function() {window.open(notebookiframe.src)};
             }
             formlaunch.style.display = '';
+
+            var notebookinfotext = document.getElementById("notebook_info_text");
+            if(notebookinfotext) {
+                notebookinfotext.style.display = '';
+            }
         }
     </script>
-    {% if is_author %}
     <script>
+    {% if is_author %}
         var formback = document.getElementById("file_note_form_back");
         if(formback) {
             formback.style.display = '';
@@ -136,9 +155,16 @@
         if(formissues) {
             formissues.style.display = '';
         }
-    </script>
+    {% else %}
+    var formhome = document.getElementById("file_note_form_home");
+    if(formhome) {
+        formhome.style.display = '';
+    }
     {% endif %}
+    </script>
 {% endif %}
+<br>
+<p id="notebook_info_text" style="color:gray; {% if wt_launching %} display:none;{% endif %}"><i>Note: Changes made inside this container will not be saved to the CORE2 submission.</i></p>
 <!-- <br>
 <div id="notebook_issue_div" style="display:none;">
     <form id="submission_notebook_issues_form" action="" method="post" enctype="multipart/form-data" >

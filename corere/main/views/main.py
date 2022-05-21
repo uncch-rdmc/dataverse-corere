@@ -205,8 +205,6 @@ def manuscript_landing(request, id=None):
                     else: 
                         if has_transition_perm(latestSubmission.view_noop, request.user):
                             launchContainerCurrentSubButton = True
-            else:
-                launchContainerCurrentSubButton = True
 
         except m.Submission.DoesNotExist:
             pass

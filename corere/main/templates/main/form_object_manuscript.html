@@ -170,25 +170,24 @@
 
     {% if not read_only %}
         {% if create %}
-            <input type=button value="Home" onClick="location.href='..';">
+            <input type=button value="Home" onClick="location.href='/manuscript/{{manuscript_id}}/'">
             <input type="submit" name="submit_continue" value="Create and Continue">
         {% elif from_submission %}
-            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='..';}">
+            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
             <input type="submit" name="submit_continue_submission" value="Save and Continue">
         {% elif m_status == "new" %}
-            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='..';}">
+            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
             <input type="submit" name="submit_continue" value="Save and Continue">
         {% elif m_status == "pending_dataverse_publish" or m_status == "published_to_dataverse" or m_status == "completed_report_sent" %}
-            <input type=button value="Home" onClick="location.href='..';">
+            <input type=button value="Home" onClick="location.href='/manuscript/{{manuscript_id}}/'">
             <input type="submit" name="submit_confirm" value="Save and Continue">
         {% else %}
-            <input type=button value="Home" onClick="location.href='..';">
+            <input type=button value="Home" onClick="location.href='/manuscript/{{manuscript_id}}/'">
             <input type="submit" name="submit" value="Save">
         {% endif %}
     {% else %}
-        <input type=button value="Home" onClick="location.href='..';">
+        <input type=button value="Home" onClick="location.href='/manuscript/{{manuscript_id}}/'">
     {% endif %}
-
 </form>
 
 {% endblock content %}

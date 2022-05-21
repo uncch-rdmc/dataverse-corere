@@ -261,12 +261,12 @@ class GenericManuscriptView(GenericCorereObjectView):
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission,
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper }#'
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper, 'manuscript_id': self.object.id }#'
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
         if self.request.user.is_superuser or not self.create:
-            logger.debug("OBJECT YEA: " + str(self.object))
+            #logger.debug("OBJECT YEA: " + str(self.object))
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
@@ -357,7 +357,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper, 'manuscript_id': self.object.id}
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
@@ -430,7 +430,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
         progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_id': self.object.id,
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
             })
@@ -574,7 +574,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
         self.general(request, *args, **kwargs)
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list,
+            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'manuscript_id': self.object.id,
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
@@ -1688,7 +1688,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
     def general(self, request, *args, **kwargs):
-        if self.object.manuscript.is_containerized() == 'Other':
+        if not self.object.manuscript.is_containerized():
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
@@ -1803,7 +1803,7 @@ class SubmissionGenericWholeTalePermissionView(GenericCorereObjectView):
     #For now if not wholetale, we check if 'edit_noop'
     #Code was same as in SubmissionNotebookView, but that needed more customization
     def general(self, request, *args, **kwargs):
-        if self.object.manuscript.is_containerized() == 'Other':
+        if not self.object.manuscript.is_containerized():
             raise Http404()
         elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
@@ -1840,8 +1840,7 @@ class SubmissionDownloadWholeTaleNotebookView(LoginRequiredMixin, GetOrGenerateO
 
     def get(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
-
-        if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
+        if not self.object.manuscript.is_containerized() or settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
 
         wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))

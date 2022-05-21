@@ -15,9 +15,7 @@
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
             cache: true,
-            headers: {
-                'Cache-Control': 'max-age=1000' 
-            },
+
             success: function (response) {
                 var [columns_config, button_index] = constructTableM(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
@@ -30,9 +28,6 @@
                     stateSave: true,
                     paging: true,
                     cache: true,
-                    headers: {
-                        'Cache-Control': 'max-age=1000' 
-                    },
                     select: 'single',
                     columns: columns_config,
                     dom: 'Bfrtpl',
@@ -143,7 +138,8 @@
                     }
                 }).on('dblclick', function(e, dt, type, indexes) {
                     //manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
-                    window.open("manuscript/" + manuscript_id);
+                    //window.open("manuscript/" + manuscript_id);
+                    window.location.href = "manuscript/" + manuscript_id;
                 }
                 )
                 ;
