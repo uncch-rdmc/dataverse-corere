@@ -323,11 +323,23 @@
     Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
     {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
         <br> 
-        Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
-        Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+        <span>
+            Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_curators|length == 0 %}
+            <a href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a>
+            {% comment %} <button type="button" class="btn btn-secondary btn-sm" id="addCuratorInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Curator</button> {% endcomment %}
+            {% endif %}
+        </span>
+        <br>  
+        <span>
+            Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_verifiers|length == 0 %}
+            <a style="margin-left:3px;" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a>
+            {% comment %} <button type="button" class="btn btn-secondary btn-sm" style="margin-left:3px;" id="addVerifierInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Verifier</button> {% endcomment %}
+            {% endif %}
+        </span>
     {% endif %}
 </p>
-
 <div class="my-1 dt-buttons btn-group flex-wrap">    
     {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}

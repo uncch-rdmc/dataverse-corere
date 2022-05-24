@@ -119,9 +119,9 @@ class UserDetailsFormHelper(FormHelper):
 
 #For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=True)
+    email = forms.EmailField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
 
 class CustomSelect2UserWidget(forms.SelectMultiple):
     class Media:
@@ -132,10 +132,41 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 
 #For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=False)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=False)
+    email = forms.EmailField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    #TODO: Add a text -or- inbetween here on the form. Also don't require First/Last/Email if the existing user is selected
+    users_to_add = ModelMultipleChoiceField(label='Select Existing CoRe2 User', queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+
+    def clean(self):
+        if ((self.cleaned_data.get('first_name', None) and self.cleaned_data.get('last_name', None) and self.cleaned_data.get('email', None))
+            or self.cleaned_data.get('users_to_add', None)):
+            return self.cleaned_data
+        else:
+            raise forms.ValidationError('Either select an existing user or provide user details to invite a new user.')
+
+class AuthorInviteAddFormHelper(FormHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            Div(
+                Div('first_name',css_class='col-md-6',),
+                Div('last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'email',
+            HTML("""
+                <label style='margin-top:2px; margin-bottom:12px'>-or-</label>
+            """),
+            'users_to_add'
+        )
+
+class StandardUserAddFormHelper(FormHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
 
 class EditorAddForm(forms.Form):
     users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
@@ -153,9 +184,9 @@ class EditUserForm(forms.ModelForm):
 
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=True)
+    email = forms.CharField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
 #No actual editing is done in this form, just uploads
 #We just leverage the existing form infrastructure for perm checks etc

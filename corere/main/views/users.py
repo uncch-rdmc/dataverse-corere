@@ -4,7 +4,7 @@ from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
 from corere.main.models import Manuscript, User, CorereInvitation
 from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm
+from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm, AuthorInviteAddFormHelper, StandardUserAddFormHelper
 from django.contrib import messages
 from django.utils.safestring import mark_safe
 from invitations.utils import get_invitation_model
@@ -85,7 +85,8 @@ def invite_assign_author(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 'manuscript_display_name': manuscript.get_display_name(),
-        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': page_title, 'page_help_text': page_help_text})
+        'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': page_title, 'page_help_text': page_help_text,
+        'helper': AuthorInviteAddFormHelper()})
 
 #Called during initial manuscript creation
 @login_required
@@ -202,7 +203,8 @@ def assign_editor(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
-        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
+        'helper': StandardUserAddFormHelper()})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -262,7 +264,8 @@ def assign_curator(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
-        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
+        'helper': StandardUserAddFormHelper()})
 
 @login_required
 @permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
@@ -323,7 +326,8 @@ def assign_verifier(request, id=None):
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
-        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title})
+        'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
+        'helper': StandardUserAddFormHelper()})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required

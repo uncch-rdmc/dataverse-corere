@@ -150,13 +150,15 @@
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="title-text">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Description of the data sources" aria-label="Description of the data sources"></span></h5>
+        <h5 class="title-text">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Full data citation for each original data source" aria-label="Full data citation for each original data source"></span></h5>
+        <h6><i><span style="color:#666666; margin-left:1px;">Please enter each data source in a separate field by selecting 'add data source'</span></i></h6>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
     {% endif %}
     {% if keyword_formset %}
         <h5 class="title-text">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h6><i><span style="color:#666666; margin-left:1px;">Please enter each keyword in a separate field by selecting 'add keyword'</span></i></h6>
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
