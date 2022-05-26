@@ -27,8 +27,8 @@
 <form action="" method="post">
     {% csrf_token %}
     {% crispy form helper %}
-    <input type=button value="Back" onClick="javascript:history.go(-1);">
-    <input type="submit" name="submit" value="Submit">
+    <input type=button value="Back" title="Return to previous page" aria-label="Return to previous page" onClick="javascript:history.go(-1);">
+    <input type="submit" name="submit" value="Submit" title="Assign user to manuscript as a {{role_name|lower}}" aria-label="Assign user to manuscript as a {{role_name|lower}}">
 </form>
 <hr>
 <h6 class="my-3">{{role_name}}s assigned to Manuscript</h6>
@@ -45,7 +45,7 @@
         <td>{{ u.username }}</td>
         {% if role_name != "Author" or can_remove_author %}
             <td>{{ u|groups_contain_count_no_completed:group_substring }}</td>
-            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="unassign('{{id}}','{{role_name|lower}}','{{u.id}}')"><span class="fas fa-user-minus"></span></button></td>
+            <td> <button class="btn btn-secondary btn-sm" type="button" onclick="unassign('{{id}}','{{role_name|lower}}','{{u.id}}')" title="Unassign {{ u.username }} as a {{role_name|lower}} from the manuscript" aria-label="Unassign {{ u.username }} as a {{role_name|lower}} from the manuscript"><span class="fas fa-user-minus"></span></button></td>
         {% endif %}
     </tr>
     {% endfor %}

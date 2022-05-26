@@ -2,9 +2,9 @@
 {% block content %}
 {% include "main/page_title.html" %}
     <ul class="list-group">
-    <li class="list-group-item"><a href="inviteeditor">Invite Editor</a></li>
-    <li class="list-group-item"><a href="invitecurator">Invite Curator</a></li>
-    <li class="list-group-item"><a href="inviteverifier">Invite Verifier</a></li>
+        <li class="list-group-item"><a title="Invite editor to the CORE2 system" aria-label="Invite editor to the CORE2 system" href="inviteeditor">Invite Editor</a></li>
+        <li class="list-group-item"><a title="Invite curator to the CORE2 system" aria-label="Invite curator to the CORE2 system" href="invitecurator">Invite Curator</a></li>
+        <li class="list-group-item"><a title="Invite verifier to the CORE2 system" aria-label="Invite verifier to the CORE2 system" href="inviteverifier">Invite Verifier</a></li>
     </ul>
     {% comment %} {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' %}

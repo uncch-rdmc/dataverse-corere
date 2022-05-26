@@ -60,7 +60,7 @@ function fill_notification_list(data) {
             // }
             return '<div class="alert alert-info alert-dismissible fade show " role="alert">'
             +    message
-            +    '<button type="button" class="btn-close" data-dismiss="alert" aria-label="Close" onclick="'
+            +    '<button type="button" class="btn-close" data-dismiss="alert" aria-label="Clear notification" onclick="'
             + `
               $.ajax({
                   url:'/inbox/notifications/mark-as-read/`+item.slug+`/',

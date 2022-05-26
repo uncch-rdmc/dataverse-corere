@@ -13,6 +13,10 @@ function create_file_table_config(table_path, readonly, is_submission, file_down
                 }
                 
             },
+            attr: {
+                title: 'Download all manuscript and appendix files',
+                'aria-label': 'Download all manuscript and appendix files'
+            }
         },         
     ]
     if(!readonly && is_submission) {
@@ -24,6 +28,10 @@ function create_file_table_config(table_path, readonly, is_submission, file_down
                     delete_all_and_refresh('..');
                 }
             },
+            attr: {
+                title: 'Delete all manuscript and appendix files',
+                'aria-label': 'Delete all manuscript and appendix files'
+            }
         },                    
         )
     }
@@ -44,9 +52,9 @@ function create_file_table_config(table_path, readonly, is_submission, file_down
                 data: 'buttons',
                 render: function(data,type,row,meta){
                     encoded = encodeURIComponent(row[0]+row[1])
-                    button =  '<button class="btn btn-secondary btn-sm" type="button" onclick="window.open(\''+file_download_url+encoded+'\')"><span class="fas fa-file-download"></span></button>'
+                    button =  '<button class="btn btn-secondary btn-sm" type="button" onclick="window.open(\''+file_download_url+encoded+'\')" title="Download file" aria-label="Download file"><span class="fas fa-file-download"></span></button>'
                     if(!readonly) {
-                        button += '<button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh(\'../deletefile/?file_path='+encoded+'\''+')"><span class="far fa-trash-alt"></span></button>'
+                        button += '<button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh(\'../deletefile/?file_path='+encoded+'\''+')" title="Delete file" aria-label="Delete file"><span class="far fa-trash-alt"></span></button>'
                     }
 
                     return button;

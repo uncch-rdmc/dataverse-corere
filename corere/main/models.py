@@ -739,7 +739,7 @@ class Manuscript(AbstractCreateUpdateModel):
     skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
     _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
 
-    dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse in the installation targeted for the dataset created with the manuscript info.')
+    dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse on the installation that your new dataset will be created under. Please provide the name at the end of the dataverse page URL (e.g. https://dataverse.unc.edu/dataverse/COPY_THIS_NAME)')
     dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
     dataverse_fetched_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
     dataverse_fetched_data_citation = models.TextField(default="", blank=True, null=True, verbose_name='Dataverse Data Citation', help_text='The data citation pulled from the dataset connected to this manuscript (via DOI)')

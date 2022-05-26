@@ -42,6 +42,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "manuscript/create";
                             },
+                            attr: {
+                                title: 'Create a new manuscript record in CORE2 for a publication',
+                                'aria-label': 'Create a new manuscript record in CORE2 for a publication'
+                            }
                         },
                     {% endif %}
                         {
@@ -50,6 +54,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "manuscript/" + manuscript_id;
                             },
+                            attr: {
+                                title: 'Work on a manuscript record',
+                                'aria-label': 'Work on a manuscript record'
+                            }
                         },
                         
                         //the default for the searches controlled by these two buttons is set later down
@@ -70,6 +78,10 @@
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
                             },
+                            attr: {
+                                title: 'Show/hide completed manuscripts',
+                                'aria-label': 'Show/hide completed manuscripts'
+                            }
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                         {
@@ -88,6 +100,10 @@
                                     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
                             },
+                            attr: {
+                                title: 'Show/hide manuscripts not assigned to you',
+                                'aria-label': 'Show/hide manuscripts not assigned to you'
+                            }
                         },
                         {
                             text: 'Show User Filter Table',
@@ -116,6 +132,10 @@
                                 //     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 // }
                             },
+                            attr: {
+                                title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
+                                'aria-label': 'Show/hide additional table where you can see the manuscripts assigned to individual users'
+                            }
                         },
                         {% endif %}
                     ]
@@ -267,6 +287,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );
                             },
+                            attr: {
+                                title: 'Show all users',
+                                'aria-label': 'Show all users'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Authors Shown',
@@ -279,6 +303,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are authors',
+                                'aria-label': 'Show/hide users who are authors'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Editors Shown',
@@ -291,6 +319,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are editors',
+                                'aria-label': 'Show/hide users who are editors'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Curators Shown',
@@ -303,6 +335,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are curators',
+                                'aria-label': 'Show/hide users who are curators'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Verifiers Shown',
@@ -315,6 +351,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are verifiers',
+                                'aria-label': 'Show/hide users who are verifiers'
+                            }
                         },
 
                     ]
@@ -326,7 +366,7 @@
                         $('#manuscript_table').addClass("visibleMe")
                     }
                     $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> Custom Manuscripts' );
-                    console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
+                    //console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
 
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
@@ -347,7 +387,6 @@
     });
 
     function constructTable(columns) {
-        console.log("HELLO 2")
         var columns_config = [];
         var button_index;
         for (var c in columns) {
