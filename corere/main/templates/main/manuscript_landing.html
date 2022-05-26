@@ -94,16 +94,31 @@
                             },
                         {% endif %}
                         {
-                            text: 'Edit/Progress',
+                            text: 'Edit Notes',
                             name: 'editSubmission',
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "/submission/"+submission_id+"/info/";
                                 
                             },
-                            {% comment %} Change these labels when improving the Edit/Progress button {% endcomment %}
                             attr: {
-                                title: 'Edit information related to this submission round',
-                                'aria-label': 'Edit information related to this submission round'
+                                title: 'Edit notes for this submission round',
+                                'aria-label': 'Edit notes for this submission round'
+                            },
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
+                        },
+                        {
+                            text: 'Review',
+                            name: 'reviewSubmission',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/info/";
+                                
+                            },
+                            attr: {
+                                title: 'Review the data/code/metadata for this submission round',
+                                'aria-label': 'Review the data/code/metadata for this submission round'
                             },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");

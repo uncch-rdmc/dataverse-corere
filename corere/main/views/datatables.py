@@ -252,36 +252,38 @@ class SubmissionJson(CorereBaseDatatableView):
             avail_buttons = []
 
             #Here we allow edit submission to be done at multiple phases
-            if(has_transition_perm(submission.edit_noop, user)
-               or has_transition_perm(submission.add_edition_noop, user)
+            if(has_transition_perm(submission.add_edition_noop, user)
                or has_transition_perm(submission.add_curation_noop, user)
                or has_transition_perm(submission.add_verification_noop, user) ):
-                avail_buttons.append('editSubmission')
+                avail_buttons.append('reviewSubmission')
                 #avail_buttons.append('editSubmissionFiles')
             else:
                 try:
                     if(has_transition_perm(submission.submission_edition.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_curation.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_verification.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
 
+            if 'reviewSubmission' not in avail_buttons and has_transition_perm(submission.edit_noop, user):
+                avail_buttons.append('editSubmission')
+
             if(has_transition_perm(submission.view_noop, user)):
-                if('editSubmission' not in avail_buttons):
+                if('editSubmission' not in avail_buttons and 'reviewSubmission' not in avail_buttons):
                     avail_buttons.append('viewSubmission')
                 if('editSubmissionFiles' not in avail_buttons):
                     avail_buttons.append('viewSubmissionFiles')
