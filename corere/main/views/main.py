@@ -5,6 +5,7 @@ from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
 from corere.main import docker as d
+from corere.main import wholetale_corere as w
 from corere.main.views.datatables import helper_manuscript_columns, helper_submission_columns, helper_user_columns
 from corere.main.forms import * #TODO: bad practice and I don't use them all
 from corere.main.utils import get_pretty_user_list_by_group_prefix
@@ -308,6 +309,13 @@ def open_notebook(request, id=None):
 #     d.delete_manuscript_docker_stack_crude(manuscript)
 #     messages.add_message(request, messages.INFO, "Manuscript #"+ str(id) + " notebook stack has been deleted")
 #     return redirect("/")
+
+@login_required()
+@require_http_methods(["GET"])
+def check_wholetale_connection(request):
+    w.WholeTaleCorere(admin=True) #If this errors our middleware will catch it
+    return HttpResponse(status=200)
+
 
 @login_required()
 @require_http_methods(["GET"])

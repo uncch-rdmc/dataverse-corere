@@ -4,13 +4,17 @@ from corere.apps.wholetale.wholetale import WholeTale
 from corere.main import models as m
 from corere.main import constants as c
 from django.db.models import Q  
+from django.http import Http404
 from django.conf import settings
 
 #We create a subclass of WholeTale to add the corere-specific code.
 #This is so the WholeTale code can be better reused by others in the future
 class WholeTaleCorere(WholeTale):
+    # When calling this initialization, note that our WholeTaleOutageMiddleware will catch connection errors
+    # It is best to initialize early during page logic to ensure that the error isn't hit after actions have been saved
     def __init__(self, token=None, admin=False):
         super(WholeTaleCorere, self).__init__(token, admin)
+
         if token:
             #When connecting as a user, we check that there are any wt-group invitations owned by corere, and accept them if so
             wt_user = self.gc.get("/user/me")

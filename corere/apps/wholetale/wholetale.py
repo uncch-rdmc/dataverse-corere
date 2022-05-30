@@ -21,7 +21,7 @@ class WholeTale:
         ADMIN = 2
 
     def __init__(self, token=None, admin=False):#, event_thread=False):
-        self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
+        self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1") #If you change this string, also look at middleware.py
         if admin:
             if token:
                 raise ValueError("Token and admin cannot be provided at the same time")

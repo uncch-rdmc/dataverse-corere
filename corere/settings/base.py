@@ -81,6 +81,7 @@ MIDDLEWARE = [
     'crequest.middleware.CrequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corere.main.middleware.WholeTaleOutageMiddleware',
     'corere.main.middleware.BaseMiddleware',
     'corere.main.utils.UserAlreadyAssociatedMiddleware',
 ]

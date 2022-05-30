@@ -67,6 +67,7 @@ urlpatterns = [
     path('account_user_details/', users.account_user_details, name="account_user_details"),
     path('account_complete_oauth/', users.account_complete_oauth, name="account_complete_oauth"),
     path('notifications/', users.notifications, name="notifications"),
+    path('wholetale_connection/', main.check_wholetale_connection, name="wholetale_connection"),
     path('site_actions/', main.site_actions, name="site_actions"),
     path('site_actions/inviteeditor/', users.invite_editor, name="inviteeditor"),
     path('site_actions/invitecurator/', users.invite_curator, name="invitecurator"),
