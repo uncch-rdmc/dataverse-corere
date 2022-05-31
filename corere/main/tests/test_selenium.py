@@ -1,4 +1,4 @@
-import time, unittest
+import time, unittest, os
 from django.test import LiveServerTestCase, override_settings
 from seleniumwire import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -6,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait, Select
+from webdriver_manager.chrome import ChromeDriverManager
 
 from corere.main.tests.selenium_access_utils import *
 from corere.main import models as m
@@ -18,9 +19,11 @@ from corere.apps.wholetale import models as wtm
 # TODO: Maybe use sys.argv to detect verbose and run print statements: https://www.knowledgehut.com/blog/programming/sys-argv-python-examples
 class LoggingInTestCase(LiveServerTestCase):
     def setUp(self):
+        #os.environ['WDM_LOG_LEVEL'] = '0' #Should Disable webdriver_manager print statements... but doesn't. 
         self.options = Options()
         self.options.headless = True
-        self.selenium = webdriver.Chrome(options=self.options)
+        # self.selenium = webdriver.Chrome(options=self.options)
+        self.selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         m.User.objects.create_superuser('admin', 'admin@test.test', 'password')
 
         #We need add the other option for compute env with the current implementation
@@ -238,10 +241,10 @@ class LoggingInTestCase(LiveServerTestCase):
     #@unittest.skip("testing others now")
     def test_3_user_workflow_with_access_checks(self):
         admin_selenium = self.selenium
-        anon_selenium = webdriver.Chrome(options=self.options)
-        v_out_selenium= webdriver.Chrome(options=self.options)
-        v_in_selenium = webdriver.Chrome(options=self.options)
-        c_selenium = webdriver.Chrome(options=self.options)
+        anon_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        v_out_selenium= webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        v_in_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        c_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
 
         ##### ADMIN LOGIN #####
 

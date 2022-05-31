@@ -443,7 +443,6 @@ class Submission(AbstractCreateUpdateModel):
                 return self.Status.IN_PROGRESS_EDITION
         else:
             raise Exception
-        pass
 
     #-----------------------
 

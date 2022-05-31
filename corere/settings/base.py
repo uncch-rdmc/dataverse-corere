@@ -129,6 +129,7 @@ DATABASES = {
         'PASSWORD': os.environ["POSTGRES_PASSWORD"],
         'HOST': os.environ["POSTGRES_HOST"], #TODO: is this needed?
         'PORT': '5432',
+        'ATOMIC_REQUESTS': True,
     },
     #Used for admin sql queries
     "readonly": {

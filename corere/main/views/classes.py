@@ -498,8 +498,8 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
         if not self.read_only:
             try:
                 file = request.FILES.get('file')
-                fullPath = request.POST.get('fullPath','')
-                path = '/'+fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+                fullRelPath = request.POST.get('fullPath','')
+                path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
 
                 if gitfiles := m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
                     g.delete_manuscript_file(self.object, fullRelPath+file.name)
@@ -1218,6 +1218,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 old_dv_url = self.object.manuscript.dataverse_installation.url
                 try:
                     dv.upload_manuscript_data_to_dataverse(self.object.manuscript)
+                    self.object.manuscript.save()
                     if old_doi and old_doi != self.object.manuscript.dataverse_fetched_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
                         self.msg = 'You have uploaded the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
                         messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
@@ -1930,9 +1931,6 @@ def _helper_submit_submission_and_redirect(request, submission):
             logger.debug("PermissionDenied")
             raise Http404()
 
-        submission.submit(request.user)
-        submission.save()
-
         if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)    
@@ -1971,6 +1969,9 @@ def _helper_submit_submission_and_redirect(request, submission):
                 wtc_tale_copy_verifier = wtc.copy_tale(tale_original.wt_id, new_title=verifier_tale_title)
                 tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
             wtc.set_group_access(tale_copy_verifier.wt_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
+
+        submission.submit(request.user)
+        submission.save()
 
         ## Messaging ###
         msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_display_name=submission.manuscript.get_display_name())

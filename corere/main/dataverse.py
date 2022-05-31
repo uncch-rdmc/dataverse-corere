@@ -29,7 +29,7 @@ def update_citation_data(manuscript):
     except Exception:
         raise ValueError("Unable to get 'published_at' from dataset json. Maybe the dataset has not been published.")
 
-    manuscript.save()
+    #manuscript.save()
 
 
 #Note: this uploads the data for the approved submission
@@ -68,7 +68,7 @@ def upload_manuscript_data_to_dataverse(manuscript):
     manuscript.dataverse_fetched_data_citation = ""
     manuscript.dataverse_fetched_publish_date = None
     # manuscript.dataverse_upload_noop()
-    manuscript.save()
+    #manuscript.save()
 
 # Converts manuscript fields and hardcoded data to a dictionary that is then converted to json
 def build_dataset_json(manuscript):
