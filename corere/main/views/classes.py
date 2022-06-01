@@ -834,6 +834,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
+        #NOTE: If you move this code after submission progressing, the saving of note phase will break.
         if not self.read_only:
             if self.note_formset is not None:
                 if self.note_formset.is_valid():

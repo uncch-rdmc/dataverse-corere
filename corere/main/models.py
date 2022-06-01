@@ -1186,14 +1186,34 @@ class Note(AbstractCreateUpdateModel):
             first_save = True
             self.manuscript = self.parent_submission.manuscript
 
-            if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
+            # The code is a hack in that a user with both curator and verifier perms will always create additional notes as a curator. If we ever need to support both we'll need to add a UI option to note creation.
+            # We don't check groups in all the places because only curators/verifiers can edit notes out of phase
+            if self.parent_submission._status == Submission.Status.NEW or self.parent_submission._status == Submission.Status.REJECTED_EDITOR:
                 self.ref_cycle = self.RefCycle.SUBMISSION
-            elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_EDITION:
                 self.ref_cycle = self.RefCycle.EDITION
-            elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_CURATION:
                 self.ref_cycle = self.RefCycle.CURATION
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_VERIFICATION:
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.VERIFICATION
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.CURATION
+                else:
+                    self.ref_cycle = self.RefCycle.VERIFICATION #If during verification assigned as either curator or verifier we default to verifier
+            elif (self.parent_submission._status == Submission.Status.REVIEWED_AWAITING_REPORT or self.parent_submission._status == Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL
+                or self.parent_submission._status == Submission.Status.RETURNED):
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.CURATION
+                elif local.user.groups.filter(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.VERIFICATION
+                elif local.user.is_superuser: 
+                    self.ref_cycle = self.RefCycle.CURATION #If later and not assigned as either curator or verifier we default to curator
+                else:
+                    logger.error("Non curator/verifier should never be editing notes out of phase. Note {} , User {} .".format(self.id, local.user.username))
+                    raise Exception("Non curator/verifier should never be editing notes out of phase")
             else:
-                self.ref_cycle = self.RefCycle.VERIFICATION
+                raise Exception("Undefined submission phase")
 
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
