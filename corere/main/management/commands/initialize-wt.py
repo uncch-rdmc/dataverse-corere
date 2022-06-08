@@ -17,6 +17,7 @@ class Command(BaseCommand):
         parser.add_argument('--createlocal', action='store_true', help='Create the local wholetale.admin group connected to what is created in the Whole Tale instance.')
         parser.add_argument('--deletegroups', action='store_true', help='Deletes all remote/local groups. Note that doing this will break existing access')
         parser.add_argument('--deletetales', action='store_true', help='Deletes all remote/local tales. Note that doing this will break existing manuscripts.')
+        #TODO: Add a flow to delete all remote tales and groups even if they aren't tracked in CORE2. With a confirmation dialog
 
     def handle(self, *args, **options):
         wtc = w.WholeTaleCorere(admin=True)
