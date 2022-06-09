@@ -883,8 +883,12 @@ class Manuscript(AbstractCreateUpdateModel):
     def has_submissions(self):
         return self.get_max_submission_version_id() != None
 
-    def get_landing_url(self):
-        return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
+    def get_landing_url(self, request):
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        return protocol + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
 
     #Note: When slug uses this function, it removes the parenthesis and replaces spaces with underscore
     def get_display_name(self):
