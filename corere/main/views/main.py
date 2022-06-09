@@ -317,6 +317,7 @@ def open_notebook(request, id=None):
 # def delete_notebook_stack(request, id=None):
 #     manuscript = get_object_or_404(m.Manuscript, id=id)
 #     d.delete_manuscript_docker_stack_crude(manuscript)
+#     list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
 #     messages.add_message(request, messages.INFO, "Manuscript #"+ str(id) + " notebook stack has been deleted")
 #     return redirect("/")
 
