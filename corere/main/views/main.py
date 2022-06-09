@@ -117,6 +117,8 @@ def manuscript_landing(request, id=None):
     editSubmissionButton = False
     reviewSubmissionButtonMain = False
     reviewSubmissionButtonMore = False
+    updateReviewSubmissionButtonMain = False
+    updateReviewSubmissionButtonMore = False
     sendReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
@@ -167,34 +169,37 @@ def manuscript_landing(request, id=None):
                 try:
                     if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
-                            reviewSubmissionButtonMore = True
+                            updateReviewSubmissionButtonMore = True
                         else:
-                            reviewSubmissionButtonMain = True
+                            updateReviewSubmissionButtonMain = True
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if has_transition_perm(latestSubmission.submission_curation.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_CURATION
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
-                            reviewSubmissionButtonMore = True
+                            updateReviewSubmissionButtonMore = True
                         else:
-                            reviewSubmissionButtonMain = True
+                            updateReviewSubmissionButtonMain = True
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if has_transition_perm(latestSubmission.submission_verification.edit_noop, request.user): #and latestSubmission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:   
-                            reviewSubmissionButtonMore = True
+                            updateReviewSubmissionButtonMore = True
                         else:
-                            reviewSubmissionButtonMain = True
+                            updateReviewSubmissionButtonMain = True
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
             if manuscript._status == m.Manuscript.Status.PUBLISHED_TO_DATAVERSE or manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT:
                 reviewSubmissionButtonMore = False
                 reviewSubmissionButtonMain = False
+                updateReviewSubmissionButtonMore = False
+                updateReviewSubmissionButtonMain = False
                 editSubmissionButton = False #Edit only via bottom menu
-            if not (returnSubmissionButton or sendReportButton or reviewSubmissionButtonMain or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore) and has_transition_perm(latestSubmission.edit_noop, request.user):
+            if not (returnSubmissionButton or sendReportButton or reviewSubmissionButtonMain or dataverseUploadManuscriptButtonMain or dataverseUploadManuscriptButtonMore or updateReviewSubmissionButtonMore or updateReviewSubmissionButtonMain) \
+                and has_transition_perm(latestSubmission.edit_noop, request.user):
                 editSubmissionButton = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
             if latestSubmission.manuscript.compute_env != 'Other' and settings.CONTAINER_DRIVER == 'wholetale':
@@ -240,6 +245,8 @@ def manuscript_landing(request, id=None):
             'editSubmissionButton': editSubmissionButton,
             'reviewSubmissionButtonMain': reviewSubmissionButtonMain,
             'reviewSubmissionButtonMore': reviewSubmissionButtonMore,
+            'updateReviewSubmissionButtonMain': updateReviewSubmissionButtonMain,
+            'updateReviewSubmissionButtonMore': updateReviewSubmissionButtonMore,
             'sendReportButton': sendReportButton,
             'returnSubmissionButton': returnSubmissionButton,
             'createSubmissionButton': createSubmissionButton,
@@ -255,6 +262,9 @@ def manuscript_landing(request, id=None):
 
     if manuscript.dataverse_installation:
         args['manuscript_dataverse_installation_url'] = manuscript.dataverse_installation.url
+
+    if manuscript._status == m.Manuscript.Status.PROCESSING:
+        args['latest_submission_status'] = manuscript.get_latest_submission().get__status_display()
 
     if settings.CONTAINER_DRIVER == "wholetale":
         args['wholetale'] = True

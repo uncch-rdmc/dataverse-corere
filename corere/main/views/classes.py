@@ -238,7 +238,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
             self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
-        if(self.dataverse_upload):
+        elif(self.dataverse_upload):
             self.form_helper = f.ManuscriptFormHelperDataverseUpload()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
