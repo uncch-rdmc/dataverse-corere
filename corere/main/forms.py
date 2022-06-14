@@ -1,6 +1,6 @@
-import logging, os, copy, sys, re
+import logging, os, copy, sys, re, datetime
 from django import forms
-from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet
+from django.forms import ModelMultipleChoiceField, inlineformset_factory, TextInput, RadioSelect, Textarea, ModelChoiceField, BaseInlineFormSet, modelformset_factory
 from django.contrib.postgres.fields import ArrayField
 #from .models import Manuscript, Submission, Edition, Curation, Verification, User, Note, GitFile
 #from invitations.models import Invitation
@@ -14,11 +14,12 @@ from django.contrib.auth.models import Group
 from django.forms.models import BaseInlineFormSet
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div
+from crispy_forms.layout import Layout, Field, ButtonHolder, Submit, Div, HTML, MultiWidgetField
 from crequest.middleware import CrequestMiddleware
 from guardian.shortcuts import get_objects_for_user, assign_perm, remove_perm
 from django.http import Http404
 from corere.apps.wholetale import models as wtm
+from django.forms.widgets import SelectDateWidget
 logger = logging.getLogger(__name__)
 
 ### NOTE: Changing the name of any form that end in "_[ROLE]" (e.g. ManuscriptForm_Admin)
@@ -118,9 +119,9 @@ class UserDetailsFormHelper(FormHelper):
 
 #For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=True)
+    email = forms.EmailField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
 
 class CustomSelect2UserWidget(forms.SelectMultiple):
     class Media:
@@ -131,10 +132,41 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 
 #For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.EmailField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
-    users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=False)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=False)
+    email = forms.EmailField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    #TODO: Add a text -or- inbetween here on the form. Also don't require First/Last/Email if the existing user is selected
+    users_to_add = ModelMultipleChoiceField(label='Select Existing CoRe2 User', queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_AUTHOR), widget=CustomSelect2UserWidget(), required=False)
+
+    def clean(self):
+        if ((self.cleaned_data.get('first_name', None) and self.cleaned_data.get('last_name', None) and self.cleaned_data.get('email', None))
+            or self.cleaned_data.get('users_to_add', None)):
+            return self.cleaned_data
+        else:
+            raise forms.ValidationError('Either select an existing user or provide user details to invite a new user.')
+
+class AuthorInviteAddFormHelper(FormHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            Div(
+                Div('first_name',css_class='col-md-6',),
+                Div('last_name',css_class='col-md-6',),
+                css_class='row',
+            ),
+            'email',
+            HTML("""
+                <label style='margin-top:2px; margin-bottom:12px'>-or-</label>
+            """),
+            'users_to_add'
+        )
+
+class StandardUserAddFormHelper(FormHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
 
 class EditorAddForm(forms.Form):
     users_to_add = ModelMultipleChoiceField(queryset=m.User.objects.filter(invite__isnull=True, groups__name=c.GROUP_ROLE_EDITOR), widget=CustomSelect2UserWidget(), required=False)
@@ -152,9 +184,9 @@ class EditUserForm(forms.ModelForm):
 
 #Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
-    first_name = forms.CharField(label='Invitee first name', max_length=150, required=True)
-    last_name = forms.CharField(label='Invitee last name', max_length=150, required=True)
-    email = forms.CharField(label='Invitee email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
+    first_name = forms.CharField(label='Invitee First Name', max_length=150, required=True)
+    last_name = forms.CharField(label='Invitee Last Name', max_length=150, required=True)
+    email = forms.CharField(label='Invitee Email', max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
 #No actual editing is done in this form, just uploads
 #We just leverage the existing form infrastructure for perm checks etc
@@ -181,19 +213,46 @@ class ManuscriptFormHelperMain(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
-            'pub_name','pub_id','description','subject', 'additional_info',
+            HTML("""
+                <h5 class='title-text'>General Info</h5>
+            """),
+            'pub_name','pub_id','description','subject',
             Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
                 css_class='row',
             ),
-            'wt_compute_env',
+            HTML("""
+                <hr><h5 class='title-text'>Exemptions</h5>
+                <h6><i><span style="color:#666666; margin-left:1px;">Used by the CORE2 team to decide whether the Manuscript is exempt from parts or all of the CORE2 process  </span></i></h6><br>
+            """),
+            # Div(
+            #     Div('qual_analysis',css_class='col-md-6',),
+            #     Div('qdr_review',css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions','exemption_override',
+            HTML("""
+                <hr><h5 class='title-text'>Environment Info</h5>
+            """),
+            'compute_env','compute_env_other',
+            'operating_system', 'packages_info', 'software_info', 
             Div(
-                Div('contact_first_name',css_class='col-md-6',),
-                Div('contact_last_name',css_class='col-md-6',),
-                Div('contact_email',css_class='col-md-6',),
+                Div('machine_type', css_class='col-md-6',),
+                Div('scheduler', css_class='col-md-6',),
                 css_class='row',
-            )
+            ),
+            Div(
+                Div('platform', css_class='col-md-6',),
+                Div('host_url', css_class='col-md-6',),
+                css_class='row',
+            ),
+            Div(
+                Div('processor_reqs', css_class='col-md-6',),
+                Div('memory_reqs', css_class='col-md-6',),
+                css_class='row',
+            ),
         )
 
 class ManuscriptFormHelperEditor(FormHelper):
@@ -202,46 +261,107 @@ class ManuscriptFormHelperEditor(FormHelper):
         self.form_tag = False
 
         self.layout = Layout(
-            'pub_name','pub_id','additional_info',
+            HTML("""
+                <h5 class='title-text'>General Info</h5>
+            """),
+            'pub_name','pub_id',
             Div(
-                Div('qual_analysis',css_class='col-md-6',),
-                Div('qdr_review',css_class='col-md-6',),
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
+                css_class='row',
+            ),
+            HTML("""
+                <hr><h5 class='title-text'>Exemptions</h5>
+            """),
+            # Div(
+            #     Div('qual_analysis', css_class='col-md-6',),
+            #     Div('qdr_review', css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'contents_restricted', 'contents_restricted_sharing','other_exemptions','exemption_override'
+        )
+
+class ManuscriptFormHelperDataverseUpload(FormHelper):
+     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_tag = False
+
+        self.layout = Layout(
+            HTML("""
+                <h5 class='title-text'>Dataverse Info</h5>
+            """),
+            'dataverse_installation','dataverse_parent',
+            HTML("""
+                <hr><h5 class='title-text'>General Info</h5>
+            """),
+            'pub_name','pub_id','description','subject',
+            Div(
+                Div('contact_first_name', css_class='col-md-6',),
+                Div('contact_last_name', css_class='col-md-6',),
+                Div('contact_email', css_class='col-md-6',),
+                css_class='row',
+            ),
+            HTML("""
+                <hr><h5 class='title-text'>Exemptions</h5>
+                <h6><i><span style="color:#666666; margin-left:1px;">Used by the CORE2 team to decide whether the Manuscript is exempt from parts or all of the CORE2 process  </span></i></h6><br>
+            """),
+            # Div(
+            #     Div('qual_analysis',css_class='col-md-6',),
+            #     Div('qdr_review',css_class='col-md-6',),
+            #     css_class='row',
+            # ),
+            'qual_analysis', 'qdr_review', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions','exemption_override',
+            HTML("""
+                <hr><h5 class='title-text'>Environment Info</h5>
+            """),
+            'compute_env','compute_env_other',
+            'operating_system', 'packages_info', 'software_info', 
+            Div(
+                Div('machine_type', css_class='col-md-6',),
+                Div('scheduler', css_class='col-md-6',),
                 css_class='row',
             ),
             Div(
-                Div('contact_first_name',css_class='col-md-6',),
-                Div('contact_last_name',css_class='col-md-6',),
-                Div('contact_email',css_class='col-md-6',),
+                Div('platform', css_class='col-md-6',),
+                Div('host_url', css_class='col-md-6',),
                 css_class='row',
-            )
+            ),
+            Div(
+                Div('processor_reqs', css_class='col-md-6',),
+                Div('memory_reqs', css_class='col-md-6',),
+                css_class='row',
+            ),
         )
 
 #------------- Base Manuscript -------------
 
 class ManuscriptBaseForm(forms.ModelForm):
+    dataverse_upload = False
     class Meta:
         abstract = True
         model = m.Manuscript
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','wt_compute_env','contact_first_name','contact_last_name','contact_email',
-            'description','subject','additional_info', ]#, 'manuscript_authors', 'manuscript_data_sources', 'manuscript_keywords']#,'keywords','data_sources']
+        fields = ['pub_name','pub_id','qual_analysis','qdr_review','compute_env', 'compute_env_other','contact_first_name','contact_last_name','contact_email',
+            'description', 'subject', 'high_performance', 'contents_gis', 'contents_restricted', 'contents_restricted_sharing', 'other_exemptions', 'exemption_override',
+            'operating_system', 'packages_info', 'software_info', 'machine_type', 'scheduler', 'platform', 'processor_reqs', 'host_url', 'memory_reqs', 'dataverse_installation', 'dataverse_parent']
         always_required = ['pub_name', 'pub_id', 'contact_first_name', 'contact_last_name', 'contact_email'] # Used to populate required "*" in form. We have disabled the default crispy functionality because it isn't dynamic enough for our per-phase requirements
         labels = label_gen(model, fields, always_required)
 
-    wt_compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.all(), empty_label=None, required=False, label="Compute Environment")
+    compute_env = forms.ModelChoiceField(queryset=wtm.ImageChoice.objects.filter(hidden=False), empty_label=None, required=False, label="Compute Environment")
 
-    #This whole save is being called to force the correct value into wt_compute_env
+    #This whole save is being called to force the correct value into compute_env
     #For some reason ModelChoiceField takes my id and turns it back into the name on save which I don't want
     #I gotta believe there is some other way but this works
     def save(self, commit=True, *args, **kwargs):
         mf = super(ManuscriptBaseForm, self).save(*args, commit=False, **kwargs)    
-        if('wt_compute_env' in self.cleaned_data):
-            wt_id = self.data.get('wt_compute_env')     
+        if('compute_env' in self.cleaned_data):
+            wt_id = self.data.get('compute_env')     
         #Pulling the raw data from the form unsafe, so we check it only contains numbers and letters
         #We don't check against the existing table values on the chance that the existing allowed choices from Whole Tale do not include old choices. This case might not exist though, and we could check against existing values.
         if wt_id and not re.match("^[\w\d]*$", wt_id):
-            logger.warning("Someone attempted attempted to set wt_compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
+            logger.warning("Someone attempted attempted to set compute_env id:{1} to an invalid string. They may have tried hacking the form.".format(self.instance.id))
             raise Http404()
-        setattr(mf, 'wt_compute_env', wt_id)
+        setattr(mf, 'compute_env', wt_id)
         mf.save()
 
     def clean(self):
@@ -270,23 +390,74 @@ class ManuscriptBaseForm(forms.ModelForm):
             contact_email = self.cleaned_data.get('contact_email')
             if(not contact_email):
                 self.add_error('contact_email', 'This field is required.')
+                
+            operating_system = self.cleaned_data.get('operating_system')
+            if(not operating_system):
+                self.add_error('operating_system', 'This field is required.')
+
+            packages_info = self.cleaned_data.get('packages_info')
+            if(not packages_info):
+                self.add_error('packages_info', 'This field is required.')
+
+            software_info = self.cleaned_data.get('software_info')
+            if(not software_info):
+                self.add_error('software_info', 'This field is required.')
 
             validation_errors = [] #we store all the "generic" errors and raise them at once
             if(self.data['author_formset-0-first_name'] == "" or self.data['author_formset-0-last_name'] == "" #or self.data['author_formset-0-identifier'] == "" or self.data['author_formset-0-identifier_scheme'] == ""
                 ):
                 validation_errors.append(ValidationError("You must specify an author."))
+
             # if(self.data['data_source_formset-0-text'] == ""):
             #     validation_errors.append(ValidationError("You must specify a data source."))
+
             if(self.data['keyword_formset-0-text'] == ""):
                 validation_errors.append(ValidationError("You must specify a keyword."))    
 
-            validation_errors.extend(self.instance.can_begin_return_problems())
+            if self.dataverse_upload:
+                dataverse_installation = self.cleaned_data.get('dataverse_installation')
+                if(not dataverse_installation):
+                    self.add_error('dataverse_installation', 'This field is required.')
+
+                dataverse_parent = self.cleaned_data.get('dataverse_parent')
+                if(not dataverse_parent):
+                    self.add_error('dataverse_parent', 'This field is required.')
+
+            # if("high_performance" in self.data.keys()):
+            #     machine_type = self.cleaned_data.get('machine_type')
+            #     if(not machine_type):
+            #         self.add_error('machine_type', 'This field is required.')
+
+            #     scheduler = self.cleaned_data.get('scheduler')
+            #     if(not scheduler):
+            #         self.add_error('scheduler', 'This field is required.')
+
+            #     platform = self.cleaned_data.get('platform')
+            #     if(not platform):
+            #         self.add_error('platform', 'This field is required.')
+
+            #     processor_reqs = self.cleaned_data.get('processor_reqs')
+            #     if(not processor_reqs):
+            #         self.add_error('processor_reqs', 'This field is required.')
+
+            #     host_url = self.cleaned_data.get('host_url')
+            #     if(not host_url):
+            #         self.add_error('host_url', 'This field is required.')
+
+            #     memory_reqs = self.cleaned_data.get('memory_reqs')
+            #     if(not memory_reqs):
+            #         self.add_error('memory_reqs', 'This field is required.')
+
+            if not (self.instance._status != m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH or self.instance._status != m.Manuscript.Status.PUBLISHED_TO_DATAVERSE
+                    or self.instance._status != m.Manuscript.Status.COMPLETED_REPORT_SENT):
+                validation_errors.extend(self.instance.can_begin_return_problems())
 
             if validation_errors:
                 #If we don't raise the error here the formset errors don't raise up
                 #But if we return any contents the error shows in the top errors field and in the formset field, and we don't want that
                 #So we return an empty list
                 raise ValidationError([])
+        
 
 #All Manuscript fields are visible to all users, so no role-based forms
 class ReadOnlyManuscriptForm(ReadOnlyFormMixin, ManuscriptBaseForm):
@@ -297,31 +468,43 @@ class ManuscriptForm_Admin(ManuscriptBaseForm):
 
 class ManuscriptForm_Author(ManuscriptBaseForm):
     class Meta(ManuscriptBaseForm.Meta):
-        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'wt_compute_env']
+        role_required = ['pub_name','description','subject','contact_first_name','contact_last_name','contact_email', 'compute_env', 'compute_env_other', 'operating_system', 'packages_info', 'software_info']
         labels = label_gen(ManuscriptBaseForm.Meta.model, ManuscriptBaseForm.Meta.fields, role_required)
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
         self.fields['qdr_review'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Editor(ManuscriptBaseForm):
-    class Meta(ManuscriptBaseForm.Meta):
-        fields = ['pub_name','pub_id','qual_analysis','qdr_review','contact_first_name','contact_last_name','contact_email','additional_info']
-
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.fields['description'].disabled = True
-        # self.fields['subject'].disabled = True
-        # self.fields['contact_first_name'].disabled = True
-        # self.fields['contact_last_name'].disabled = True
-        # self.fields['contact_email'].disabled = True
+        self.fields['compute_env'].disabled = True
+        self.fields['compute_env_other'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['qdr_review'].disabled = True
+        self.fields['operating_system'].disabled = True
+        self.fields['packages_info'].disabled = True
+        self.fields['software_info'].disabled = True
+        self.fields['machine_type'].disabled = True
+        self.fields['scheduler'].disabled = True
+        self.fields['platform'].disabled = True
+        self.fields['host_url'].disabled = True
+        self.fields['processor_reqs'].disabled = True
+        self.fields['memory_reqs'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Curator(ManuscriptBaseForm):
 
     def __init__ (self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pub_id'].disabled = True
+        self.fields['compute_env'].disabled = True
+        self.fields['qual_analysis'].disabled = True
+        self.fields['qdr_review'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 class ManuscriptForm_Verifier(ManuscriptBaseForm):
 
@@ -335,8 +518,10 @@ class ManuscriptForm_Verifier(ManuscriptBaseForm):
         self.fields['contact_last_name'].disabled = True
         self.fields['contact_email'].disabled = True
         self.fields['description'].disabled = True
-        self.fields['additional_info'].disabled = True
         self.fields['subject'].disabled = True
+        self.fields['compute_env'].disabled = True
+        self.fields['other_exemptions'].disabled = True
+        self.fields['exemption_override'].disabled = True
 
 ManuscriptForms = {
     "Admin": ManuscriptForm_Admin,
@@ -345,6 +530,29 @@ ManuscriptForms = {
     "Curator": ManuscriptForm_Curator,
     "Verifier": ManuscriptForm_Verifier,
 }
+
+class ManuscriptForm_Editor_NoSubmissions(ManuscriptBaseForm):
+    class Meta(ManuscriptBaseForm.Meta):
+        fields = ['pub_name','pub_id','qual_analysis','contents_restricted', 'contents_restricted_sharing','other_exemptions','qdr_review','contact_first_name','contact_last_name','contact_email','exemption_override']
+
+    def __init__ (self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['exemption_override'].disabled = True
+        # self.fields['description'].disabled = True
+        # self.fields['subject'].disabled = True
+        # self.fields['contact_first_name'].disabled = True
+        # self.fields['contact_last_name'].disabled = True
+        # self.fields['contact_email'].disabled = True
+
+############# Manuscript Upload To Dataverse Forms #############
+#TODO: Maybe move up with other manuscript forms? Depends on how different this ends up being..
+#      We might just include the manuscript form and eventually a file/file-metadata form here?
+
+class ManuscriptFormDataverseUpload(ManuscriptBaseForm):
+    dataverse_upload = True
+    pass
+
+
 #------------- Data Source -------------
 
 #Doing this check in "is_valid" is probably not the right spot. We raise a validation error instead of letting the function complete.
@@ -358,20 +566,21 @@ class DataSourceBaseForm(forms.ModelForm):
         fields = ["text"]
         labels = label_gen(model, fields)
 
-    def is_valid(self):
-        result = super(DataSourceBaseForm, self).is_valid()
+    ## NOTE: Commented out because we no longer require Data Source
+    # def is_valid(self):
+    #     result = super(DataSourceBaseForm, self).is_valid()
 
-        #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
-        if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
-            validation_errors = [] #we store all the "generic" errors and raise them at once
-            if(self.data['data_source_formset-0-text'] == ""):
-                validation_errors.append(ValidationError("You must specify a data source."))
+    #     #This data probably is untrustworthy, but if the user munges it all that happens is they are required to add another field.
+    #     if(self.fields.get("manuscript").parent_instance._status != m.Manuscript.Status.NEW):
+    #         validation_errors = [] #we store all the "generic" errors and raise them at once
+    #         if(self.data['data_source_formset-0-text'] == ""):
+    #             validation_errors.append(ValidationError("You must specify a data source."))
 
-            if validation_errors:
-                result = True
-                raise ValidationError(validation_errors)
+    #         if validation_errors:
+    #             result = True
+    #             raise ValidationError(validation_errors)
 
-        return result
+    #     return result
 
 
 class DataSourceForm_Admin(DataSourceBaseForm):
@@ -540,6 +749,7 @@ class AuthorForm_Verifier(AuthorBaseForm):
         self.fields["identifier"].disabled = True
         #self.fields["position"].disabled = True
 
+
 class BaseAuthorManuscriptFormset(BaseInlineFormSet):
     pass
     # def clean(self):
@@ -582,45 +792,86 @@ class NoteForm(forms.ModelForm):
     class Meta:
         model = m.Note
         fields = ['text','scope','creator','note_replied_to','note_reference']
+        required = ['text']
         labels = label_gen(model, fields)
 
-    SCOPE_OPTIONS = (('public','Public'),('private','Private'))
+    SCOPE_OPTIONS = (('public','All Roles'),('private','Curators/Verifiers'))
 
     scope = forms.ChoiceField(widget=forms.RadioSelect,
                                         choices=SCOPE_OPTIONS, required=False)
 
     note_reference = forms.CharField(label='File/Category', widget=forms.Select()) #TODO: This should actually be populated during the init
 
+    # creator = forms.CharField(label='Creator')
+
     #Checker is for passing prefeteched django-guardian permissions
     #https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
     #Other args are also passed in for performance improvements across all the notes
     def __init__ (self, *args, checkers, manuscript, submission, sub_files, **kwargs):
+        #We have to populate the value of the creator before the super because it is based off an existing field
+        #We are basing of an existing field so it correctly populates the default value for creating new notes (to the users name)
+        #The best way found to do this was to do it before the super, otherwise it becomes uneditable?
+        #Note that this creator field is anonymized if the viewing user is not a curator/verifier
+        user = CrequestMiddleware.get_request().user
+        curator_verifier = True
+        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+            curator_verifier = False
+            #NOTE: If the user is an editor/author and there are multiple editors/authors, the additional editors/authors will be made generic (due to this code and the choices code below)
+            instance = kwargs.get('instance', None)
+            if instance and instance.creator:
+                if instance.creator.groups.filter(name=c.GROUP_ROLE_CURATOR).exists():
+                    kwargs.update(initial={'creator': 'Curator'})
+                elif instance.creator.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists():
+                    kwargs.update(initial={'creator': 'Verifier'})
+                elif instance.creator != user:
+                    if instance.creator.groups.filter(name=c.GROUP_ROLE_EDITOR).exists():
+                        kwargs.update(initial={'creator': 'Editor'})
+                    elif instance.creator.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists():
+                        kwargs.update(initial={'creator': 'Author'})
+                    else:
+                        print("This shouldn't happen but we'll 404 to test")
+                        raise Http404()
+
         super(NoteForm, self).__init__(*args, **kwargs)
 
         #For some reason I can't fathom, accessing any note info via self.instance causes many extra calls to this method.
         #It also causes the end form to not populate. So we are getting the info we need on the manuscript via crequest
 
-        user = CrequestMiddleware.get_request().user
+        #user = CrequestMiddleware.get_request().user
         path_obj_name = CrequestMiddleware.get_request().resolver_match.url_name.split("_")[0] #CrequestMiddleware.get_request().resolver_match.func.view_class.object_friendly_name
 
-        if(not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, manuscript))):
+        if(not curator_verifier):
             self.fields.pop('scope')
-        else:       
-            #Populate scope field depending on existing roles
-            role_count = 0
-            for checker in checkers:
-                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self.instance)):
-                    role_count += 1
-            if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
-                self.fields['scope'].initial = 'public'
+           
+            #We have to get the choice id of the user from the original dropdown so it'll be correctly added later
+            #TODO: Maybe instead we could just override the info on save, because we only allow saving our own notes anyways
+            user_key = None
+            for choice in self.fields['creator'].widget.choices:
+                if choice[1] == str(user):
+                    user_key = choice[0]
+            user_kv = self.fields['creator'].widget.choices
+            #Set list contents for Creator user if we need to preserve curator/verifier anonymity. Even if a dropdown is disabled all the options are populated
+            #TODO: This if statement seems pointless, its the same list. I think we meant to keep the author name visible for the editor but then that got lost
+            if user.has_any_perm(c.PERM_MANU_ADD_AUTHORS, manuscript): #Check for editor
+                self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
             else:
+                self.fields['creator'].widget.choices = [('Curator','Curator'),('Verifier','Verifier'),('Editor','Editor'),('Author','Author'),(user_key, user)]
+            
+        else:
+            if self.instance.is_private(checkers=checkers):
                 self.fields['scope'].initial = 'private'
+            else:
+                self.fields['scope'].initial = 'public'
 
         self.fields['creator'].disabled = True
+        
         if(self.instance.id): #if based off existing note
-            if(self.instance.creator != user): #If the user is not the creator of the note
+            #if self.instance.creator != user and not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.fields['scope'] and self.fields['scope'].initial == 'private'):
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
                 for fkey, fval in self.fields.items():
-                    fval.widget.attrs['disabled']=True #you have to disable this way for scope to disable
+                    #self.deny_edit = True
+                    fval.disabled = True #not sure this is doing anything
+                    fval.widget.attrs['disabled'] = True #you have to disable this way for scope to disable
 
         #Initialize note_reference
         #Note: I tried moving this to classes.py to not repeat it, but it didn't get faster. So leaving it here.
@@ -645,44 +896,64 @@ class NoteForm(forms.ModelForm):
     def save(self, commit, *args, **kwargs):
         if(self.has_changed()):
             user = CrequestMiddleware.get_request().user
-            if(self.cleaned_data['creator'] != user):
-                pass #Do not save
-        super(NoteForm, self).save(commit, *args, **kwargs)
-        if('scope' in self.changed_data):
-            #Somewhat inefficient, but we just delete all perms and readd new ones. Safest.
-            for role in c.get_roles():
-                group = Group.objects.get(name=role)
-                remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            if(self.cleaned_data['scope'] == 'public'):
+            had_id = False
+            #if(self.cleaned_data['id']):
+            
+            if self.instance.id:
+                had_id = True
+                if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
+                # if self.cleaned_data['creator'] != user: #Works even though we mess with creator during init above, because we always keep your name
+                #     if not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.instance.is_private(checkers=self.checkers)):
+                    return #Do not save
+
+            super(NoteForm, self).save(commit, *args, **kwargs)
+
+            # if(not self.cleaned_data['id'] or 'scope' in self.changed_data):
+            if(not had_id or 'scope' in self.changed_data):
+                #Somewhat inefficient, but we just delete all view perms and readd new ones. Safest.
                 for role in c.get_roles():
                     group = Group.objects.get(name=role)
-                    assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
-            else:
-                if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
-                    for role in c.get_private_roles():
+                    remove_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                if(not 'scope' in self.cleaned_data or self.cleaned_data['scope'] == 'public'): #Scope isn't in the form for author/editors, which defaults to public
+                    for role in c.get_roles():
                         group = Group.objects.get(name=role)
                         assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
                 else:
-                    #At this point we've saved already, maybe we shouldn't?
-                    logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
-                    raise Http404()
-        if('note_reference' in self.changed_data):
-            #TODO: If we open up notes to other types again, we need to check if submission is set here
-            files = self.instance.parent_submission.submission_files.all()
-            file_full_paths = []
-            for file in files:
-                file_full_paths = file_full_paths + [file.path+file.name]
-            self.instance.ref_file_type = ''
-            self.instance.ref_file = None
+                    if(user.has_any_perm(c.PERM_MANU_CURATE, self.instance.manuscript) or user.has_any_perm(c.PERM_MANU_VERIFY, self.instance.manuscript)): #only users with certain roles can set private
+                        for role in c.get_private_roles():
+                            #print(self.instance)
+                            group = Group.objects.get(name=role)
+                            #print(group.__dict__)
+                            assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
+                    else:
+                        #At this point we've saved already, maybe we shouldn't?
+                        logger.warning("User id:{0} attempted to set note id:{1} to private, when they do not have the required permissions. They may have tried hacking the form.".format(user.id, self.instance.id))
+                        raise Http404()
 
-            if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
-                self.instance.ref_file_type = self.cleaned_data['note_reference']
-            elif(self.cleaned_data['note_reference'] in file_full_paths):
-                file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
-                file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
-                self.instance.ref_file = file
+#TODO: I think this code is setting notes to public when it shouldn't? I don't understand the case for this code at all so it is disabled
+            # else:
+            #     for role in c.get_roles():
+            #         group = Group.objects.get(name=role)
+            #         assign_perm(c.PERM_NOTE_VIEW_N, group, self.instance)
 
-            self.instance.save()
+            if(not self.instance.id or 'note_reference' in self.changed_data):
+            # if(not self.cleaned_data['id'] or 'note_reference' in self.changed_data):
+                #TODO: If we open up notes to other types again, we need to check if submission is set here
+                files = self.instance.parent_submission.submission_files.all()
+                file_full_paths = []
+                for file in files:
+                    file_full_paths = file_full_paths + [file.path+file.name]
+                self.instance.ref_file_type = ''
+                self.instance.ref_file = None
+
+                if(self.cleaned_data['note_reference'] in m.GitFile.FileTag.values):
+                    self.instance.ref_file_type = self.cleaned_data['note_reference']
+                elif(self.cleaned_data['note_reference'] in file_full_paths):
+                    file_folder, file_name = self.cleaned_data['note_reference'].rsplit('/', 1)
+                    file = m.GitFile.objects.get(name=file_name, path=file_folder+'/', parent_submission=self.instance.parent_submission)
+                    self.instance.ref_file = file
+
+                self.instance.save()
 
 class BaseNoteFormSet(BaseInlineFormSet):
     #only allow deleting of user-owned notes. we also disable the checkbox via JS
@@ -691,7 +962,9 @@ class BaseNoteFormSet(BaseInlineFormSet):
         deleted_forms = super(BaseNoteFormSet, self).deleted_forms
         user = CrequestMiddleware.get_request().user
         for i, form in enumerate(deleted_forms):
-            if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
+            note = m.Note.objects.get(id=form.instance.id)
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, note):
+            # if(not m.Note.objects.filter(id=form.instance.id, creator=user).exists()): #If the user is not the creator of the note
                 deleted_forms.pop(i) #Then we remove the note from the delete list, to not delete the note
 
         return deleted_forms
@@ -703,6 +976,31 @@ class BaseNoteFormSet(BaseInlineFormSet):
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)                
         return self._queryset
+
+    # def clean(self):
+    #     print("IN NOTE FORMSET CLEAN BEFORE SUPER")
+    #     user = CrequestMiddleware.get_request().user
+    #     print(type(self.forms))
+    #     print(self.forms)
+    #     forms_copy = self.forms #We need a different list to be able to iterate while deleting
+    #     for form in forms_copy:
+    #         print(form.__dict__)
+    #         if form.instance.id and form.instance.creator != user:
+    #             print("FORM REMOVED FROM LIST IN CLEAN")
+    #             print("")
+    #             self.forms.remove(form)
+    #     print(self.forms)
+    #     # super().clean()
+    #     # print(type(self.forms))
+    #     # for form in self.forms:
+    #     #     if form.instance.id and form.instance.creator != user:
+    #     #         self.forms.remove(form)
+    #     #NOTE: This code below deleting the actual model objects. We just want to remove the object from the list....
+    #     # for form in self.forms:
+    #     #     if form.instance.id and form.instance.creator != user:
+    #     #         form.instance.delete()
+    #         # print(form.__dict__)
+    #         # print("")
 
 class NoteFormSetHelper(FormHelper):
      def __init__(self, *args, **kwargs):
@@ -865,10 +1163,11 @@ class GitFileFormSetHelper(FormHelper):
     #                         data-trigger="hover" data-placement="auto" data-content="' + content + '"> \
     #                         <span class="glyphicon glyphicon-info-sign"></span></a>'
 
+#This could maybe be deleted as there are no fields. But we may use it to pass the girder token?
 class SubmissionBaseForm(forms.ModelForm):
     class Meta:
         model = m.Submission
-        fields = ['high_performance','contents_gis','contents_proprietary','contents_proprietary_sharing']
+        fields = []
         labels = label_gen(model, fields)
 
     def save(self, *args, **kwargs):
@@ -898,7 +1197,70 @@ SubmissionForms = {
 }
 
 class ReadOnlySubmissionForm(ReadOnlyFormMixin, SubmissionBaseForm):
-    pass
+    class Meta(SubmissionBaseForm.Meta):
+        fields = ['launch_issues']
+
+#------------- Submission Container Issues -------------
+
+class SubmissionContainerIssuesForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = ['launch_issues']
+        labels = label_gen(model, fields)
+
+#------------- Submission Empty Issues -------------
+
+#This was created alongside ContainerIssues, because there are cases where we don't want to ask issues but need to pass a form and this is easiest
+class SubmissionEmptyForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = []
+        labels = label_gen(model, fields)
+
+#------------- Submission Editor Date -------------
+
+class SubmissionEditorDateForm(forms.ModelForm):
+    class Meta:
+        model = m.Submission
+        fields = ['editor_submit_date']
+        labels = label_gen(model, fields)
+        widgets = {
+            'editor_submit_date': SelectDateWidget(years=range(2020, datetime.date.today().year+1)),
+        }
+
+    # def __init__ (self, *args, **kwargs):
+    #     super(SubmissionEditorDateForm, self).__init__(*args, **kwargs)
+    #     self.layout = Layout(
+    #         MultiWidgetField('editor_submit_date', attrs=({'style': 'width: 33%; display: inline-block;'}))
+    #     )
+
+
+# SubmissionEditorDateFormset = inlineformset_factory(
+#     m.Manuscript, 
+#     m.Submission, 
+#     extra=0,
+#     form=SubmissionEditorDateForm,
+#     can_delete = False,
+# )
+
+#This really doesn't need to be a formset because we only use one, but it makes the form logic more consistent
+SubmissionEditorDateFormset = modelformset_factory(
+    m.Submission, 
+    extra=0,
+    form=SubmissionEditorDateForm,
+    can_delete = False,
+)
+
+
+# This form is only used when editors are no directly using CORE2 for a manuscript, to collect the date that the submission was sent to the curation team.
+
+#TODO: Soooo... we need like a bunch more version of this form
+# - We need a version with the "editor submission date" field (when edition disabled)
+#   - Maybe need to make this role based... so a version for admin and verifier?
+# - We need a version with "editor submission date" but also EditOutOfPhase...
+# ...
+# - I should look up ways to better do this that doesn't cause the forms to grow exponentially?
+#   - One option would be to make the "Editor Submission Date" on a separate form entirely  
 
 #------------- Edition -------------
 
@@ -910,7 +1272,7 @@ class EditionBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(EditionBaseForm, self).__init__(*args, **kwargs)
-        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
+        self.fields['report'].widget.attrs['class'] = 'smallerarea'
         # self.helper = FormHelper(self)
         # self.helper.form_show_errors = False
         # self.form_show_errors = False
@@ -921,7 +1283,7 @@ class EditionBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Edition.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Edition.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Edition.Status.NEW.label + '.']
         
 
 class EditionForm_Admin(EditionBaseForm):
@@ -969,6 +1331,7 @@ ReadOnlyEditionSubmissionFormset = inlineformset_factory(
 
 #------------- Curation -------------
 
+#If changing this, see the EditionDisabled version below
 class CurationBaseForm(forms.ModelForm):
     class Meta:
         model = m.Curation
@@ -977,7 +1340,6 @@ class CurationBaseForm(forms.ModelForm):
 
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
         super(CurationBaseForm, self).__init__(*args, **kwargs)
-        # self.fields['report'].widget.attrs['class'] = 'smallerarea'
 
     def has_changed(self, *args, **kwargs):
         return True #this is to ensure the form is always saved, so that notes created will be connected to the right part of the cycle
@@ -985,22 +1347,12 @@ class CurationBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Curation.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Curation.Status.NEW.label + '.']
+
+#### There are two versions of these forms, one for when edition is disabled and one when it isn't, to collect the editor_submit_date ####
 
 class CurationForm_Admin(CurationBaseForm):
     pass
-
-# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
-# class CurationForm_Author(ReadOnlyFormMixin, CurationBaseForm):
-#     class Meta:
-#         model = m.Curation
-#         fields = []
-
-# #TODO: I'm not sure that we need an Author/Editor form for these objects, as they never see them.
-# class CurationForm_Editor(ReadOnlyFormMixin, CurationBaseForm):
-#     class Meta:
-#         model = m.Curation
-#         fields = []
 
 class CurationForm_Curator(CurationBaseForm):
     pass
@@ -1033,6 +1385,20 @@ ReadOnlyCurationSubmissionFormset = inlineformset_factory(
     can_delete = False,
 )
 
+class EditOutOfPhaseCurationForm(CurationBaseForm):
+    def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+        super(EditOutOfPhaseCurationForm, self).__init__(*args, **kwargs)
+        self.fields['_status'].disabled = True
+        self.fields['needs_verification'].disabled = True
+
+EditOutOfPhaseCurationFormset = inlineformset_factory(
+    m.Submission, 
+    m.Curation, 
+    extra=0,
+    form=EditOutOfPhaseCurationForm,
+    can_delete = False,
+)
+
 #------------- Verification -------------
 
 class VerificationBaseForm(forms.ModelForm):
@@ -1051,7 +1417,7 @@ class VerificationBaseForm(forms.ModelForm):
     def clean(self):
         form_data = self.cleaned_data
         if form_data['_status'] == m.Verification.Status.NEW:
-            self._errors['_status'] = ['Review must have a status other than ' + m.Verification.Status.NEW + '.']
+            self._errors['_status'] = ['Review must have a status other than ' + m.Verification.Status.NEW.label + '.']
 
 class VerificationForm_Admin(VerificationBaseForm):
     pass
@@ -1099,177 +1465,172 @@ ReadOnlyVerificationSubmissionFormset = inlineformset_factory(
     can_delete = False,
 )
 
-#------------ Verification Metadata - Main -------------
-
-class VMetadataBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadata
-        fields = ["operating_system", "packages_info", "software_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
-        #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
-        always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info", "software_info"]
-        labels = label_gen(model, fields, always_required)
-
-    #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
-    #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
-    #      But I don't want to do this until things are more stable and I have tests working again.
+class EditOutOfPhaseVerificationForm(VerificationBaseForm):
     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
-        super(VMetadataBaseForm, self).__init__(*args, **kwargs)
-        self.empty_permitted = False
-        # self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
-        # self.fields['software_info'].widget.attrs['class'] = 'smallerarea'
+        super(EditOutOfPhaseVerificationForm, self).__init__(*args, **kwargs)
+        self.fields['_status'].disabled = True
 
-        if(previous_vmetadata):
-            self.fields['operating_system'].initial = previous_vmetadata.operating_system
-            self.fields['machine_type'].initial = previous_vmetadata.machine_type
-            self.fields['scheduler'].initial = previous_vmetadata.scheduler
-            self.fields['platform'].initial = previous_vmetadata.platform
-            self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
-            self.fields['host_url'].initial = previous_vmetadata.host_url
-            self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
-            self.fields['packages_info'].initial = previous_vmetadata.packages_info
-            self.fields['software_info'].initial = previous_vmetadata.software_info
-
-    def clean(self):
-        #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
-        if("high_performance" in self.data.keys()):
-            machine_type = self.cleaned_data.get('machine_type')
-            if(not machine_type):
-                self.add_error('machine_type', 'This field is required.')
-
-            scheduler = self.cleaned_data.get('scheduler')
-            if(not scheduler):
-                self.add_error('scheduler', 'This field is required.')
-
-            platform = self.cleaned_data.get('platform')
-            if(not platform):
-                self.add_error('platform', 'This field is required.')
-
-            processor_reqs = self.cleaned_data.get('processor_reqs')
-            if(not processor_reqs):
-                self.add_error('processor_reqs', 'This field is required.')
-
-            host_url = self.cleaned_data.get('host_url')
-            if(not host_url):
-                self.add_error('host_url', 'This field is required.')
-
-            memory_reqs = self.cleaned_data.get('memory_reqs')
-            if(not memory_reqs):
-                self.add_error('memory_reqs', 'This field is required.')
-
-
-class VMetadataForm_Admin(VMetadataBaseForm):
-    pass
-
-class VMetadataForm_Author(VMetadataBaseForm):
-    pass
-
-class VMetadataForm_Editor(ReadOnlyFormMixin, VMetadataBaseForm):
-    pass
-
-class VMetadataForm_Curator(VMetadataBaseForm):
-    pass
-
-class VMetadataForm_Verifier(VMetadataBaseForm):
-    pass
-
-VMetadataSubmissionFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataSubmissionFormsets[role_str] = inlineformset_factory(
-            m.Submission, 
-            m.VerificationMetadata, 
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
-            can_delete = False,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
-
-class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
-    pass
-
-ReadOnlyVMetadataSubmissionFormset = inlineformset_factory(
+EditOutOfPhaseVerificationFormset = inlineformset_factory(
     m.Submission, 
-    m.VerificationMetadata, 
+    m.Verification, 
     extra=0,
-    form=ReadOnlyVMetadataForm,
+    form=EditOutOfPhaseVerificationForm,
     can_delete = False,
 )
 
-# VMetadataSubmissionFormset = inlineformset_factory(
-#     m.Submission,
-#     m.VerificationMetadata,  
-#     extra=1,
-#     form=VMetadataForm,
-#     fields=("operating_system","machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"),
-#     can_delete = True,
+#------------ Verification Metadata - Main -------------
+
+# class VMetadataBaseForm(forms.ModelForm):
+#     class Meta:
+#         model = m.VerificationMetadata
+#         fields = ["operating_system", "packages_info", "software_info", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs"]
+#         #Note that many of these fields are actually hidden unless a user required high-performance compute. We don't enforce the requirement unless that is checked.
+#         always_required = ["operating_system", "machine_type", "scheduler", "platform", "processor_reqs", "host_url", "memory_reqs", "packages_info", "software_info"]
+#         labels = label_gen(model, fields, always_required)
+
+#     #NOTE: This is a hacky way to pass our vmetadata to be populated. It doesn't scale to formsets with more than one object.
+#     #      Eventually we'll have to copy all the vmetadatas, and that will probably require a refactor to pre-save all these objects and pass them as querysets.
+#     #      But I don't want to do this until things are more stable and I have tests working again.
+#     def __init__ (self, *args, previous_vmetadata=None, **kwargs):
+#         super(VMetadataBaseForm, self).__init__(*args, **kwargs)
+#         self.empty_permitted = False
+#         # self.fields['packages_info'].widget.attrs['class'] = 'smallerarea'
+#         # self.fields['software_info'].widget.attrs['class'] = 'smallerarea'
+
+#         if(previous_vmetadata):
+#             self.fields['operating_system'].initial = previous_vmetadata.operating_system
+#             self.fields['machine_type'].initial = previous_vmetadata.machine_type
+#             self.fields['scheduler'].initial = previous_vmetadata.scheduler
+#             self.fields['platform'].initial = previous_vmetadata.platform
+#             self.fields['processor_reqs'].initial = previous_vmetadata.processor_reqs
+#             self.fields['host_url'].initial = previous_vmetadata.host_url
+#             self.fields['memory_reqs'].initial = previous_vmetadata.memory_reqs
+#             self.fields['packages_info'].initial = previous_vmetadata.packages_info
+#             self.fields['software_info'].initial = previous_vmetadata.software_info
+
+#     def clean(self):
+#         #Accessing data without clean is sketchy, but since we are just checking the variable's existence (which only happens if its checked) its ok.
+#         if("high_performance" in self.data.keys()):
+#             machine_type = self.cleaned_data.get('machine_type')
+#             if(not machine_type):
+#                 self.add_error('machine_type', 'This field is required.')
+
+#             scheduler = self.cleaned_data.get('scheduler')
+#             if(not scheduler):
+#                 self.add_error('scheduler', 'This field is required.')
+
+#             platform = self.cleaned_data.get('platform')
+#             if(not platform):
+#                 self.add_error('platform', 'This field is required.')
+
+#             processor_reqs = self.cleaned_data.get('processor_reqs')
+#             if(not processor_reqs):
+#                 self.add_error('processor_reqs', 'This field is required.')
+
+#             host_url = self.cleaned_data.get('host_url')
+#             if(not host_url):
+#                 self.add_error('host_url', 'This field is required.')
+
+#             memory_reqs = self.cleaned_data.get('memory_reqs')
+#             if(not memory_reqs):
+#                 self.add_error('memory_reqs', 'This field is required.')
+
+
+# class VMetadataForm_Admin(VMetadataBaseForm):
+#     pass
+
+# class VMetadataForm_Author(VMetadataBaseForm):
+#     pass
+
+# class VMetadataForm_Editor(ReadOnlyFormMixin, VMetadataBaseForm):
+#     pass
+
+# class VMetadataForm_Curator(VMetadataBaseForm):
+#     pass
+
+# class VMetadataForm_Verifier(VMetadataBaseForm):
+#     pass
+
+# VMetadataManuscriptFormsets = {}
+# for role_str in list_of_roles:
+#     try:
+#         VMetadataManuscriptFormsets[role_str] = inlineformset_factory(
+#             m.Manuscript, 
+#             m.VerificationMetadata, 
+#             extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+#             form=getattr(sys.modules[__name__], "VMetadataForm_"+role_str),
+#             can_delete = False,
+#         ) 
+#     except AttributeError:
+#         pass #If no form for role we should never show the form, so pass
+
+# class ReadOnlyVMetadataForm(ReadOnlyFormMixin, VMetadataBaseForm):
+#     pass
+
+# ReadOnlyVMetadataManuscriptFormset = inlineformset_factory(
+#     m.Manuscript, 
+#     m.VerificationMetadata, 
+#     extra=0,
+#     form=ReadOnlyVMetadataForm,
+#     can_delete = False,
 # )
 
 #------------ Verification Metadata - Software -------------
 
-class VMetadataSoftwareBaseForm(forms.ModelForm):
-    class Meta:
-        model = m.VerificationMetadataSoftware
-        fields = ["name","version"]
-        labels = label_gen(model, fields)
+# class VMetadataSoftwareBaseForm(forms.ModelForm):
+#     class Meta:
+#         model = m.VerificationMetadataSoftware
+#         fields = ["name","version"]
+#         labels = label_gen(model, fields)
 
-    # def __init__ (self, *args, **kwargs):
-    #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
+#     # def __init__ (self, *args, **kwargs):
+#     #     super(VMetadataSoftwareForm, self).__init__(*args, **kwargs)
 
-class VMetadataSoftwareForm_Admin(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Admin(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Author(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Author(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Editor(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Editor(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Curator(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Curator(VMetadataSoftwareBaseForm):
+#     pass
 
-class VMetadataSoftwareForm_Verifier(VMetadataSoftwareBaseForm):
-    pass
+# class VMetadataSoftwareForm_Verifier(VMetadataSoftwareBaseForm):
+#     pass
 
-VMetadataSoftwareVMetadataFormsets = {}
-for role_str in list_of_roles:
-    try:
-        VMetadataSoftwareVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
-            m.VerificationMetadataSoftware,  
-            extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
-            form=getattr(sys.modules[__name__], "VMetadataSoftwareForm_"+role_str),
-            can_delete = True,
-        ) 
-    except AttributeError:
-        pass #If no form for role we should never show the form, so pass
+# VMetadataSoftwareVMetadataFormsets = {}
+# for role_str in list_of_roles:
+#     try:
+#         VMetadataSoftwareVMetadataFormsets[role_str] = inlineformset_factory(
+#             m.VerificationMetadata,  
+#             m.VerificationMetadataSoftware,  
+#             extra=1 if(role_str == "Admin" or role_str == "Author" or role_str == "Curator" or role_str == "Verifier") else 0,
+#             form=getattr(sys.modules[__name__], "VMetadataSoftwareForm_"+role_str),
+#             can_delete = True,
+#         ) 
+#     except AttributeError:
+#         pass #If no form for role we should never show the form, so pass
 
-# VMetadataSoftwareVMetadataFormset = inlineformset_factory(
+# class ReadOnlyVMetadataSoftwareForm(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
+#     pass
+
+# ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
 #     m.VerificationMetadata,  
 #     m.VerificationMetadataSoftware,  
-#     extra=1,
-#     form=VMetadataSoftwareForm,
-#     fields=("name","version", "code_repo_url"),
-#     can_delete = True,
+#     extra=0,
+#     form=ReadOnlyVMetadataSoftwareForm,
+#     can_delete = False,
 # )
-
-class ReadOnlyVMetadataSoftwareForm(ReadOnlyFormMixin, VMetadataSoftwareBaseForm):
-    pass
-
-ReadOnlyVMetadataSoftwareVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
-    m.VerificationMetadataSoftware,  
-    extra=0,
-    form=ReadOnlyVMetadataSoftwareForm,
-    can_delete = False,
-)
 
 #------------ Verification Metadata - Badge -------------
 
 class VMetadataBadgeBaseForm(forms.ModelForm):
     class Meta:
         model = m.VerificationMetadataBadge
-        fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"]
+        fields = ["name","badge_type","version","definition_url","logo_url","issuing_org","issuing_date"]
         labels = label_gen(model, fields)
 
     # def __init__ (self, *args, **kwargs):
@@ -1283,11 +1644,11 @@ class VMetadataBadgeForm_Curator(VMetadataBadgeBaseForm):
 
 #No forms for other roles as they cannot view
 
-VMetadataBadgeVMetadataFormsets = {}
+VMetadataBadgeManuscriptFormsets = {}
 for role_str in list_of_roles:
     try:
-        VMetadataBadgeVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
+        VMetadataBadgeManuscriptFormsets[role_str] = inlineformset_factory(
+            m.Manuscript,  
             m.VerificationMetadataBadge,  
             extra=1 if(role_str == "Admin" or role_str == "Curator" ) else 0,
             form=getattr(sys.modules[__name__], "VMetadataBadgeForm_"+role_str),
@@ -1296,20 +1657,11 @@ for role_str in list_of_roles:
     except AttributeError:
         pass #If no form for role we should never show the form, so pass
 
-# VMetadataBadgeVMetadataFormset = inlineformset_factory(
-#     m.VerificationMetadata,  
-#     m.VerificationMetadataBadge,  
-#     extra=1,
-#     form=VMetadataBadgeForm,
-#     fields=("name","type","version","definition_url","logo_url","issuing_org","issuing_date","verification_metadata"),
-#     can_delete = True,
-# )
-
 class ReadOnlyVMetadataBadgeForm(ReadOnlyFormMixin, VMetadataBadgeBaseForm):
     pass
 
-ReadOnlyVMetadataBadgeVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
+ReadOnlyVMetadataBadgeManuscriptFormset = inlineformset_factory(
+    m.Manuscript,  
     m.VerificationMetadataBadge,  
     extra=0,
     form=ReadOnlyVMetadataBadgeForm,
@@ -1336,11 +1688,11 @@ class VMetadataAuditForm_Curator(VMetadataAuditBaseForm):
 
 #No forms for other roles as they cannot view
 
-VMetadataAuditVMetadataFormsets = {}
+VMetadataAuditManuscriptFormsets = {}
 for role_str in list_of_roles:
     try:
-        VMetadataAuditVMetadataFormsets[role_str] = inlineformset_factory(
-            m.VerificationMetadata,  
+        VMetadataAuditManuscriptFormsets[role_str] = inlineformset_factory(
+            m.Manuscript,  
             m.VerificationMetadataAudit,  
             extra=1 if(role_str == "Admin" or role_str == "Curator") else 0,
             form=getattr(sys.modules[__name__], "VMetadataAuditForm_"+role_str),
@@ -1352,8 +1704,8 @@ for role_str in list_of_roles:
 class ReadOnlyVMetadataAuditForm(ReadOnlyFormMixin, VMetadataAuditBaseForm):
     pass
 
-ReadOnlyVMetadataAuditVMetadataFormset = inlineformset_factory(
-    m.VerificationMetadata,  
+ReadOnlyVMetadataAuditManuscriptFormset = inlineformset_factory(
+    m.Manuscript,  
     m.VerificationMetadataAudit,  
     extra=0,
     form=ReadOnlyVMetadataAuditForm,

@@ -6,7 +6,7 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEFAULT_AUTO_FIELD='django.db.models.AutoField' 
 
 LOGIN_URL = '/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/?login=true'
 LOGOUT_REDIRECT_URL = '/'
 
 #MEDIA_ROOT = os.environ["MEDIA_ROOT"]
@@ -35,6 +35,7 @@ DOCKER_BUILD_FOLDER = "/tmp"
 # Application definition
 INSTALLED_APPS = [
     'corere.apps.wholetale',
+    'corere.apps.file_datatable',
     'django.forms',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'guardian',
     'simple_history',
     'corere.main',
+    'explorer'
 ]
 
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting' #to allow our custom override of default widgets
@@ -79,9 +81,11 @@ MIDDLEWARE = [
     'crequest.middleware.CrequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corere.main.middleware.WholeTaleOutageMiddleware',
     'corere.main.middleware.BaseMiddleware',
+    'corere.main.utils.UserAlreadyAssociatedMiddleware',
 ]
-
+      
 #To have django-debug-toolbar show
 INTERNAL_IPS = [
     '127.0.0.1',
@@ -92,7 +96,7 @@ ROOT_URLCONF = 'corere.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'main/templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'main/templates'), '/corere/apps/file_datatable/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -125,7 +129,20 @@ DATABASES = {
         'PASSWORD': os.environ["POSTGRES_PASSWORD"],
         'HOST': os.environ["POSTGRES_HOST"], #TODO: is this needed?
         'PORT': '5432',
-    }
+        'ATOMIC_REQUESTS': True,
+    },
+    #Used for admin sql queries
+    "readonly": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": "5432",
+        "OPTIONS": {
+            "options": "-c default_transaction_read_only=on"
+        },
+    },
 }
 
 REST_FRAMEWORK = {
@@ -164,14 +181,14 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'django_file': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'normal',
             'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/django.log",
             'interval': 1,
         },      
         'file': {
-            'level': 'DEBUG',
+            'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'normal',
             'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/corere.log",
@@ -186,7 +203,7 @@ LOGGING = {
         },
         'corere': {
             'handlers': ['file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         },
     },
@@ -232,7 +249,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_user',
     'corere.main.utils.social_pipeline_return_session_user',
     'social_core.pipeline.user.get_username',
-    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.associate_user'
     # 'social_core.pipeline.social_auth.load_extra_data',
     #'social_core.pipeline.user.user_details',
     )
@@ -254,9 +271,35 @@ CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 SIMPLE_HISTORY_REVERT_DISABLED=True
 
+EXPLORER_CONNECTIONS = { 'Default': 'readonly' }
+EXPLORER_DEFAULT_CONNECTION = 'readonly'
+#EXPLORER_NO_PERMISSION_VIEW = 'explorer.views.auth.safe_login_view_wrapper'
+EXPLORER_SQL_BLACKLIST = (
+    'ALTER',
+    'CREATE TABLE',
+    'DELETE',
+    'DROP',
+    'GRANT',
+    'INSERT INTO',
+    'OWNER TO',
+    'RENAME ',
+    #'REPLACE',
+    'SCHEMA',
+    'TRUNCATE',
+    'UPDATE',
+)
+
 WHOLETALE_BASE_URL = os.environ["WHOLETALE_BASE_URL"]
 WHOLETALE_ADMIN_GIRDER_API_KEY = os.environ["WHOLETALE_ADMIN_GIRDER_API_KEY"]
+
+# DATAVERSE_BASE_URL = os.environ["DATAVERSE_BASE_URL"]
+# DATAVERSE_API_KEY = os.environ["DATAVERSE_API_KEY"]
 
 #CSRF_COOKIE_SAMESITE = 'None'
 ##Enabling this setting causes social auth to break
 #SESSION_COOKIE_SAMESITE = 'None'
+
+SKIP_EDITION = False
+
+#This is a selenium-only flag, do not use in a real environment
+SKIP_GIT = False

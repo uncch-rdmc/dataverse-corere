@@ -1,8 +1,9 @@
-import time, datetime, sseclient, threading, json, requests
+import time, datetime, sseclient, threading, json, requests, random, string, logging
 from django.conf import settings
 from girder_client import GirderClient
 from pathlib import Path
 from corere.apps.wholetale import models as wtm
+logger = logging.getLogger(__name__)
 
 #Some code taken from https://github.com/whole-tale/corere-mock
 #Some code also taken from https://gist.github.com/craig-willis/1d928c9afe78ff2a55a804c35637fa42
@@ -20,7 +21,7 @@ class WholeTale:
         ADMIN = 2
 
     def __init__(self, token=None, admin=False):#, event_thread=False):
-        self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1")
+        self.gc = GirderClient(apiUrl="https://girder."+settings.WHOLETALE_BASE_URL+"/api/v1") #If you change this string, also look at middleware.py
         if admin:
             if token:
                 raise ValueError("Token and admin cannot be provided at the same time")
@@ -46,6 +47,7 @@ class WholeTale:
     #The alternative would be to create a version for each submission, there is not version-level access control.
     #NOTE: This command assumes your corere server is running as https because if it isn't the csp setting won't work anyways
     def create_tale(self, title, image_id):
+        #TODO-WT: We should only be setting the config if the tale is a jupyternotebook. But this would require which Images are jupyter. This doesn't break anything so for now it'll stay.
         json_dict = {"title": title, "imageId": image_id, "dataSet": []}
         json_dict['config'] = {"csp": f"frame-ancestors 'self' https://dashboard.{settings.WHOLETALE_BASE_URL} https://{settings.SERVER_ADDRESS}"}
         return self.gc.post("/tale", json=json_dict)
@@ -124,11 +126,18 @@ class WholeTale:
     def delete_instance(self, instance_id):
         return self.gc.delete(f"/instance/{instance_id}")
 
-    def download_files(self, path, folder_id=None):
-        if folder_id is None:
-            folder_id = self.tale["workspaceId"]  # otherwise it should be version
+    def download_tale(self, tale_id):
+        tale = self.gc.get(f"/tale/{tale_id}")
+        return self.download_folder_zip(tale['workspaceId'])
 
-        self.gc.downloadFolderRecursive(folder_id, path)
+    def download_folder_zip(self, folder_id, mimeFilter=None):
+        return self.gc.get(f"/folder/{folder_id}/download", jsonResp=False)#, parameters={"mimeFilter": mimeFilter})
+
+    # def download_files(self, path, folder_id):
+    #     if folder_id is None:
+    #         folder_id = self.tale["workspaceId"]  # otherwise it should be version
+
+    #     return self.gc.downloadFolderRecursive(folder_id, path)
 
     def get_images(self):
         return self.gc.get("/image")
@@ -141,6 +150,11 @@ class WholeTale:
     
     def create_group(self, name, public=False):
         return self.gc.post("/group", parameters={"name": name, "public": public})
+
+    def create_group_with_hash(self, name):
+        """ create a group with a random string attached to the end, to practically avoid collisions """
+        our_hash = random.choices(string.ascii_uppercase + string.digits, k=64)
+        return self.create_group(name + ' ' + ''.join(our_hash))
 
     def get_group(self, group_id):
         return self.gc.get("/group/{}".format(group_id))

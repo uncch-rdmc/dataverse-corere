@@ -39,6 +39,103 @@
             {% endif %}
         });
         {% endif %}
+
+    })
+    
+</script>
+{% comment %} This script was used for submissions before moving many form related fields around {% endcomment %}
+<script type="text/javascript">
+    $(function () {
+        //checkbox conditionality and popups
+        var hp_checkbox = document.getElementById('id_high_performance');
+        var v_mt_div = document.getElementById('div_id_machine_type');
+        var v_s_div = document.getElementById('div_id_scheduler');
+        var v_p_div = document.getElementById('div_id_platform');
+        var v_pr_div = document.getElementById('div_id_processor_reqs');
+        var v_hu_div = document.getElementById('div_id_host_url');
+        var v_mr_div = document.getElementById('div_id_memory_reqs');
+
+        if(hp_checkbox) {
+            if (!hp_checkbox.checked) {
+                v_mt_div.style.display = "none";
+                v_s_div.style.display = "none";
+                v_p_div.style.display = "none";
+                v_pr_div.style.display = "none";
+                v_hu_div.style.display = "none";
+                v_mr_div.style.display = "none";
+            }
+            hp_checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    alert("Please provide additional high-performance compute environment specifications in your README before submitting.")
+                    v_mt_div.style.display = "block";
+                    v_s_div.style.display = "block";
+                    v_p_div.style.display = "block";
+                    v_pr_div.style.display = "block";
+                    v_hu_div.style.display = "block";
+                    v_mr_div.style.display = "block";
+                } else {
+                    v_mt_div.style.display = "none";
+                    v_s_div.style.display = "none";
+                    v_p_div.style.display = "none";
+                    v_pr_div.style.display = "none";
+                    v_hu_div.style.display = "none";
+                    v_mr_div.style.display = "none";
+                    document.getElementById('id_machine_type').value = '';
+                    document.getElementById('id_scheduler').value = '';
+                    document.getElementById('id_platform').value = '';
+                    document.getElementById('id_processor_reqs').value = '';
+                    document.getElementById('id_host_url').value = '';
+                    document.getElementById('id_memory_reqs').value = '';
+                } 
+            });
+        }
+        var cr_checkbox = document.getElementById('id_contents_restricted');
+        var crs_checkbox = document.getElementById('id_contents_restricted_sharing');
+        var ps_div = document.getElementById('div_id_contents_restricted_sharing');
+        if (!cr_checkbox.checked) {
+            ps_div.style.display = "none";
+        }
+        cr_checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if('{{role_name}}' == 'Author'){
+                    alert("Please send restricted data to the AJPS editor.")
+                }
+                ps_div.style.display = "block";
+            } else {
+                ps_div.style.display = "none";
+                crs_checkbox.checked = false;
+            }
+        });
+        crs_checkbox.addEventListener('change', function() {
+            if ('{{role_name}}' == 'Author' && this.checked) {
+                alert("If you are not permitted to share these data within Dataverse or with Odum for verification, please contact the AJPS Editors.")
+            }
+        });
+
+        var dropdown_compute_env = document.getElementById('id_compute_env');
+        var dropdown_compute_env_other_div = document.getElementById('div_id_compute_env_other');
+       
+        if(dropdown_compute_env && dropdown_compute_env_other_div) {
+            if(dropdown_compute_env.options[dropdown_compute_env.selectedIndex].value !== "Other") {
+                dropdown_compute_env_other_div.style.display = "none";
+            }
+
+            dropdown_compute_env.addEventListener('change', function() {
+                if(this.options[this.selectedIndex].value == "Other") {
+                    dropdown_compute_env_other_div.style.display = "block";
+                } else {
+                    dropdown_compute_env_other_div.style.display = "none";
+                    document.getElementById('id_compute_env_other').value = '';
+                }
+            })
+        }
+
+        var exemption_override_check = document.getElementById('id_exemption_override');
+        if (!exemption_override_check.checked) {
+            var exemption_override_div = document.getElementById('div_id_exemption_override');
+            exemption_override_div.style.display = "none";
+        }
+
     })
 </script>
 {% include "main/page_title.html" %}    
@@ -47,79 +144,52 @@
     {% crispy form manuscript_helper %}
     <hr>
     {% if author_formset %}
-        <h5 class="cblue">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h5 class="title-text">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
         {{ author_formset.non_form_errors }}
         {% crispy author_formset author_inline_helper %}
         <hr>
     {% endif %}
     {% if data_source_formset %}
-        <h5 class="cblue">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-original-title="Description about data sources"></span></h5>
+        <h5 class="title-text">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Full data citation for each original data source" aria-label="Full data citation for each original data source"></span></h5>
+        <h6><i><span style="color:#666666; margin-left:1px;">Please enter each data source in a separate field by selecting 'add data source'</span></i></h6>
         {{ data_source_formset.non_form_errors }}
         {% crispy data_source_formset data_source_inline_helper %}
         <hr>
     {% endif %}
     {% if keyword_formset %}
-        <h5 class="cblue">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h5 class="title-text">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        <h6><i><span style="color:#666666; margin-left:1px;">Please enter each keyword in a separate field by selecting 'add keyword'</span></i></h6>
         {{ keyword_formset.non_form_errors }}
         {% crispy keyword_formset keyword_inline_helper %}
         <hr>
     {% endif %}
+    {% if v_metadata_formset %}
+        <h5 class="title-text">Verification Metadata</h5>
+        {{ v_metadata_formset.non_form_errors }}
+        {% crispy v_metadata_formset helper %}
+        <hr>  
+    {% endif %}
 
     {% if not read_only %}
         {% if create %}
-            <input type=button value="Home" onClick="location.href='..';">
-            <input type="submit" name="submit_continue" value="Create and Continue">
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" name="submit_continue" value="Create and Continue" title="Create your new manuscript and proceed to upload files" aria-label="Create your new manuscript and proceed to upload files">
         {% elif from_submission %}
-            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='..';}">
-            <input type="submit" name="submit_continue_submission" value="Save and Continue">
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
+            <input type="submit" name="submit_continue_submission" value="Save and Continue" title="Save your updated manuscript info and proceed to upload data/code files" aria-label="Save your updated manuscript info and proceed to upload data/code files">
         {% elif m_status == "new" %}
-            <input type=button value="Home" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='..';}">
-            <input type="submit" name="submit_continue" value="Save and Continue">
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
+            <input type="submit" name="submit_continue" value="Save and Continue" title="Save your updated manuscript info and proceed to upload files" aria-label="Save your updated manuscript info and proceed to upload files">
+        {% elif m_status == "pending_dataverse_publish" or m_status == "published_to_dataverse" or m_status == "completed_report_sent" %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" name="submit_confirm" value="Save and Continue" title="Save your updated manuscript info and proceed to reviewing data/code files" aria-label="Save your updated manuscript info and proceed to reviewing data/code files">
         {% else %}
-            <input type=button value="Home" onClick="location.href='..';">
-            <input type="submit" name="submit" value="Save">
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" name="submit" value="Save" title="Save your updated manuscript info" aria-label="Save your updated manuscript info">
         {% endif %}
     {% else %}
-        <input type=button value="Home" onClick="location.href='..';">
+        <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
     {% endif %}
-
 </form>
-{% if obj_type != 'manuscript' %}
-<script>
-    {% comment %} 
-    Goes through each note and checks if the author is our user. If not, disables the delete checkbox
-    We do this before the other script to remove the delete option from new notes.
-    {% endcomment %}
-    for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
-        if(elem.tagName == 'TR') {
-            if(elem.firstElementChild.tagName == 'TD'){
-                creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
-
-                if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
-                    for(let celem of elem.childNodes) {
-                        if(celem.tagName == 'TD') {
-                            if(celem.id.endsWith('DELETE')) {
-                                celem.firstElementChild.firstElementChild.style.display = 'none'
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    {% comment %}
-    Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
-    This was required to set the field to be the username. 
-    Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
-    That being said, this is pretty brittle as well.
-    {% endcomment %}
-
-    var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
-    lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
-
-    
-</script>
-{% endif %}
 
 {% endblock content %}

@@ -7,8 +7,8 @@
 {# NOTE: if you edit this navbar, edit the oauth2-proxy file sign_in.html  #}
 <nav class="navbar navbar-expand-sm navbar-light ">
   <div class="container-fluid">
-    <a class="navbar-brand " href="/"><img src="{% static 'main/CORE2.png' %}" /></a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <a class="navbar-brand" href="/"><img src="{% static 'main/CORE2.png' %}" /></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" title="Toggle navigation bar" aria-label="Toggle navigation bar">
       <span class="navbar-toggler-icon"></span>
     </button>
 
@@ -20,12 +20,13 @@
           </a>
           <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
             {% comment %} {% register_notify_callbacks callbacks='fill_notification_badge' %} {% endcomment %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
-            <a class="dropdown-item" href="/notifications">Notifications <span class="notification_count badge badge-danger align-middle">{% live_notify_badge %}</span></a>
-            <a class="dropdown-item" href="/">My Manuscripts</a>
+            <a class="dropdown-item" href="/notifications" title="View notification list" aria-label="View notification list">Notifications <span class="notification_count badge bg-danger align-middle" >{% live_notify_badge %}</span></a>
+            <a class="dropdown-item" href="/" title="View manuscripts you are involved with" aria-label="View manuscripts you are involved with">My Manuscripts</a>
             {% if request.user|has_group:"Role Curator" %} 
-              <a class="dropdown-item" href="/site_actions">Site Actions</a>
+              <a class="dropdown-item" href="/site_actions" title="Additional actions for curating admins" aria-label="Additional actions for curating admins">Site Actions</a>
             {% endif%}
-            {% if request.user|groups_contain_count_no_completed:"Role" > 1 or request.user.is_superuser %}
+            {% comment %} The code utilizing this is also disabled, see utils.get_role_name_for_form{% endcomment %}
+            {% comment %} {% if request.user|groups_contain_count_no_completed:"Role" > 1 or request.user.is_superuser %}
               <div class="dropdown-divider"></div>
               {% if request.user|has_group:"Role Author" %} 
                 {% if request.session.active_role == "Author" %} 
@@ -62,7 +63,7 @@
                   <a class="dropdown-item" href="/switch_role?role=Admin&next={{request.path_info}}">Switch to Admin Role</a>
                 {% endif %}   
               {% endif%}
-            {% endif%}
+            {% endif%} {% endcomment %}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="/logout">Logout</a>
           </div>
@@ -85,7 +86,7 @@
     {% for message in messages %}
         <div class="alert {{ message.tags|bootstrap_alert_lvl }} alert-dismissible fade show " role="alert">
           {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss message" title="Dismiss message"></button>
         </div>
     {% endfor %}
 {% endif %}

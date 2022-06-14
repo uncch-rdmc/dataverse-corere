@@ -24,6 +24,7 @@ def get_private_roles():
 #Manuscript perm strings
 PERM_MANU_ADD_M = 'add_manuscript'
 PERM_MANU_CHANGE_M = 'change_manuscript'
+PERM_MANU_CHANGE_M_FILES = 'change_manuscript_files'
 PERM_MANU_DELETE_M = 'delete_manuscript'
 PERM_MANU_VIEW_M = 'view_manuscript'
 PERM_MANU_ADD_AUTHORS = 'add_authors_on_manuscript'
@@ -37,9 +38,9 @@ PERM_MANU_CURATE = 'curate_manuscript'
 PERM_MANU_VERIFY = 'verify_manuscript'
 
 #Note perm strings
-PERM_NOTE_ADD_N = 'add_note'
+#PERM_NOTE_ADD_N = 'add_note'
 PERM_NOTE_CHANGE_N = 'change_note'
-PERM_NOTE_DELETE_N = 'delete_note'
+#PERM_NOTE_DELETE_N = 'delete_note'
 PERM_NOTE_VIEW_N = 'view_note'
 
 #You need the perm path when checking non-object perms
@@ -47,5 +48,5 @@ def perm_path(perm):
     return 'main.'+perm
 
 progress_list_manuscript = ['Create Manuscript', 'Upload Files', 'Invite Author']
-progress_list_submission_first = ['Update Manuscript', 'Add Submission Info', 'Upload Files', 'Run Code']
-progress_list_submission_subsequent = ['Add Submission Info', 'Upload Files', 'Run Code']
+progress_list_container_submission = ['Update Manuscript', 'Upload Files', 'Run Code', 'Add Submission Info']
+progress_list_external_submission = ['Update Manuscript', 'Upload Files', 'Add Submission Info']

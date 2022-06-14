@@ -1,18 +1,21 @@
 {% extends "main/layout_full.html" %}
 {% load i18n %}
 {% load auth_extras %}
+{% load manuscript_commit_timestamp %}
 {% block content %}
 
 {% comment %} Manuscript Table {% endcomment %}
 
 <script type="text/javascript">
     var search_completed_vis_toggle = true;
-    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}';
+    {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
+    var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
     $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
-            cache: false,
+            cache: true,
+
             success: function (response) {
                 var [columns_config, button_index] = constructTableM(response.data[0]);
                 var last_row = 0; //TODO: settings this to something by default so we don't error on first load. But not sure if its right
@@ -24,6 +27,7 @@
                     processing: true,
                     stateSave: true,
                     paging: true,
+                    cache: true,
                     select: 'single',
                     columns: columns_config,
                     dom: 'Bfrtpl',
@@ -38,6 +42,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "manuscript/create";
                             },
+                            attr: {
+                                title: 'Create a new manuscript record in CORE2 for a publication',
+                                'aria-label': 'Create a new manuscript record in CORE2 for a publication'
+                            }
                         },
                     {% endif %}
                         {
@@ -46,6 +54,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "manuscript/" + manuscript_id;
                             },
+                            attr: {
+                                title: 'Work on a manuscript record',
+                                'aria-label': 'Work on a manuscript record'
+                            }
                         },
                         
                         //the default for the searches controlled by these two buttons is set later down
@@ -56,20 +68,24 @@
                             action: function ( e, dt, node, config ) {
                                 if(search_completed_vis_toggle == false) {
                                     //Implicit globals are not best practice
-                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                                     search_completed_vis_toggle = true;
                                     this.text( '<i class="far fa-eye-slash"></i> Completed' );
                                     
                                 } else {
-                                    table.columns( 4 ).search( "Completed" ).draw();
+                                    table.columns( 4 ).search( "Completed Report Sent" ).draw();
                                     search_completed_vis_toggle = false;
                                     this.text( '<i class="far fa-eye"></i> Completed' );
                                 }
                             },
+                            attr: {
+                                title: 'Show/hide completed manuscripts',
+                                'aria-label': 'Show/hide completed manuscripts'
+                            }
                         },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                         {
-                            text: '<i class="far fa-eye"></i> All Manuscripts',
+                            text: '<i class="far fa-eye-slash"></i> My Manuscripts',
                             name: 'viewnotuserassigned',
                             className: 'visibilityButton',
                             action: function ( e, dt, node, config ) {
@@ -84,6 +100,10 @@
                                     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
                             },
+                            attr: {
+                                title: 'Show/hide manuscripts not assigned to you',
+                                'aria-label': 'Show/hide manuscripts not assigned to you'
+                            }
                         },
                         {
                             text: 'Show User Filter Table',
@@ -112,6 +132,10 @@
                                 //     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 // }
                             },
+                            attr: {
+                                title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
+                                'aria-label': 'Show/hide additional table where you can see the manuscripts assigned to individual users'
+                            }
                         },
                         {% endif %}
                     ]
@@ -134,10 +158,9 @@
                     }
                 }).on('dblclick', function(e, dt, type, indexes) {
                     //manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
-                    window.open("manuscript/" + manuscript_id);
-                }
-                )
-                ;
+                    //window.open("manuscript/" + manuscript_id);
+                    window.location.href = "manuscript/" + manuscript_id;
+                });
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load
                 var selected_row = 0
                 if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
@@ -151,14 +174,16 @@
                 table.row(':first').select(); //Select first row always
 
                 //Implicit globals are not best practice
-                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission", true, false, false ).draw();
+                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
                 table.columns( 5 ).search( "{{request.user.username}}" ).draw();
                 {% endif %}
+                document.getElementById('manuscript_table_loading').style.display = "none";
+                document.getElementById('manuscript_table_holder').style.display = "block";
+                document.getElementById('user_table_holder').style.display = "block";
             }
         })
-
     });
 
     function constructTableM(columns) {
@@ -177,8 +202,8 @@
                 column_settings.visible = false;
             } else if(columns[c][0] === 'pub_name') {
                 column_settings.render = function ( data, type, row ) {
-                    return type === 'display' && data.length > 25 ?
-                        data.substr( 0, 25 ) +'…' :
+                    return type === 'display' && data.length > 60 ?
+                        data.substr( 0, 60 ) +'…' :
                         data;
                 }
             }
@@ -189,8 +214,7 @@
     } 
 </script>
 
-
-<div class="cblue" id="user_table_holder" hidden>
+<div id="user_table_holder" style="display:none;" hidden>
     <br>
     <h2>Users</h2>
     <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
@@ -209,8 +233,9 @@
 <br>
 
 <div>
-    <div class="cblue" id="manuscript_table_holder">
-        <table id="manuscript_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
+    <div class="title-text" id="manuscript_table_loading">Loading...</div>
+    <div class="title-text" id="manuscript_table_holder" style="display:none;">
+        <table id="manuscript_table" class="datatable table table-striped table-bordered visibleMe" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}
                     <th>{{ field }}</th>
@@ -263,6 +288,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );
                             },
+                            attr: {
+                                title: 'Show all users',
+                                'aria-label': 'Show all users'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Authors Shown',
@@ -275,6 +304,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are authors',
+                                'aria-label': 'Show/hide users who are authors'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Editors Shown',
@@ -287,6 +320,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are editors',
+                                'aria-label': 'Show/hide users who are editors'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Curators Shown',
@@ -299,6 +336,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye"></i> Curators Shown' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye-slash"></i> Verifiers Hidden' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are curators',
+                                'aria-label': 'Show/hide users who are curators'
+                            }
                         },
                         {
                             text: '<i class="far fa-eye"></i> Verifiers Shown',
@@ -311,6 +352,10 @@
                                 $('#user_table').DataTable().buttons( "showOnlyCurators:name" ).text( '<i class="far fa-eye-slash"></i> Curators Hidden' );
                                 $('#user_table').DataTable().buttons( "showOnlyVerifiers:name" ).text( '<i class="far fa-eye"></i> Verifiers Shown' );                                //this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );
                             },
+                            attr: {
+                                title: 'Show/hide users who are verifiers',
+                                'aria-label': 'Show/hide users who are verifiers'
+                            }
                         },
 
                     ]
@@ -322,7 +367,7 @@
                         $('#manuscript_table').addClass("visibleMe")
                     }
                     $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> Custom Manuscripts' );
-                    console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
+                    //console.log($('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ))
 
                 } )
                 .on( 'deselect', function ( e, dt, type, indexes ) {
@@ -343,7 +388,6 @@
     });
 
     function constructTable(columns) {
-        console.log("HELLO 2")
         var columns_config = [];
         var button_index;
         for (var c in columns) {

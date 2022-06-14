@@ -6,8 +6,8 @@
 <form action="{{key|default_if_none:''}}" method="post">
     {% csrf_token %}
     {% crispy form helper %}
-    <input type=button value="Back" onClick="javascript:history.go(-1);">
-    <input type="submit" name="submit" value="Submit">
+    <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onClick="javascript:history.go(-1);">
+    <input type="submit" name="submit" value="Submit" title="Save user details" aria-label="Save user details">
 </form>
 
 {% endblock content %}

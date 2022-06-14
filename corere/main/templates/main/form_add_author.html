@@ -28,8 +28,8 @@
 <form action="" method="post">
     {% csrf_token %}
     {% crispy form helper %}
-    <input type=button value="Back" onclick="location.href='../uploadfiles/'">
-    <input type="submit" name="submit" value="Submit" onClick="return confirm('This manuscript will be handed off to the Author, is that ok?');">
+    <input type=button value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='../uploadfiles/'">
+    <input type="submit" name="submit" value="Submit" title="Add author to manuscript and hand the manuscript to the author to add their data/code" aria-label="Add author to manuscript and hand the manuscript to the author to add their data/code" onClick="return confirm('This manuscript will be handed off to the Author, is that ok?');">
 </form>
 
 {{ form.media.js }}

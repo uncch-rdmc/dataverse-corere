@@ -6,9 +6,11 @@
 
 @import "https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700";
 
-// #content {
+$base-color: #6c97d8;
+$title-color: darken($base-color, 28%);
 
-// }
+$progress-reached: $base-color;
+$progress-done-circle: yellowgreen;
 
 //makes file metadata description the correct height for formsets. Needed to override our new default textarea
 textarea.shortarea {
@@ -22,7 +24,7 @@ table.filestable {
 }
 
 ul.live_notify_list {
-    margin-left: -40px; //I don't understand the styling I'm having to override with this
+    margin-left: -32px; //I don't understand the styling I'm having to override with this
 }
 
 //Adding alert-danger and alert to formset errors (without having to touch styles)
@@ -47,6 +49,19 @@ table.dataTable tr.selected td.select-checkbox:after, table.dataTable tr.selecte
     font-size: .5rem !important;
     margin-top: 3px !important;
     //I can't seem to figure out how to change the color of the checkmark here
+}
+
+table.filetable {
+    //Target th & td, overriding bootstrap's _tables.scss. Makes rows thinner mostly
+    > :not(caption) > * > * {
+        padding: 0.25rem;
+        vertical-align: middle;
+              }
+    .sorting:before, .sorting:after {
+        top: 2px;
+        font-size:.9rem;
+        // padding-top: 20px;
+    }
 }
 
 .page-title {
@@ -95,12 +110,12 @@ body.full {
 }
 
 .navbar {
-    background: #7386D5;
+    background: $base-color;
 }
 
 .btn-primary {
     color: rgb(255, 255, 255);
-    background-color: #8596d6;
+    background-color: $base-color;
     border-color: #989898
 }
 
@@ -128,13 +143,13 @@ body.full {
     padding-top: 10px;
 }
 
-.cblue {
-    color: #7386D5;
+.title-text {
+    color: $title-color;
     // display:block;
 }
 
 table.dataTable tbody>tr.selected, table.dataTable tbody>tr>.selected {
-    background-color: #7386D5;
+    background-color: $base-color;
     opacity: .75;
 }
 
@@ -158,13 +173,13 @@ table.dataTable thead .sorting:before, table.dataTable thead .sorting_asc:before
 ul.pagination {
     float: right;
     a {
-        color: #7386D5;
+        color: $base-color;
     }
 
     .page-item.active .page-link {
         color: #fff;
-        background-color: #7386D5;
-        border-color: #7386D5;
+        background-color: $base-color;
+        border-color: $base-color;
     }
 }
 
@@ -175,7 +190,7 @@ table.dataTable tbody th.focus, table.dataTable tbody td.focus {
 .dropdown-menu a:hover
 {
   color: #fff;
-  background-color: #7386D5;
+  background-color: $base-color;
   border-color: #fff;
 }
 .notification_count{
@@ -202,24 +217,24 @@ td.custom-control {
 }
 
 .tooltip-icon {
-    color: #7386D5;
+    color: $base-color;
     margin-left: 2px;
     font-size: .9rem;
 }
 .tooltip-inner {
-    background-color: #7386D5;
+    background-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, .tooltip.bs-tooltip-bottom .arrow::before {
-    border-bottom-color: #7386D5;
+    border-bottom-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, .tooltip.bs-tooltip-top .arrow::before {
-    border-top-color: #7386D5;
+    border-top-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, .tooltip.bs-tooltip-left .arrow::before {
-    border-left-color: #7386D5;
+    border-left-color: $base-color;
 }
 .tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, .tooltip.bs-tooltip-right .arrow::before {
-    border-right-color: #7386D5;
+    border-right-color: $base-color;
 }
 
 //TODO: Enanabling the commented out lines gets iframe to size right, but then the form buttons get hidden. Figure out later.
@@ -241,7 +256,7 @@ ol.progtrckr {
 }
 ol.progtrckr li {
     display: table-cell;
-    text-align: center;
+    text-align: right;
     line-height: 3em;
 }
 
@@ -255,40 +270,64 @@ ol.progtrckr[data-progtrckr-steps="8"] li { width: 12%; }
 ol.progtrckr[data-progtrckr-steps="9"] li { width: 11%; }
 
 ol.progtrckr li.progtrckr-done {
-    color: black;
-    border-bottom: 4px solid yellowgreen;
+    color: yellowgreen;
+    border-bottom: 4px solid $progress-reached;
 }
 ol.progtrckr li.progtrckr-todo {
     color: silver; 
     border-bottom: 4px solid silver;
 }
+ol.progtrckr li.progtrckr-current {
+    color: $progress-reached; 
+    border-bottom: 4px solid $progress-reached;
+}
 
 ol.progtrckr li:after {
     content: "\00a0\00a0";
 }
-ol.progtrckr li:before {
-    position: relative;
-    bottom: -2.5em;
-    float: left;
-    left: 50%;
-    line-height: 1em;
+
+div.progress-circle-todo {
+    width: 25px;
+    height: 25px;
+    border: 2px solid silver;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
 }
-ol.progtrckr li.progtrckr-done:before {
-    content: "\2713";
-    color: white;
-    background-color: yellowgreen;
-    height: 1.2em;
-    width: 1.2em;
-    line-height: 1.2em;
-    border: none;
-    border-radius: 1.2em;
+
+div.progress-circle-current {
+    width: 25px;
+    height: 25px;
+    border: 2px solid $progress-reached;
+    border-radius: 50%;
+    background-color: #FFFFFF;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
 }
-ol.progtrckr li.progtrckr-todo:before {
-    content: "\039F";
-    color: silver;
-    background-color: white;
-    font-size: 1.5em;
-    bottom: -1.6em;
+
+div.progress-circle-done {
+    width: 25px;
+    height: 25px;
+    border: 2px solid $progress-done-circle;
+    border-radius: 50%;
+    background-color: $progress-done-circle;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="-3.25 -4 35 35"><path d="M9 21.035l-9-8.638 2.791-2.87 6.156 5.874 12.21-12.436 2.843 2.817z"/></svg>');
+    // background-color: $progress-done-circle;
+    margin-bottom: -63px;
+    margin-left: auto; 
+    margin-right: 0;
+}
+
+span.progtrckr-text {
+    display: block;
+    text-align: center;
+    margin-left: auto; 
+    //TODO: This new margin and width only work the case with 4 elements?
+    width: 200px;
+    margin-right: -87.5px;
 }
 
 div.sectional {
@@ -337,10 +376,40 @@ select {
     padding-right: 2rem;
   }
 
+select.custom-select {
+    background-position-x: calc(100% + 2px);
+    background-position-y: 2.5px;
+    padding-right: 1rem;
+    margin-right: 0;
+}
+
 .table-bordered {
     border: 1px solid #dee2e6;   
     border-width: 1px;
 }
+
+#div_id_note_formset-0-scope {
+    width:160px;
+}
+
+//This fixing of the date widget doesn't scale quite right with margin as fixed and width as a percent
+//But its good enough for now
+.selectdatewidget {
+    display: inline-block; 
+    width: 32.5%; 
+    margin-right:10px;
+}
+.selectdatewidget:nth-child(3) {
+    margin-right:0px !important;
+}
+
+//Add back bootstrap 3 tiny buttons, for our grid. We aren't targeting mobile anyways
+// .btn-group-xs > .btn, .btn-xs {
+//     padding: .25rem .4rem;
+//     font-size: .875rem;
+//     line-height: .5;
+//     border-radius: .2rem;
+// }
 
 /* Datatables OLD */
 
@@ -413,7 +482,7 @@ select {
 // #sidebar {
 //     min-width: 250px;
 //     max-width: 250px;
-//     background: #7386D5;
+//     background: $base-color;
 //     color: #fff;
 //     transition: all 0.6s cubic-bezier(0.945, 0.020, 0.270, 0.665);
 //     transform-origin: bottom left;
@@ -445,7 +514,7 @@ select {
 //     display: block;
 // }
 // #sidebar ul li a:hover {
-//     color: #7386D5;
+//     color: $base-color;
 //     background: #fff;
 // }
 
@@ -487,7 +556,7 @@ select {
 
 // a.download {
 //     background: #fff;
-//     color: #7386D5;
+//     color: $base-color;
 // }
 
 // a.article, a.article:hover {

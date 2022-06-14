@@ -1,9 +1,13 @@
-import logging
+import logging, json
 from django_datatables_view.base_datatable_view import BaseDatatableView
+from django_datatables_view.mixins import LazyEncoder
 from django.conf import settings
+from django.http import HttpResponse
 from corere.main import constants as c
 from corere.main import models as m
 from corere.main import wholetale_corere as w
+from corere.apps.file_datatable import views as fdtv
+from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm
 from guardian.shortcuts import get_objects_for_user, get_perms
 from django.utils.html import escape
@@ -15,10 +19,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
+from django.views.decorators.cache import cache_control
+
 logger = logging.getLogger(__name__)
 
-#Shared across our various datatables
+#Shared across our various (non-file) datatables
 class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
+    http_method_names = ['get']
+
     # pull from source mostly, except when noted. 
     # Needed to disallow users from requesting columns from the model we do not wish to provide
     def extract_datatables_column_data(self):
@@ -87,13 +95,17 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
         # return qs[start:offset]
 
+    # def handle_exception(self, e):
+    #     print(logger.__dict__)
+    #     print("HANDLED EXCEPTION")
+    #     raise e
+
 
 def helper_manuscript_columns(user):
     columns = [['selected',''],['id','ID'],['pub_id','Pub ID'],['pub_name','Pub Name'],['_status','Status']]
-    if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
-        columns.append(['users', "Users"])
     if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
         #columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
+        columns.append(['users', "Users"])
         columns.append(['updated_at','Last Update Date'])
     return columns
     #return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
@@ -101,7 +113,35 @@ def helper_manuscript_columns(user):
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class ManuscriptJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     max_display_length = 500
+
+    ### get() and get_json_response() are copied from the JSONResponseMixin and slightly modified to allow caching
+    @cache_control(max_age=9999999)
+    def get(self, request, *args, **kwargs):
+        self.request = request
+
+        func_val = self.get_context_data(**kwargs)
+        if not self.is_clean:
+            assert isinstance(func_val, dict)
+            response = dict(func_val)
+            if "error" not in response and "sError" not in response:
+                response["result"] = "ok"
+            else:
+                response["result"] = "error"
+        else:
+            response = func_val
+
+        dump = json.dumps(response, cls=LazyEncoder)
+        return self.render_to_response(dump)
+
+    def get_json_response(self, content, **httpresponse_kwargs):
+        """Construct an `HttpResponse` object."""
+        response = HttpResponse(
+            content, content_type="application/json", **httpresponse_kwargs
+        )
+        #add_never_cache_headers(response)
+        return response
 
     def get_columns(self):
         return helper_manuscript_columns(self.request.user)
@@ -142,6 +182,7 @@ def helper_submission_columns(user):
     return columns
 
 class SubmissionJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     model = m.Submission
     max_display_length = 500
 
@@ -211,36 +252,38 @@ class SubmissionJson(CorereBaseDatatableView):
             avail_buttons = []
 
             #Here we allow edit submission to be done at multiple phases
-            if(has_transition_perm(submission.edit_noop, user)
-               or has_transition_perm(submission.add_edition_noop, user)
+            if(has_transition_perm(submission.add_edition_noop, user)
                or has_transition_perm(submission.add_curation_noop, user)
                or has_transition_perm(submission.add_verification_noop, user) ):
-                avail_buttons.append('editSubmission')
+                avail_buttons.append('reviewSubmission')
                 #avail_buttons.append('editSubmissionFiles')
             else:
                 try:
                     if(has_transition_perm(submission.submission_edition.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_edition.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_curation.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_curation.RelatedObjectDoesNotExist:
                     pass
 
                 try:
                     if(has_transition_perm(submission.submission_verification.edit_noop, user)):
-                        avail_buttons.append('editSubmission')
+                        avail_buttons.append('reviewSubmission')
                         #avail_buttons.append('editSubmissionFiles')
                 except m.Submission.submission_verification.RelatedObjectDoesNotExist:
                     pass
 
+            if 'reviewSubmission' not in avail_buttons and has_transition_perm(submission.edit_noop, user):
+                avail_buttons.append('editSubmission')
+
             if(has_transition_perm(submission.view_noop, user)):
-                if('editSubmission' not in avail_buttons):
+                if('editSubmission' not in avail_buttons and 'reviewSubmission' not in avail_buttons):
                     avail_buttons.append('viewSubmission')
                 if('editSubmissionFiles' not in avail_buttons):
                     avail_buttons.append('viewSubmissionFiles')
@@ -248,20 +291,22 @@ class SubmissionJson(CorereBaseDatatableView):
             # if(has_transition_perm(submission.submit, user)):
             #     avail_buttons.append('progressSubmission')
             if(has_transition_perm(submission.send_report, user)):
-                avail_buttons.append('generateReportForSubmission')
+                avail_buttons.append('sendReportForSubmission')
             if(has_transition_perm(submission.finish_submission, user)):
                 avail_buttons.append('returnSubmission')
 
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
-            if(settings.CONTAINER_DRIVER == 'wholetale'):
+            if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                 dominant_corere_group = w.get_dominant_group_connector(user, submission).corere_group
                 if dominant_corere_group:
                     if(dominant_corere_group.name.startswith("Author")):
                         if(has_transition_perm(submission.edit_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
                             avail_buttons.append('launchSubmissionContainer')
+                            avail_buttons.append('downloadContainerFiles')
                     else: 
                         if(has_transition_perm(submission.view_noop, user) and 'launchSubmissionContainer' not in avail_buttons):
                             avail_buttons.append('launchSubmissionContainer')
+                            avail_buttons.append('downloadContainerFiles')
 
             return avail_buttons
 
@@ -280,7 +325,8 @@ class SubmissionJson(CorereBaseDatatableView):
             manuscript = m.Manuscript.objects.get(id=manuscript_id)
         except ObjectDoesNotExist:
             raise Http404()
-        if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+        #if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+        if(has_transition_perm(manuscript.view_noop, self.request.user)):
             return(m.Submission.objects.filter(manuscript=manuscript_id).order_by('-version_id'))
         else:
             raise Http404()
@@ -305,6 +351,7 @@ def helper_user_columns(user):
 # Customizing django-datatables-view defaults
 # See https://pypi.org/project/django-datatables-view/ for info on functions
 class UserJson(CorereBaseDatatableView):
+    http_method_names = ['get']
     max_display_length = 500
 
     def get_columns(self):
@@ -320,7 +367,10 @@ class UserJson(CorereBaseDatatableView):
         return super(UserJson, self).render_column(user, column[0])
 
     def get_initial_queryset(self):
-        return(m.User.objects.all())
+        if has_group(self.request.user, c.GROUP_ROLE_CURATOR) or has_group(self.request.user, c.GROUP_ROLE_VERIFIER):
+            return m.User.objects.all()
+        else:
+            raise Http404()
         # manuscript_id = self.kwargs['manuscript_id']
         # try:
         #     manuscript = m.Manuscript.objects.get(id=manuscript_id)
@@ -339,4 +389,37 @@ class UserJson(CorereBaseDatatableView):
     #         qs = qs.filter(Q(title__icontains=search)|Q(pub_id__icontains=search)|Q(doi__icontains=search))
     #     return qs
 
+############ File Tables (based off the files_datatable app) ############
 
+class ManuscriptFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    http_method_names = ['get']
+    
+    def get_initial_queryset(self):
+        manuscript_id = self.kwargs['id']
+        try:
+            manuscript = m.Manuscript.objects.get(id=manuscript_id)
+        except ObjectDoesNotExist:
+            raise Http404()
+        if(has_transition_perm(manuscript.view_noop, self.request.user)):
+        #if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, manuscript)):
+            #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
+            return m.GitFile.objects.filter(parent_manuscript=manuscript).order_by('-date')
+        else:
+            raise Http404()
+
+class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
+    http_method_names = ['get']
+
+    def get_initial_queryset(self):
+        submission_id = self.kwargs['id']
+        try:
+            submission = m.Submission.objects.get(id=submission_id)
+        except ObjectDoesNotExist:
+            raise Http404()
+        #TODO: Should this perm be checking more... right now editors/curators/verifiers might be able to see author files while they are working
+        if(has_transition_perm(submission.manuscript.view_noop, self.request.user)):
+        #if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, submission.manuscript)):
+            #print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
+            return m.GitFile.objects.filter(parent_submission=submission).order_by('-date')
+        else:
+            raise Http404()

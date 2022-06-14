@@ -4,7 +4,7 @@ from corere.main import models as m
 from django.contrib.auth import get_user_model
 #from .models import Manuscript
 
-# Currently For creation of groups with permissions in CoReRe
+# Currently For creation of groups with permissions in CORE2
 
 # First we get the out-of-the-box model permissions we will assign to our new groups
 # NOTE: these permissions define when a group should be able to perform an action on ALL instances of a model
@@ -14,8 +14,9 @@ def populate_models(sender, **kwargs):
     from django.contrib.auth.models import Group
     from django.contrib.auth.models import Permission
     perm_manuscript_add = Permission.objects.get(codename=c.PERM_MANU_ADD_M)
-    perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
-    perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
+    # perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
+    # perm_manuscript_change_files = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M_FILES)
+    #perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
     perm_manuscript_view = Permission.objects.get(codename=c.PERM_MANU_VIEW_M)
 
     perm_manuscript_add_authors = Permission.objects.get(codename=c.PERM_MANU_ADD_AUTHORS)

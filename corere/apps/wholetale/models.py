@@ -60,7 +60,7 @@ class GroupConnector(models.Model):
             if self.corere_group:
                 raise AssertionError("Admin wholetale groups cannot also be connected to corere_group")
 
-            if GroupConnector.objects.filter(is_admins=True).exclude(group_id=self.wt_id).count() > 0:
+            if GroupConnector.objects.filter(is_admins=True).exclude(wt_id=self.wt_id).count() > 0:
                 raise AssertionError("Only one admin wholetale group can be created")
         else:
             if not self.manuscript:
@@ -70,6 +70,11 @@ class GroupConnector(models.Model):
 class ImageChoice(models.Model):
     wt_id = models.CharField(max_length=24, primary_key=True, verbose_name='Image ID in Whole Tale')
     name = models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')
+    show_last = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['show_last', 'name']
 
     def __str__(self):
         return self.name

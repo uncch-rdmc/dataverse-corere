@@ -1,5 +1,4 @@
-import logging
-import uuid
+import logging, uuid, pytz
 # from . import constants as c
 from django.conf import settings
 from django.db import models
@@ -26,6 +25,7 @@ from corere.apps.wholetale import models as wtm
 from corere.main.middleware import local
 from corere.main.utils import fsm_check_transition_perm
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import EmailValidator
 #from django.utils.translation import gettext_lazy as _
 from guardian.shortcuts import get_objects_for_group, get_perms
 from autoslug import AutoSlugField
@@ -74,18 +74,18 @@ class User(AbstractUser):
     # This model inherits these fields from abstract user:
     # username, email, first_name, last_name, date_joined and last_login, password, is_superuser, is_staff and is_active
 
-    # See apps.py/signals.py for the instantiation of CoReRe's default User groups/permissions
+    # See apps.py/signals.py for the instantiation of CORE2's default User groups/permissions
 
     #invite_key = models.CharField(max_length=64, blank=True)
     invited_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-    email = models.EmailField(unique=True, blank=False)
+    email = models.EmailField(unique=True, blank=False, validators=[EmailValidator])
     wt_id = models.CharField(max_length=24, blank=True, null=True, verbose_name='User ID in Whole Tale')
 
     #This parameter is to track the last time a user has been sent manually by corere to oauthproxy's sign_in page
     #It is not an exact parameter because a user could potentially alter their url string to have it not be set right
     #But that is ok because the only reprocussion is they may get shown an oauthproxy login inside their iframe
-    last_oauthproxy_forced_signin = models.DateTimeField(default=datetime(1900, 1, 1))
+    last_oauthproxy_forced_signin = models.DateTimeField(default=datetime(1900, 1, 1, tzinfo=pytz.UTC))
 
     # Django Guardian has_perm does not check whether the user has a global perm.
     # We always want that in our project, so this function checks both
@@ -110,7 +110,7 @@ class User(AbstractUser):
 
 class Edition(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', 'New'
+        NEW = 'new', '---'
         ISSUES = 'issues', 'Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
@@ -162,13 +162,13 @@ class Edition(AbstractCreateUpdateModel):
 
 class Curation(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = 'new', 'New'
-        INCOM_MATERIALS = 'incom_materials', 'Incomplete Materials'
+        NEW = 'new', '---'
+        INCOM_MATERIALS = 'incomplete_materials', 'Incomplete Materials'
         MAJOR_ISSUES = 'major_issues', 'Major Issues'
         MINOR_ISSUES = 'minor_issues', 'Minor Issues'
         NO_ISSUES = 'no_issues', 'No Issues'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission approved by the curator')
     report = models.TextField(default="", verbose_name='Details')
     needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_curation')
@@ -193,9 +193,10 @@ class Curation(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == Submission.Status.IN_PROGRESS_CURATION ):
-            return True
-        return False
+        return True
+        # if(self.submission._status == Submission.Status.IN_PROGRESS_CURATION ):
+        #     return True
+        # return False
 
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
@@ -216,14 +217,14 @@ class Curation(AbstractCreateUpdateModel):
 
 class Verification(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
-        NEW = "new"
-        NOT_ATTEMPTED = "not_attempted" # The name of this is vague
-        MINOR_ISSUES = "minor_issues"
-        MAJOR_ISSUES = "major_issues"
-        SUCCESS_W_MOD = "success_w_mod"
-        SUCCESS = "success"
+        NEW = 'new', '---'
+        NOT_ATTEMPTED = 'not_attempted', 'Not Attempted'
+        MINOR_ISSUES = 'minor_issues', 'Minor Issues'
+        MAJOR_ISSUES = 'major_issues', 'Major Issues'
+        SUCCESS_W_MOD = 'success_with_modification', 'Success with Modification'
+        SUCCESS = 'success', 'Success'
 
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Review', help_text='Was the submission able to be verified')
     submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name='submission_verification')
     report = models.TextField(default="", verbose_name='Details')
     code_executability = models.CharField(max_length=2000, default="", verbose_name='Code Executability')
@@ -251,13 +252,15 @@ class Verification(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     def can_edit(self):
-        if(self.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION ):
-            return True
-        return False
+        return True
+        # if(self.submission._status == Submission.Status.IN_PROGRESS_VERIFICATION ):
+        #     return True
+        # return False
 
     #Does not actually change status, used just for permission checking
+    #NOTE: Eventually we may want edit to work if you are an admin, not if you have curate (so non-admin curators are restricted)
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[can_edit],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript))
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_VERIFY, instance.submission.manuscript) or user.has_any_perm(c.PERM_MANU_CURATE, instance.submission.manuscript))
     def edit_noop(self):
         return self._status
 
@@ -285,20 +288,18 @@ class Submission(AbstractCreateUpdateModel):
         IN_PROGRESS_CURATION = 'in_progress_curation'
         IN_PROGRESS_VERIFICATION = 'in_progress_verification'
         REVIEWED_AWAITING_REPORT = 'reviewed_awaiting_report'
-        REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approve'
+        REVIEWED_REPORT_AWAITING_APPROVAL = 'reviewed_awaiting_approval'
         RETURNED = 'returned'
 
-    _status = FSMField(max_length=25, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Submission review status', help_text='The status of the submission in the review process')
     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="manuscript_submissions")
     version_id = models.IntegerField(verbose_name='Version number')
     files_changed = models.BooleanField(default=True)
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
-    high_performance = models.BooleanField(default=False, verbose_name='Does this submission require a high-performance compute environment?')
-    contents_gis = models.BooleanField(default=False, verbose_name='Does this submission contain GIS data and mapping?')
-    contents_proprietary = models.BooleanField(default=False, verbose_name='Does this submission contain restricted or proprietary data?')
-    contents_proprietary_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?')
-    
+    launch_issues = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Container Launch Issues', help_text='Issues faced when attempting to launch the container')
+    editor_submit_date = models.DateField(verbose_name='Editor Submit Date', blank=True, null=True, help_text='The date when editors submitted the submission. Only used when editor use of CORE2 for a manuscript is disabled.')
+
     class Meta:
         default_permissions = ()
         ordering = ['version_id']
@@ -322,11 +323,11 @@ class Submission(AbstractCreateUpdateModel):
             else:
                 self.version_id = prev_max_version_id + 1
         
-        girderToken = kwargs.pop('girderToken', None)
+        girderToken = kwargs.pop('girderToken', None) #this is unused now. If you remove it you have to stop it from coming in or you'll have errors
         super(Submission, self).save(*args, **kwargs)
 
         if(first_save):
-            if settings.CONTAINER_DRIVER == "wholetale":
+            if self.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
                 wtc = w.WholeTaleCorere(admin=True)
                 tale = self.manuscript.manuscript_tales.get(original_tale=None)
                 group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -341,10 +342,10 @@ class Submission(AbstractCreateUpdateModel):
                     new_gfile.parent_submission = self
                     new_gfile.id = None
                     new_gfile.save()
-                if settings.CONTAINER_DRIVER == "wholetale":
+                if self.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
                     for tc in tale.tale_copies.all(): #delete copy instances from previous submission. Note this happens as admin from the previous connection above
                         wtc.delete_tale(tale.wt_id) #deletes instances as well
-        elif self._status == self.Status.REJECTED_EDITOR and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
+        elif self._status == self.Status.REJECTED_EDITOR and self.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale": #If editor rejects we need to give the author write access again to the same submission
             wtc = w.WholeTaleCorere(admin=True)
             tale = self.manuscript.manuscript_tales.get(original_tale=None)
             group = Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id))
@@ -407,8 +408,11 @@ class Submission(AbstractCreateUpdateModel):
     ##### django-fsm (workflow) related functions #####
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript))
+    #New perms allow curators to edit submission at any point
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW or instance._status == instance.Status.REJECTED_EDITOR) and user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)  
+                                            or user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
+                                            #or (instance._status == instance.Status.RETURNED and user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript) and (instance.manuscript._status == instance.manuscript.Status.COMPLETED or instance.manuscript._status == instance.manuscript.Status.COMPLETED_REPORTED))))
     def edit_noop(self):
         return self._status
 
@@ -427,15 +431,18 @@ class Submission(AbstractCreateUpdateModel):
         return True
 
     #TODO: I'm not sure if on_error is ever hit, but we'd want it to be NEW or REJECTED_EDITOR conditionally.
-    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=Status.IN_PROGRESS_EDITION, on_error=Status.NEW, conditions=[can_submit],
+    @transition(field=_status, source=[Status.NEW, Status.REJECTED_EDITOR], target=RETURN_VALUE(), on_error=Status.NEW, conditions=[can_submit],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance.manuscript)) #MAD: Used same perm as add, do we want that?
     def submit(self, user):
         if has_transition_perm(self.manuscript.review, user): #checking here because we need the user
             self.manuscript.review()
             self.manuscript.save()
+            if self.manuscript.skip_edition:
+                return self.Status.IN_PROGRESS_CURATION
+            else:
+                return self.Status.IN_PROGRESS_EDITION
         else:
             raise Exception
-        pass
 
     #-----------------------
 
@@ -528,13 +535,20 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_CURATION], target=RETURN_VALUE(), conditions=[can_review_curation],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def review_curation(self):
-        try:
-            if(self.submission_curation.needs_verification == True):
+        try: 
+            if self.submission_curation.needs_verification == True:
                 return self.Status.IN_PROGRESS_VERIFICATION
         except Submission.submission_curation.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_CURATION
         
-        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+        if not settings.SKIP_GIT:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+
+        #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
+        if self.submission_curation._status == Curation.Status.NO_ISSUES: #We've already checked that it doesn't need verification above
+            self.manuscript._status = Manuscript.Status.PENDING_DATAVERSE_PUBLISH
+            self.manuscript.save()
+
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
@@ -550,24 +564,65 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=[Status.IN_PROGRESS_VERIFICATION], target=RETURN_VALUE(), conditions=[can_review_verification],
                 permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_VERIFY, instance.manuscript)))
     def review_verification(self):
-        try:
-            if(self.submission_verification._status == Verification.Status.SUCCESS): #just checking the object exists, crude
+        try: #just checking the object exists, crude
+            if self.submission_verification._status == Verification.Status.SUCCESS: 
                 pass
         except Submission.submission_verification.RelatedObjectDoesNotExist:
             return self.Status.IN_PROGRESS_VERIFICATION
         
-        g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+        if not settings.SKIP_GIT:
+            g.create_submission_branch(self) #We create the submission branch before returning the submission, to "save" the current state of the repo for history
+
+        #If fully accepted submission, we set the manuscript to complete here, even though there are steps in the submission outstanding (sending the final report)
+        if self.submission_curation._status == Curation.Status.NO_ISSUES and self.submission_verification._status == Verification.Status.SUCCESS:
+                self.manuscript._status = Manuscript.Status.PENDING_DATAVERSE_PUBLISH
+                self.manuscript.save()
+
         return self.Status.REVIEWED_AWAITING_REPORT
 
     #-----------------------
     
+    # NOTE: This just checks the additional manuscript status requirements. send_report() enforces the submission status requirements
     def can_send_report(self):
-        return True
+        if self.manuscript._status == Manuscript.Status.COMPLETED_REPORT_SENT or self.manuscript._status == Manuscript.Status.PENDING_DATAVERSE_PUBLISH:
+            return False
+        else:
+            return True 
 
-    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=Status.REVIEWED_REPORT_AWAITING_APPROVAL, conditions=[can_send_report],
+    @transition(field=_status, source=Status.REVIEWED_AWAITING_REPORT, target=RETURN_VALUE(), conditions=[can_send_report],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CURATE, instance.manuscript)))
     def send_report(self):
-        pass
+        #TODO: Actually send a report here. If edition enabled
+
+        if self.manuscript._status == Manuscript.Status.PUBLISHED_TO_DATAVERSE: #If final report being sent
+            # Rename existing groups (add completed suffix) when done for clean-up and reporting
+            author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
+            author_group = Group.objects.get(name=author_name)
+            author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
+            author_group.save()
+
+            editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
+            editor_group = Group.objects.get(name=editor_name)
+            editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
+            editor_group.save()
+
+            # Now that we are implementing a dataverse_upload step, curators should not be locked out of editing ever
+            # curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
+            # curator_group = Group.objects.get(name=curator_name)
+            # curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
+            # curator_group.save()
+
+            verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
+            verifier_group = Group.objects.get(name=verifier_name)
+            verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
+            verifier_group.save()
+
+            self.manuscript._status = Manuscript.Status.COMPLETED_REPORT_SENT
+            self.manuscript.save()
+
+            return self.Status.RETURNED
+
+        return self.Status.REVIEWED_REPORT_AWAITING_APPROVAL
 
     #-----------------------
     
@@ -579,35 +634,6 @@ class Submission(AbstractCreateUpdateModel):
     @transition(field=_status, source=Status.REVIEWED_REPORT_AWAITING_APPROVAL, target=Status.RETURNED, conditions=[can_finish_submission],
             permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_APPROVE, instance.manuscript)))
     def finish_submission(self):
-        if(self.submission_curation._status == Curation.Status.NO_ISSUES):
-            if(self.submission_curation.needs_verification == False or (self.submission_curation.needs_verification == True and self.submission_verification._status == Verification.Status.SUCCESS)):
-                self.manuscript._status = Manuscript.Status.COMPLETED
-                ## We decided to leave completed manuscripts in the list and toggle their visibility
-
-                # Rename existing groups (add completed suffix) when done for clean-up and reporting
-                author_name = name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.manuscript.id)
-                author_group = Group.objects.get(name=author_name)
-                author_group.name = author_name + " " + c.GROUP_COMPLETED_SUFFIX
-                author_group.save()
-
-                editor_name = name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.manuscript.id)
-                editor_group = Group.objects.get(name=editor_name)
-                editor_group.name = editor_name + " " + c.GROUP_COMPLETED_SUFFIX
-                editor_group.save()
-
-                curator_name = name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)
-                curator_group = Group.objects.get(name=curator_name)
-                curator_group.name = curator_name + " " + c.GROUP_COMPLETED_SUFFIX
-                curator_group.save()
-
-                verifier_name = name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)
-                verifier_group = Group.objects.get(name=verifier_name)
-                verifier_group.name = verifier_name + " " + c.GROUP_COMPLETED_SUFFIX
-                verifier_group.save()
-
-                self.manuscript.save()
-                return
-            
         self.manuscript._status = Manuscript.Status.AWAITING_RESUBMISSION
         self.manuscript.save()
         return
@@ -642,14 +668,18 @@ class Keyword(models.Model):
 
 ####################################################
 
+#This model has a lot of fields because it stores the (many) user form fields as well as a few internal fields.
+#Ideally it may be better to have the form fields in their own class, but this requires touching hundreds of places in the application, and the benefit is minor.
 class Manuscript(AbstractCreateUpdateModel):
     class Status(models.TextChoices):
         NEW = 'new', 'New'
-        AWAITING_INITIAL = 'awaiting_init', 'Awaiting Initial Submission'
-        AWAITING_RESUBMISSION = 'awaiting_resub', 'Awaiting Author Resubmission'
+        AWAITING_INITIAL = 'awaiting_initial', 'Awaiting Initial Submission'
+        AWAITING_RESUBMISSION = 'awaiting_resubmission', 'Awaiting Author Resubmission'
         REVIEWING = 'reviewing', 'Editor Reviewing'
         PROCESSING = 'processing', 'Processing Submission'
-        COMPLETED = 'completed', 'Completed'
+        PENDING_DATAVERSE_PUBLISH = 'pending_dataverse_publish', 'Pending Dataverse Publish' #TODO: Maybe rename this to "Approved?". Technically its not completed when this is set because we still need to send the report and upload to dataverse
+        PUBLISHED_TO_DATAVERSE = 'published_to_dataverse', 'Published To Dataverse'
+        COMPLETED_REPORT_SENT = 'completed_report_sent', 'Completed Report Sent'
 
     class Subjects(models.TextChoices):
         AGRICULTURAL = 'agricultural', 'Agricultural Sciences'
@@ -664,32 +694,61 @@ class Manuscript(AbstractCreateUpdateModel):
         MATHEMATICS = 'mathematics', 'Mathematical Sciences'
         HEALTH = 'health', 'Medicine, Health and Life Sciences'
         PHYSICS = 'physics', 'Physics'
-        SOCIAL = 'social', 'Social Sciences'
+        SOCIAL = 'social', 'Social Sciences' 
         OTHER = 'other', 'Other'
 
     pub_name = models.CharField(max_length=200, default="", verbose_name='Manuscript Title', help_text='Title of the manuscript')
     pub_id = models.CharField(max_length=200, default="", db_index=True, verbose_name='Manuscript #', help_text='The internal ID from the publication')
-    qual_analysis = models.BooleanField(default=False, blank=True, null=True, verbose_name='Qualitative Analysis', help_text='Whether this manuscript includes qualitative analysis')
-    qdr_review = models.BooleanField(default=False, blank=True, null=True, verbose_name='QDR Review', help_text='Does this manuscript need verification of qualitative results by QDR?')
+    qual_analysis = models.BooleanField(default=False, verbose_name='Does this manuscript include qualitative analysis?', help_text='TODO')
+    qdr_review = models.BooleanField(default=False, verbose_name='Does this manuscript need verification of qualitative results by QDR?', help_text='TODO')
     contact_first_name = models.CharField(max_length=150, verbose_name='Corresponding Author Given Name', help_text='Given name of the publication contact that will be stored in Dataverse')
     contact_last_name =  models.CharField(max_length=150, verbose_name='Corresponding Author Surname', help_text='Surname of the publication contact that will be stored in Dataverse')
     contact_email = models.EmailField(null=True, verbose_name='Corresponding Author Email Address', help_text='Email address of the publication contact that will be stored in Dataverse')
-    dataverse_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
-    description = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
+    description = models.TextField(blank=True, null=True, default="", verbose_name='Abstract', help_text='The abstract for the manuscript')
     subject = models.CharField(max_length=14, blank=True, null=True, choices=Subjects.choices, verbose_name='Subject') 
-    additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
+    # additional_info = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Additional Info', help_text='Additional info about the manuscript (e.g., approved exemptions, restricted data, etc).')
     # producer_first_name = models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer First Name')
     # producer_last_name =  models.CharField(max_length=150, blank=True, null=True, verbose_name='Producer Last Name')
-    _status = FSMField(max_length=15, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
-    wt_compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Whole Tale Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+    #TODO: When fixing local container mode (non settings.CONTAINER_DRIVER == 'wholetale'), we will need to generate a list of compute environments to populate the form for selecting the below fields
+    compute_env = models.CharField(max_length=100, blank=True, null=True, verbose_name='Compute Environment Format') #This is set to longer than 24 to bypass a validation check due to form weirdness. See the manuscript form save function for more info
+    compute_env_other = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Environment Details', help_text='Details about the unlisted environment')
+    
+    # Was a part of submission
+    high_performance = models.BooleanField(default=False, verbose_name='Does this manuscript require a high-performance compute environment?', help_text='TODO')
+    contents_gis = models.BooleanField(default=False, verbose_name='Does this manuscript contain GIS data and mapping?', help_text='TODO')
+    contents_restricted = models.BooleanField(default=False, verbose_name='Does this manuscript contain restricted or proprietary data?', help_text='TODO')
+    contents_restricted_sharing = models.BooleanField(default=False, verbose_name='Are you restricted from sharing this data with Odum for verification only?', help_text='TODO')  
+    other_exemptions = models.TextField(max_length=1024, blank=True, null=True, default="", verbose_name='Other Exemptions', help_text='Are there any other exemptions to the verification workflow that the curation team should know about?')
+    
+    exemption_override = models.BooleanField(default=False, verbose_name='Exemption Override', help_text='The curation team has decided to deploy this manuscript inside Whole Tale, even with potential issues.')
+
+    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
+    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
+    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
+    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
+    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
+    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
+    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
+    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
+    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
 
     uuid = models.UUIDField(unique=True, default=uuid.uuid4, editable=False) #currently only used for naming a file folder on upload. Needed as id doesn't exist until after create
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,], excluded_fields=['slug'])
     slug = AutoSlugField(populate_from='get_display_name') #TODO: make this based off other things?
+    skip_edition = models.BooleanField(default=False, help_text='Is this manuscript being run without external Authors or Editors')
+    _status = FSMField(max_length=32, choices=Status.choices, default=Status.NEW, verbose_name='Manuscript Status', help_text='The overall status of the manuscript in the review process')
+
+    dataverse_parent = models.CharField(max_length=1024, blank=True, null=True, default="", verbose_name='Parent Dataverse', help_text='The parent Dataverse on the installation that your new dataset will be created under. Please provide the name at the end of the dataverse page URL (e.g. https://dataverse.unc.edu/dataverse/COPY_THIS_NAME)')
+    dataverse_installation = models.ForeignKey('DataverseInstallation', blank=True, null=True, verbose_name='Dataverse Installation', on_delete=models.SET_NULL, related_name="dataverseinstallation_manuscripts")
+    dataverse_fetched_doi = models.CharField(max_length=150, blank=True, verbose_name='Dataverse DOI', help_text='DOI of the publication in Dataverse')
+    dataverse_fetched_data_citation = models.TextField(default="", blank=True, null=True, verbose_name='Dataverse Data Citation', help_text='The data citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_article_citation = models.TextField(default="", blank=True, null=True, verbose_name='Dataverse Article Citation', help_text='The article citation pulled from the dataset connected to this manuscript (via DOI)')
+    dataverse_fetched_publish_date = models.DateField(verbose_name='Dataset Publish Date', blank=True, null=True, help_text='The date the dataset in Dataverse was published')
 
     class Meta:
         permissions = [
-            #TODO: This includes default CRUD permissions. We could switch it to be explicit (other objects too)
+            #NOTE: THIS LIST DOES NOT INCLUDE THE DEFAULT CRUD PERMISSIONS ADDED AUTOMATICALLY BY DJANGO. We could switch it to be explicit (other objects too)
+            (c.PERM_MANU_CHANGE_M_FILES, 'Can manage files for a manuscript'),
             (c.PERM_MANU_ADD_AUTHORS, 'Can manage authors on manuscript'),
             (c.PERM_MANU_REMOVE_AUTHORS, 'Can manage authors on manuscript'), # we needed more granularity for authors
             (c.PERM_MANU_MANAGE_EDITORS, 'Can manage editors on manuscript'),
@@ -709,13 +768,29 @@ class Manuscript(AbstractCreateUpdateModel):
         first_save = False
         if not self.pk:
             first_save = True
+            if settings.SKIP_EDITION: #Set here because we want it to save with super
+                self.skip_edition = True
+
+        if not first_save and settings.CONTAINER_DRIVER == "wholetale":
+            orig = Manuscript.objects.get(pk=self.pk)
+
+            if orig.is_containerized() != self.is_containerized() or orig.compute_env != self.compute_env:
+                #This code will delete "nothing" if there was no container previously
+                old_tales = self.manuscript_tales.all()
+                wtc = w.WholeTaleCorere(admin=True)
+                for ot in old_tales:
+                    wtc.delete_tale(ot.wt_id)
+                self.manuscript_tales.all().delete()
+
         super(Manuscript, self).save(*args, **kwargs)
+
         if first_save:
             # Note these works alongside global permissions defined in signals.py
             # TODO: Make this concatenation standardized
             editor_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)
             group_manuscript_editor, created = Group.objects.get_or_create(name=editor_group_name)
             assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_editor, self) 
+            assign_perm(c.PERM_MANU_CHANGE_M_FILES, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_DELETE_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_editor, self) 
             assign_perm(c.PERM_MANU_ADD_AUTHORS, group_manuscript_editor, self) 
@@ -730,7 +805,8 @@ class Manuscript(AbstractCreateUpdateModel):
 
             curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
             group_manuscript_curator, created = Group.objects.get_or_create(name=curator_group_name)
-            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self) 
+            assign_perm(c.PERM_MANU_CHANGE_M, group_manuscript_curator, self)
+            assign_perm(c.PERM_MANU_CHANGE_M_FILES, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_VIEW_M, group_manuscript_curator, self) 
             assign_perm(c.PERM_MANU_CURATE, group_manuscript_curator, self) 
 
@@ -743,43 +819,60 @@ class Manuscript(AbstractCreateUpdateModel):
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
 
-            if settings.CONTAINER_DRIVER == "wholetale":
+            if settings.CONTAINER_DRIVER == "wholetale": #NOTE: We don't check is_containerized() here because it'll be false until a compute_env is set. It means we create groups for manuscripts that won't be in wholetale but that's ok
                 #Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
                 wtc = w.WholeTaleCorere(admin=True)
-                wtc_group_editor = wtc.create_group(editor_group_name)
+                wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
                 wtm_group_editor = wtm.GroupConnector.objects.create(corere_group=group_manuscript_editor, wt_id=wtc_group_editor['_id'], manuscript=self)
-                wtc_group_author = wtc.create_group(author_group_name)
+                wtc_group_author = wtc.create_group_with_hash(author_group_name)
                 wtm_group_author = wtm.GroupConnector.objects.create(corere_group=group_manuscript_author, wt_id=wtc_group_author['_id'], manuscript=self)
-                wtc_group_curator = wtc.create_group(curator_group_name)
+                wtc_group_curator = wtc.create_group_with_hash(curator_group_name)
                 wtm_group_curator = wtm.GroupConnector.objects.create(corere_group=group_manuscript_curator, wt_id=wtc_group_curator['_id'], manuscript=self)
-                wtc_group_verifier = wtc.create_group(verifier_group_name)
+                wtc_group_verifier = wtc.create_group_with_hash(verifier_group_name)
                 wtm_group_verifier = wtm.GroupConnector.objects.create(corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier['_id'], manuscript=self)
                 
             group_manuscript_editor.user_set.add(local.user) #TODO: Should be dynamic on role or more secure, but right now only editors create manuscripts. Will need to fix wt invite below as well.
         
-        if settings.CONTAINER_DRIVER == "wholetale":
-            if self.wt_compute_env and not self.manuscript_tales.all().exists():
-                wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
-                wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
-                wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
-                wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
+        if settings.CONTAINER_DRIVER == "wholetale" and self.is_containerized() and not self.manuscript_tales.all().exists():
+            #We create our root tale for the manuscript after the compute env has been provided. This triggers before there were ever tales, and after tales were deleted due to compute_env switch.
+            wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
+            wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
+            wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
+            wtm_group_verifier = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)).wholetale_group
+            
+            wtc = w.WholeTaleCorere(admin=True)
+            tale_title = f"{self.get_display_name()} - {self.id}"
+
+            wtc_tale = wtc.create_tale(tale_title, self.compute_env)
+            tale = wtm.Tale()
+            tale.manuscript = self
+            tale.wt_id = wtc_tale["_id"]
+            tale.group_connector = wtm_group_author
+            tale.save()
+
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
+            wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
+
+            if not first_save:
+                try: #All this code is for recreating a tale after an environment switch.
+                    latest_sub = self.get_latest_submission()
+                    tale.submission = latest_sub
+                    tale.save()
+                    wtc.upload_files(tale.wt_id, g.get_submission_files_path(self)) #Upload existing files. Only should actually do anything when is_containerized changes because we check for tale existence.
+                    if latest_sub._status == Submission.Status.NEW or latest_sub._status == Submission.Status.REJECTED_EDITOR:
+                        wtc.set_group_access(tale.wt_id, wtc.AccessType.WRITE, wtm_group_author)
+                except Submission.DoesNotExist:
+                    pass
                 
-                wtc = w.WholeTaleCorere(admin=True)
-                tale_title = f"{self.get_display_name()} - {self.id}"
-                wtc_tale = wtc.create_tale(tale_title, self.wt_compute_env)
-                tale = wtm.Tale()
-                tale.manuscript = self
-                tale.wt_id = wtc_tale["_id"]
-                tale.group_connector = wtm_group_author
-                tale.save()
+            #TODO-WT: We aren't handling the case where a compute env is changed and then a user attempts to run a compute env for a previous submission with a different env.
+            #         I think my best bet is to make a custom error for this? "The environment type for this manuscript has changed. You cannot run submissions from before this change took place."
 
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_editor)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_author)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_curator)
-                wtc.set_group_access(tale.wt_id, wtc.AccessType.READ, wtm_group_verifier)
-
-    def is_complete(self):
-        return self._status == Manuscript.Status.COMPLETED
+    def is_containerized(self):
+        if not self.compute_env or self.compute_env == 'Other' or ((self.high_performance or self.contents_restricted_sharing) and not self.exemption_override):
+            return False
+        return True
 
     def get_max_submission_version_id(self):
         return Submission.objects.filter(manuscript=self).aggregate(Max('version_id'))['version_id__max']
@@ -787,9 +880,17 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
 
-    def get_landing_url(self):
-        return settings.CONTAINER_PROTOCOL + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
+    def has_submissions(self):
+        return self.get_max_submission_version_id() != None
 
+    def get_landing_url(self, request):
+        if request.is_secure():
+            protocol = "https"
+        else:
+            protocol = "http"
+        return protocol + "://" + settings.SERVER_ADDRESS + "/manuscript/" + str(self.id)
+
+    #Note: When slug uses this function, it removes the parenthesis and replaces spaces with underscore
     def get_display_name(self):
         try:
             return self.pub_id + " (" + self.contact_last_name + ")"
@@ -860,11 +961,13 @@ class Manuscript(AbstractCreateUpdateModel):
         return True
 
     # Perm: ability to create/edit a submission
-    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=Status.REVIEWING, conditions=[can_review],
+    @transition(field=_status, source=[Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[can_review],
                 permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_ADD_SUBMISSION, instance))
     def review(self):
-        #update submission status here?
-        pass #Here add any additional actions related to the state change
+        if self.skip_edition:
+            return self.Status.PROCESSING
+        else:
+            return self.Status.REVIEWING
 
     #-----------------------
 
@@ -883,22 +986,73 @@ class Manuscript(AbstractCreateUpdateModel):
     #-----------------------
 
     #Does not actually change status, used just for permission checking
-    @transition(field=_status, source=[Status.NEW, Status.AWAITING_INITIAL, Status.AWAITING_RESUBMISSION], target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CHANGE_M,instance))
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CHANGE_M,instance)
+                                          and ((instance._status == instance.Status.NEW or instance._status == instance.Status.AWAITING_INITIAL or instance._status == instance.Status.AWAITING_RESUBMISSION)
+                                                or user.is_superuser)))
     def edit_noop(self):
+        return self._status
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
+        permission=lambda instance, user: ( user.has_any_perm(c.PERM_MANU_CHANGE_M,instance)
+                                          and ((instance._status == instance.Status.NEW or instance._status == instance.Status.AWAITING_INITIAL or instance._status == instance.Status.AWAITING_RESUBMISSION)
+                                                or user.is_superuser)))
+    def edit_files_noop(self):
         return self._status
 
     #-----------------------
 
-    #TODO: Address limitation with having only one manuscript version. If its being edited as part of a resubmission what do we do about viewing?
-    #      Do we just allow viewing whatever is there? Do we block it during certain states. Maybe it'll be less of an issue if we can put all versioned data in the submission?
-    #
+    #TODO: We may just want to allow viewing all the time if you have the perm? Otherwise the manuscripts table may send people to a 404?
+    #      I'm not sure what other logic might rely on view not working for new...
     #Does not actually change status, used just for permission checking
     @transition(field=_status, source='*', target=RETURN_VALUE(), conditions=[],
-        permission=lambda instance, user: (#(instance._status == Status.NEW and user.has_any_perm(c.PERM_MANU_ADD_M,instance.manuscript)) or #add_manuscript means any other editor can see it (even from a different pub...)
+        permission=lambda instance, user: ((instance._status == instance.Status.NEW and user.has_any_perm(c.PERM_MANU_CHANGE_M, instance)) or
                                             (instance._status != instance.Status.NEW and user.has_any_perm(c.PERM_MANU_VIEW_M, instance))) )
     def view_noop(self):
         return self._status
+
+    #-----------------------
+
+    def can_dataverse_upload_noop(self):
+        return True
+
+    @transition(field=_status, source=[Status.PENDING_DATAVERSE_PUBLISH, Status.PUBLISHED_TO_DATAVERSE, Status.COMPLETED_REPORT_SENT], target=RETURN_VALUE(), conditions=[can_dataverse_upload_noop],
+                permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    def dataverse_upload_noop(self):
+        return self._status
+
+    #-----------------------
+
+    def can_dataverse_pull_citation(self):
+        if self.dataverse_fetched_doi:
+            return True
+        return False
+
+    #Does not actually change status, used just for permission checking
+    @transition(field=_status, source=[Status.PENDING_DATAVERSE_PUBLISH, Status.PUBLISHED_TO_DATAVERSE, Status.COMPLETED_REPORT_SENT], target=RETURN_VALUE(), conditions=[can_dataverse_pull_citation],
+        permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE,instance))
+    def dataverse_pull_citation(self):
+        if self._status == self.Status.PENDING_DATAVERSE_PUBLISH:
+            return self.Status.PUBLISHED_TO_DATAVERSE
+        else:
+            return self._status
+
+    #-----------------------
+
+    ## This is done by the submission
+
+    # def can_send_final_report(self):
+    #     if self.dataverse_fetched_data_citation and self.dataverse_fetched_publish_date:
+    #         return True
+    #     return False
+
+    # @transition(field=_status, source=[Status.COMPLETED, Status.COMPLETED_REPORTED], target=Status.COMPLETED_REPORTED, conditions=[can_send_final_report],
+    #             permission=lambda instance, user: user.has_any_perm(c.PERM_MANU_CURATE, instance))
+    # def send_final_report(self):
+    #     return #self._status
+
+#-----------------------
 
 @receiver(post_delete, sender=Manuscript, dispatch_uid='manuscript_delete_groups_signal')
 def delete_manuscript_groups(sender, instance, using, **kwargs):
@@ -906,6 +1060,8 @@ def delete_manuscript_groups(sender, instance, using, **kwargs):
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).delete()
     Group.objects.get(name__startswith=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(instance.id)).delete()
+
+####################################################
 
 #Class related to locally hosted docker containers
 class LocalContainerInfo(models.Model):
@@ -946,9 +1102,9 @@ class GitFile(AbstractCreateUpdateModel):
     class FileTag(models.TextChoices):
         CODE = 'code', 'Code'
         DATA = 'data', 'Data'
-        DOC_README = 'doc_readme', 'Documentation - Readme'
-        DOC_CODEBOOK = 'doc_codebook', 'Documentation - Codebook'
-        DOC_OTHER = 'doc_other', 'Documentation - Other'
+        DOC_README = 'documentation_readme', 'Documentation - Readme'
+        DOC_CODEBOOK = 'documentation_codebook', 'Documentation - Codebook'
+        DOC_OTHER = 'documentation_other', 'Documentation - Other'
         #UNSET = '-','-'
 
     #git_hash = models.CharField(max_length=40, verbose_name='SHA-1', help_text='SHA-1 hash of a blob or subtree based on its associated mode, type, and filename.') #we don't store this currently
@@ -958,7 +1114,7 @@ class GitFile(AbstractCreateUpdateModel):
     name = models.CharField(max_length=4096, verbose_name='file name', help_text='The name of the file')
     date = models.DateTimeField(verbose_name='file creation date')
     size = models.IntegerField(verbose_name='file size', help_text='The size of the file in bytes')
-    tag = models.CharField(max_length=14, null=True, blank=True, choices=FileTag.choices, verbose_name='file type')
+    tag = models.CharField(max_length=32, null=True, blank=True, choices=FileTag.choices, verbose_name='file type')
     description = models.CharField(max_length=1024, null=True, blank=True, default="", verbose_name='file description')
 
     #linked = models.BooleanField(default=True)
@@ -1005,7 +1161,7 @@ class Note(AbstractCreateUpdateModel):
         CURATION = 'curation', 'Curation'
         VERIFICATION = 'verification', 'Verification'
 
-    text    = models.TextField(verbose_name='Note Text')
+    text    = models.TextField(blank=False, null=False, verbose_name='Note Text')
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
     note_replied_to = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='note_responses')
     parent_submission = models.ForeignKey(Submission, null=True, blank=True, on_delete=models.CASCADE, related_name='notes')
@@ -1016,11 +1172,11 @@ class Note(AbstractCreateUpdateModel):
     #Instead of being parents, these refer to which file or category of the submission a note refers to.
     #The idea is that we want to show all these notes on the submission page, but then give the ability to specify what part of the submission they are related to
     ref_file = models.ForeignKey(GitFile, null=True, blank=True, on_delete=models.CASCADE, related_name='ref_notes')
-    ref_file_type = models.CharField(max_length=14, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
+    ref_file_type = models.CharField(max_length=32, choices=GitFile.FileTag.choices, blank=True, verbose_name='file type') 
     
     #Instead of having notes attached to edition/curation/verification, we have all notes on submission but track when during the process the note was made.
     #We could have inferred this from the author, but that really stinks for testing as an admin (who can have multiple roles)
-    ref_cycle = models.CharField(max_length=12, choices=RefCycle.choices) 
+    ref_cycle = models.CharField(max_length=32, choices=RefCycle.choices) 
     
     def save(self, *args, **kwargs):
         refs = 0
@@ -1034,30 +1190,74 @@ class Note(AbstractCreateUpdateModel):
             first_save = True
             self.manuscript = self.parent_submission.manuscript
 
-            if not hasattr(self.parent_submission, 'submission_edition'): #if not self.parent_submission.submission_edition:
+            # The code is a hack in that a user with both curator and verifier perms will always create additional notes as a curator. If we ever need to support both we'll need to add a UI option to note creation.
+            # We don't check groups in all the places because only curators/verifiers can edit notes out of phase
+            if self.parent_submission._status == Submission.Status.NEW or self.parent_submission._status == Submission.Status.REJECTED_EDITOR:
                 self.ref_cycle = self.RefCycle.SUBMISSION
-            elif not hasattr(self.parent_submission, 'submission_curation'): #elif not self.parent_submission.submission_curation:
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_EDITION:
                 self.ref_cycle = self.RefCycle.EDITION
-            elif not hasattr(self.parent_submission, 'submission_verification'): #elif not self.parent_submission.submission_verification:
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_CURATION:
                 self.ref_cycle = self.RefCycle.CURATION
+            elif self.parent_submission._status == Submission.Status.IN_PROGRESS_VERIFICATION:
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.VERIFICATION
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.CURATION
+                else:
+                    self.ref_cycle = self.RefCycle.VERIFICATION #If during verification assigned as either curator or verifier we default to verifier
+            elif (self.parent_submission._status == Submission.Status.REVIEWED_AWAITING_REPORT or self.parent_submission._status == Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL
+                or self.parent_submission._status == Submission.Status.RETURNED):
+                if local.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.CURATION
+                elif local.user.groups.filter(name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.manuscript.id)).exists():
+                    self.ref_cycle = self.RefCycle.VERIFICATION
+                elif local.user.is_superuser: 
+                    self.ref_cycle = self.RefCycle.CURATION #If later and not assigned as either curator or verifier we default to curator
+                else:
+                    logger.error("Non curator/verifier should never be editing notes out of phase. Note {} , User {} .".format(self.id, local.user.username))
+                    raise Exception("Non curator/verifier should never be editing notes out of phase")
             else:
-                self.ref_cycle = self.RefCycle.VERIFICATION
+                raise Exception("Undefined submission phase")
 
         super(Note, self).save(*args, **kwargs)
         if first_save and local.user != None and local.user.is_authenticated: #maybe redundant
             assign_perm(c.PERM_NOTE_VIEW_N, local.user, self) 
             assign_perm(c.PERM_NOTE_CHANGE_N, local.user, self) 
-            assign_perm(c.PERM_NOTE_DELETE_N, local.user, self) 
 
-    #TODO: If implementing fsm can_edit, base it upon the creator of the note
+            #We assign non-admin curators the ability to change all notes. Maybe that should just be admins though?
+            curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self.manuscript)
+            group_manuscript_curator = Group.objects.get(name=curator_group_name)
+            assign_perm(c.PERM_NOTE_CHANGE_N, group_manuscript_curator, self)
+
+            #Note: We don't assign the rest of view perms here because they are handled in the form save and there is logic in there that changes the scope based on public/private
+            #      Eventually we may want to move that logic into the model
+
+    def is_private(self, checkers=None):
+        role_count = 0
+        if checkers:
+            for checker in checkers:
+                if(checker.has_perm(c.PERM_NOTE_VIEW_N, self)):
+                    role_count += 1
+        else:
+            #TODO: Implement doing this code without using prefetched perms, when needed. See this for more prefetch info https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
+            #.. also search code for checkers and look for what we grab in classes.py
+            raise Exception("IMPLEMENTATION INCOMPLETE")
+
+        if(role_count == 4): #pretty crude check, if all roles then its public. Using a magic number (4) instead of len(c.get_roles()) because its already hardcoded other places.
+            return False
+        else:
+            return True
+
+
+#NOTE: Disabled as part of the manuscript/submission models rework. I'm pretty sure we don't want this as the authors won't fill it out
 
 #If we add any field requirements to software it'll cause issues with our submission form saving.
-class VerificationMetadataSoftware(models.Model):
-    name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
-    version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
-    #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+# class VerificationMetadataSoftware(models.Model):
+#     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+#     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+#     #code_repo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Code Repository URL')
+#     verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_softwares", blank=True, null=True)
+#     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataBadge(models.Model):
     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
@@ -1067,7 +1267,8 @@ class VerificationMetadataBadge(models.Model):
     logo_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Logo URL')
     issuing_org = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Issuing Organization')
     issuing_date = models.DateField(blank=True, null=True, verbose_name='Issuing Date')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
+    #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_badges")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 class VerificationMetadataAudit(models.Model):
@@ -1078,20 +1279,8 @@ class VerificationMetadataAudit(models.Model):
     verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Verified Results')
     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
-    verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
-    history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
-
-class VerificationMetadata(AbstractCreateUpdateModel):
-    operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
-    machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
-    scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
-    platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
-    processor_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Processor Requirements')
-    host_url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='Hosting Institution URL')
-    memory_reqs = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Memory Reqirements')
-    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
-    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')
-    submission = models.OneToOneField('Submission', on_delete=models.CASCADE, related_name="submission_vmetadata")
+    manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+    #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
 
 #other fields (email, created) are in base model
@@ -1151,6 +1340,31 @@ class CorereInvitation(Invitation):
             invite_url_sent=invite_url,
             inviter=self.inviter)
 
+############### DATAVERSE ################
+
+class DataverseInstallation(models.Model):
+    name = models.CharField(max_length=200, verbose_name='Installation Name')
+    url = models.URLField(max_length=200, verbose_name='URL')
+    api_token = models.CharField(max_length=200, verbose_name='API Token')
+    username = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='User Name', help_text='User that owns the API token. We store this only for informational purposes.')
+    # address, access token, pretty name
+
+    def __str__(self):
+        return '{0} ({1})'.format(self.name, self.url)
+
+# class VerificationMetadataAudit(models.Model):
+#     name = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Name')
+#     version = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Version')
+#     url = models.URLField(max_length=200, default="", blank=True, null=True, verbose_name='URL')
+#     organization = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Organization')
+#     verified_results = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Verified Results')
+#     exceptions = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exceptions')
+#     exception_reason = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Exception Reason')
+#     manuscript = models.ForeignKey('Manuscript', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+#     #verification_metadata = models.ForeignKey('VerificationMetadata', on_delete=models.CASCADE, related_name="verificationmetadata_audits")
+#     history = HistoricalRecords(bases=[AbstractHistoryWithChanges,])
+
+
 ############### POST-SAVE ################
 
 # post-save signal to update history with list of fields changed
@@ -1160,10 +1374,10 @@ class CorereInvitation(Invitation):
 @receiver(post_save, sender=Curation, dispatch_uid="add_history_info_curation")
 @receiver(post_save, sender=Verification, dispatch_uid="add_history_info_verification")
 @receiver(post_save, sender=Note, dispatch_uid="add_history_info_note")
-@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
+#@receiver(post_save, sender=VerificationMetadataSoftware, dispatch_uid="add_history_info_vmetadata_software")
 @receiver(post_save, sender=VerificationMetadataBadge, dispatch_uid="add_history_info_vmetadata_badge")
 @receiver(post_save, sender=VerificationMetadataAudit, dispatch_uid="add_history_info_vmetadata_audit")
-@receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
+# @receiver(post_save, sender=VerificationMetadata, dispatch_uid="add_history_info_vmetadata")
 def add_history_info(sender, instance, **kwargs):
     try:
         new_record, old_record = instance.history.order_by('-history_date')[:2]
@@ -1178,7 +1392,7 @@ def add_history_info(sender, instance, **kwargs):
 #If this errors out, I think trigger won't be cleared and will error on later saves
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
-    if settings.CONTAINER_DRIVER == 'wholetale':
+    if settings.CONTAINER_DRIVER == 'wholetale': #TODO-WT: Should I bypass this when self.compute_env != 'Other'? For now I'm just letting it happen. Probably should skip though if only for efficiency
         wtc = w.WholeTaleCorere(admin=True)
         if model is Group and instance.wt_id and not hasattr(instance, 'invite'):
             if action == 'post_add':

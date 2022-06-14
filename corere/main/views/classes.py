@@ -1,4 +1,4 @@
-import logging, os, requests, urllib, time, git, sseclient, threading, base64, json
+import logging, os, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -6,21 +6,24 @@ from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
 from corere.main import wholetale_corere as w
+from corere.main import dataverse as dv
 from corere.apps.wholetale import models as wtm
 from corere.main import git as g
 from .. import constants as c 
+from html import unescape
 from guardian.shortcuts import assign_perm, remove_perm, get_perms
 from guardian.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from guardian.core import ObjectPermissionChecker
 from django_fsm import has_transition_perm, TransitionNotAllowed
 from django.http import Http404
-from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, generate_progress_bar_html
+from corere.main.utils import fsm_check_transition_perm, get_role_name_for_form, get_progress_bar_html_submission, generate_progress_bar_html
 from django.contrib.auth.models import Group
 #from django.contrib.auth.mixins import LoginRequiredMixin #TODO: Did we need both? I don't think so.
 from django.views import View
 from corere.main import git as g
 from django.http import HttpResponse, StreamingHttpResponse
 from django.db.models import Max
+from django.utils.safestring import mark_safe
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -28,6 +31,7 @@ from notifications.signals import notify
 from templated_email import send_templated_mail
 from django.utils.datastructures import MultiValueDictKeyError
 from django.db import transaction
+from django_renderpdf.views import PDFView
 
 logger = logging.getLogger(__name__)  
 
@@ -37,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 #TODO: "transition_method_name" is a bit misleading. We are (over)using transitions to do perm checks, but the no-ops aren't actually transitioning
 
-#To use this at the very least you'll need to use the GetOrGenerateObjectMixin.
 class GenericCorereObjectView(View):
     form = None
     form_dict = None
@@ -65,12 +68,12 @@ class GenericCorereObjectView(View):
     
     create = False #Used by default template
 
-    def dispatch(self, request, *args, **kwargs): 
+    def general(self, request, *args, **kwargs): 
         try:
             self.form = self.form(self.request.POST or None, self.request.FILES or None, instance=self.object)
         except TypeError as e: #Added so that progress and other calls that don't use forms can work. TODO: implement better
             pass
-        return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
+        #return super(GenericCorereObjectView, self).dispatch(request,*args, **kwargs)
 
     #NOTE: Both get/post has a lot of logic to deal with whether notes are/aren't defined. We should probably handled this in a different way.
     # Maybe find a way to pass the extra import in all the child views, maybe with different templates?
@@ -78,6 +81,8 @@ class GenericCorereObjectView(View):
     #The generic get/post is used by submission file views.
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -89,7 +94,8 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        print(self.redirect)
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -98,6 +104,7 @@ class GenericCorereObjectView(View):
         if self.form.is_valid():
             if not self.read_only:
                 self.form.save() #Note: this is what saves a newly created model instance
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.SUCCESS, self.msg)
             return redirect(self.redirect)
         else:
@@ -109,7 +116,7 @@ class GenericCorereObjectView(View):
         return render(request, self.template, context)
 
 class GitFilesMixin(object):
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         self.files_dict_list = self.object.get_gitfiles_pathname(combine=True)
 
         if(isinstance(self.object, m.Manuscript)):
@@ -118,12 +125,12 @@ class GitFilesMixin(object):
         elif(isinstance(self.object, m.Submission)):
             self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile/?file_path="
             self.file_download_url = "/submission/"+str(self.object.id)+"/downloadfile/?file_path="
-            print(self.file_download_url)
+            #print(self.file_download_url)
         else:
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
 
-        return super(GitFilesMixin, self).setup(request, *args, **kwargs)
+        return super(GitFilesMixin, self).dispatch(request, *args, **kwargs)
 
 #We need to get the object first before django-guardian checks it.
 #For some reason django-guardian doesn't do it in its dispatch and the function it calls does not get the args we need
@@ -132,21 +139,20 @@ class GitFilesMixin(object):
 #Note: this does not save a newly created model in itself, which is good for when we need to check transition perms, etc
 class GetOrGenerateObjectMixin(object):
     #TODO: This gets called on every get, do we need to generate the messages this early?
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if kwargs.get('id'):
             self.object = get_object_or_404(self.model, id=kwargs.get('id'))
             self.msg = _("generic_objectUpdated_banner").format(object_type=self.object_friendly_name, object_id=self.object.id)
         elif not self.read_only:
             self.object = self.model()
             if(self.parent_model is not None):
-                print("The object create method I didn't want called after create got called")
                 setattr(self.object, self.parent_reference_name, get_object_or_404(self.parent_model, id=kwargs.get(self.parent_id_name)))
                 if(self.parent_reference_name == "submission"):
                     setattr(self.object, "manuscript", self.object.submission.manuscript)
             self.msg = _("generic_objectCreated_banner").format(object_type=self.object_friendly_name)
         else:
             logger.error("Error with GetOrGenerateObjectMixin dispatch")
-        return super(GetOrGenerateObjectMixin, self).setup(request, *args, **kwargs)
+        return super(GetOrGenerateObjectMixin, self).dispatch(request, *args, **kwargs)
     
 # class ChooseRoleFormMixin(object):
 #     def dispatch(self, request, *args, **kwargs):
@@ -159,22 +165,22 @@ class GetOrGenerateObjectMixin(object):
 
 #A mixin that calls Django fsm has_transition_perm for an object
 #It expects that the object has been grabbed already, for example by GetCreateObjectMixin    
-#TODO: Is this specifically for noop transitions? if so we should name it that way.
+
 class TransitionPermissionMixin(object):
     transition_on_parent = False
-    def setup(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         if(self.transition_on_parent):
             parent_object = getattr(self.object, self.parent_reference_name)
             transition_method = getattr(parent_object, self.transition_method_name)
         else:
             transition_method = getattr(self.object, self.transition_method_name)
-        logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
-        logger.debug(str(transition_method))
+        # logger.debug("User perms on object: " + str(get_perms(request.user, self.object))) #DEBUG
+        # logger.debug(str(transition_method))
         if(not has_transition_perm(transition_method, request.user)):
             logger.debug("PermissionDenied")
             raise Http404()
-        return super(TransitionPermissionMixin, self).setup(request, *args, **kwargs)    
-    pass
+        return super(TransitionPermissionMixin, self).dispatch(request, *args, **kwargs)    
+    # pass
 
 #via https://gist.github.com/ceolson01/206139a093b3617155a6 , with edits
 class GroupRequiredMixin(object):
@@ -202,35 +208,49 @@ class GenericManuscriptView(GenericCorereObjectView):
     author_formset = None
     data_source_formset = None
     keyword_formset = None 
+    # v_metadata_formset = None
     role_name = None
     from_submission = False
     create = False
     form_helper = None
+    dataverse_upload = False
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.read_only:
             #All Manuscript fields are visible to all users, so no role-based forms
             self.form = f.ReadOnlyManuscriptForm
-            if self.request.user.is_superuser or not self.create:
-                self.author_formset = f.ReadOnlyAuthorFormSet
-                self.data_source_formset = f.ReadOnlyDataSourceFormSet
-                self.keyword_formset = f.ReadOnlyKeywordFormSet
+            #if self.request.user.is_superuser or self.object.has_submissions(): #NOTE: This was disabled because verifiers couldn't view the manuscript. My understanding is these should be visible to all
+            self.author_formset = f.ReadOnlyAuthorFormSet
+            self.data_source_formset = f.ReadOnlyDataSourceFormSet
+            self.keyword_formset = f.ReadOnlyKeywordFormSet
+                # self.v_metadata_formset = f.ReadOnlyVMetadataManuscriptFormset
         else:
             self.role_name = get_role_name_for_form(request.user, self.object, request.session, self.create)
-            self.form = f.ManuscriptForms[self.role_name]
+            if(self.dataverse_upload):
+                self.form = f.ManuscriptFormDataverseUpload
+            else:
+                self.form = f.ManuscriptForms[self.role_name]
             if self.request.user.is_superuser or not self.create:
                 self.author_formset = f.AuthorManuscriptFormsets[self.role_name]
                 self.data_source_formset = f.DataSourceManuscriptFormsets[self.role_name]
                 self.keyword_formset = f.KeywordManuscriptFormsets[self.role_name]
-            
-        if(self.create and self.role_name == "Editor"): #we need a different helper for editor during create to hide certain fields
+                # self.v_metadata_formset = f.VMetadataManuscriptFormsets[self.role_name]
+
+        if(not self.object.has_submissions() and self.role_name == "Editor"): #we need a different form/helper for editor during create to hide certain fields
+            self.form = f.ManuscriptForm_Editor_NoSubmissions
             self.form_helper = f.ManuscriptFormHelperEditor()
+        elif(self.dataverse_upload):
+            self.form_helper = f.ManuscriptFormHelperDataverseUpload()
         else:
             self.form_helper = f.ManuscriptFormHelperMain()
 
-        return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
+        super(GenericManuscriptView, self).general(request,*args, **kwargs)
+
+        #return super(GenericManuscriptView, self).dispatch(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
         else:
@@ -239,28 +259,32 @@ class GenericManuscriptView(GenericCorereObjectView):
         #print(self.from_submission)
         if(self.from_submission):
             self.msg = _("manuscript_additionalInfoDuringSubmissionFlowHelpText_banner")
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission,
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper }#'role_name': self.role_name, 
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper, 'manuscript_id': self.object.id }#'
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
         if self.request.user.is_superuser or not self.create:
+            #logger.debug("OBJECT YEA: " + str(self.object))
             context['author_formset'] = self.author_formset(instance=self.object, prefix="author_formset")
             context['author_inline_helper'] = f.GenericInlineFormSetHelper(form_id='author')
             context['data_source_formset'] = self.data_source_formset(instance=self.object, prefix="data_source_formset")
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset(instance=self.object, prefix="keyword_formset")
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if(self.from_submission):
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            if(self.object.is_containerized()):
+                progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
+            else:
+                progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -270,10 +294,13 @@ class GenericManuscriptView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if self.request.user.is_superuser or not self.create:
             self.author_formset = self.author_formset(request.POST, instance=self.object, prefix="author_formset")
             self.data_source_formset = self.data_source_formset(request.POST, instance=self.object, prefix="data_source_formset")
             self.keyword_formset = self.keyword_formset(request.POST, instance=self.object, prefix="keyword_formset")
+            # self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
 
         if(isinstance(self.object, m.Manuscript)):
             manuscript_display_name = self.object.get_display_name()
@@ -281,7 +308,9 @@ class GenericManuscriptView(GenericCorereObjectView):
             manuscript_display_name = self.object.manuscript.get_display_name()
 
         if not self.read_only and self.form.is_valid() \
-            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            and (not self.author_formset or self.author_formset.is_valid()) and (not self.data_source_formset or self.data_source_formset.is_valid()) \
+            and (not self.keyword_formset or self.keyword_formset.is_valid()):
+            
             self.form.save()
             if(self.author_formset):
                 self.author_formset.save()
@@ -289,18 +318,40 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.data_source_formset.save()
             if(self.keyword_formset):
                 self.keyword_formset.save()
+            # if(self.v_metadata_formset):
+            #     self.v_metadata_formset.save()
 
             if request.POST.get('submit_continue'):
+                list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 #return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect('manuscript_uploadfiles', id=self.object.id)
-            elif request.POST.get('submit_continue_submission'):
+
+            if request.POST.get('submit_confirm'):
+                list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                 messages.add_message(request, messages.SUCCESS, self.msg)
+                #return redirect('manuscript_addauthor', id=self.object.id)
+                return redirect('submission_confirmfilesbeforedataverseupload', id=self.object.get_latest_submission().id)
+
+            #This logic needs a different way of detecting whether to go to the edit of a submission or creation
+            #We should get the latest submission and check its status?
+            elif request.POST.get('submit_continue_submission'):
+                list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                messages.add_message(request, messages.SUCCESS, self.msg)
+
                 try: #If it already exists from the user going between the form pages
-                    first_submission = self.object.get_latest_submission()
-                    return redirect('submission_edit', id=first_submission.id)
+                    latest_sub = self.object.get_latest_submission()
+                    if latest_sub._status == m.Submission.Status.RETURNED:
+                        # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                        submission = m.Submission.objects.create(manuscript=self.object)
+                        #print(submission)
+                        return redirect('submission_uploadfiles', id=submission.id)
+                    else:
+                        return redirect('submission_uploadfiles', id=latest_sub.id)
                 except m.Submission.DoesNotExist:
-                    return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    # return redirect('manuscript_createsubmission', manuscript_id=self.object.id)
+                    submission = m.Submission.objects.create(manuscript=self.object)
+                    return redirect('submission_uploadfiles', id=submission.id)
             else:
                 return redirect(self.redirect)
         else:
@@ -308,9 +359,10 @@ class GenericManuscriptView(GenericCorereObjectView):
             logger.debug(self.author_formset.errors)
             logger.debug(self.data_source_formset.errors)
             logger.debug(self.keyword_formset.errors)  
+            # logger.debug(self.v_metadata_formset.errors)  
 
         context = {'form': self.form, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'from_submission': self.from_submission, 
-            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'helper': self.helper}
+            'm_status':self.object._status, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'role_name': self.role_name, 'helper': self.helper, 'manuscript_id': self.object.id}
 
         if not self.create:
             context['manuscript_display_name'] = manuscript_display_name
@@ -322,14 +374,14 @@ class GenericManuscriptView(GenericCorereObjectView):
             context['data_source_inline_helper'] = f.GenericInlineFormSetHelper(form_id='data_source')
             context['keyword_formset'] = self.keyword_formset
             context['keyword_inline_helper'] = f.GenericInlineFormSetHelper(form_id='keyword')
+            # context['v_metadata_formset'] = self.v_metadata_formset
 
         if(self.from_submission):
-            progress_list = c.progress_list_submission_first
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Update Manuscript')
+            #We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
+            progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, 'Update Manuscript')
             context['progress_bar_html'] = progress_bar_html
         elif(self.create or self.object._status == m.Manuscript.Status.NEW):
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Create Manuscript')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Create Manuscript')
             context['progress_bar_html'] = progress_bar_html
 
         if(self.form_helper):
@@ -352,7 +404,7 @@ class ManuscriptEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     page_title = _("manuscript_edit_pageTitle")
     page_help_text = _("manuscript_edit_helpText")
 
-class ManuscriptCompleteView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+class ManuscriptUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     #template = 'main/form_object_manuscript.html'
     transition_method_name = 'edit_noop'
     page_title = _("manuscript_edit_pageTitle")
@@ -369,52 +421,56 @@ class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #This is for the upload files page. The ajax uploader uses a different class
 class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
-    transition_method_name = 'edit_noop'
+    template = 'main/form_upload_files.html'
+    transition_method_name = 'edit_files_noop'
     page_title = _("manuscript_uploadFiles_pageTitle")
                 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         if self.object._status == m.Manuscript.Status.NEW:
             self.page_help_text = _("manuscript_uploadFilesNew_helpText")
-        return super(ManuscriptUploadFilesView, self).dispatch(request,*args, **kwargs)
+        return super(ManuscriptUploadFilesView, self).general(request,*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        progress_list = c.progress_list_manuscript
-        progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+        self.general(request, *args, **kwargs)
 
-        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 
+        progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
+
+        return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_id': self.object.id,
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
             })
 
+    #TODO: Remove renaming code entirely after rewrite of file rename
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
             errors = []
-            changes_for_git = []
-            try: 
-                with transaction.atomic(): #to ensure we only save if there are no errors
-                    for key, value in request.POST.items():
-                        if(key.startswith("file:")):
-                            skey = key.removeprefix("file:")
-                            error_text = _helper_sanitary_file_check(value)
-                            if(error_text):
-                                raise ValueError(error_text)
-                            if(skey != value):
-                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                before_path = "/"+before_path
-                                gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
-                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path           
-                                gfile.name=after_name
-                                gfile.path=after_path
-                                gfile.save()
-                                changes_for_git.append({"old":skey, "new":value})
-            except ValueError as e:
-                errors.append(str(e))
-                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
-                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+            # changes_for_git = []
+            # try: 
+            #     with transaction.atomic(): #to ensure we only save if there are no errors
+            #         for key, value in request.POST.items():
+            #             if(key.startswith("file:")):
+            #                 skey = key.removeprefix("file:")
+            #                 error_text = _helper_sanitary_file_check(value)
+            #                 if(error_text):
+            #                     raise ValueError(error_text)
+            #                 if(skey != value):
+            #                     before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     before_path = "/"+before_path
+            #                     gfile = m.GitFile.objects.get(parent_manuscript=self.object, name=before_name, path=before_path)
+            #                     after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     after_path = "/" + after_path           
+            #                     gfile.name=after_name
+            #                     gfile.path=after_path
+            #                     gfile.save()
+            #                     changes_for_git.append({"old":skey, "new":value})
+            # except ValueError as e:
+            #     errors.append(str(e))
+            #     #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+            #     logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
 
-            g.rename_manuscript_files(self.object, changes_for_git)
+            # g.rename_manuscript_files(self.object, changes_for_git)
 
             if not errors and request.POST.get('submit_continue'):
                 if list(self.files_dict_list):
@@ -422,8 +478,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 else:
                     errors.append(_('manuscript_noFiles_error'))
                 
-            progress_list = c.progress_list_manuscript
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
+            progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_display_name': self.object.get_display_name(), 
                 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
@@ -431,134 +486,217 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 }
 
             if(errors):
-                print(errors)
+                #print(errors)
                 context['errors']= errors
 
             return render(request, self.template, context)
 
 #Supports the ajax uploader performing file uploads
 class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'edit_files_noop'
     http_method_names = ['post']
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
-            file = request.FILES.get('file')
-            fullPath = request.POST.get('fullPath','')
-            path = '/'+fullPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+            try:
+                file = request.FILES.get('file')
+                fullRelPath = request.POST.get('fullPath','')
+                path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
 
-            if m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
-                return HttpResponse('File already exists', status=409)
-            md5 = g.store_manuscript_file(self.object, file, path)
-            #Create new GitFile for uploaded manuscript file
-            git_file = m.GitFile()
-            #git_file.git_hash = '' #we don't store this currently
-            git_file.md5 = md5
-            git_file.name = file.name
-            git_file.path = path
-            git_file.size = file.size
-            git_file.parent_manuscript = self.object
-            git_file.save(force_insert=True)
+                if gitfiles := m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
+                    g.delete_manuscript_file(self.object, fullRelPath+file.name)
+                    gitfiles[0].delete()    
+                    #return HttpResponse('File already exists', status=409)
+                md5 = g.store_manuscript_file(self.object, file, path)
+                #Create new GitFile for uploaded manuscript file
+                git_file = m.GitFile()
+                #git_file.git_hash = '' #we don't store this currently
+                git_file.md5 = md5
+                git_file.name = file.name
+                git_file.path = path
+                git_file.size = file.size
+                git_file.parent_manuscript = self.object
+                git_file.save(force_insert=True)
 
-            #TODO: maybe centralize this flag setting to happen by the GitFile model
-            self.object.files_changed = True
-            self.object.save()
-            
-            return HttpResponse(status=200)
+                #TODO: maybe centralize this flag setting to happen by the GitFile model
+                self.object.files_changed = True
+                self.object.save()
+                
+                return HttpResponse(status=200)
+            except Exception as e: #TODO: Make more precise. Make sure to catch empty post
+                logger.error(str(e))
+                raise Http404()
 
 class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['get']
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
 
-        return g.download_manuscript_file(self.object, file_path)
+        return g.get_manuscript_file(self.object, file_path, True)
 
 class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ['post']
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'edit_files_noop'
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         g.delete_manuscript_file(self.object, file_path)
         
+        folder_path, file_name = file_path.rsplit('/',1)
+        folder_path = folder_path + '/'
+        try:
+            m.GitFile.objects.get(parent_manuscript=self.object, path=folder_path, name=file_name).delete()
+        except m.GitFile.DoesNotExist:
+            logger.warning("While deleting file " + file_path + " on manuscript " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
         return HttpResponse(status=200)
 
 #TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     form = f.ManuscriptFilesForm #TODO: Delete this if we really don't need a form?
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'view_noop'
     page_title = _("manuscript_viewFiles_pageTitle")
     http_method_names = ['get']
     read_only = True
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
-            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list,
+            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'manuscript_id': self.object.id,
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
             })
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
     template = 'main/file_list.html'
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
             'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
-#NOTE: This is unused and disabled in URLs. Probably should delete.
-#Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
-#This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
-class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    http_method_names = ['post']
+# #NOTE: This is unused and disabled in URLs. Probably should delete.
+# #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
+# #This and the other "progressviews" could be made generic, but I get the feeling we'll want to customize all the messaging and then it'll not really be worth it
+# class ManuscriptProgressView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#     http_method_names = ['post']
 
-    def post(self, request, *args, **kwargs):
-        try:
-            if not fsm_check_transition_perm(self.object.begin, request.user): 
-                print(str(self.object))
-                logger.error("PermissionDenied")
-                raise Http404()
-            try:
-                self.object.begin()
-                self.object.save()
-            except TransitionNotAllowed as e:
-                logger.error("TransitionNotAllowed: " + str(e))
-                raise
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             if not fsm_check_transition_perm(self.object.begin, request.user): 
+#                 print(str(self.object))
+#                 logger.error("PermissionDenied")
+#                 raise Http404()
+#             try:
+#                 self.object.begin()
+#                 self.object.save()
+#             except TransitionNotAllowed as e:
+#                 logger.error("TransitionNotAllowed: " + str(e))
+#                 raise
 
-        except (TransitionNotAllowed):
-            ### Messaging ###
-            self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
-            messages.add_message(request, messages.ERROR, self.msg)
-            ### End Messaging ###
-        return redirect('/manuscript/'+str(self.object.id))
+#         except (TransitionNotAllowed):
+#             ### Messaging ###
+#             self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
+#             list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#             messages.add_message(request, messages.ERROR, self.msg)
+#             ### End Messaging ###
+#         return redirect('/manuscript/'+str(self.object.id))
 
-class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-    template = 'main/manuscript_report.html'
-    def get(self, request, *args, **kwargs):
-        #This should ensure the user has read access
-        #What data do we need to pull? Just the manuscript? Eh probably gotta do more lifting here
-        return render(request, self.template, {'manuscript': self.object})
 
-#TODO: This might need a TransitionPermissionMixin
-class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+#TODO: Delete this and manuscript_report.html. Holding onto these for a bit incase we need to use them to display the content not as a pdf (though the style is stale)
+# class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
+#     template = 'main/manuscript_report.html'
+
+#     def get(self, request, *args, **kwargs):
+#         return render(request, self.template, {'manuscript': self.object})
+
+
+
+#This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
+#PDFView acts like a TemplateView
+#Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
+class ManuscriptReportDownloadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, PDFView):
+    template_name = 'main/manuscript_report_download.html'
+    prompt_download = True
+    transition_method_name = 'view_noop'
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+    download_name = "verification_report.pdf"
+
+    def get_context_data(self, *args, **kwargs):
+        """Pass some extra context to the template."""
+        context = super().get_context_data(*args, **kwargs)
+        context['manuscript'] = self.object #get_object_or_404(m.Manuscript, id=kwargs.get('id'))
+
+        return context
+
+class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']
-    # transition_method_name = 'view_noop'
+    transition_method_name = 'view_noop'
     model = m.Manuscript
     object_friendly_name = 'manuscript'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return g.download_all_manuscript_files(self.object)
 
+class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get','post']
+    transition_method_name = 'dataverse_upload_noop' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+    page_title = "Upload To Dataverse" #_("manuscript_edit_pageTitle")
+    page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse" #_("manuscript_edit_helpText")
+    dataverse_upload = True
+
+class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ['get']
+    transition_method_name = 'dataverse_pull_citation' #TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+    model = m.Manuscript
+    object_friendly_name = 'manuscript'
+
+    def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        try:
+            dv.update_citation_data(self.object)
+            self.msg= 'Information from dataset ' + self.object.dataverse_fetched_doi + ' has been fetched. Information can be confirmed by viewing the <a href="./reportdownload">verification report</a>.'
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+            messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+            self.object.dataverse_pull_citation()
+            self.object.save()
+
+        except Exception as e: #for now we catch all exceptions and present them as a message
+            self.msg= 'An error has occurred attempting to pull citation data from Dataverse: ' + str(e)
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+            messages.add_message(request, messages.ERROR, self.msg)
+
+        return redirect('manuscript_landing', id=self.object.id)
 
 ############################################# SUBMISSION #############################################
+
+#See commit f9f9a1f205c21f6e883bb91f767a57ba69879a35 or older for old saving code for v_metadata audit / badge / etc. We probably need this again for our "push to dataverse" step
 
 # Do not call directly. Used for the main submission form
 class GenericSubmissionFormView(GenericCorereObjectView):
@@ -570,30 +708,24 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     note_formset = f.NoteSubmissionFormset
     note_helper = f.NoteFormSetHelper()
     prev_sub_vmetadata = None
-    #prev_sub_vmetadata_softwares = None
 
     edition_formset = None
     curation_formset = None
     verification_formset = None
-    v_metadata_formset = None
-    v_metadata_software_formset = None
-    v_metadata_badge_formset = None
-    v_metadata_audit_formset = None
+    submission_editor_date_formset = None
+    can_progress = False
 
-    #TODO: Move this to the top, after (probably) deleting add_formsets
-    def dispatch(self, request, *args, **kwargs):
-        #If new submission with previous submission existing, copy over data from the previous submission
-        if(request.method == 'GET' and not self.object.id):
-            prev_max_sub_version_id = self.object.manuscript.get_max_submission_version_id()
-            if prev_max_sub_version_id:
-                self.copy_previous_submission_contents(self.object.manuscript, prev_max_sub_version_id)
-
+    def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         try:
             if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
                 self.form = f.SubmissionForms[role_name]
+                self.can_progress = True
             elif(has_transition_perm(self.object.view_noop, request.user)):
                 self.form = f.ReadOnlySubmissionForm
+                self.can_progress = False
+            else:
+                raise Http404()
         except (m.Submission.DoesNotExist, KeyError):
             pass
         try:
@@ -601,86 +733,61 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_editionReview_helpText")
+                self.can_progress = True
             elif(has_transition_perm(self.object.submission_edition.view_noop, request.user)):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+                self.can_progress = False
         except (m.Edition.DoesNotExist, KeyError):
             pass
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                if self.object._status !=  m.Submission.Status.IN_PROGRESS_CURATION: #We show our later edit form with only certain fields editable
+                    self.curation_formset = f.EditOutOfPhaseCurationFormset
+                    self.can_progress = False
+                else:
+                    self.curation_formset = f.CurationSubmissionFormsets[role_name]
+                    self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_curationReview_helpText")
+
+                if self.object.manuscript.skip_edition:
+                    self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif(has_transition_perm(self.object.submission_curation.view_noop, request.user)):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+                self.can_progress = False
+                #We may need a read_only SubmissionEditorDateFormset for here
+
         except (m.Curation.DoesNotExist, KeyError):
             pass
         try:
             if(not self.read_only and (has_transition_perm(self.object.add_verification_noop, request.user) or has_transition_perm(self.object.submission_verification.edit_noop, request.user))):
-                self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                if self.object._status !=  m.Submission.Status.IN_PROGRESS_VERIFICATION: #We show our later edit form with only certain fields editable
+                    self.verification_formset = f.EditOutOfPhaseVerificationFormset
+                    self.can_progress = False
+                else:
+                    self.verification_formset = f.VerificationSubmissionFormsets[role_name]
+                    self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id) 
                 self.page_help_text = _("submission_verificationReview_helpText")
             elif(has_transition_perm(self.object.submission_verification.view_noop, request.user)):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+                self.can_progress = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_formset = f.VMetadataSubmissionFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_formset = f.ReadOnlyVMetadataSubmissionFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.manuscript.add_submission_noop, request.user) or has_transition_perm(self.object.edit_noop, request.user))):
-                self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name]
-            elif(has_transition_perm(self.object.view_noop, request.user)):
-                self.v_metadata_software_formset = f.ReadOnlyVMetadataSoftwareVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-
-        #So the problem with these is that we enforce "curators-only" by checking add/edit for a curation. We don't have a view_curation option (because curations become public once completed) so we can't enforce view.
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_badge_formset = f.ReadOnlyVMetadataBadgeVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-        try:
-            if(not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
-                self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormsets[role_name]
-            elif(self.read_only and (role_name == "Curator" or role_name == "Admin")): #This is hacky, should be a "transition" perm on the object
-                self.v_metadata_audit_formset = f.ReadOnlyVMetadataAuditVMetadataFormset
-        except (m.Submission.DoesNotExist, KeyError):
-            pass
-        except (m.Curation.DoesNotExist, KeyError):
-            pass
-
-        #TODO: Figure out how we should do perms for these
-        #self.v_metadata_formset = f.VMetadataSubmissionFormset
-        #self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormset
-        #self.v_metadata_badge_formset = f.VMetadataBadgeVMetadataFormset
-        #self.v_metadata_audit_formset = f.VMetadataAuditVMetadataFormset
-
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         manuscript_display_name = self.object.manuscript.get_display_name()
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+        if self.can_progress:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+
+        context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS
 
         if(self.note_formset is not None):
             checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
@@ -692,28 +799,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
             context['note_formset'] = self.note_formset(instance=self.object, prefix="note_formset", 
                 form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files}) #TODO: This was set to `= formset`, maybe can delete that variable now?
+        
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if(self.curation_formset is not None):
             context['curation_formset'] = self.curation_formset(instance=self.object, prefix="curation_formset")
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset(instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset", form_kwargs={'previous_vmetadata': self.prev_sub_vmetadata})
-        try:
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")#, form_kwargs={'previous_vmetadata_softwares': self.prev_sub_vmetadata_softwares})
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            if(self.v_metadata_software_formset is not None):
-                context['v_metadata_software_formset'] = self.v_metadata_software_formset(prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                context['v_metadata_badge_formset'] = self.v_metadata_badge_formset(prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                context['v_metadata_audit_formset'] = self.v_metadata_audit_formset(prefix="v_metadata_audit_formset")
+        if(self.submission_editor_date_formset is not None):
+            context['submission_editor_date_formset'] = self.submission_editor_date_formset(queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
@@ -721,6 +815,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         self.redirect = "/manuscript/"+str(self.object.manuscript.id)
 
         manuscript_display_name = self.object.manuscript.get_display_name()
@@ -739,106 +835,57 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if(self.curation_formset):
             self.curation_formset = self.curation_formset(request.POST, instance=self.object, prefix="curation_formset")
+        if(self.submission_editor_date_formset):
+            self.submission_editor_date_formset = self.submission_editor_date_formset(request.POST, queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
         if(self.verification_formset):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
-        if(self.v_metadata_formset):
-            self.v_metadata_formset = self.v_metadata_formset(request.POST, instance=self.object, prefix="v_metadata_formset")
-
-
-        #TODO: not sure if we need to do this ID logic in the post    
-        try:
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_audit_formset")
-        except self.model.submission_vmetadata.RelatedObjectDoesNotExist: #With a new submission, submission_vmetadata does not exist yet
-            # print("DNE")
-            # if(self.v_metadata_software_formset is not None):
-            #     self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, prefix="v_metadata_software_formset")
-            if(self.v_metadata_badge_formset is not None):
-                self.v_metadata_badge_formset = self.v_metadata_badge_formset(request.POST, prefix="v_metadata_badge_formset")
-            if(self.v_metadata_audit_formset is not None):
-                self.v_metadata_audit_formset = self.v_metadata_audit_formset(request.POST, prefix="v_metadata_audit_formset")
 
         #This code checks whether to attempt saving, seeing that each formset that exists is valid
         #If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
+        #NOTE: If you move this code after submission progressing, the saving of note phase will break.
         if not self.read_only:
-            # print(self.v_metadata_software_formset)
-            # print((self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid()))
+            if self.note_formset is not None:
+                if self.note_formset.is_valid():
+                    self.note_formset.save()
+                else:
+                    for fr in self.note_formset.forms:
+                        if(fr.is_valid()):
+                            fr.save(True)
+
+            #This code handles the case where a curator-admin needs to edit their curation while a verification is available. If they don't change the verification, they can still save the curation.
+            hide_v_errors = False
+            if not self.read_only and (has_transition_perm(self.object.add_curation_noop, request.user) or (hasattr(self.object, 'submission_curation') and has_transition_perm(self.object.submission_curation.edit_noop, request.user))):
+                if self.verification_formset and self.verification_formset[0].changed_data == []:
+                    if not request.POST.get('submit_progress_verification'):
+                        hide_v_errors = True
+
+            #NOTE: The user.is_superuser and extra verification formset valid checks are in here to handle editing out of phase by curator-admins.
+            #      Curator-admins need to be able to edit their curation while a verification is happening, and without this verification validation will stop saving.
+            #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.        
             if( self.form.is_valid() and (self.edition_formset is None or self.edition_formset.is_valid()) and (self.curation_formset is None or self.curation_formset.is_valid()) 
-                and (self.verification_formset is None or self.verification_formset.is_valid()) and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
-                #and (self.v_metadata_software_formset is None or self.v_metadata_software_formset.is_valid())
-                and (self.v_metadata_badge_formset is None or self.v_metadata_badge_formset.is_valid()) and (self.v_metadata_audit_formset is None or self.v_metadata_audit_formset.is_valid()) 
+                and (self.verification_formset is None or self.verification_formset.is_valid() or hide_v_errors) #and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid()) 
                 ):
-                self.form.save(girderToken=request.COOKIES.get('girderToken')) #Note: this is what saves a newly created model instance
+                self.form.save()
+
+                if(self.submission_editor_date_formset):
+                    o_id = self.object.id
+                    self.submission_editor_date_formset.save()
+                    self.object = self.model.objects.get(id=o_id) #We re-fetch the object here to ensure that the saves below don't wipe out the date. Not quite sure why this is needed
                 if(self.edition_formset):
                     self.edition_formset.save()
                 if(self.curation_formset):
                     self.curation_formset.save()
-                if(self.verification_formset):
+                if(self.verification_formset and self.verification_formset.is_valid()):
                     self.verification_formset.save()
-                if(self.v_metadata_formset):
-                    self.v_metadata_formset.save()
-                self.v_metadata_software_formset = self.v_metadata_software_formset(request.POST, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset")
-                if(self.v_metadata_software_formset):
-                    # All this logic is to fix our software verificatio metadata we have copied over from our previous submission
-                    # The forms provided in the formset have the old vmetadata id which breaks saving.
-                    # It seemed easiest to just fix it here instead of figuring out how to pass the old data into the formset factory to build the new objects
-                    updated_request = request.POST.copy()
-                    
-                    #If there is a mismatch we know we just copied over the v metadata software from the previous submission and need to update it here
-                    try:
-                        if(request.POST["v_metadata_software_formset-__prefix__-verification_metadata"] != str(self.object.submission_vmetadata.id)):
-                            updated_request = request.POST.copy()
-                            updated_request["v_metadata_software_formset-__prefix__-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                            softwares_counter = 0
-                            while True:
-                                if not "v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata" in updated_request:
-                                    break
-                                #updated_request.update({"v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata":str(self.object.submission_vmetadata.id)})
-                                updated_request["v_metadata_software_formset-" + str(softwares_counter) + "-verification_metadata"] = str(self.object.submission_vmetadata.id)
-                                softwares_counter = softwares_counter + 1
-
-                            role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
-                            f.VMetadataSoftwareVMetadataFormsets[role_name]
-
-                            #TODO: save_as_new may not be a good idea all of the time??
-                            self.v_metadata_software_formset = f.VMetadataSoftwareVMetadataFormsets[role_name](updated_request, instance=self.object.submission_vmetadata, prefix="v_metadata_software_formset", save_as_new=True)
-
-                        if(self.v_metadata_software_formset.is_valid()):
-                            self.v_metadata_software_formset.save()
-                        else:
-                            #We don't do anything about errors because they happen after everything else has saved anyways. And we don't actually do real validation on software.
-                            print(self.v_metadata_software_formset.errors)
-                            logger.debug(self.v_metadata_software_formset.errors)
-                    except MultiValueDictKeyError:
-                        logger.error("MULTI VALUE KEY DICT ERROR")
-                        logger.error(request.POST)
-
-                if(self.v_metadata_badge_formset):
-                    self.v_metadata_badge_formset.save()
-                if(self.v_metadata_audit_formset): 
-                    self.v_metadata_audit_formset.save()
-                if(self.note_formset is not None and self.note_formset.is_valid()):
-                    self.note_formset.save()
 
                 try:
-                    #NOTE: We submit the actual submission (during the author workflow) only after they've finished editing file metadata
                     status = None
                     if request.POST.get('submit_progress_edition'):
                         if not fsm_check_transition_perm(self.object.submit_edition, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
                         status = self.object.submit_edition()
-                        self.object.save()
-                        if(settings.CONTAINER_DRIVER == 'wholetale'):
-                            #Here we create the wholetale version. We do this after the editors approval because it isn't really a "done" submission then
-                            wtc = w.WholeTaleCorere(admin=True)
-                            tale_original = self.object.submission_tales.get(original_tale=None)    
-                            wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
-                
+                        self.object.save()                
                     elif request.POST.get('submit_progress_curation'):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
@@ -846,51 +893,58 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         status = self.object.review_curation()
                         self.object.save()
                     elif request.POST.get('submit_progress_verification'):
-                        if not fsm_check_transition_perm(self.object.review_verification, request.user):
-                            logger.debug("PermissionDenied")
-                            raise Http404()
-                        status = self.object.review_verification()
-                        self.object.save()
-
-
+                        if self.verification_formset and self.verification_formset.is_valid():
+                            if not fsm_check_transition_perm(self.object.review_verification, request.user):
+                                logger.debug("PermissionDenied")
+                                raise Http404()
+                            status = self.object.review_verification()
+                            self.object.save()
+                        
+                    if ((self.object.manuscript.skip_edition and request.POST.get('submit_progress_curation'))
+                        or (not self.object.manuscript.skip_edition and request.POST.get('submit_progress_edition'))):
+                        if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
+                            #Here we create the wholetale version. 
+                            # If not skipping editor, we do this after the editors approval because it isn't really a "done" submission then
+                            # Else, we do it after curator approval because that's the next step.
+                            wtc = w.WholeTaleCorere(admin=True)
+                            tale_original = self.object.submission_tales.get(original_tale=None)    
+                            result = wtc.create_tale_version(tale_original.wt_id, w.get_tale_version_name(self.object.version_id))
                     ### Messaging ###
                     if(status != None):
                         if(status == m.Submission.Status.IN_PROGRESS_CURATION):
                             #Send message/notification to curators that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
-                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                         elif(status == m.Submission.Status.IN_PROGRESS_VERIFICATION):
                             #Send message/notification to verifiers that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id)) 
-                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                            notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
                             notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                             for u in recipients: #We have to loop to get the user model fields
-                                send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                        elif(status == m.Submission.Status.REVIEWED_AWAITING_REPORT):
+                            #Send message/notification to curators that the submission is ready for its report to be returned, This can happen when a verifier finishes verifying, or a curator finishes curating and skips verification
+                            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)) 
+                            notification_msg = _("submission_objectReviewed_notification_forCurator").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
+                            notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+                            for u in recipients: #We have to loop to get the user model fields
+                                send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     ### End Messaging ###
-
-                    #is there another one for completed? report happens when curation/verification "fails" but does it when you succeed?
-                    # - Generate report and return submission to authors happens on EVERY submission, even the "final" one. At least currently.
-                    #    - We should probably have generate report actually send the report to the editors. Maybe doublecheck on this with the curators first.
-                    #    - I don't think "return submission" is actually a part of the workflow, maybe doublecheck on this too?
-                    #       - We probably shouldn't say "return submission to authors" on the final submission. If at all
-                    # - We should give a message to the authors when "return submission to authors" is completed
-                    # - Should we add another submission status for the manuscript being completed? Would make notifications easier, also maybe easier to tell in admin
-                    #    - Technically you can tell by looking at the edition/curation/verification
-                    #
 
                 except TransitionNotAllowed as e:
                     logger.error("TransitionNotAllowed: " + str(e))
                     raise
 
                 if request.POST.get('back_save'):
-                    return redirect('manuscript_complete', id=self.object.manuscript.id)
+                    return redirect('submission_notebook', id=self.object.id)
 
                 if request.POST.get('submit_continue'):
+                    list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                     messages.add_message(request, messages.SUCCESS, self.msg)
-                    return redirect('submission_uploadfiles', id=self.object.id)
+                    return _helper_submit_submission_and_redirect(request, self.object)
 
                 return redirect(self.redirect)
 
@@ -899,73 +953,60 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     logger.debug(self.edition_formset.errors)
                 if(self.curation_formset):
                     logger.debug(self.curation_formset.errors)
+                if(self.submission_editor_date_formset):
+                    logger.debug(self.submission_editor_date_formset.errors)
                 if(self.verification_formset):
                     logger.debug(self.verification_formset.errors)
-                if(self.v_metadata_formset):
-                    logger.debug(self.v_metadata_formset.errors)
-                # if(self.v_metadata_software_formset):
-                #     logger.debug(self.v_metadata_software_formset.errors)
-                if(self.v_metadata_badge_formset):
-                    logger.debug(self.v_metadata_badge_formset.errors)
-                if(self.v_metadata_audit_formset): 
-                    logger.debug(self.v_metadata_audit_formset.errors)
-        else:
-            if(self.note_formset is not None and self.note_formset.is_valid()): #these can be saved even if read only
-                self.note_formset.save()
+
+        else: #readonly
+            if self.note_formset is not None:
+                if self.note_formset.is_valid():
+                    self.note_formset.save()
+                else:
+                    for fr in self.note_formset.forms:
+                        if(fr.is_valid()):
+                            fr.save(True)
                 return redirect(self.redirect) #This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-            'v_metadata_software_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_software'), 'v_metadata_badge_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_badge'), 'v_metadata_audit_inline_helper': f.GenericInlineFormSetHelper(form_id='v_metadata_audit') }
+            'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
         
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Add Submission Info')
-            context['progress_bar_html'] = progress_bar_html
+        if not self.can_progress:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
+        
+        context['is_manu_curator'] = request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists() or request.user.is_superuser #Used to enable delete option for all notes in JS
 
         if(self.note_formset is not None):
-            context['note_formset'] = self.note_formset
+            #We re-init the note formset to not show the validation errors. There may be an easier and more efficient way
+            checkers = [ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)), ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER))]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by('path','name')
+
+            context['note_formset'] = f.NoteSubmissionFormset(instance=self.object, prefix="note_formset", 
+                form_kwargs={'checkers': checkers, 'manuscript': self.object.manuscript, 'submission': self.object, 'sub_files': sub_files})
+
         if(self.edition_formset is not None):
             context['edition_formset'] = self.edition_formset
         if(self.curation_formset is not None):
             context['curation_formset'] = self.curation_formset
         if(self.verification_formset is not None):
             context['verification_formset'] = self.verification_formset
-        if(self.v_metadata_formset is not None):
-            context['v_metadata_formset'] = self.v_metadata_formset
-        if(self.v_metadata_software_formset is not None):
-            context['v_metadata_software_formset'] = self.v_metadata_software_formset
-        if(self.v_metadata_badge_formset is not None):
-            context['v_metadata_badge_formset'] = self.v_metadata_badge_formset
-        if(self.v_metadata_audit_formset is not None):
-            context['v_metadata_audit_formset'] = self.v_metadata_audit_formset
+        if(self.submission_editor_date_formset is not None):
+            context['submission_editor_date_formset'] = self.submission_editor_date_formset
 
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
 
         return render(request, self.template, context)
 
-    #Custom method, called via dispatch. Copies over submission and its verification metadatas
-    #This does not copy over GitFiles, those are done later in the flow
-    def copy_previous_submission_contents(self, manuscript, version_id):
-        #print("COPY PREV SUB")
-        prev_sub = m.Submission.objects.get(manuscript=manuscript, version_id=version_id)
-        #self.prev_sub_vmetadata_queryset = m.VerificationMetadata.objects.get(id=prev_sub.submission_vmetadata.id)
-
-        self.prev_sub_vmetadata =  prev_sub.submission_vmetadata
-        prev_sub.pk = None
-        prev_sub.id = None #Do I need to do both?
-        prev_sub._status = m.Submission.Status.NEW
-        self.object = prev_sub
-
 class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericSubmissionFormView):
     transition_method_name = 'add_submission_noop'
     transition_on_parent = True
     page_title = _("submission_create_pageTitle")
-    page_help_text = _("submission_edit_helpText")
+    page_help_text = _("submission_info_helpText")
     template = 'main/form_object_submission.html'
     create = True
 
@@ -976,12 +1017,12 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
-    page_help_text = _("submission_edit_helpText") #Sometimes overwritten by GenericSubmissionFormView
+    page_help_text = _("submission_info_helpText") #Sometimes overwritten by GenericSubmissionFormView
     template = 'main/form_object_submission.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_edit_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
-        return super().dispatch(request, *args, **kwargs)
+    def general(self, request, *args, **kwargs):
+        self.page_title = _("submission_info_pageTitle").format(submission_version=self.object.version_id) #Sometimes overwritten by GenericSubmissionFormView
+        return super().general(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
@@ -989,9 +1030,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
     read_only = True #We still allow post because you can still create/edit notes.
     template = 'main/form_object_submission.html'
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         self.page_title = _("submission_view_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
 
 ##### THESE FILE METADATA COLLECTING CLASSES ARE DISABLED FOR NOW. WE MAY WANT THEM EVENTUALLY TO COLLECT DESCRIPTION/TAGS FOR DATAVERSE ###
@@ -1018,9 +1059,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1035,6 +1076,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #                 if request.POST.get('back_save'):
 #                     if (settings.SKIP_DOCKER):
 #                         self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
+#                         list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
 #                         messages.add_message(request, messages.INFO, self.msg)
 #                         return redirect('submission_uploadfiles', id=self.object.id)
 #                     container_flow_address = _helper_get_oauth_url(request, self.object)
@@ -1049,19 +1091,22 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #                     ## Messaging ###
 #                     self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+#                     list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
 #                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     logger.info(self.msg)
 #                     recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-#                     notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+#                     notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
 #                     notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
 #                     for u in recipients: #We have to loop to get the user model fields
-#                         send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+#                         send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
 #                     ## End Messaging ###
 
 #                     # self.msg = _("submission_submitted_banner")
-#                     # messages.add_message(request, messages.SUCCESS, self.msg)
+#                     # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     return redirect('manuscript_landing', id=self.object.manuscript.id)
 #                 else:
+#                     list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
 #                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     return redirect('manuscript_landing', id=self.object.manuscript.id)
 #         else:
@@ -1074,9 +1119,9 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
 #             if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-#                 progress_list = c.progress_list_submission_first
+#                 progress_list = c.progress_list_container_submission_first
 #             else:
-#                 progress_list = c.progress_list_submission_subsequent
+#                 progress_list = c.progress_list_container_submission_subsequent
 #             progress_bar_html = generate_progress_bar_html(progress_list, 'Add File Metadata')
 #             context['progress_bar_html'] = progress_bar_html
 
@@ -1100,11 +1145,12 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #         self.page_title = _("submission_viewFileMetadata_pageTitle").format(submission_version=self.object.version_id)
 #         return super().dispatch(request, *args, **kwargs)
 
+#NOTE: The template connected to this does not use dataverse_upload currently, could be removed
 #This is for the upload files page. The ajax uploader uses a different class
 class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     form = f.SubmissionUploadFilesForm
-    template = 'main/not_form_upload_files.html'
+    template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_uploadFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1112,72 +1158,108 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
     parent_model = m.Manuscript
     object_friendly_name = 'submission'
     model = m.Submission
+    dataverse_upload = False
 
-    def dispatch(self, request, *args, **kwargs):
-        self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+    def general(self, request, *args, **kwargs):
+        if self.read_only:
+            self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+        elif self.dataverse_upload and self.object.manuscript.dataverse_installation:
+            self.page_title = _("submission_completeFiles_pageTitle").format()
+            self.page_help_text = _("submission_completeFiles_helpText").format(dataverse=self.object.manuscript.dataverse_parent, installation=self.object.manuscript.dataverse_installation.name)
+        else:
+            self.page_title = _("submission_uploadFiles_pageTitle").format(submission_version=self.object.version_id)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
             'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
+            "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'dataverse_upload': self.dataverse_upload,
+            'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(), 'manuscript_id': self.object.manuscript.id}
+        
+        if self.dataverse_upload:
+            context['dataverse_upload'] = self.dataverse_upload
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-            context['progress_bar_html'] = progress_bar_html
+        if not self.read_only and not self.dataverse_upload:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
-        if not self.read_only:
-            errors = []
-            changes_for_git = []
-            try: #File Renaming
-                with transaction.atomic(): #to ensure we only save if there are no errors
-                    for key, value in request.POST.items():
-                        if(key.startswith("file:")):
-                            skey = key.removeprefix("file:")
-                            if(skey != value):
-                                error_text = _helper_sanitary_file_check(value)
-                                if(error_text):
-                                    raise ValueError(error_text)
-                                before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
-                                before_path = "/"+before_path
-                                gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
-                                after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
-                                after_path = "/" + after_path                      
-                                gfile.name=after_name
-                                gfile.path=after_path
-                                gfile.save()
-                                changes_for_git.append({"old":skey, "new":value})
-                                self.object.files_changed = True
-                                self.object.save()
-            except ValueError as e:
-                errors.append(str(e))
-                #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
-                logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+        self.general(request, *args, **kwargs)
 
-            g.rename_submission_files(self.object.manuscript, changes_for_git)
+        if not self.read_only:
+            self.object.save() #This saves our new submission, now that we've moved our old create pageSubmissionCreateView #The comment/code before this may be unneeded now that we always do manuscript edit first
+
+            errors = []
+
+            ## TODO: Use this code and then remove after implementing ajax based datatable file renaming
+
+            # changes_for_git = []
+            #
+            # try: #File Renaming
+            #     with transaction.atomic(): #to ensure we only save if there are no errors
+            #         for key, value in request.POST.items():
+            #             if(key.startswith("file:")):
+            #                 skey = key.removeprefix("file:")
+            #                 if(skey != value):
+            #                     error_text = _helper_sanitary_file_check(value)
+            #                     if(error_text):
+            #                         raise ValueError(error_text)
+            #                     before_path, before_name = skey.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     before_path = "/"+before_path
+            #                     gfile = m.GitFile.objects.get(parent_submission=self.object, name=before_name, path=before_path)
+            #                     after_path, after_name = value.rsplit('/', 1) #need to catch if this fails, validation error
+            #                     after_path = "/" + after_path                      
+            #                     gfile.name=after_name
+            #                     gfile.path=after_path
+            #                     gfile.save()
+            #                     changes_for_git.append({"old":skey, "new":value})
+            #                     self.object.files_changed = True
+            #                     self.object.save()
+            # except ValueError as e:
+            #     errors.append(str(e))
+            #     #TODO: As this code is used to catch more cases we'll need to differentiate when to log an error
+            #     logger.error("User " + str(request.user.id) + " attempted to save a file with .. in the name. Seems fishy.")
+
+            # g.rename_submission_files(self.object.manuscript, changes_for_git)
+
+            if not errors and request.POST.get('submit_dataverse_upload'):
+                old_doi = self.object.manuscript.dataverse_fetched_doi
+                #TODO: This url will be bad if the dataverse_uploader changes the dataverse targeted, because the change will have happened in the previous form.
+                old_dv_url = self.object.manuscript.dataverse_installation.url
+                try:
+                    dv.upload_manuscript_data_to_dataverse(self.object.manuscript)
+                    self.object.manuscript.save()
+                    if old_doi and old_doi != self.object.manuscript.dataverse_fetched_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
+                        self.msg = 'You have uploaded the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
+                        list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    else: 
+                        self.msg = 'You have uploaded the manuscript data to Dataverse, creating a new dataset.'
+                        list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                        messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
+                    return redirect('manuscript_landing', id=self.object.manuscript.id)
+
+                except Exception as e: #for now we catch all exceptions and present them as a message
+                    self.msg= 'An error has occurred attempting to upload to Dataverse: ' + str(e)
+                    list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                    messages.add_message(request, messages.ERROR, self.msg)
+                    logger.error('An error has occurred attempting to upload manuscript {} to Dataverse: {}'.format(str(self.object.manuscript.id), str(e)))
+                    raise e #TODO: We should probably handle this error better, but since its only our curators this is ok for now
 
             if not errors and request.POST.get('submit_continue'):
-                if (settings.SKIP_DOCKER):
-                    self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
-                    messages.add_message(request, messages.INFO, self.msg)
-
-                    return _helper_submit_submission_and_redirect(request, self.object)
-
                 if list(self.files_dict_list):
-                    if(settings.CONTAINER_DRIVER == 'wholetale'):
-                        if(self.object.files_changed):
+                    if settings.SKIP_DOCKER or not self.object.manuscript.is_containerized():
+                        return redirect('submission_info', id=self.object.id)
+                    elif settings.CONTAINER_DRIVER == 'wholetale':
+                        if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
                             tale = self.object.submission_tales.get(original_tale=None) #we always upload to the original tale
                             wtc.delete_tale_files(tale.wt_id)
-                            wtc.upload_files(tale.wt_id, g.get_submission_repo_path(self.object.manuscript))
+                            wtc.upload_files(tale.wt_id, g.get_submission_files_path(self.object.manuscript))
                             wtc_instance = wtc.create_instance_with_purge(tale, request.user) #this may take a long time      
                             try: #If instance model object already exists, delete it
                                 wtm.Instance.objects.get(tale=tale, corere_user=request.user).delete()
@@ -1214,23 +1296,38 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
                 errors.append(_('submission_noFiles_error'))
             
-            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
+            context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'manuscript_id': self.object.manuscript.id,
                 'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
-                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
-                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER}
+                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'dataverse_upload': self.dataverse_upload,
+                "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(),}
 
-            if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-                if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                    progress_list = c.progress_list_submission_first
-                else:
-                    progress_list = c.progress_list_submission_subsequent
-                progress_bar_html = generate_progress_bar_html(progress_list, 'Upload Files')
-                context['progress_bar_html'] = progress_bar_html
+            if self.dataverse_upload:
+                context['dataverse_upload'] = self.dataverse_upload
+
+            if not self.read_only and not self.dataverse_upload: #should never hit post if read_only but yea
+                context['progress_bar_html'] = get_progress_bar_html_submission('Upload Files', self.object)
 
             if(errors):
                 context['errors']= errors
 
             return render(request, self.template, context)
+
+class SubmissionReadFilesView(SubmissionUploadFilesView):
+    transition_method_name = 'view_noop'
+    form = f.GitFileReadOnlyFileFormSet
+    read_only = True
+
+    # def general(self, request, *args, **kwargs):
+    #     #TODO: I'm not sure if this title actually does anything
+    #     self.page_title = _("submission_viewFiles_pageTitle").format(submission_version=self.object.version_id)
+    #     return super().general(request, *args, **kwargs)
+
+#TODO: This needs to pass m_status but isn't
+class SubmissionCompleteFilesBeforeDataverseUploadView(SubmissionUploadFilesView):
+    transition_on_parent = True
+    transition_method_name = 'dataverse_upload_noop'
+    #page_help_text = _("submission_completeFiles_helpText") #set in SubmissionUploadFilesView, as we pass arguments to it
+    dataverse_upload = True #tell parent view to pass m_status even though is a sub
 
 #Supports the ajax uploader performing file uploads
 class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
@@ -1245,28 +1342,39 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
 
     #TODO: Should we making sure these files are safe?
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if not self.read_only:
-            file = request.FILES.get('file')
-            fullRelPath = request.POST.get('fullPath','')
-            path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
-            if m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
-                return HttpResponse('File already exists', status=409)
-            md5 = g.store_submission_file(self.object.manuscript, file, path)
-            #Create new GitFile for uploaded submission file
-            git_file = m.GitFile()
-            #git_file.git_hash = '' #we don't store this currently
-            git_file.md5 = md5
-            git_file.name = file.name
-            git_file.path = path
-            git_file.size = file.size
-            git_file.parent_submission = self.object
-            git_file.save(force_insert=True)
+            try:
+                file = request.FILES.get('file')
+                fullRelPath = request.POST.get('fullPath','')
+                # print(file)
+                # print(fullRelPath)
+                path = '/'+fullRelPath.rsplit(file.name)[0] #returns '' if fullPath is blank, e.g. file is on root
+                # print(path)
+                if gitfiles := m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
+                    g.delete_submission_file(self.object.manuscript, fullRelPath+file.name)
+                    gitfiles[0].delete()    
+                    #return HttpResponse('File already exists', status=409)
+                md5 = g.store_submission_file(self.object.manuscript, file, path)
+                #Create new GitFile for uploaded submission file
+                git_file = m.GitFile()
+                #git_file.git_hash = '' #we don't store this currently
+                git_file.md5 = md5
+                git_file.name = file.name
+                git_file.path = path
+                git_file.size = file.size
+                git_file.parent_submission = self.object
+                git_file.save(force_insert=True)
 
-            #TODO: maybe centralize this flag setting to happen by the GitFile model
-            self.object.files_changed = True
-            self.object.save()
+                #TODO: maybe centralize this flag setting to happen by the GitFile model
+                self.object.files_changed = True
+                self.object.save()
 
-            return HttpResponse(status=200)
+                return HttpResponse(status=200)
+            except Exception as e: #TODO: Make more precise. Make sure to catch empty post
+                logger.error(str(e))
+                raise Http404()
 
 class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']
@@ -1276,11 +1384,14 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     object_friendly_name = 'submission'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
 
-        return g.download_submission_file(self.object, file_path)
+        return g.get_submission_file(self.object, file_path, True)
 
 class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     http_method_names = ['get']
@@ -1290,6 +1401,8 @@ class SubmissionDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
     object_friendly_name = 'submission'
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return g.download_all_submission_files(self.object)
 
 class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
@@ -1300,9 +1413,12 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         g.delete_submission_file(self.object.manuscript, file_path)
 
         folder_path, file_name = file_path.rsplit('/',1)
@@ -1325,7 +1441,8 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
 
     def post(self, request, *args, **kwargs):
-        #print(list(g.get_submission_files_list(self.object.manuscript)))
+        self.general(request, *args, **kwargs)
+
         for b in g.get_submission_files_list(self.object.manuscript):
             g.delete_submission_file(self.object.manuscript, b)
 
@@ -1354,13 +1471,15 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         return render(request, self.template, {'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_download_url': self.file_download_url, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     template = 'main/file_list.html' #I think this is not actually used here
-    transition_method_name = 'edit_noop'
+    transition_method_name = 'view_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -1369,9 +1488,12 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         file_path = request.GET.get('file_path')
         if(not file_path):
             raise Http404()
+        file_path = unescape(file_path)
         folder_path, file_name = file_path.rsplit('/',1)
         folder_path = folder_path + '/'
         try:
@@ -1383,7 +1505,8 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             prev_sub = m.Submission.objects.get(manuscript=self.object.manuscript, version_id=self.object.version_id - 1)
             try:
                 old_md5 = m.GitFile.objects.values_list('md5').get(parent_submission=prev_sub, path=folder_path, name=file_name)
-                if(old_md5 == new_md5):
+
+                if(old_md5 != new_md5):
                     #Same file path exists in the previous version. New version of file has dififerent md5
                     image_base64 = "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AQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIEZiXw/wPxpudNEypX+wAAAABJRU5ErkJggg=="
                     return HttpResponse(base64.b64decode(image_base64), content_type='image/png')
@@ -1405,7 +1528,7 @@ class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
     #TODO: Maybe don't need some of these, after creating uploader
     # form = f.SubmissionUploadFilesForm
-    # template = 'main/not_form_upload_files.html'
+    # template = 'main/form_upload_files.html'
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_reconcileFiles_helpText")
     parent_reference_name = 'manuscript'
@@ -1414,17 +1537,19 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     object_friendly_name = 'submission'
     model = m.Submission
 
-    def dispatch(self, request, *args, **kwargs):
+    def general(self, request, *args, **kwargs):
         self.page_title = _("submission_reconcileFiles_pageTitle").format(submission_version=self.object.version_id)
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
         #here we need to get the list of files from WT, compare them to our files_dict_list, and return back the differences.
         #... or well maybe the info about the differences can be done with SubmissionFilesCheckNewness (probably will require expanding that method)
 
         pass
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
         pass
 
 #NOTE: This is unused and disabled in URLs. Probably should delete.
@@ -1453,10 +1578,11 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
 #         except (TransitionNotAllowed):
 #             self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+#             list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
 #             messages.add_message(request, messages.ERROR, self.msg)
 #         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
+class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
     parent_model = m.Manuscript
@@ -1465,6 +1591,8 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         try:
             if not fsm_check_transition_perm(self.object.send_report, request.user): 
                 logger.debug("PermissionDenied")
@@ -1476,9 +1604,11 @@ class SubmissionGenerateReportView(LoginRequiredMixin, GetOrGenerateObjectMixin,
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
             self.msg= _("submission_objectTransferEditorReturnSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.SUCCESS, self.msg)
         except (TransitionNotAllowed):
             self.msg= _("submission_objectTransferEditorReturnFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1492,6 +1622,8 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
     http_method_names = ['post']
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         try:
             if not fsm_check_transition_perm(self.object.finish_submission, request.user): 
                 logger.debug("PermissionDenied")
@@ -1501,7 +1633,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 self.object.save()
 
                 #Delete all tale copies both locally and in WT. This also deletes running instances.
-                if(settings.CONTAINER_DRIVER == 'wholetale'):
+                if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
                     wtc = w.WholeTaleCorere(admin=True)
                     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
                         wtc.delete_tale(wtm_tale.wt_id)
@@ -1509,33 +1641,35 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
 
                 ### Messaging ###
                 if(self.object._status == m.Submission.Status.RETURNED):
-                    if(self.object.manuscript._status == m.Manuscript.Status.COMPLETED):
+                    if(self.object.manuscript._status == m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH):
                         #If completed, send message to... editor and authors?
                         self.msg= _("submission_objectComplete_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+                        list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_complete_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_update_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
-                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                     else:
                         #If not complete, send message to author about submitting again
                         self.msg= _("submission_objectTransferAuthorSuccess_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+                        list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)) 
-                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url())
+                        notification_msg = _("manuscript_objectTransferAuthor_notification_forAuthor").format(object_id=self.object.manuscript.id, object_title=self.object.manuscript.get_display_name(), object_url=self.object.manuscript.get_landing_url(request))
                         notify.send(request.user, verb='passed', recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
                         for u in recipients: #We have to loop to get the user model fields
-                            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+                            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
                 ### End Messaging ###
 
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
 
-
         except (TransitionNotAllowed):
             self.msg= _("submission_objectTransferAuthorFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
+            list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -1554,8 +1688,10 @@ class SubmissionNotebookRedirectView(LoginRequiredMixin, GetOrGenerateObjectMixi
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
         if 'postauth' in request.GET:
-            request.user.last_oauthproxy_forced_signin = datetime.now()
+            request.user.last_oauthproxy_forced_signin = datetime.now() #maybe change to timezone.now() https://stackoverflow.com/questions/18622007/
             request.user.save()
         context = {'sub_id':self.object.id,'scheme':settings.CONTAINER_PROTOCOL,'host':settings.SERVER_ADDRESS}
         return render(request, self.template, context)
@@ -1570,35 +1706,42 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
     #These two parameters are updated programatically in dispatch
     http_method_names = ['get', 'post']
     read_only = False
+    form = f.SubmissionEmptyForm
 
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
     #code is same as in SubmissionWholeTaleEventStreamView
-    def dispatch(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
-            self.dominant_group= w.get_dominant_group_connector(request.user, self.object)
+    def general(self, request, *args, **kwargs):
+        if not self.object.manuscript.is_containerized():
+            raise Http404()
+        elif settings.CONTAINER_DRIVER == 'wholetale':
+            self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
 
             try:
-                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object)
-            except wtm.Tale.DoesNotExist: 
-                if self.object.version_id < self.object.manuscript.get_max_submission_version_id(): #Happens launching an instance from a previous submission, as we have to create the Tale on demand
-                    #Copy master tale, revert to previous version, launch instance.
-                    wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
-                    wtc = w.WholeTaleCorere(admin=True)
-                    wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
-                    #Ok, so I gotta copy the parent tale first and then revert it
-                    wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
+                self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object) #this will blow up and 404 if there is no dominant group, which we want
+            except wtm.Tale.DoesNotExist: #We create the tale on demand if not existent. This happens because the tale is from a previous submission, or the tales were wiped out after the manuscript.compute_env was changed
+                #Copy master tale, revert to previous version, launch instance.
+                wtm_parent_tale = self.object.manuscript.manuscript_tales.get(original_tale=None)
+                wtc = w.WholeTaleCorere(admin=True)
+                wtc_tale_target_version = wtc.get_tale_version(wtm_parent_tale.wt_id, w.get_tale_version_name(self.object.version_id))
+                #Ok, so I gotta copy the parent tale first and then revert it
+                wtc_versioned_tale = wtc.copy_tale(tale_id=wtm_parent_tale.wt_id)
+                if self.object.version_id < self.object.manuscript.get_max_submission_version_id():
+                    if not wtc_tale_target_version:
+                        raise Http404("The compute environment cannot be launched for this submission, because the compute environment changed after this submission was created.")
                     wtc_versioned_tale = wtc.restore_tale_to_version(wtc_versioned_tale['_id'], wtc_tale_target_version['_id'])
-                    self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
-                    wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
-                else:
-                    raise Http404()
+                self.wtm_tale = wtm.Tale.objects.create(manuscript=self.object.manuscript, submission=self.object,  wt_id=wtc_versioned_tale['_id'], group_connector=self.dominant_group, original_tale=wtm_parent_tale)
+                wtc.set_group_access(self.wtm_tale.wt_id, wtc.AccessType.WRITE, self.dominant_group)
 
             if self.wtm_tale.original_tale == None:
                 transition_method = getattr(self.object, 'edit_noop')
                 if(not has_transition_perm(transition_method, request.user)):
+                    #print(self.dominant_group.corere_group.__dict__)
+
                     logger.debug("PermissionDenied")
                     raise Http404()
+                else: #TODO: This form should be moved eventually to handle the non-wt workflow. Note that we only want it to show up for when authors test.
+                    self.form = f.SubmissionContainerIssuesForm
             else:
                 transition_method = getattr(self.object, 'view_noop')
                 if(not has_transition_perm(transition_method, request.user)):
@@ -1612,18 +1755,20 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 logger.debug("PermissionDenied")
                 raise Http404()
 
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
-        context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
-            'page_title': self.page_title, 'page_help_text': self.page_help_text,  
-            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id}
+        self.general(request, *args, **kwargs)
 
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        context = {'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create,
+            'page_title': _("submission_notebook_pageTitle").format(submission_version=self.object.version_id),
+            'page_help_text': self.page_help_text, "form": self.form,
+            'manuscript_display_name': self.object.manuscript.get_display_name(), 'manuscript_id': self.object.manuscript.id, "skip_edition": self.object.manuscript.skip_edition}
+
+        if settings.CONTAINER_DRIVER == 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             context['is_author'] = self.dominant_group.corere_group.name.startswith("Author")
             wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
             wtm_instance = w.get_model_instance(request.user, self.object)
-
             if not wtm_instance:
                 wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
                 wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
@@ -1635,6 +1780,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                     wtm.Instance.objects.create(tale=self.wtm_tale, wt_id=wtc_instance['_id'], corere_user=request.user) 
                 elif not wtm_instance.instance_url:       
                     if(wtc_instance['status'] == w.WholeTaleCorere.InstanceStatus.ERROR):
+                        #TODO-WT: Is there an error case where we want the user (author) to just skip the container entirely?
                         wtc.delete_instance(wtm_instance.wt_id)
                         wtm_instance.delete()
                         wtc_instance = wtc.create_instance_with_purge(self.wtm_tale, request.user)
@@ -1657,36 +1803,33 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
         else:
             context['notebook_url'] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
-        if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            if(self.object.manuscript._status == m.Manuscript.Status.AWAITING_INITIAL):
-                progress_list = c.progress_list_submission_first
-            else:
-                progress_list = c.progress_list_submission_subsequent
-            progress_bar_html = generate_progress_bar_html(progress_list, 'Run Code')
-            context['progress_bar_html'] = progress_bar_html
+        if not self.read_only:
+            context['progress_bar_html'] = get_progress_bar_html_submission('Run Code', self.object)
 
         return render(request, self.template, context)
 
     def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        #TODO: This probably needs to handle what happens if the form isn't valid?
         if request.POST.get('submit'):
-            return _helper_submit_submission_and_redirect(request, self.object)
+            if self.form:
+                if self.form.is_valid():
+                    self.form.save() #This saves any launch issues reported by the author, for the curation team to review.
+
+            return redirect('submission_info', id=self.object.id)
+
         if request.POST.get('back'):
             return redirect('submission_uploadfiles', id=self.object.id)
-        pass
 
-class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
-    parent_reference_name = 'manuscript'
-    parent_id_name = "manuscript_id"
-    parent_model = m.Manuscript
-    object_friendly_name = 'submission'
-    model = m.Submission
-    http_method_names = ['get']
-
+class SubmissionGenericWholeTalePermissionView(GenericCorereObjectView):
     #We programatically check transition permissions depending on the tale in question (for WholeTale).
     #For now if not wholetale, we check if 'edit_noop'
-    #Code is same as in SubmissionNotebookView
-    def dispatch(self, request, *args, **kwargs):
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+    #Code was same as in SubmissionNotebookView, but that needed more customization
+    def general(self, request, *args, **kwargs):
+        if not self.object.manuscript.is_containerized():
+            raise Http404()
+        elif settings.CONTAINER_DRIVER == 'wholetale':
             self.wtm_tale = w.get_dominant_group_connector(request.user, self.object).groupconnector_tales.get(submission=self.object)
 
             if self.wtm_tale.original_tale == None:
@@ -1707,16 +1850,49 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
                 logger.debug("PermissionDenied")
                 raise Http404()
 
-        return super().dispatch(request, *args, **kwargs)
+        return super().general(request, *args, **kwargs)
+
+# The downside to this approach is we download it to CORE2 before providing it to the user
+# We could just generate the download url for the user and send them to Whole Tale directly for it.
+class SubmissionDownloadWholeTaleNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, SubmissionGenericWholeTalePermissionView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
-        if settings.CONTAINER_DRIVER != 'wholetale':
+        self.general(request, *args, **kwargs)
+        if not self.object.manuscript.is_containerized() or settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
+            return Http404()
+
+        wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+        self.dominant_group = w.get_dominant_group_connector(request.user, self.object)
+        self.wtm_tale = self.dominant_group.groupconnector_tales.get(submission=self.object) #this will blow up and 404 if there is no dominant group, which we want
+        tale_zip = wtc.download_tale(self.wtm_tale.wt_id)
+        response = HttpResponse(tale_zip.content, content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename="'+self.object.manuscript.slug + '_-_submission_' + str(self.object.version_id) + '_-_whole_tale_contents_' + self.dominant_group.corere_group.name.split()[0] + '.zip"'
+        return response
+
+class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObjectMixin, SubmissionGenericWholeTalePermissionView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['get']
+
+    def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
             return Http404()
 
         wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
         return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user, request.COOKIES.get('girderToken')))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
-        
+
 def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderToken):
     stream = wtc.get_event_stream()
     client = sseclient.SSEClient(stream)
@@ -1778,10 +1954,7 @@ def _helper_submit_submission_and_redirect(request, submission):
             logger.debug("PermissionDenied")
             raise Http404()
 
-        submission.submit(request.user)
-        submission.save()
-
-        if(settings.CONTAINER_DRIVER == 'wholetale'):
+        if submission.manuscript.is_containerized() and settings.CONTAINER_DRIVER == 'wholetale':
             wtc = w.WholeTaleCorere(admin=True)
             tale_original = submission.submission_tales.get(original_tale=None)    
             #  Set the wt author group's access to the root tale as read
@@ -1820,22 +1993,28 @@ def _helper_submit_submission_and_redirect(request, submission):
                 tale_copy_verifier = wtm.Tale.objects.create(manuscript=submission.manuscript, submission=submission, wt_id=wtc_tale_copy_verifier["_id"], group_connector=group_verifier.wholetale_group, original_tale=tale_original)
             wtc.set_group_access(tale_copy_verifier.wt_id, wtc.AccessType.WRITE, group_verifier.wholetale_group)
 
+        submission.submit(request.user)
+        submission.save()
+
         ## Messaging ###
         msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=submission.manuscript.id ,manuscript_display_name=submission.manuscript.get_display_name())
+        list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
         messages.add_message(request, messages.SUCCESS, msg)
         logger.info(msg)
         recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id)) 
-        notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=submission.manuscript.id, object_title=submission.manuscript.get_display_name(), object_url=submission.manuscript.get_landing_url())
+        notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(object_id=submission.manuscript.id, object_title=submission.manuscript.get_display_name(), object_url=submission.manuscript.get_landing_url(request))
         notify.send(request.user, verb='passed', recipient=recipients, target=submission.manuscript, public=False, description=notification_msg)
         for u in recipients: #We have to loop to get the user model fields
-            send_templated_mail( template_name='test', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={ 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
+            send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_first_name':u.first_name, 'user_last_name':u.last_name, 'user_email':u.email} )
         ## End Messaging ###
 
         # self.msg = _("submission_submitted_banner")
+        # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect('manuscript_landing', id=submission.manuscript.id)
     else:
         #TODO: Add different message here?
+        # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect('manuscript_landing', id=submission.manuscript.id)
 

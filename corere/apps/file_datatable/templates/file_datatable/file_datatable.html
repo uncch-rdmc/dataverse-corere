@@ -1,0 +1,47 @@
+<div class="title-text" id="file_table_holder">
+    <table id="file_table" class="datatable table table-striped table-bordered filetable" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Path</th>
+                <th>Name</th>
+                {% if obj_type == "submission" %}<th></th>{% endif %}
+            </tr>
+        </thead>
+    </table>
+</div>
+
+{% load static %}
+<script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        {% comment %}Add our UI components specific to CORE2 {% endcomment %}
+        {% if obj_type == "submission" %}
+        config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}}, true, '{{ file_download_url }}')
+            {% comment %}{% if not dataverse_upload %} //Disabled because it broke column formatting, maybe try later  {% endcomment %}
+            fourth_column =                 {
+                        data: 'newness',
+                        render: function(data,type,row,meta){
+                            encoded = encodeURIComponent(row[0]+row[1])
+                            button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/></td>'
+
+                            return button;
+                        }
+                    },
+            config['columns'].push(fourth_column)
+            fourth_column_def = { "width": "33px", "targets": 3 }
+            config['columnDefs'].push(fourth_column_def)
+            {% comment %}{% endif %} {% endcomment %}
+        {% else %}
+        config = create_file_table_config("/manuscript/{{obj_id}}/file_table/", {{read_only|lower}}, false, '{{ file_download_url }}')
+        {% endif %}
+        {% if not read_only %}
+        $.extend(config, {
+            "initComplete": function(settings, json) {
+                document.getElementById('files_count_text').textContent = '('+$('#file_table').DataTable().page.info().recordsTotal+')';
+            }
+        });
+        {% endif %}
+        $('#file_table').DataTable(config)
+    } );
+</script>

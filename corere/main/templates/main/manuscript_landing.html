@@ -35,12 +35,12 @@
     
     function fixButtonGroupCurve() {
         //{% comment %} needs as we make buttons invisible, otherwise groups end up with non-rounded edges {% endcomment %}
-        $('.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
-        $('.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn').css('border-radius', 0);
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn:visible:first').css({
             'border-top-left-radius': '3px',
             'border-bottom-left-radius': '3px',
         });
-        $('.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
+        $('.my-1.btn-group').has('.btn:hidden').find('.btn:visible:last').css({
             'border-top-right-radius': '3px',
             'border-bottom-right-radius': '3px',
         });
@@ -84,22 +84,41 @@
                                 text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
                                 name: 'createSubmission',
                                 action: function ( e, dt, node, config ) {
-                                    {% if submission_count < 1 %}
-                                        window.location.href = "/manuscript/"+ manuscript_id +"/complete/";
-                                    {% else %}
-                                        window.location.href = "/manuscript/"+ manuscript_id +"/createsubmission/";
-                                    {% endif %}
+                                    window.location.href = "/manuscript/"+ manuscript_id +"/update/";
+                                },
+                                attr: {
+                                    title: 'Create a new submission of data/code for this manuscript',
+                                    'aria-label': 'Create a new submission of data/code for this manuscript'
                                 },
                                 enabled: createSubButton
                             },
                         {% endif %}
-
                         {
-                            text: 'Edit/Progress',
+                            text: 'Edit Notes',
                             name: 'editSubmission',
                             action: function ( e, dt, node, config ) {
-                                window.location.href = "/submission/"+submission_id+"/edit/";
+                                window.location.href = "/submission/"+submission_id+"/info/";
                                 
+                            },
+                            attr: {
+                                title: 'Edit notes for this submission round',
+                                'aria-label': 'Edit notes for this submission round'
+                            },
+                            init: function ( dt, node, config ) {
+                                node.css("display", "none");
+                            },
+                            enabled: false
+                        },
+                        {
+                            text: 'Review',
+                            name: 'reviewSubmission',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/info/";
+                                
+                            },
+                            attr: {
+                                title: 'Review the data/code/metadata for this submission round',
+                                'aria-label': 'Review the data/code/metadata for this submission round'
                             },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");
@@ -112,6 +131,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "/submission/"+submission_id+"/editfiles/";
                             },
+                            attr: {
+                                title: 'Edit the data/code submitted for review',
+                                'aria-label': 'Edit the data/code submitted for review'
+                            },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");
                             },
@@ -123,6 +146,10 @@
                             action: function ( e, dt, node, config ) {
                                 window.location.href = "/submission/"+submission_id+"/view/";
                             },
+                            attr: {
+                                title: 'View information related to this submission round',
+                                'aria-label': 'View information related to this submission round'
+                            },
                             init: function ( dt, node, config ) {
                                     node.css("display", "none");
                                 },
@@ -132,8 +159,11 @@
                             text: 'View Files',
                             name: 'viewSubmissionFiles',
                             action: function ( e, dt, node, config ) {
-
                                 window.location.href = "/submission/"+submission_id+"/viewfiles/";
+                            },
+                            attr: {
+                                title: 'View the data/code submitted for review',
+                                'aria-label': 'View the data/code submitted for review'
                             },
                             init: function ( dt, node, config ) {
                                     node.css("display", "none");
@@ -144,16 +174,33 @@
                             text: 'Launch Container',
                             name: 'launchSubmissionContainer',
                             action: function ( e, dt, node, config ) {
-
                                 window.location.href = "/submission/"+submission_id+"/notebook/";
+                            },
+                            attr: {
+                                title: 'Launch a virtual environment containing the data/code submitted for review',
+                                'aria-label': 'Launch a virtual environment containing the data/code submitted for review'
                             },
                             init: function ( dt, node, config ) {
                                     node.css("display", "none");
                                 },
                             enabled: false
                         },
-
                         {
+                            text: 'Download Container Files',
+                            name: 'downloadContainerFiles',
+                            action: function ( e, dt, node, config ) {
+                                window.location.href = "/submission/"+submission_id+"/wtdownloadall/";
+                            },
+                            attr: {
+                                title: 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.',
+                                'aria-label': 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.'
+                            },
+                            init: function ( dt, node, config ) {
+                                    node.css("display", "none");
+                                },
+                            enabled: false
+                        },
+                        {% comment %} {
                             text: 'Hand-off to Editors',
                             name: 'progressSubmission',
                             action: function ( e, dt, node, config ) {
@@ -169,18 +216,22 @@
                                     }
                                 })
                             },
+                            attr: {
+                                title: '',
+                                'aria-label': ''
+                            },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");
                             },
                             enabled: false
-                        },
+                        }, {% endcomment %}
                         {
                             text: 'Send Report',
-                            name: 'generateReportForSubmission',
+                            name: 'sendReportForSubmission',
                             action: function ( e, dt, node, config ) {
                                 var headers = new Headers();
                                 headers.append('X-CSRFToken', '{{ csrf_token }}');
-                                fetch('/submission/'+submission_id+'/generatereport/', {
+                                fetch('/submission/'+submission_id+'/sendreport/', {
                                     method: 'POST',
                                     headers: headers, 
                                     credentials: 'include'
@@ -189,6 +240,10 @@
                                         window.location.href = response.url;
                                     }
                                 })
+                            },
+                            attr: {
+                                title: 'Send current verification report for the manuscript to the editors',
+                                'aria-label': 'Send current verification report for the manuscript to the editors'
                             },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");
@@ -211,6 +266,10 @@
                                     }
                                 })
                             },
+                            attr: {
+                                title: 'Return this manuscript record to the authors to resubmit their data/code',
+                                'aria-label': 'Return this manuscript record to the authors to resubmit their data/code'
+                            },
                             init: function ( dt, node, config ) {
                                 node.css("display", "none");
                             },
@@ -219,8 +278,8 @@
                         {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
                         {
                             text: '<i class="far fa-eye"></i> Timestamps Shown',
-                            name: 'viewnotuserassigned',
-                            className: 'visibilityButton',
+                            name: 'viewTimestamps',
+                            className: 'timestampButton',
                             action: function ( e, dt, node, config ) {
                                 //Implicit globals are not best practice
                                 var column = table.column(4);
@@ -239,6 +298,10 @@
                                     table_show_timestamps  = false;
                                     this.text( '<i class="far fa-eye-slash"></i> Timestamps Hidden' );
                                 }
+                            },
+                            attr: {
+                                title: 'Show/hide timestamps related to the submission review process',
+                                'aria-label': 'Show/hide timestamps related to the submission review process'
                             },
                         },
                         {% endif %}
@@ -290,11 +353,11 @@
                 
                 sub_table_callback(table)
 
-                // manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
+                {% comment %} // manuscript_avail_buttons = JSON.parse('{{manuscript_avail_buttons|safe}}');
                 // for(var i in manuscript_avail_buttons) {
                 //     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                 //     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
-                // }
+                // } {% endcomment %}
 
                 fixButtonGroupCurve();
             }
@@ -308,85 +371,119 @@
 <br>
 
 <p id="manuscript_overview"> 
-    <b>Status: {{manuscript_status}} (Updated {{manuscript_updated}})</b><br>
+    <b>Status: {{manuscript_status}} {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} {% if latest_submission_status %} - {{latest_submission_status}} {% endif %} {% endif %} (Updated {{manuscript_updated}})</b><br>
     Title: {{manuscript_pub_name}}<br>
+    {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
+    {% if manuscript_dataset_doi %}Dataset: <a href="{{manuscript_dataverse_installation_url}}/dataset.xhtml?persistentId={{manuscript_dataset_doi}}">{{manuscript_dataset_doi}}</a><br>{% endif %}
+    {% endif %}
+    {% if manuscript_compute_env %}Compute Environment: {{manuscript_compute_env}}<br>{% endif %}
     QDR Review: {{manuscript_qdr_review}}<br>
     Corresponding Author: {{manuscript_corresponding_author}}<br>
     Author{% if manuscript_authors|length > 1 %}s{% endif %}: {{manuscript_authors|join:', '}} {% if manuscript_author_account_completed %} <span class="fas fa-check" title="Registered" aria-label="Registered" style="color:green;"></span>{% endif %}<br>
     Editor{% if manuscript_editors|length > 1 %}s{% endif %}: {{manuscript_editors|join:', '}}
     {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER %} 
         <br> 
-        Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}} <br>
-        Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+        <span>
+            Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_curators|length == 0 %}
+            <a href="/manuscript/{{manuscript_id}}/assigncurator/" title="Add curator to this manuscript" aria-label="Add curator to this manuscript">Add Curator</a>
+            {% comment %} <button type="button" class="btn btn-secondary btn-sm" id="addCuratorInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Curator</button> {% endcomment %}
+            {% endif %}
+        </span>
+        <br>  
+        <span>
+            Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
+            {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_verifiers|length == 0 %}
+            <a style="margin-left:3px;" href="/manuscript/{{manuscript_id}}/assignverifier/" title="Add verifier to this manuscript" aria-label="Add verifier to this manuscript">Add Verifier</a>
+            {% comment %} <button type="button" class="btn btn-secondary btn-sm" style="margin-left:3px;" id="addVerifierInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Verifier</button> {% endcomment %}
+            {% endif %}
+        </span>
     {% endif %}
 </p>
-
 <div class="my-1 dt-buttons btn-group flex-wrap">    
     {% comment %} we precall these and store them as template variables. slightly inefficient {% endcomment %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_noop' as m_edit_flag %}
+    {% user_has_transition_perm request.user 'manuscript' manuscript_id 'edit_files_noop' as m_edit_files_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
-    {% if createFirstSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/complete/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
-    {% elif createLaterSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/createsubmission/'"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
+    {% if createSubmissionButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="createSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'" title="Create a new submission of data/code for this manuscript" aria-label="Create a new submission of data/code for this manuscript"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
 
     {% if editSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Edit Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="editSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'" title="Complete the current submission for this manuscript" aria-label="Complete the current submission for this manuscript">Complete Submission</button>    
     {% endif %}
 
-    {% comment %} 
-    
-    which buttons were post before?
-    - /progress/ (unused?)
-    - /generatereport/
-    - /finish/
-    {% endcomment %}
-
-    {% if reviewSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/submission/{{latest_submission_id}}/edit/'">Review Submission</button>    
+    {% if reviewSubmissionButtonMain %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="reviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Provide your review of the latest submission" aria-label="Provide your review of the latest submission">Review Submission</button>    
     {% endif %}
-    {% if generateReportButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('generatereport')">Generate Report</button>    
+    {% if updateReviewSubmissionButtonMain %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="updateReviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Update your review of the latest submission" aria-label="Update your review of the latest submission">Update Review</button>    
+    {% endif %}
+    {% if sendReportButton %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="downloadReportButton" onclick="location.href='/manuscript/{{manuscript_id}}/reportdownload/'" title="" aria-label="">Download Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" onclick="postToSubUrl('finish')">Return Submission to Authors</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" onclick="postToSubUrl('finish')" title="Return this manuscript record to the authors to resubmit their data/code" aria-label="Return this manuscript record to the authors to resubmit their data/code">Return Submission to Authors</button>    
     {% endif %}
 
+    {% if dataverseUploadManuscriptButtonMain %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="dataverseUploadManuscriptButtonMain" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'" title="Uplaod approved submission data, code and metadata to a dataverse" aria-label="Uplaod approved submission data, code and metadata to a dataverse">Upload To Dataverse</button>    
+    {% endif %}
+    {% if dataversePullCitationButtonMain %}
+    <button type="button" class="btn btn-secondary buttons-collection" id="dataversePullCitationButtonMain" onclick="location.href='/manuscript/{{manuscript_id}}/pullcitation/'" title="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published." aria-label="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published.">Fetch Dataset Info</button>    
+    {% endif %}
 
     {% if m_edit_flag %} 
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'">Edit Manuscript</button>
-        <button type="button" class="btn btn-secondary buttons-collection" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'">Edit Manuscript Files</button>
+        <button type="button" class="btn btn-secondary buttons-collection" id="editManuscriptButton" onclick="location.href='/manuscript/{{manuscript_id}}/edit/'" title="Edit manuscript metadata" aria-label="Edit manuscript metadata">Edit Manuscript</button>
+    {% endif %}
+    {% if m_edit_files_flag %}
+       <button type="button" class="btn btn-secondary buttons-collection" id="editManuscriptFilesButton" onclick="location.href='/manuscript/{{manuscript_id}}/uploadfiles/'" title="Edit publication and appendix files for manuscript" aria-label="Edit publication and appendix files for manuscript">Edit Manuscript Files</button>
     {% endif %}
 
-    <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-        Details
+    <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" title="Click to select additional actions" aria-label="Click to select additional actions">
+        More Actions
     </button>
     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
         {% comment %} Maybe make view not show up when you can edit? {% endcomment %}
-        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/view/">Additional Info</a></li> 
+        {% if reviewSubmissionButtonMore %}
+            <li><a class="dropdown-item" id="reviewSubmissionButtonLinkMore" href="/submission/{{latest_submission_id}}/info/" title="Review latest submission" aria-label="Review latest submission">Review Submission</a></li> 
+        {% endif %}
+        {% if updateReviewSubmissionButtonMore %}
+            <li><a class="dropdown-item" id="updateReviewSubmissionButtonLinkMore" href="/submission/{{latest_submission_id}}/info/" title="Update latest submission review" aria-label="Update latest submission review">Update Review</a></li> 
+        {% endif %}
+        <li><a class="dropdown-item" id="viewManuscriptButtonLinkMore" href="/manuscript/{{manuscript_id}}/view/" title="View additional manuscript info" aria-label="View additional manuscript info">Additional Info</a></li> 
         <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
-        <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/report/">View Report</a></li>
+        {% if not sendReportButton %}
+        <li><a class="dropdown-item" id="reportDownloadButtonLinkMore" href="/manuscript/{{manuscript_id}}/reportdownload/" title="Download current verification report" aria-label="Download current verification report">Download Report</a></li>
+        {% endif %}
         {% if launchContainerCurrentSubButton %}
             {% if wholetale %}
-            <li><a class="dropdown-item" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" id="launchContainerButtonLinkMore" title="Launch container with data/code from this manuscript" aria-label="Launch container with data/code from this manuscript" onclick="window.open('/submission/{{latest_submission_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" id="downloadContainerButtonLinkMore" title="Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment." aria-label="Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment." onclick="window.open('/submission/{{latest_submission_id}}/wtdownloadall/')">Download Container Files</a></li>
             {% else %}
-            <li><a class="dropdown-item" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
+            <li><a class="dropdown-item" id="launchContainerButtonLinkMore" title="Launch container with data/code from this manuscript" aria-label="Launch container with data/code from this manuscript" onclick="window.open('/manuscript/{{manuscript_id}}/notebook/')">Launch Container</a></li>
             {% endif %}
+        {% endif %}
+        {% if dataverseUploadManuscriptButtonMore %}
+            <li><a class="dropdown-item" id="dataverseUploadManuscriptButtonLinkMore" title="Create a new dataset from the data/code/metadata stored for this manuscript" aria-label="Create a new dataset from the data/code/metadata stored for this manuscript" href="/manuscript/{{manuscript_id}}/confirm/">Reupload To Dataverse</a></li>
+        {% endif %}
+        {% if dataversePullCitationButtonMore %}
+            <li><a class="dropdown-item" id="dataversePullCitationButtonLinkMore" title="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published." aria-label="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published." href='/manuscript/{{manuscript_id}}/pullcitation/'>Fetch Dataset Info</a></li>
         {% endif %}
     </ul>
 
     {% if request.user|has_group:GROUP_ROLE_CURATOR %} 
-        <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-            Access
+        <button class="btn btn-secondary buttons-collection dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false" title="Click to assign users to the manuscript" aria-label="Click to assign users to the manuscript">
+            Assign
         </button>
         <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Invite/Add Author</a></li> 
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigneditor/">Add Editor</a></li>
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assigncurator/">Add Curator</a></li>
-            <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/assignverifier/">Add Verifier</a></li>
+            <li><a class="dropdown-item" title="Assign or unassign author to this manuscript" aria-label="Assign or unassign author to this manuscript" href="/manuscript/{{manuscript_id}}/inviteassignauthor/">Manage Authors</a></li> 
+            <li><a class="dropdown-item" title="Assign or unassign editor to this manuscript" aria-label="Assign or unassign editor to this manuscript" href="/manuscript/{{manuscript_id}}/assigneditor/">Manage Editors</a></li>
+            <li><a class="dropdown-item" title="Assign or unassign curator to this manuscript" aria-label="Assign or unassign curator to this manuscript" href="/manuscript/{{manuscript_id}}/assigncurator/">Manage Curator</a></li>
+            <li><a class="dropdown-item" title="Assign or unassign verifier to this manuscript" aria-label="Assign or unassign verifier to this manuscript" href="/manuscript/{{manuscript_id}}/assignverifier/">Manage Verifier</a></li>
         </ul>
     {% endif %}
     </div>    
@@ -394,7 +491,7 @@
     <div class="accordion" style="margin:10px -21px" id="manuscriptAccordionPanels">
         <div class="accordion-item">
           <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
               Manuscript Files
             </button>
           </h2>
@@ -408,7 +505,7 @@
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header" id="panelsStayOpen-headingThree">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
               Submissions
             </button>
           </h2>
@@ -426,7 +523,7 @@
             </div >
           </div>
         </div>
-      </div>
+    </div>
 
 </div>
 {% endblock %}

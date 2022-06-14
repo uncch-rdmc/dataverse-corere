@@ -352,15 +352,15 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         # self.assertEqual(cl.post(reverse("manuscript_createsubmission", kwargs={'manuscript_id':self.M_B4_SUB1_NOUSER   })).status_code, 404)
 
         ### All submission edit actions should only be doable when a submission is in progress
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 200)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
@@ -470,8 +470,8 @@ class TestAuthorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # cannot generate report or return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -845,15 +845,15 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
 
 
         ### Curator cannot edit submission
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
@@ -955,8 +955,8 @@ class TestCuratorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # can generate report but not return it
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 302)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 302)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -1322,15 +1322,15 @@ class TestEditorUrlAccess(BaseTestWithFixture):
 
 
         ### Editor cannot edit submission
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
@@ -1432,8 +1432,8 @@ class TestEditorUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # Editor cannot generate report but can return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 302)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 
@@ -1797,15 +1797,15 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
 
 
         ### Verifier cannot edit submission
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
-        self.assertEqual(cl.get(reverse("submission_edit", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_CUR1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_VER1_ALLUSER  })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_B4_SUB2_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_ALLUSER     })).status_code, 404)
+        self.assertEqual(cl.get(reverse("submission_info", kwargs={'id':self.S_DONE_NOUSER      })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_DUR_SUB1_NOUSER })).status_code, 404)
         self.assertEqual(cl.get(reverse("submission_editfiles", kwargs={'id':self.S_B4_ED1_ALLUSER  })).status_code, 404)
@@ -1907,8 +1907,8 @@ class TestVerifierUrlAccess(BaseTestWithFixture):
         self.assertEqual(cl.post(reverse("submission_progress", kwargs={'id':self.S_DUR_VER1_ALLUSER })).status_code, 404)
 
         # cannot generate report or return the report
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
-        self.assertEqual(cl.post(reverse("submission_generatereport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_ALLUSER })).status_code, 404)
+        self.assertEqual(cl.post(reverse("submission_sendreport", kwargs={'id':self.S_B4_REP1_NOUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_ALLUSER })).status_code, 404)
         self.assertEqual(cl.post(reverse("submission_finish", kwargs={'id':self.S_B4_APPR1_NOUSER })).status_code, 404)
 

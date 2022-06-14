@@ -1,0 +1,93 @@
+{% extends "main/layout_fixed.html" %}
+{% block content %}
+{% include "main/page_title.html" %}
+
+{% if not read_only %}
+{% include "main/file_upload.html" %}
+{% else %}
+<!-- <input type=button value="Home" onClick="location.href='..';"> -->
+{% endif %}
+
+<div class="accordion" style="padding-bottom:10px" id="uploadAccordionPanels">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
+        {% if obj_type == 'submission' and read_only %}
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="true" aria-controls="panelsStayOpen-collapseTwo" aria-label="Show/hide file list">
+        {% else %}
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo" aria-label="Show/hide file list">
+        {% endif %}
+        Files&nbsp<span id="files_count_text"></span>
+        </button>
+      </h2>
+        {% if obj_type == 'submission' and read_only %}
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        {% else %}
+            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#uploadAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+        {% endif %}
+
+        <div class="accordion-body">                
+          <div id="files_list_holder">
+            {% include "main/file_list.html" %}
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script>
+    function delete_and_refresh(delete_url, id, obj_type){
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch(delete_url, {
+            method: 'POST',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            var table = $('#file_table').DataTable();
+            table.ajax.reload(function(){ 
+                document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
+            });
+        })
+    }
+    function delete_all_and_refresh(submission_url){
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+        fetch(submission_url+"/deleteallfiles/", {
+            method: 'POST',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            var table = $('#file_table').DataTable();
+            table.ajax.reload(function(){ 
+                document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
+            });
+        })
+    }
+</script>
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if dataverse_upload %}
+        <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">
+        <input type="button" name="submit_dataverse_upload" value="Upload To Dataverse" title="Create new dataset in your chosen dataverse and upload files" aria-label="Create new dataset in your chosen dataverse and upload files" onclick="document.getElementById('submit_dataverse_upload_fileslist').click()" >
+    {% elif m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
+        {% if obj_type == 'submission' %}
+            <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
+            {% if skip_docker or not containerized %}
+                <input type="button" name="submit_continue" value="Continue" title="Continue to add notes about this submission" aria-label="Continue to add notes about this submission" onclick="document.getElementById('submit_continue_fileslist').click()" >
+            {% else %}
+                <input type="button" name="submit_continue" value="Launch Container" title="Launch container for this submission of data/code" aria-label="Launch container for this submission of data/code" onclick="document.getElementById('submit_continue_fileslist').click()" >
+            {% endif %}
+            
+        {% else %}
+            <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='../edit/'">
+            <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
+        {% endif %}
+    {% else %}
+        <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+    {% endif %}
+</form>
+{% if obj_type == "submission" and not read_only and containerized and not dataverse_upload %}
+<br>
+<p style="color:gray"><i>By clicking Launch Container, you will be sent to the next step where your files will be sent to Whole Tale to launch a web environment to run your code. If you need to upload more files, you can do this through the environment or by coming back to this page and uploading new files.</i></p>
+{% endif %}
+{% endblock content %}

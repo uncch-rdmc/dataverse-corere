@@ -3,9 +3,9 @@
 {% block content %}
     {% include "main/page_title.html" %}
     {% load notifications_tags %}
-    {% register_notify_callbacks callbacks='fill_notification_list' %}
+    {% register_notify_callbacks callbacks='fill_notification_list' fetch='100'%}
     {% live_notify_list %}
-    <input type=button value="Clear all notifications" onClick="
+    <input type="button" value="Clear all notifications" title="Clear all user notifications" aria-label="Clear all user notifications" onClick="
         $.ajax({
             url:'/inbox/notifications/mark-all-as-read/',
             type:'get' 

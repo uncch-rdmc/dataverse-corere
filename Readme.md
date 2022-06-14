@@ -47,6 +47,12 @@ Install dependencies:
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
+Start psql and run this action to store timestamps on rows (used for data caching):
+```
+ALTER SYSTEM SET track_commit_timestamp = on;
+```
+Then restart psql.
+
 For development, print emails to console by editing  `corere/settings/development.py`:
 ```
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -104,6 +110,8 @@ Start Django server
 python3 manage.py runsslserver
 ```
 
+Once CORE2 is running, be sure got to the admin console `/admin/sites/site/` and change the default site to match your domain info. This will be used to populate the address in emails.
+
 Configure CORE2 roles for the admin user:
 * Goto https://localhost:8000/admin
 * Select Users 
@@ -137,11 +145,13 @@ As your user:
 
 ### Additional Functionality:
 
-Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). You will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. You will also need to register `http://localhost/auth/complete/globus/` for new user registration. Also make sure when copying the client id, to use the one named `Client ID`.
+Register your application with Globus for auth (https://auth.globus.org/v2/web/developers/new). If you are using the local-container implementation via docker, you will need to add a block of redirect urls for Corere to use. The format is `http://localhost:[port]/oauth2/callback` . You will need to register port 50020 through 50039. You will also need to register `http://localhost/auth/complete/globus/` for new user registration. Also make sure when copying the client id, to use the one named `Client ID`.
 
 [Insert docker info here]
 
 Before going live in production, make sure to go into the admin interface and correct set your default Site. Go to sites, select the only object and change the domain and display name to match the server info
+
+Note that the default configuration enables an sql-explorer for read-only queries. This uses the same user as write access, but with a read flag enabled. If you wish to make this more restrictive or remove it, see `https://django-sql-explorer.readthedocs.io/`.
 
 ## Usage
 

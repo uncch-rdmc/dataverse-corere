@@ -1,26 +1,27 @@
-{% load always_escape %}
-<div id="filesWithHeader">    
+{% comment %}
+<!-- {% load always_escape %}
+<div id="filesWithHeader">   
     <div id="filesHeaderDiv" 
         {% if not files_dict_list %}
             style="visibility:hidden;"
         {% endif %}> 
-        {% comment %} {% if not read_only %}
+        <!--{% if not read_only %}
             </br>
-        {% endif %} {% endcomment %}
+        {% endif %} -->
         {% if not landing_page %}
         <hr> 
         {% endif %}
-        {% if not landing_page %}<h5 class="cblue">Uploaded Files:</h5> {% endif %}
-    </div>
-
-    <form action="" method="post">
+        {% if not landing_page %}<h5 class="title-text">Uploaded Files:</h5> {% endif %}
+    </div> -->
+{% endcomment %}
+    <form action="" method="post" style="visibility:hidden; height:0px; width:0px;">
         {% csrf_token %}
-        <table id="filestable" class="filestable">
+        {% comment %}
+        <!-- <table id="filestable" class="filestable">
             {% for path in files_dict_list %}
                 <tr>
                     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="window.open('{{ file_download_url }}{{ path|always_escape }}')"><span class="fas fa-file-download"></span></button></td>
                     {% if not read_only %}
-                    <!-- <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_refresh('{{ file_delete_url }}{{ path|always_escape }}','{{ obj_id }}','{{obj_type}}')"><span class="far fa-trash-alt"></span></button></td> -->
                     <td> <button class="btn btn-secondary btn-sm" type="button" onclick="delete_and_remove(this,'{{ path|always_escape }}')"><span class="far fa-trash-alt"></span></button></td>
                     {% endif %}
                     <td class="filespath">
@@ -41,8 +42,15 @@
         {% if obj_type == "submission"%}
         <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="deleteallbutton" class="btn btn-secondary btn-sm" type="button" onclick="delete_all_and_refresh('{{ obj_id }}')"><span class="far fa-trash-alt"></span> Delete All</button>
         {% endif %}
-        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="submit_fileslist" class="btn btn-secondary btn-sm" type="submit">Save Names</button>
-
-        <input type="submit" id="submit_continue_fileslist" name="submit_continue" value="Submit" style="visibility:hidden;"> {% comment %}This button is always hidden but can be clicked by other buttons outside the form {% endcomment %}
+        <button {% if not files_dict_list %}style="visibility:hidden;"{% endif %} id="submit_fileslist" class="btn btn-secondary btn-sm" type="submit">Save Names</button> -->
+        {% endcomment %}
+        
+        {% comment %}These button are always hidden but can be clicked by other buttons outside the form {% endcomment %}
+        {% comment %}I don't know why we take the approach of clicking these buttons from another fragment. There was a reason but it may not be relevant with the new files datatable{% endcomment %}
+        <input type="submit" id="submit_continue_fileslist" name="submit_continue" value="Submit" style="visibility:hidden;">
+        <input type="submit" id="submit_dataverse_upload_fileslist" name="submit_dataverse_upload" value="Submit" style="visibility:hidden;">
     </form>
-    </div>
+
+{% include "file_datatable/file_datatable.html" with obj_id=obj_id%}
+
+

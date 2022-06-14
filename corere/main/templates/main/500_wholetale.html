@@ -1,0 +1,30 @@
+{% extends "main/layout_fixed.html" %}
+{% block content %}
+<script>
+    function wt_connection_test() {
+        document.getElementById('connection_test_result').style.color = "black";
+        document.getElementById('connection_test_result').textContent = 'Checking connection...'
+
+        fetch('/wholetale_connection', {
+            method: 'GET',
+            credentials: 'include'
+        }).then(response => {
+            if(response.status == 200) {
+                document.getElementById('connection_test_result').style.color = "green";
+                document.getElementById('connection_test_result').textContent = 'Connection restored!'
+            } else {
+                document.getElementById('connection_test_result').style.color = "red";
+                document.getElementById('connection_test_result').textContent = 'Connection still down.'
+            }
+        })
+    }
+</script>
+<h3>Whole Tale Connection Error</h3>
+<p>A connection error has occurred attempting to connect to the external Whole Tale container service. This service is required for interactions with this manuscript.</p> 
+<p>Please wait a few minutes and then click back to try your action again, or click 'Test Connection' to see if the link with this service has been restored.</p>
+<p>
+    <button class="btn btn-secondary btn-sm" type="button" title="Back" aria-label="Back" onclick="history.back()">Back</button>
+    <button class="btn btn-secondary btn-sm" type="button" onclick="wt_connection_test()" title="Check the connectivity to Whole Tale" aria-label="Check the connectivity to Whole Tale">Test Connection</button>
+</p>
+<p><span id="connection_test_result"></span>
+{% endblock content %}
