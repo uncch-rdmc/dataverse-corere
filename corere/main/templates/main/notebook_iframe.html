@@ -16,14 +16,14 @@
     <input type="button" value="Home" id="file_note_form_home" style="display:none;" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'" >
     {% if not read_only %}
         <input id="file_note_form_launch" type="button" name="launch" value="Launch External" style="display:none;" title="Display container in a full page window" aria-label="Display container in a full page window">
-        <input id="file_note_form_submit" type="submit" name="submit" value="Continue" style="display:none;" title="Continue to add notes about this submission" aria-label="Continue to add notes about this submission"> 
+        <input id="file_note_form_submit" type="submit" value="Continue" style="display:none;" title="Continue to add notes about this submission" aria-label="Continue to add notes about this submission"> 
         <input id="file_note_form_download" type="button" name="Download" value="Download Container Files" style="display:none;" onclick="window.open('../wtdownloadall/')" title="Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment." aria-label="Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment."> 
         {% comment %}{% if skip_edition %}
-            <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the curation team. Is that ok?');" style="display:none;"> 
+            <input id="file_note_form_submit" type="submit" value="Submit" onClick="return confirm('This submission will be handed off to the curation team. Is that ok?');" style="display:none;"> 
         {% else %}
-            <input id="file_note_form_submit" type="submit" name="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
+            <input id="file_note_form_submit" type="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
         {% endif %}{% endcomment %}
-        <input id="file_note_form_issues" type="button" name="submit" value="It isn't working" title="Add info about problems interacting with the container environment" aria-label="Add info about problems interacting with the container environment" onClick="alert('We are sorry to hear you are having issues running your container. Please enter info about the issues you ran into in the text box above the button clicked, and then click submit.'); show_issues_form()" style="display:none;"> 
+        <input id="file_note_form_issues" type="button" value="It isn't working" title="Add info about problems interacting with the container environment" aria-label="Add info about problems interacting with the container environment" onClick="alert('We are sorry to hear you are having issues running your container. Please enter info about the issues you ran into in the text box above the button clicked, and then click submit.'); show_issues_form()" style="display:none;"> 
 
     {% endif %}
 </form>

@@ -54,15 +54,15 @@
     {%comment%} here we need to add an option for when we are in "read only" to show the submit button still {%endcomment%}
     {% if read_only or not can_progress%}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
     {% elif verification_formset %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_verification" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off your review" aria-label="Save note changes for this submission of data/code, and hand off your review" onclick="return confirm('Once you hand off this form, editing the status will be locked. Is this ok?');">
     {% elif curation_formset %}
         {% comment %}cases to add: curation issues and no verification, curation issues and verification, no curation issues and no verification, no curation issues and no verification{%endcomment%}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_curation" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off your review" aria-label="Save note changes for this submission of data/code, and hand off your review" id="submit_progress_curation_button" >
 
         <script>

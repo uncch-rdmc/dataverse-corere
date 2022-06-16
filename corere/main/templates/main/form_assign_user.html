@@ -28,7 +28,7 @@
     {% csrf_token %}
     {% crispy form helper %}
     <input type=button value="Back" title="Return to previous page" aria-label="Return to previous page" onClick="javascript:history.go(-1);">
-    <input type="submit" name="submit" value="Submit" title="Assign user to manuscript as a {{role_name|lower}}" aria-label="Assign user to manuscript as a {{role_name|lower}}">
+    <input type="submit" value="Submit" title="Assign user to manuscript as a {{role_name|lower}}" aria-label="Assign user to manuscript as a {{role_name|lower}}">
 </form>
 <hr>
 <h6 class="my-3">{{role_name}}s assigned to Manuscript</h6>
