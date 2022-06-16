@@ -418,9 +418,9 @@
     {% if reviewSubmissionButtonMain %}
     <button type="button" class="btn btn-secondary buttons-collection" id="reviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Provide your review of the latest submission" aria-label="Provide your review of the latest submission">Review Submission</button>    
     {% endif %}
-    {% if updateReviewSubmissionButtonMain %}
+    {% comment %} {% if updateReviewSubmissionButtonMain %}
     <button type="button" class="btn btn-secondary buttons-collection" id="updateReviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Update your review of the latest submission" aria-label="Update your review of the latest submission">Update Review</button>    
-    {% endif %}
+    {% endif %} {% endcomment %}
     {% if sendReportButton %}
     <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>    
     <button type="button" class="btn btn-secondary buttons-collection" id="downloadReportButton" onclick="location.href='/manuscript/{{manuscript_id}}/reportdownload/'" title="" aria-label="">Download Report</button>    
