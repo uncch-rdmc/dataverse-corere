@@ -95,8 +95,8 @@
         <td>
             General:
             <ul>
-                <li>{{submission.submission_curation.report}}</li>
-                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+                <li>{{submission.submission_curation.report|linebreaksbr}}</li>
+                {% for note in general_notes %}<li>{{note.text|linebreaksbr}}</li>{% endfor %}
             </ul>
             {% comment %} Category notes listed by category {% endcomment %}
             {% alias "" as previous_note_category %}
@@ -108,7 +108,7 @@
                     {{note.get_ref_file_type_display}}:<ul>
                     {% alias note.ref_file_type as previous_note_category %}
                 {% endif %}
-                <li>{{note.text}}</li>
+                <li>{{note.text|linebreaksbr}}</li>
             {% endfor %}</ul>
 
             {% comment %} File notes listed by file {% endcomment %}
@@ -121,7 +121,7 @@
                     {{note.ref_file.name}}:<ul>
                     {% alias note.ref_file.name as previous_note_file %}
                 {% endif %}
-                <li>{{note.text}}</li>
+                <li>{{note.text|linebreaksbr}}</li>
             {% endfor %}</ul>
         </td>
         {% endwith %}
@@ -138,8 +138,8 @@
         <td>
             General:
             <ul>
-                <li>{{submission.submission_verification.report}}</li>
-                {% for note in general_notes %}<li>{{note.text}}</li>{% endfor %}
+                <li>{{submission.submission_verification.report|linebreaksbr}}</li>
+                {% for note in general_notes %}<li>{{note.text|linebreaksbr}}</li>{% endfor %}
             </ul>
             Code Executability:
             <ul><li>{{submission.submission_verification.code_executability}}</li></ul>
@@ -153,7 +153,7 @@
                     {{note.get_ref_file_type_display}}:<ul>
                     {% alias note.ref_file_type as previous_note_category %}
                 {% endif %}
-                <li>{{note.text}}</li>
+                <li>{{note.text|linebreaksbr}}</li>
             {% endfor %}</ul>
 
             {% comment %} File notes listed by file {% endcomment %}
@@ -166,7 +166,7 @@
                     {{note.ref_file.name}}:<ul>
                     {% alias note.ref_file.name as previous_note_file %}
                 {% endif %}
-                <li>{{note.text}}</li>
+                <li>{{note.text|linebreaksbr}}</li>
             {% endfor %}</ul>
             <i>Please note: Tables and figures appearing in appendices were verified only for successful execution of analysis code and not for accuracy of results.</i>
         </td>
@@ -187,11 +187,11 @@
     </tr>
     <tr>
         <td>Data Citation</td>
-        <td><b>{{manuscript.dataverse_fetched_data_citation}}</b></td>
+        <td><b>{{manuscript.dataverse_fetched_data_citation|linebreaksbr}}</b></td>
     </tr>
     <tr>
         <td>Article Citation</td>
-        <td><b>{{manuscript.dataverse_fetched_article_citation}}</b></td>
+        <td><b>{{manuscript.dataverse_fetched_article_citation|linebreaksbr}}</b></td>
     </tr>
 </table>
 {% endif %}

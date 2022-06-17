@@ -622,16 +622,6 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #             ### End Messaging ###
 #         return redirect('/manuscript/'+str(self.object.id))
 
-
-#TODO: Delete this and manuscript_report.html. Holding onto these for a bit incase we need to use them to display the content not as a pdf (though the style is stale)
-# class ManuscriptReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericManuscriptView):
-#     template = 'main/manuscript_report.html'
-
-#     def get(self, request, *args, **kwargs):
-#         return render(request, self.template, {'manuscript': self.object})
-
-
-
 #This is a somewhat working example with the renderpdf library. But I think maybe using django-weasyprint is a better choice
 #PDFView acts like a TemplateView
 #Note that under the hood this uses https://doc.courtbouillon.org/weasyprint/stable/
