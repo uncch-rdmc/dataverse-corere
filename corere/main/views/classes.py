@@ -584,7 +584,7 @@ class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tran
             })
 
 class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
-    template = 'main/file_list.html'
+    template = 'file_datatable/file_datatable.html'
     transition_method_name = 'view_noop'
     http_method_names = ['get']
 
@@ -1232,6 +1232,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 old_dv_url = self.object.manuscript.dataverse_installation.url
                 try:
                     dv.upload_manuscript_data_to_dataverse(self.object.manuscript)
+
                     self.object.manuscript.save()
                     if old_doi and old_doi != self.object.manuscript.dataverse_fetched_doi: #I don't actually know why I'm checking doi equality here... we could probably just check old_doi existing
                         self.msg = 'You have uploaded the manuscript, which created a new dataset. You may want to go to <a href="' + old_dv_url + '/dataset.xhtml?persistentId=' + old_doi + '">' + old_doi + '</a> and delete the previous dataset.'
@@ -1461,7 +1462,7 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 #Used for ajax refreshing in EditFiles
 #TODO: Probably no longer be needed with list rewrite
 class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericCorereObjectView):
-    template = 'main/file_list.html'
+    template = 'file_datatable/file_datatable.html'
     transition_method_name = 'edit_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"
@@ -1478,7 +1479,7 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
-    template = 'main/file_list.html' #I think this is not actually used here
+    template = 'file_datatable/file_datatable.html' #I think this is not actually used here
     transition_method_name = 'view_noop'
     parent_reference_name = 'manuscript'
     parent_id_name = "manuscript_id"

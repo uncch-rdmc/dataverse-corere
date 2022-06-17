@@ -3,8 +3,7 @@
 <script> username = '{{ user.get_username }}' </script>
 {% comment %} 
 Grabbed from: https://stackoverflow.com/questions/25651204/
-The solution creates a fake disabled button while hiding the real ones. This is because if we disable the real buttons then the value of the button does not pass in the form body.
-This script may break other events attempting to listening to submit 
+The solution creates fake disabled buttons/inputs while hiding the real ones. This is because if we disable the real buttons then the value of the button does not pass in the form body.
 {% endcomment %}
 <script>
     for (let i = 0; i < document.forms.length; i++) {

@@ -498,7 +498,7 @@
           <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
             <div class="accordion-body">                
               <div id="files_list_holder">
-                {% include "main/file_list.html" with landing_page=True read_only=True file_download_url='downloadfile/?file_path=' %}
+                {% include "file_datatable/file_datatable.html" with obj_id=obj_id landing_page=True read_only=True file_download_url='downloadfile/?file_path='%}
               </div>
             </div>
           </div>
