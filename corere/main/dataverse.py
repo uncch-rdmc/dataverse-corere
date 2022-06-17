@@ -1,18 +1,19 @@
-import json, datetime, re, time
+import json, datetime, re, time, logging
 import pyDataverse.api as pyd
 from corere.main import models as m
 from corere.main import git as g
 from django.conf import settings
+logger = logging.getLogger("dataverse") #We set this name explicitly so we can configure it in settings without having double logs
 
 #Goes to the dataset for the manuscript, grabs the citation information and updates the manuscript
 def update_citation_data(manuscript):
     # native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     # native_dataset_json = native_api.get_dataset(manuscript.dataverse_fetched_doi).json()['data']    
-    #print(native_dataset_json)
 
     search_api = pyd.SearchApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
-    search_dataset_json = search_api.search('dsPersistentId:"'+manuscript.dataverse_fetched_doi+'"',auth=True).json()['data']
-    #print(search_dataset_json)
+    search_dataset_result = search_api.search('dsPersistentId:"'+manuscript.dataverse_fetched_doi+'"',auth=True)
+    logger.debug("Manuscript {}, search_dataset_result {}".format(manuscript.id, search_dataset_result.__dict__))
+    search_dataset_json = search_dataset_result.json()['data']
     try:
         #TODO: Eventually we may need to grab all the publications, but for now we assume there will only be one
         manuscript.dataverse_fetched_article_citation = search_dataset_json['items'][0]['publications'][0]['citation'] + " " + search_dataset_json['items'][0]['publications'][0]['url']
@@ -31,35 +32,36 @@ def update_citation_data(manuscript):
 
     #manuscript.save()
 
-
 #Note: this uploads the data for the approved submission
 def upload_manuscript_data_to_dataverse(manuscript):
     native_api = pyd.NativeApi(manuscript.dataverse_installation.url, api_token=manuscript.dataverse_installation.api_token)
     dataset_json = build_dataset_json(manuscript)
 
-    create_dataset_response = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True).json()
-    #print(create_dataset_response) #TODO: I need to handle erroring here better, I think some dataverses have stricter field requirements?
+    create_dataset_response = native_api.create_dataset(manuscript.dataverse_parent, dataset_json, pid=None, publish=False, auth=True)
+    logger.debug("Manuscript {}, create_dataset_response {}".format(manuscript.id, create_dataset_response.__dict__)) #TODO: I need to handle erroring here better, I think some dataverses have stricter field requirements?
 
-    dataset_pid = create_dataset_response['data']['persistentId'] #dataverse is either the alias or the id
+    dataset_pid = create_dataset_response.json()['data']['persistentId'] #dataverse is either the alias or the id
 
     submission = manuscript.get_latest_submission()
     submission_files = submission.submission_files.all().order_by('path','name')
     files_root_path = g.get_submission_files_path(manuscript)
 
     for git_file in submission_files:    
-        lock_response = native_api.get_dataset_lock(dataset_pid).json()
-        while lock_response['data']: #If locked (usually tabular ingest), wait
-            #print("LOCKED")
-            time.sleep(1)
-            lock_response = native_api.get_dataset_lock(dataset_pid).json()
+        lock_response = native_api.get_dataset_lock(dataset_pid)
+        logger.debug("Manuscript {}, lock_response {}".format(manuscript.id, lock_response.__dict__))
+        while lock_response.json()['data']: #If locked (usually tabular ingest), wait
+            time.sleep(.5)
+            lock_response = native_api.get_dataset_lock(dataset_pid)
+            logger.debug("Manuscript {}, lock_response {}".format(manuscript.id, lock_response.__dict__))
 
-        file_response = native_api.upload_datafile(dataset_pid, files_root_path + git_file.full_path, json_str=None, is_pid=True)
-        # print(git_file.full_path)
-        # print(file_response.json())
+        json_str = "{'directoryLabel':'"+ git_file.path +"'}"
+        file_response = native_api.upload_datafile(dataset_pid, files_root_path + git_file.full_path, json_str=json_str, is_pid=True)
+        logger.debug("Manuscript {}, lock_response {}".format(manuscript.id, lock_response.__dict__))
+
         if file_response.json()['status'] == 'OK':
-            # print(file_response.json()['data'])
             file_id = file_response.json()['data']['files'][0]['dataFile']['id']
-            native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
+            redetect_response = native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
+            logger.debug("Manuscript {}, redetect_response {}".format(manuscript.id, redetect_response.__dict__))
         else:
             raise Exception("Exception from dataverse during upload: " + file_response.json()['message']) #TODO: Handle this better?
 

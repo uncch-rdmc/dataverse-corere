@@ -188,7 +188,7 @@ LOGGING = {
             'interval': 1,
         },      
         'file': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.handlers.TimedRotatingFileHandler',
             'formatter': 'normal',
             'filename': os.environ["DJANGO_LOG_DIRECTORY"] + "/corere.log",
@@ -204,6 +204,11 @@ LOGGING = {
         'corere': {
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': True,
+        },
+        'dataverse': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
             'propagate': True,
         },
     },
