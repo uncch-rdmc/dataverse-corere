@@ -59,6 +59,7 @@ urlpatterns = [
     path('submission/<int:id>/newfilecheck/', classes.SubmissionFilesCheckNewness.as_view(), name="submission_checkfilenewness"),
     path('submission/<int:id>/wtstream/', classes.SubmissionWholeTaleEventStreamView.as_view(), name="submission_wholetalestream"),
     path('submission/<int:id>/wtdownloadall/', classes.SubmissionDownloadWholeTaleNotebookView.as_view(), name="submission_wholetalestream"),
+    path('submission/<int:id>/deleteinstance/', classes.SubmissionDeleteInstanceView.as_view(), name="submission_deleteinstance"),
     path('submission/<int:id>/file_table/', datatables.SubmissionFileJson.as_view(), name="submission_file_table"),
 
     path('logout/', users.logout_view, name="logout"),

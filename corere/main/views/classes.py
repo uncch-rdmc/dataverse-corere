@@ -1884,6 +1884,26 @@ class SubmissionWholeTaleEventStreamView(LoginRequiredMixin, GetOrGenerateObject
         return StreamingHttpResponse(_helper_generate_whole_tale_stream_contents(wtc, self.object, request.user, request.COOKIES.get('girderToken')))
         #return StreamingHttpResponse(_helper_fake_stream(wtc))
 
+class SubmissionDeleteInstanceView(LoginRequiredMixin, GetOrGenerateObjectMixin, SubmissionGenericWholeTalePermissionView):
+    parent_reference_name = 'manuscript'
+    parent_id_name = "manuscript_id"
+    parent_model = m.Manuscript
+    object_friendly_name = 'submission'
+    model = m.Submission
+    http_method_names = ['post']
+
+    #TODO: make a delete someday
+    def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        if settings.CONTAINER_DRIVER != 'wholetale': #We don't check compute_env here because it'll be handled by dispatch
+            return Http404()
+
+        wtm_instance = w.get_model_instance(request.user, self.object)
+        wtc = w.WholeTaleCorere(request.COOKIES.get('girderToken'))
+        wtc.delete_instance(wtm_instance.wt_id)
+        return redirect('submission_notebook', id=self.object.id)
+
 def _helper_generate_whole_tale_stream_contents(wtc, submission, user, girderToken):
     stream = wtc.get_event_stream()
     client = sseclient.SSEClient(stream)

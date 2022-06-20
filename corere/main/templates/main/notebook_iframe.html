@@ -23,9 +23,13 @@
         {% else %}
             <input id="file_note_form_submit" type="submit" value="Submit" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');" style="display:none;"> 
         {% endif %}{% endcomment %}
-        <input id="file_note_form_issues" type="button" value="It isn't working" title="Add info about problems interacting with the container environment" aria-label="Add info about problems interacting with the container environment" onClick="alert('We are sorry to hear you are having issues running your container. Please enter info about the issues you ran into in the text box above the button clicked, and then click submit.'); show_issues_form()" style="display:none;"> 
-
     {% endif %}
+    {% if is_author and not read_only %}
+        <input id="file_note_form_issues" type="button" value="It isn't working" title="Add info about problems interacting with the container environment" aria-label="Add info about problems interacting with the container environment" onClick="alert('We are sorry to hear you are having issues running your container. You can attempt to relaunch it with the Delete Instance button. If that does not work, please enter info about the issues you ran into in the text box above the button clicked, and then click submit.'); show_issues_form()" style="display:none;"> 
+    {% else %}
+        <input id="file_note_form_issues" type="button" value="It isn't working" title="Add info about problems interacting with the container environment" aria-label="Add info about problems interacting with the container environment" onClick="alert('We are sorry to hear you are having issues running your container. Please attempt to relaunch it with the Delete Instance button. If this still does not work, contact your administrator.'); show_issues_form()" style="display:none;"> 
+    {% endif %}
+    <input id="delete_instance" type="button" name="delete_instance" value="Delete Instance" style="display:none;" title="Delete the instance so it can be re-created" aria-label="Delete the instance so it can be re-created" onClick="deleteInstance()">
 </form>
 
 {% if wt_launching %}
@@ -90,6 +94,10 @@
         if(formlaunch) {
             formlaunch.style.display = '';
         }
+        var formissues = document.getElementById("file_note_form_issues");
+        if(formissues) {
+            formissues.style.display = '';
+        }
         {% if is_author %}
         var formback = document.getElementById("file_note_form_back");
         if(formback) {
@@ -102,10 +110,6 @@
         var formdownload = document.getElementById("file_note_form_download");
         if(formdownload) {
             formdownload.style.display = '';
-        }
-        var formissues = document.getElementById("file_note_form_issues");
-        if(formissues) {
-            formissues.style.display = '';
         }
         {% else %}
         var formhome = document.getElementById("file_note_form_home");
@@ -137,6 +141,10 @@
         }
     </script>
     <script>
+    var formissues = document.getElementById("file_note_form_issues");
+    if(formissues) {
+        formissues.style.display = '';
+    }
     {% if is_author %}
         var formback = document.getElementById("file_note_form_back");
         if(formback) {
@@ -149,10 +157,6 @@
         var formdownload = document.getElementById("file_note_form_download");
         if(formdownload) {
             formdownload.style.display = '';
-        }
-        var formissues = document.getElementById("file_note_form_issues");
-        if(formissues) {
-            formissues.style.display = '';
         }
     {% else %}
     var formhome = document.getElementById("file_note_form_home");
@@ -177,6 +181,26 @@
         if(notebook_issue_div) {
             notebook_issue_div.style.display = 'block';
         }
+        var delete_instance_button = document.getElementById("delete_instance");
+        if(delete_instance_button) {
+            delete_instance_button.style.display = '';
+        }
     }
+</script>
+<script>
+function deleteInstance() {
+    var headers = new Headers();
+    headers.append('X-CSRFToken', '{{ csrf_token }}');
+    //fetch('/submission/{{latest_submission_id}}/'+endpoint+'/', {
+    fetch('../deleteinstance/', {
+        method: 'POST',
+        headers: headers, 
+        credentials: 'include'
+    }).then(response => {
+        if (response.redirected) {
+            window.location.href = window.location.href;
+        }
+    })
+}
 </script>
 {% endblock content %}
