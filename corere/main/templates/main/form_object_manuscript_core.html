@@ -1,0 +1,57 @@
+{% load auth_extras %}
+{% load crispy_forms_tags %}
+
+<form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
+    {% if not in_sub_review %}{% csrf_token %}{% endif %}
+    {% crispy form manuscript_helper %}
+    
+    {% if author_formset %}
+        <hr>
+        <h5 class="title-text">Authors{% if request.user|has_group:"Role Author" %}*{% endif %}<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="The authors on the publication" aria-label="The authors on the publication"></span></h5>        
+        {{ author_formset.non_form_errors }}
+        {% crispy author_formset author_inline_helper %}
+    {% endif %}
+    {% if data_source_formset %}
+        <hr>
+        <h5 class="title-text">Data Sources<span class="fas fa-question-circle tooltip-icon" data-toggle="tooltip" data-placement="auto" title="" data-bs-original-title="Full data citation for each original data source" aria-label="Full data citation for each original data source"></span></h5>
+        {% if not in_sub_review %}<h6><i><span style="color:#666666; margin-left:1px;">Please enter each data source in a separate field by selecting 'add data source'</span></i></h6>{% endif %}
+        {{ data_source_formset.non_form_errors }}
+        {% crispy data_source_formset data_source_inline_helper %}
+    {% endif %}
+    {% if keyword_formset %}
+        <hr>
+        <h5 class="title-text">Keywords{% if request.user|has_group:"Role Author" %}*{% endif %}</h5>
+        {% if not in_sub_review %}<h6><i><span style="color:#666666; margin-left:1px;">Please enter each keyword in a separate field by selecting 'add keyword'</span></i></h6>{% endif %}
+        {{ keyword_formset.non_form_errors }}
+        {% crispy keyword_formset keyword_inline_helper %}
+    {% endif %}
+    {% if v_metadata_formset %}
+        <hr>
+        <h5 class="title-text">Verification Metadata</h5>
+        {{ v_metadata_formset.non_form_errors }}
+        {% crispy v_metadata_formset helper %}
+    {% endif %}
+
+    {% if not read_only %}
+        <hr>
+        {% if create %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" name="submit_continue" value="Create and Continue" title="Create your new manuscript and proceed to upload files" aria-label="Create your new manuscript and proceed to upload files">
+        {% elif from_submission %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
+            <input type="submit" name="submit_continue_submission" value="Save and Continue" title="Save your updated manuscript info and proceed to upload data/code files" aria-label="Save your updated manuscript info and proceed to upload data/code files">
+        {% elif m_status == "new" %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
+            <input type="submit" name="submit_continue" value="Save and Continue" title="Save your updated manuscript info and proceed to upload files" aria-label="Save your updated manuscript info and proceed to upload files">
+        {% elif m_status == "pending_dataverse_publish" or m_status == "published_to_dataverse" or m_status == "completed_report_sent" %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" name="submit_confirm" value="Save and Continue" title="Save your updated manuscript info and proceed to reviewing data/code files" aria-label="Save your updated manuscript info and proceed to reviewing data/code files">
+        {% else %}
+            <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+            <input type="submit" value="Save" title="Save your updated manuscript info" aria-label="Save your updated manuscript info">
+        {% endif %}
+    {% elif not in_sub_review %}
+        <hr>
+        <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+    {% endif %}
+</form>

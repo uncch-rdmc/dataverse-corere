@@ -43,21 +43,22 @@
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            var table = $('#file_table').DataTable();
+            var table = $('#file_table_{{obj_type}}').DataTable();
             table.ajax.reload(function(){ 
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });
         })
     }
     function delete_all_and_refresh(submission_url){
+        console.log(submission_url)
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch(submission_url+"/deleteallfiles/", {
+        fetch(submission_url+"deleteallfiles/", {
             method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            var table = $('#file_table').DataTable();
+            var table = $('#file_table_{{obj_type}}').DataTable();
             table.ajax.reload(function(){ 
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });

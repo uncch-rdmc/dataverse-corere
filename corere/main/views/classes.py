@@ -2,6 +2,7 @@ import logging, os, requests, urllib, time, git, sseclient, threading, base64, j
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.template.loader import render_to_string
 from corere.main import models as m
 from corere.main import forms as f #TODO: bad practice and I don't use them all
 from corere.main import docker as d
@@ -58,7 +59,6 @@ class GenericCorereObjectView(View):
     #NOTE: that these do not clear on their own and have to be cleared manually. There has to be a better way...
     #      If you don't clear them you get duplicate notes etc
     files_dict_list = []
-    file_delete_url = None
     #TODO: This is too much. Need a better way to deal with these params. Also some are for manuscript and some are for submission
     helper = f.GenericFormSetHelper()
     page_title = ""
@@ -120,12 +120,9 @@ class GitFilesMixin(object):
         self.files_dict_list = self.object.get_gitfiles_pathname(combine=True)
 
         if(isinstance(self.object, m.Manuscript)):
-            self.file_delete_url = "/manuscript/"+str(self.object.id)+"/deletefile/?file_path="
-            self.file_download_url = "/manuscript/"+str(self.object.id)+"/downloadfile/?file_path="
+            self.file_url_base = "/manuscript/"+str(self.object.id)+"/"
         elif(isinstance(self.object, m.Submission)):
-            self.file_delete_url = "/submission/"+str(self.object.id)+"/deletefile/?file_path="
-            self.file_download_url = "/submission/"+str(self.object.id)+"/downloadfile/?file_path="
-            #print(self.file_download_url)
+            self.file_url_base = "/submission/"+str(self.object.id)+"/"
         else:
             logger.error("Attempted to load Git file for an object which does not have git files") #TODO: change error
             raise Http404()
@@ -289,7 +286,6 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if(self.form_helper):
             context['manuscript_helper'] = self.form_helper
-        #TODO: Add logic for manuscript creation
 
         return render(request, self.template, context)
 
@@ -436,7 +432,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
         progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
         return render(request, self.template, {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_id': self.object.id,
-            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
+            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': list(self.files_dict_list), 'file_url_base': self.file_url_base, 
             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'progress_bar_html': progress_bar_html
             })
 
@@ -481,7 +477,7 @@ class ManuscriptUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, 'Upload Files')
 
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'm_status':self.object._status, 'manuscript_display_name': self.object.get_display_name(), 
-                'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'progress_bar_html': progress_bar_html, 
+                'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 'file_url_base': self.file_url_base, 'progress_bar_html': progress_bar_html, 
                 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":"master", 'page_title': self.page_title, 'page_help_text': self.page_help_text
                 }
 
@@ -591,9 +587,8 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
     def get(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 
-            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 
-            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
+        return render(request, self.template, {'read_only': self.read_only, 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'file_url_base': self.file_url_base, 
+            'manuscript_display_name': self.object.get_display_name(), 'files_dict_list': self.files_dict_list, 'obj_id': self.object.id, "obj_type": self.object_friendly_name})
 
 # #NOTE: This is unused and disabled in URLs. Probably should delete.
 # #Does not use TransitionPermissionMixin as it does the check internally. Maybe should switch
@@ -799,6 +794,30 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if(self.submission_editor_date_formset is not None):
             context['submission_editor_date_formset'] = self.submission_editor_date_formset(queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset")
 
+        #TODO: This needs to be added to post for when there are errors?
+
+        # We generate the info section providing read-only access to the manuscript metadata and files
+        if (self.edition_formset is not None) or (self.curation_formset is not None) or (self.verification_formset is not None):
+            #This context dict is sent to our sub render_to_string call, it does not get added to our main render
+            manu_context_dict = {
+                'form': f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
+                'manuscript_helper': f.ManuscriptFormHelperMain(),
+                'author_formset': f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
+                'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'),
+                'data_source_formset': f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
+                'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'),
+                'keyword_formset': f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
+                'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword'),
+                'in_sub_review': True,
+                'read_only': True
+            }
+            
+            manu_html = render_to_string('main/form_content_manuscript.html', manu_context_dict)
+            context['manuscript_metadata_html'] = manu_html
+            context['object_id'] = self.object.id #TODO: Do we need to do this?
+            context['m_file_url_base'] = '../../../manuscript/'+str(self.object.manuscript.id)+'/'
+            context['s_file_url_base'] = '../'
+
         if(self.note_helper is not None):
             context['note_helper'] = self.note_helper
 
@@ -961,6 +980,27 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, "obj_type": self.object_friendly_name, "create": self.create, 'inline_helper': f.GenericInlineFormSetHelper(), 's_version': self.object.version_id,
             'page_title': self.page_title, 'page_help_text': self.page_help_text, 'manuscript_display_name': manuscript_display_name, 's_status':self.object._status, 'parent_id': self.object.manuscript.id, 'can_progress': self.can_progress}
         
+        if (self.edition_formset is not None) or (self.curation_formset is not None) or (self.verification_formset is not None):
+            #This context dict is sent to our sub render_to_string call, it does not get added to our main render
+            manu_context_dict = {
+                'form': f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
+                'manuscript_helper': f.ManuscriptFormHelperMain(),
+                'author_formset': f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
+                'author_inline_helper': f.GenericInlineFormSetHelper(form_id='author'),
+                'data_source_formset': f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
+                'data_source_inline_helper': f.GenericInlineFormSetHelper(form_id='data_source'),
+                'keyword_formset': f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
+                'keyword_inline_helper': f.GenericInlineFormSetHelper(form_id='keyword'),
+                'in_sub_review': True,
+                'read_only': True
+            }
+            
+            manu_html = render_to_string('main/form_content_manuscript.html', manu_context_dict)
+            context['manuscript_metadata_html'] = manu_html
+            context['object_id'] = self.object.id #TODO: Do we need to do this?
+            context['m_file_url_base'] = '../../../manuscript/'+str(self.object.manuscript.id)+'/'
+            context['s_file_url_base'] = '../'
+        
         if not self.can_progress:
             context['progress_bar_html'] = get_progress_bar_html_submission('Add Submission Info', self.object)
         
@@ -1005,6 +1045,7 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 
 #Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
 #TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
+#NOTE: This is currently used for editing by author as well as for review by editor/curator/verifier
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = 'edit_noop'
     page_help_text = _("submission_info_helpText") #Sometimes overwritten by GenericSubmissionFormView
@@ -1044,7 +1085,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
 #             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+#             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
 #             'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
@@ -1104,7 +1145,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
 #             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 's_status':self.object._status, 'parent_id': self.object.manuscript.id,
-#             'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
+#             'obj_id': self.object.id, "obj_type": self.object_friendly_name, "repo_branch":g.helper_get_submission_branch_name(self.object),
 #             'parent':self.object, 'children_formset':formset, 'page_title': self.page_title, 'page_help_text': self.page_help_text}
 
 #         if(self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
@@ -1165,7 +1206,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
 
         context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 
             'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.files_dict_list), 's_status':self.object._status,
-            'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
+            'file_url_base': self.file_url_base, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 
             "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'dataverse_upload': self.dataverse_upload,
             'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(), 'manuscript_id': self.object.manuscript.id}
         
@@ -1289,7 +1330,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             
             context = {'form': self.form, 'helper': self.helper, 'read_only': self.read_only, 'manuscript_id': self.object.manuscript.id,
                 'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': list(self.object.get_gitfiles_pathname(combine=True)), 's_status':self.object._status,
-                'file_delete_url': self.file_delete_url, 'file_download_url': self.file_download_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'dataverse_upload': self.dataverse_upload,
+                'file_url_base': self.file_url_base, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'dataverse_upload': self.dataverse_upload,
                 "repo_branch":g.helper_get_submission_branch_name(self.object), 'page_title': self.page_title, 'page_help_text': self.page_help_text, 'skip_docker': settings.SKIP_DOCKER, 'containerized': self.object.manuscript.is_containerized(),}
 
             if self.dataverse_upload:
@@ -1434,15 +1475,19 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
     def post(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        for b in g.get_submission_files_list(self.object.manuscript):
-            g.delete_submission_file(self.object.manuscript, b)
+        # for b in g.get_submission_files_list(self.object.manuscript):
+        #     g.delete_submission_file(self.object.manuscript, b)
 
-            folder_path, file_name = b.rsplit('/',1)
-            folder_path = folder_path + '/'
-            try:
-                m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
-            except m.GitFile.DoesNotExist:
-                logger.warning("While deleting file " + b + " using delete all on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+        #     folder_path, file_name = b.rsplit('/',1)
+        #     folder_path = folder_path + '/'
+        #     try:
+        #         m.GitFile.objects.get(parent_submission=self.object, path=folder_path, name=file_name).delete()
+        #     except m.GitFile.DoesNotExist:
+        #         logger.warning("While deleting file " + b + " using delete all on submission " + str(self.object.id) + ", the associated GitFile was not found. This could be due to a previous error during upload.")
+
+        #New Strat: Delete files folder and then get every GitFile object for the submission and delete. Way cleaner.
+        g.delete_all_submission_files(self.object.manuscript)
+        m.GitFile.objects.filter(parent_submission=self.object).delete()
 
         self.object.files_changed = True
         self.object.save()
@@ -1465,8 +1510,8 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
         self.general(request, *args, **kwargs)
 
         return render(request, self.template, {'read_only': self.read_only, 
-            'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_download_url': self.file_download_url, 
-            'file_delete_url': self.file_delete_url, 'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
+            'manuscript_display_name': self.object.manuscript.get_display_name(), 'files_dict_list': self.files_dict_list, 'file_url_base': self.file_url_base, 
+            'obj_id': self.object.id, "obj_type": self.object_friendly_name, 'page_title': self.page_title, 'page_help_text': self.page_help_text})
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     template = 'file_datatable/file_datatable.html' #I think this is not actually used here

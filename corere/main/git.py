@@ -20,23 +20,31 @@ def create_submission_repo(manuscript):
     files_path = get_submission_files_path(manuscript)
     os.makedirs(files_path, exist_ok=True)
     repo.index.commit("initial commit")
+    #repo.create_head("master")
 
-def get_manuscript_files_list(manuscript):
-    return _get_files_list(manuscript, get_manuscript_files_path(manuscript))
+# #Maybe unused
+# def get_manuscript_files_list(manuscript):
+#     return _get_files_list(manuscript, get_manuscript_files_path(manuscript))
 
-def get_submission_files_list(manuscript):
-    return _get_files_list(manuscript, get_submission_files_path(manuscript))
+# #Only used for submission deleteallfiles
+# def get_submission_files_list(manuscript):
+#     print(get_submission_files_path(manuscript))
+#     return _get_files_list(manuscript, get_submission_files_path(manuscript))
 
-def _get_files_list(manuscript, path):
-    try:
-        repo = git.Repo(path+"..")
-        if 'head' in repo.__dict__:
-            return helper_list_paths(repo.head.commit.tree[0], path, path)
-        else:
-            yield from () #If no head (e.g. no commits) return empty list
-        #TODO: We may want to handle having a head but no files
-    except git.exc.NoSuchPathError:
-        raise Http404()
+# #Only used for get_submission_files_list which is only used for deleteallfiles
+# def _get_files_list(manuscript, path):
+#     try:
+#         print("huh")
+#         repo = git.Repo(path+"..")
+#         print(repo.__dict__)
+#         if 'head' in repo.__dict__: #TODO: This doesn't work currently on the 1st submission because there is no head because we did not make a branch
+#             return helper_list_paths(repo.head.commit.tree[0], path, path)
+#         else:
+#             print("NO COMMITS")
+#             yield from () #If no head (e.g. no commits) return empty list
+#         #TODO: We may want to handle having a head but no files
+#     except git.exc.NoSuchPathError:
+#         raise Http404()
 
 #returns md5 of file
 def store_manuscript_file(manuscript, file, subdir):
@@ -111,9 +119,17 @@ def delete_submission_file(manuscript, file_path):
     _delete_file(repo_path, repo_path + files_folder + file_path)
 
     #We recreate our "inside the repo" directory incase our delete recursively deleted it
-    #TODO: This is likely slow when called many times (e.g. delete all). If we have performance issues we should only call it once at the end of many deletes
+    #TODO: This is likely slow when called many times (e.g. old delete all). If we have performance issues we should only call it once at the end of many deletes
     files_path = get_submission_files_path(manuscript)
     os.makedirs(files_path, exist_ok=True)
+
+def delete_all_submission_files(manuscript):
+    submission_files_path = get_submission_files_path(manuscript)
+    shutil.rmtree(submission_files_path)
+    os.makedirs(submission_files_path)
+    repo = git.Repo(get_submission_repo_path(manuscript))
+    repo.index.remove(submission_files_path, r=True)
+    repo.index.commit("delete all submission files")
 
 #delete file from filesystem, create commit for file
 #TODO: This currently will delete the 
@@ -237,12 +253,12 @@ def create_submission_branch(submission):
 #Lists the paths of all the files. Used only to delete_all currently
 #When initially called, repo_path and rel_path should be the same.
 #TODO: This actually returns a generator, we should probably name it differently or switch it to a list
-def helper_list_paths(root_tree, repo_path, rel_path):
-    for blob in root_tree.blobs:
-        #Split off the system path from the return. 
-        yield (rel_path.split(repo_path, 1)[1] + '/' + blob.name)#[1:] #commented code would remove leading slash
-    for tree in root_tree.trees:
-        yield from (helper_list_paths(tree, repo_path, rel_path + '/' + tree.name)) #recursive
+# def helper_list_paths(root_tree, repo_path, rel_path):
+#     for blob in root_tree.blobs:
+#         #Split off the system path from the return. 
+#         yield (rel_path.split(repo_path, 1)[1] + '/' + blob.name)#[1:] #commented code would remove leading slash
+#     for tree in root_tree.trees:
+#         yield from (helper_list_paths(tree, repo_path, rel_path + '/' + tree.name)) #recursive
 
 #Note: Submission branches are only created when the submission is completed. This will not tell you whether your submission has been completed.
 def helper_get_submission_branch_name(submission):
