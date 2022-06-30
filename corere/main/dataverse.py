@@ -1,4 +1,4 @@
-import json, datetime, re, time, logging
+import json, datetime, re, time, logging, magic
 import pyDataverse.api as pyd
 from corere.main import models as m
 from corere.main import git as g
@@ -55,15 +55,18 @@ def upload_manuscript_data_to_dataverse(manuscript):
             logger.debug("Manuscript {}, lock_response {}".format(manuscript.id, lock_response.__dict__))
 
         json_str = "{'directoryLabel':'"+ git_file.path +"'}"
-        file_response = native_api.upload_datafile(dataset_pid, files_root_path + git_file.full_path, json_str=json_str, is_pid=True)
-        logger.debug("Manuscript {}, lock_response {}".format(manuscript.id, lock_response.__dict__))
+        path = files_root_path + git_file.full_path
+        mime = magic.from_file(path, mime=True)
+        
+        upload_file_response = native_api.upload_datafile(dataset_pid, path, json_str=json_str, is_pid=True, mime_type=mime)
+        logger.debug("Manuscript {}, upload_file_response {}".format(manuscript.id, upload_file_response.__dict__))
 
-        if file_response.json()['status'] == 'OK':
-            file_id = file_response.json()['data']['files'][0]['dataFile']['id']
-            redetect_response = native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
-            logger.debug("Manuscript {}, redetect_response {}".format(manuscript.id, redetect_response.__dict__))
-        else:
-            raise Exception("Exception from dataverse during upload: " + file_response.json()['message']) #TODO: Handle this better?
+        # if upload_file_response.json()['status'] == 'OK':
+        #     file_id = upload_file_response.json()['data']['files'][0]['dataFile']['id']
+        #     redetect_response = native_api.redetect_file_type(file_id) #If we don't redetect the file type dataverse seems to think it is text always
+        #     logger.debug("Manuscript {}, redetect_response {}".format(manuscript.id, redetect_response.__dict__))
+        # else:
+        #     raise Exception("Exception from dataverse during upload: " + upload_file_response.json()['message']) #TODO: Handle this better?
 
     manuscript.dataverse_fetched_doi = dataset_pid
     manuscript.dataverse_fetched_article_citation = ""

@@ -98,6 +98,11 @@ Source the config files:
 . ./env.secret.sample.sh
 ```
 
+Install libmagic for identifying MIME-type of files during Dataverse uploads (needed to support Dataverse 5.3)
+```
+brew install libmagic
+```
+
 ```
 python3 manage.py migrate
 python3 manage.py createsuperuser --noinput

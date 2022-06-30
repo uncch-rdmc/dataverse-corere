@@ -17,7 +17,7 @@ django-datatables-view==1.19.1
 django-fsm==2.8.0
 django-guardian==2.4.0
 
-#Custom django-invitations (1.9.3) with changes: 
+# Custom django-invitations (1.9.3) with changes: 
 # - pass the key forward to signup as we use it when creating an initial user
 # - disable accepting invitation on initial url load, which disabled the key and broke the flow if you have to reload.
 git+https://github.com/OdumInstitute/django-invitations.git
@@ -38,10 +38,16 @@ jupyter-repo2docker==2022.2.0
 libsass==0.21.0
 oauthlib==3.2.0
 psycopg2-binary==2.9.3
-pydataverse==0.3.1
+
+# Custom pyDataverse (off 0.3.1) adding functionality to pass mime type explicitly to file upload
+# This was needed for supporting our targeted 5.3 dataverse installation.
+git+https://github.com/OdumInstitute/pydataverse.git@mime_type_upload
+
 pycparser==2.21
 PyJWT==2.3.0
 python-jose==3.3.0
+# If we stop explicitly passing MIME-type to pyDataverse during file upload, python-magic should not be needed
+python-magic==0.4.27
 python3-openid==3.2.0
 pytz==2021.3
 rcssmin==1.1.0
@@ -54,5 +60,5 @@ social-auth-core==4.2.0
 sseclient-py==1.7.2
 sqlparse==0.4.2
 urllib3==1.26.8
-#We require this slightly over version explicitly to ensure CORE2 uses the right version of libpango when running django-renderpdf. This was an issue on our test server
+#We require this slightly older version explicitly to ensure CORE2 uses the right version of libpango when running django-renderpdf. This was an issue on our test server
 weasyprint==52.5 
