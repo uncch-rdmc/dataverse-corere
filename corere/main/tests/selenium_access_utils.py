@@ -27,22 +27,52 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
             # print(full_url)
             # print("...")
             
-            if method == 'GET':
-                browser.get(full_url)
-                # for request in browser.requests:
-                #     if(request.response):
-                #         print("{} - {}".format(request.url, request.response.status_code))
-                for request in browser.requests:
-                    if request.url == full_url and request.response:
-                        test.assertEqual(status_code, request.response.status_code, msg=method + " " + full_url)
-                        del browser.requests
-            elif method == 'POST':
-                # This is for posting without a body, which we use in a few places to progress the manuscript etc.
-                # We'll need something more verbose if we want to pass a body
-                result_status = call_request_method(browser, method, full_url )
-                test.assertEqual(status_code, result_status, msg=method+ " " + full_url)
-            else:
-                raise Exception("NO OTHER METHODS SUPPORTED")
+            try:
+
+                if method == 'GET':
+                    browser.get(full_url)
+                    # for request in browser.requests:
+                    #     if(request.response):
+                    #         print("{} - {}".format(request.url, request.response.status_code))
+                    for request in browser.requests:
+                        if request.url == full_url and request.response:
+                            test.assertEqual(status_code, request.response.status_code, msg=method + " " + full_url)
+                            del browser.requests
+                elif method == 'POST':
+                    # This is for posting without a body, which we use in a few places to progress the manuscript etc.
+                    # We'll need something more verbose if we want to pass a body
+                    result_status = call_request_method(browser, method, full_url )
+                    test.assertEqual(status_code, result_status, msg=method+ " " + full_url)
+                else:
+                    raise Exception("NO OTHER METHODS SUPPORTED")
+
+            except Exception as e:
+                # This block was disabled as we now just disable cors for our selenium tests
+
+                # #TODO: We are catching these post errors that seem to be blowing up because of CORS under the hood.
+                # #      I'm not quite sure what caused these, it could have been template refactor but honestly may just be chrome updating?
+                # #      
+                # #      Here is some more verbose error messaging when calling these via the console on our curator selenium browser:
+
+                #             #fetch('http://localhost:60492/manuscript/1/uploader/', {method: 'POST',credentials: 'include'})
+                #             #Promise {<pending>}
+                #             #localhost/:1 Access to fetch at 'http://localhost:60492/manuscript/1/uploader/' from origin 'http://localhost:61565' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.
+                #             #VM323:1          POST http://localhost:60492/manuscript/1/uploader/ net::ERR_FAILED 502
+                #             #(anonymous) @ VM323:1
+                #             #VM323:1                  Uncaught (in promise) TypeError: Failed to fetch
+                #             #    at <anonymous>:1:1
+                #             #(anonymous) @ VM323:1
+                #             #fetch('http://localhost:60492/manuscript/1/uploader/', {method: 'POST',credentials: 'include', mode: 'no-cors'})
+                #             #Promise {<pending>}
+                #             #VM371:1          POST http://localhost:60492/manuscript/1/uploader/ net::ERR_ABORTED 502 (Bad Gateway)
+                            
+                # if(method == 'POST' and hasattr(e, 'msg') and (e.msg.startswith('javascript error') or e.msg.startswith('unexpected alert open'))):
+                #     print("Exception with javascript and post on url {}. This seems to be a CORS issue, maybe manifesting in the recent version of chrome. Bypassing for now".format(full_url))
+                #     pass #unneeded?
+
+                print("Exception calling {} on url {}".format(method, full_url))
+                print(e.__dict__)
+                raise e
 
     browser.get(current_url)
 

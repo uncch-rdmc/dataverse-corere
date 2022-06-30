@@ -22,6 +22,8 @@ class LoggingInTestCase(LiveServerTestCase):
         #os.environ['WDM_LOG_LEVEL'] = '0' #Should Disable webdriver_manager print statements... but doesn't. 
         self.options = Options()
         self.options.headless = True
+        # This was enabled to fix CORS post errors after tests ran fine for a while. It may have been due to a refactor but it also seems likely that it was due to a chrome update
+        self.options.add_argument("--disable-web-security")
         # self.selenium = webdriver.Chrome(options=self.options)
         self.selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         m.User.objects.create_superuser('admin', 'admin@test.test', 'password')
@@ -245,6 +247,7 @@ class LoggingInTestCase(LiveServerTestCase):
         v_out_selenium= webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_in_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         c_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        
 
         ##### ADMIN LOGIN #####
 
@@ -413,6 +416,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
         check_access(self, v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_in_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        # time.sleep(999999)
         check_access(self, c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         ##### ASSIGN AUTHOR (SELF) TO MANUSCRIPT #####
@@ -454,6 +458,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        #time.sleep(999999)
         check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####

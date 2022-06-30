@@ -128,7 +128,12 @@ def delete_all_submission_files(manuscript):
     shutil.rmtree(submission_files_path)
     os.makedirs(submission_files_path)
     repo = git.Repo(get_submission_repo_path(manuscript))
-    repo.index.remove(submission_files_path, r=True)
+    try:
+        repo.index.remove(submission_files_path, r=True)
+    except Exception as e:
+        if not str(e).endswith('did not match any files\''):
+            # We catch the error of there being no files to delete
+            raise e
     repo.index.commit("delete all submission files")
 
 #delete file from filesystem, create commit for file
