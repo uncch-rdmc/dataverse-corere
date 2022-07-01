@@ -723,8 +723,8 @@ class Manuscript(AbstractCreateUpdateModel):
     exemption_override = models.BooleanField(default=False, verbose_name='Exemption Override', help_text='The curation team has decided to deploy this manuscript inside Whole Tale, even with potential issues.')
 
     operating_system = models.CharField(max_length=200, default="", verbose_name='Operating System')
-    packages_info = models.TextField(blank=False, null=False, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
-    software_info = models.TextField(blank=False, null=False, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
+    packages_info = models.TextField(blank=True, null=True, default="", verbose_name='Required Packages', help_text='Please provide the list of your required packages and their versions.')
+    software_info = models.TextField(blank=True, null=True, default="", verbose_name='Statistical Software', help_text='Please provide the list of your used statistical software and their versions.')  
     machine_type = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Machine Type')
     scheduler = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Scheduler Module')
     platform = models.CharField(max_length=200, default="", blank=True, null=True, verbose_name='Platform')
