@@ -1,6 +1,7 @@
 import logging, json, time, requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.db import transaction
 from corere.main import models as m
 from corere.main import constants as c
 from corere.main import git as g
@@ -22,6 +23,10 @@ from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
+# Disabling atomic requests for this view fixed a testing issue with new user registration
+# Happened during rendering the response [response = render(request, "main/index.html", args)], error: [main:074] current transaction is aborted, commands ignored until end of transaction block
+# TODO: Investigate this further, digging into database messages etc
+@transaction.non_atomic_requests
 @require_http_methods(["GET"])
 def index(request):
     if request.user.is_authenticated:
