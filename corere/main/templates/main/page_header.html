@@ -1,8 +1,9 @@
-<div class="title">
-    <div class="title-text">
-        <span class="page-title" > {{page_title}}{% spaceless %}
+<div class="header">
+    {% comment %} Similar logic in head.html for tab titles {% endcomment %}
+    <div class="header-text">
+        <span class="page-header" > {{page_title}}{% spaceless %}
         {% if manuscript_display_name %}
-        : </span> <span class="manuscript-title" >{{manuscript_display_name}}</span>
+        : </span> <span class="manuscript-header" >{{manuscript_display_name}}</span>
         {% else %}
         </span>
         {% endif %}{% endspaceless %}

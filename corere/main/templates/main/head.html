@@ -30,7 +30,16 @@
 {% load notifications_tags %}
 <script src="{% static 'main/notify_custom.js' %}" type="text/javascript"></script>
 
+{% comment %} Similar logic in page_header.html for page headers in body {% endcomment %}
+{% if page_title %}
+  {% if manuscript_display_name %}
+  <title>{{page_title}}: {{manuscript_display_name}}</title>
+  {% else %}
+  <title>{{ page_title }}</title>
+  {% endif %}
+{% else %}
 <title>Dataverse CORE2</title> {% comment %}This is also hardcoded in notify_custom.js{% endcomment %}
+{% endif %}
 <link rel="shortcut icon" href="{% static 'main/cropped-CORE2_icon-05-32x32.png' %}">
 
 <script>

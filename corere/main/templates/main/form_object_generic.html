@@ -3,7 +3,7 @@
 {% load concat %}
 {% load crispy_forms_tags %}
  
-{% include "main/page_title.html" %}    
+{% include "main/page_header.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form helper %}

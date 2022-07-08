@@ -2,7 +2,7 @@
 {% block content %}
 {% load crispy_forms_tags %}
 
-{% include "main/page_title.html" %}  
+{% include "main/page_header.html" %}  
 <form action="{{key|default_if_none:''}}" method="post">
     {% csrf_token %}
     {% crispy form helper %}
