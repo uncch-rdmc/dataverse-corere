@@ -1300,7 +1300,7 @@ class CorereInvitation(Invitation):
             **kwargs)
         return instance
 
-    def send_invitation(self, request, **kwargs):
+    def send_invitation(self, request, extra_text='', **kwargs):
         current_site = kwargs.pop('site', Site.objects.get_current())
         invite_url = reverse('invitations:accept-invite',
                              args=[self.key])
@@ -1323,8 +1323,10 @@ class CorereInvitation(Invitation):
             'last_name': self.user.last_name,
             'key': self.key,
             'inviter': self.inviter,
+            'extra_text': extra_text
         })
 
+        # Under the hood this template uses our custom 'templates/invitations/email/email_invite_message.html'
         email_template = 'invitations/email/email_invite'
 
         get_invitations_adapter().send_mail(

@@ -1,28 +1,30 @@
 import logging, requests
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Permission, Group
+from django.contrib.sites.models import Site
+from django.contrib.sites.shortcuts import get_current_site
+from django.db import IntegrityError
+from django.http import Http404, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.crypto import get_random_string
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext as _
+from django.views.decorators.http import require_http_methods
 from guardian.decorators import permission_required_or_404
 from guardian.shortcuts import get_objects_for_user, assign_perm, get_users_with_perms
-from corere.main.models import Manuscript, User, CorereInvitation
-from django.contrib.auth.decorators import login_required
-from corere.main.forms import AuthorAddForm, UserByRoleAddFormHelper, UserDetailsFormHelper, AuthorInviteAddForm, EditorAddForm, CuratorAddForm, VerifierAddForm, EditUserForm, UserInviteForm, AuthorInviteAddFormHelper, StandardUserAddFormHelper
-from django.contrib import messages
-from django.utils.safestring import mark_safe
 from invitations.utils import get_invitation_model
-from django.utils.crypto import get_random_string
-from django.contrib.auth.models import Permission, Group
+from notifications.signals import notify
+from templated_email import send_templated_mail
 from corere.main import constants as c
+from corere.main import forms as f
 from corere.main import models as m
 from corere.main import wholetale_corere as w
-from django.contrib.auth import login, logout
-from django.conf import settings
-from notifications.signals import notify
-from django.http import Http404, HttpResponse
 from corere.main.templatetags.auth_extras import has_group
 from corere.main.utils import fsm_check_transition_perm, generate_progress_bar_html
-from django.utils.translation import gettext as _
-from django.db import IntegrityError
-from templated_email import send_templated_mail
-from django.views.decorators.http import require_http_methods
+
 logger = logging.getLogger(__name__)
 
 # Editor/Superuser enters an email into a form and clicks submit
@@ -32,13 +34,13 @@ logger = logging.getLogger(__name__)
 # TODO: We should probably make permissions part of our constants as well
 
 @login_required
-# @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
-@permission_required_or_404(c.perm_path(c.PERM_MANU_CURATE), (Manuscript, 'id', 'id'), accept_global_perms=True)
+# @permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+@permission_required_or_404(c.perm_path(c.PERM_MANU_CURATE), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def invite_assign_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
-    form = AuthorInviteAddForm(request.POST or None)
-    manuscript = Manuscript.objects.get(pk=id)
+    form = f.AuthorInviteAddForm(request.POST or None)
+    manuscript = m.Manuscript.objects.get(pk=id)
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
 
@@ -58,13 +60,13 @@ def invite_assign_author(request, id=None):
                 author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
                 try:
                     #def helper_create_user_and_invite(request, email, first_name, last_name, role):
-                    new_user = helper_create_user_and_invite(request, email, first_name, last_name, author_role)
+                    new_user = helper_create_user_and_invite(request, email, first_name, last_name, author_role, manuscript=manuscript)
                     # msg = _("user_inviteRole_banner").format(email=email, role="author")
                     # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
                     # messages.add_message(request, messages.INFO, msg)
                     users.append(new_user) #add new new_user to the other users provided
                 except IntegrityError: #If user entered in email field already exists
-                    user = User.objects.get(email=email)
+                    user = m.User.objects.get(email=email)
                     users.append(user)
             for u in users:
                 if(not u.groups.filter(name=c.GROUP_ROLE_AUTHOR).exists()):
@@ -73,35 +75,36 @@ def invite_assign_author(request, id=None):
                 manu_author_group.user_set.add(u)
                     
                 ### Messaging ###
-                msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_display_name=manuscript.get_display_name())
-                logger.info(msg)
-                list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
-                messages.add_message(request, messages.INFO, msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_display_name=manuscript.get_display_name(), object_url=manuscript.get_landing_url(request))
-                if(u != new_user):
-                    notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
-                    send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
-                ### End Messaging ###
+                if u != new_user: # we don't want to provide a link to the manuscript to our authors before they are even registered
+                    msg = _("user_addAsRoleToManuscript_banner").format(role="author", email=u.email, manuscript_display_name=manuscript.get_display_name())
+                    logger.info(msg)
+                    list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                    messages.add_message(request, messages.INFO, msg)
+                    notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(role="author", email=request.user.email, manuscript_display_name=manuscript.get_display_name(), object_url=manuscript.get_landing_url(request))
+                    if(u != new_user):
+                        notify.send(request.user, verb='assigned', recipient=u, target=manuscript, public=False, description=notification_msg)
+                        send_templated_mail( template_name='base', from_email=settings.EMAIL_HOST_USER, recipient_list=[u.email], context={'subject':'CORE2 Update', 'notification_msg':notification_msg, 'user_email':u.email} )
+                    ### End Messaging ###
 
             return redirect('/manuscript/'+str(manuscript.id))
         else:
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring), 'manuscript_display_name': manuscript.get_display_name(),
         'group_substring': group_substring, 'role_name': 'Author', 'assigned_users': manu_author_group.user_set.all(), 'can_remove_author': can_remove_author, 'page_title': page_title, 'page_help_text': page_help_text,
-        'helper': AuthorInviteAddFormHelper()})
+        'helper': f.AuthorInviteAddFormHelper()})
 
 #Called during initial manuscript creation
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
+@permission_required_or_404(c.perm_path(c.PERM_MANU_ADD_AUTHORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True) #slightly hacky that you need add to access the remove function, but everyone with remove should be able to add
 @require_http_methods(["GET", "POST"])
 def add_author(request, id=None):
     group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
-    manuscript = Manuscript.objects.get(pk=id)
+    manuscript = m.Manuscript.objects.get(pk=id)
     page_title = _("user_assignAuthor_pageTitle")
     page_help_text = _("user_assignAuthor_helpText")
-    helper = UserByRoleAddFormHelper()
+    helper = f.UserByRoleAddFormHelper()
     form_initial = {'first_name':manuscript.contact_first_name, 'last_name':manuscript.contact_last_name, 'email':manuscript.contact_email}
-    form = AuthorAddForm(request.POST or None, initial=form_initial)
+    form = f.AuthorAddForm(request.POST or None, initial=form_initial)
 
     if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
@@ -112,11 +115,11 @@ def add_author(request, id=None):
             last_name = form.cleaned_data['last_name']
             author_role = Group.objects.get(name=c.GROUP_ROLE_AUTHOR) 
             try:
-                user = User.objects.get(email=email)
+                user = m.User.objects.get(email=email)
                 author_role.user_set.add(user)
                 new_user = False
                 #assign role
-            except User.DoesNotExist:
+            except m.User.DoesNotExist:
                 new_user = True
                 user = helper_create_user_and_invite(request, email, first_name, last_name, author_role)
 
@@ -156,30 +159,30 @@ def add_author(request, id=None):
         'group_substring': group_substring, 'role_name': 'Author', 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title, 'page_help_text': page_help_text, 'progress_bar_html': progress_bar_html})
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_REMOVE_AUTHORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def unassign_author(request, id=None, user_id=None):
     if request.method == 'POST':
-        manuscript = Manuscript.objects.get(pk=id)
+        manuscript = m.Manuscript.objects.get(pk=id)
         if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_AUTHOR_PREFIX
         manu_author_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
             user = manu_author_group.user_set.get(id=user_id)
-        except User.DoesNotExist:
+        except m.User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_author_group.user_set.remove(user)
         return redirect('/manuscript/'+str(id)+'/inviteassignauthor')
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def assign_editor(request, id=None):
-    form = EditorAddForm(request.POST or None)
+    form = f.EditorAddForm(request.POST or None)
     page_title = _("user_assignEditor_pageTitle")
-    manuscript = Manuscript.objects.get(pk=id)
+    manuscript = m.Manuscript.objects.get(pk=id)
     if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
@@ -209,33 +212,33 @@ def assign_editor(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_EDITOR, group_substring), 
         'group_substring': group_substring, 'role_name': 'Editor', 'assigned_users': manu_editor_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
-        'helper': StandardUserAddFormHelper()})
+        'helper': f.StandardUserAddFormHelper()})
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_EDITORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def unassign_editor(request, id=None, user_id=None):
     if request.method == 'POST':
-        manuscript = Manuscript.objects.get(pk=id)
+        manuscript = m.Manuscript.objects.get(pk=id)
         if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_EDITOR_PREFIX
         manu_editor_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
             user = manu_editor_group.user_set.get(id=user_id)
-        except User.DoesNotExist:
+        except m.User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_editor_group.user_set.remove(user)
         return redirect('/manuscript/'+str(id)+'/assigneditor')
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def assign_curator(request, id=None):
-    form = CuratorAddForm(request.POST or None)
+    form = f.CuratorAddForm(request.POST or None)
     page_title = _("user_assignCurator_pageTitle")
-    manuscript = Manuscript.objects.get(pk=id)
+    manuscript = m.Manuscript.objects.get(pk=id)
     if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
@@ -271,14 +274,14 @@ def assign_curator(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_CURATOR, group_substring),
         'group_substring': group_substring, 'role_name': 'Curator', 'assigned_users': manu_curator_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
-        'helper': StandardUserAddFormHelper()})
+        'helper': f.StandardUserAddFormHelper()})
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_CURATORS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def unassign_curator(request, id=None, user_id=None):
     if request.method == 'POST':
-        manuscript = Manuscript.objects.get(pk=id)
+        manuscript = m.Manuscript.objects.get(pk=id)
         if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_CURATOR_PREFIX
@@ -288,7 +291,7 @@ def unassign_curator(request, id=None, user_id=None):
         #     manu_editor_group = Group.objects.get(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX+ " " + str(manuscript.id))
         try:
             user = manu_curator_group.user_set.get(id=user_id)
-        except User.DoesNotExist:
+        except m.User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_curator_group.user_set.remove(user)
@@ -299,12 +302,12 @@ def unassign_curator(request, id=None, user_id=None):
         return redirect('/manuscript/'+str(id)+'/assigncurator')
 
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def assign_verifier(request, id=None):
-    form = VerifierAddForm(request.POST or None)
+    form = f.VerifierAddForm(request.POST or None)
     page_title = _("user_assignVerifier_pageTitle")
-    manuscript = Manuscript.objects.get(pk=id)
+    manuscript = m.Manuscript.objects.get(pk=id)
     if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
         raise Http404()
     group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
@@ -334,22 +337,22 @@ def assign_verifier(request, id=None):
             logger.debug(form.errors) #TODO: DO MORE?
     return render(request, 'main/form_assign_user.html', {'form': form, 'id': id, 'select_table_info': helper_generate_select_table_info(c.GROUP_ROLE_VERIFIER, group_substring),
         'group_substring': group_substring, 'role_name': 'Verifier', 'assigned_users': manu_verifier_group.user_set.all(), 'manuscript_display_name': manuscript.get_display_name(), 'page_title': page_title,
-        'helper': StandardUserAddFormHelper()})
+        'helper': f.StandardUserAddFormHelper()})
 
 #MAD: Maybe error if id not in list (right now does nothing silently)
 @login_required
-@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (Manuscript, 'id', 'id'), accept_global_perms=True)
+@permission_required_or_404(c.perm_path(c.PERM_MANU_MANAGE_VERIFIERS), (m.Manuscript, 'id', 'id'), accept_global_perms=True)
 @require_http_methods(["GET", "POST"])
 def unassign_verifier(request, id=None, user_id=None):
     if request.method == 'POST':
-        manuscript = Manuscript.objects.get(pk=id)
+        manuscript = m.Manuscript.objects.get(pk=id)
         if(manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT):
             raise Http404()
         group_substring = c.GROUP_MANUSCRIPT_VERIFIER_PREFIX
         manu_verifier_group = Group.objects.get(name=group_substring+ " " + str(manuscript.id))
         try:
             user = manu_verifier_group.user_set.get(id=user_id)
-        except User.DoesNotExist:
+        except m.User.DoesNotExist:
             logger.warn("User {0} attempted to remove user id {1} from group {2} which is invalid".format(request.user.id, user_id, group_substring))
             raise Http404()
         manu_verifier_group.user_set.remove(user)
@@ -393,10 +396,10 @@ def account_complete_oauth(request):
 @login_required()
 @require_http_methods(["GET", "POST"])
 def account_user_details(request):
-    helper = UserDetailsFormHelper()
+    helper = f.UserDetailsFormHelper()
     page_title = _("user_accountDetails_pageTitle")
            
-    form = EditUserForm(request.POST or None, instance=request.user)
+    form = f.EditUserForm(request.POST or None, instance=request.user)
 
     if request.method == 'POST':
         if form.is_valid():
@@ -437,7 +440,7 @@ def account_user_details(request):
                     wtc.invite_user_to_group(request.user.wt_id, wtm.objects.get(is_admins=True).wt_id)
 
                 w.WholeTaleCorere(girderToken) #connecting as the user detects and accepts outstanding invitations
-        except User.invite.RelatedObjectDoesNotExist:
+        except m.User.invite.RelatedObjectDoesNotExist:
             pass
     return response
 
@@ -477,15 +480,15 @@ def invite_verifier(request):
 @require_http_methods(["GET", "POST"])
 def invite_user_not_author(request, role, role_text):
     if(has_group(request.user, c.GROUP_ROLE_CURATOR)):
-        form = UserInviteForm(request.POST or None)
-        helper = UserByRoleAddFormHelper()
+        form = f.UserInviteForm(request.POST or None)
+        helper = f.UserByRoleAddFormHelper()
         if request.method == 'POST':
             if form.is_valid():
                 email = form.cleaned_data['email']
                 first_name = form.cleaned_data['first_name']
                 last_name = form.cleaned_data['last_name']
                 
-                if User.objects.filter(email=email):
+                if m.User.objects.filter(email=email):
                     messages.error(request, "Email provided already exists in CORE2")
                     return render(request, 'main/form_user_details.html', {'form': form, 'helper': helper, 'page_title': "Invite {0}".format(role_text.capitalize())})
 
@@ -504,12 +507,9 @@ def invite_user_not_author(request, role, role_text):
 
 #TODO: Inviting with a bad email address errors but only AFTER the new user is created, creating an orphan
 #TODO: Should most of this be added to the user save method?
-def helper_create_user_and_invite(request, email, first_name, last_name, role):
-    from django.contrib.sites.models import Site
-    from django.contrib.sites.shortcuts import get_current_site
-
+def helper_create_user_and_invite(request, email, first_name, last_name, role, manuscript=None):
     #In here, we create a "starter" new_user that will later be modified and connected to auth after the invite
-    new_user = User()
+    new_user = m.User()
     new_user.email = email
     new_user.first_name = first_name
     new_user.last_name = last_name
@@ -523,7 +523,7 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
     new_user.save()
     role.user_set.add(new_user)
 
-    invite = CorereInvitation.create(email, new_user)#, inviter=request.user)
+    invite = m.CorereInvitation.create(email, new_user)#, inviter=request.user)
 
     ## TODO: This code was an attempt to alter the domain/port of the emails coming out of the invitations library. It didn't work
     ##       The goal in doing this was to make the invitation urls match the SERVER_ADDRESS. Which is nice when we are using an alternate SERVER_ADDRESS to make VM based testing flow
@@ -532,7 +532,10 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
 
     # request.META['SERVER_NAME'], request.META['SERVER_PORT'] = settings.SERVER_ADDRESS.split(":")
     # request.HTTP_HOST = settings.SERVER_ADDRESS
-    invite.send_invitation(request)
+    extra_text = None
+    if manuscript:
+        extra_text = 'Once you have registered, you will be able to work on the manuscript '+ manuscript.pub_name +', which you have been assigned.'
+    invite.send_invitation(request, extra_text=extra_text)
 
     return new_user
 
@@ -541,7 +544,7 @@ def helper_create_user_and_invite(request, email, first_name, last_name, role):
 #Its a string that is used to initialize a js map, fairly hacky stuff
 #Output looks like: "[['key1', 'foo'], ['key2', 'test']]"
 def helper_generate_select_table_info(role_name, group_substring):
-    users = User.objects.filter(invite__isnull=True, groups__name=role_name)
+    users = m.User.objects.filter(invite__isnull=True, groups__name=role_name)
     table_dict = "["
     for u in users:
         #{key1: "foo", key2: someObj}
