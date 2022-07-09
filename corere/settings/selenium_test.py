@@ -11,4 +11,4 @@ from .development import *
 SKIP_GIT = True
 SKIP_EDITION = True
 
-MIDDLEWARE.remove('django.middleware.csrf.CsrfViewMiddleware') 
+MIDDLEWARE.remove("django.middleware.csrf.CsrfViewMiddleware")

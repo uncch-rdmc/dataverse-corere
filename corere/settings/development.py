@@ -2,30 +2,32 @@ from .base import *
 
 DEBUG = True
 
-if(DEBUG):
+if DEBUG:
     INSTALLED_APPS = INSTALLED_APPS + INSTALLED_APPS_DEBUG
-    MIDDLEWARE  = MIDDLEWARE_DEBUG + MIDDLEWARE 
+    MIDDLEWARE = MIDDLEWARE_DEBUG + MIDDLEWARE
 
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_TLS = True
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
 EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
 EMAIL_PORT = 587
 
 CRISPY_FAIL_SILENTLY = not DEBUG
 
-#Set to http for development purposes. Containers will be available on 50000-50019.
-#Set to https for production purposes. Internal containers will be assigned ports 50000-50019, but will expect a webserverto provide ssl and upstream to them on ports 50020-50039.
-CONTAINER_PROTOCOL = 'http'
-CONTAINER_TO_CORERE_ADDRESS = 'host.docker.internal:8000' #when deployed locally we need to use this address to connect from oauth2proxy to our host machine
+# Set to http for development purposes. Containers will be available on 50000-50019.
+# Set to https for production purposes. Internal containers will be assigned ports 50000-50019, but will expect a webserverto provide ssl and upstream to them on ports 50020-50039.
+CONTAINER_PROTOCOL = "http"
+CONTAINER_TO_CORERE_ADDRESS = (
+    "host.docker.internal:8000"  # when deployed locally we need to use this address to connect from oauth2proxy to our host machine
+)
 
 SKIP_DOCKER = False
 
-#CONTAINER_DRIVER = 'local-docker'
-CONTAINER_DRIVER = 'wholetale'
+# CONTAINER_DRIVER = 'local-docker'
+CONTAINER_DRIVER = "wholetale"
 
 # For use of CORE2 solely by curators and verifiers.
 # This bypass some editor and author steps, and assign editor when curator is assigned if both roles are present

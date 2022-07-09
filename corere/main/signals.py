@@ -2,7 +2,8 @@ from . import constants as c
 from django.contrib.contenttypes.models import ContentType
 from corere.main import models as m
 from django.contrib.auth import get_user_model
-#from .models import Manuscript
+
+# from .models import Manuscript
 
 # Currently For creation of groups with permissions in CORE2
 
@@ -13,10 +14,11 @@ from django.contrib.auth import get_user_model
 def populate_models(sender, **kwargs):
     from django.contrib.auth.models import Group
     from django.contrib.auth.models import Permission
+
     perm_manuscript_add = Permission.objects.get(codename=c.PERM_MANU_ADD_M)
     # perm_manuscript_change = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M)
     # perm_manuscript_change_files = Permission.objects.get(codename=c.PERM_MANU_CHANGE_M_FILES)
-    #perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
+    # perm_manuscript_delete = Permission.objects.get(codename=c.PERM_MANU_DELETE_M)
     perm_manuscript_view = Permission.objects.get(codename=c.PERM_MANU_VIEW_M)
 
     perm_manuscript_add_authors = Permission.objects.get(codename=c.PERM_MANU_ADD_AUTHORS)
@@ -27,7 +29,7 @@ def populate_models(sender, **kwargs):
 
     editor, created = Group.objects.get_or_create(name=c.GROUP_ROLE_EDITOR)
     editor.permissions.clear()
-    editor.permissions.add(perm_manuscript_add) 
+    editor.permissions.add(perm_manuscript_add)
 
     author, created = Group.objects.get_or_create(name=c.GROUP_ROLE_AUTHOR)
     author.permissions.clear()
@@ -44,12 +46,12 @@ def populate_models(sender, **kwargs):
     curator.permissions.add(perm_manuscript_manage_curators)
     curator.permissions.add(perm_manuscript_manage_verifiers)
 
-    ## Add all roles to superusers 
+    ## Add all roles to superusers
 
     User = get_user_model()
     superusers = User.objects.filter(is_superuser=True)
 
     for user in superusers:
         for role in c.get_roles():
-            my_group = Group.objects.get(name=role) 
+            my_group = Group.objects.get(name=role)
             my_group.user_set.add(user)

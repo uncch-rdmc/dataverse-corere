@@ -10,59 +10,92 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('main', '0001_initial'),
+        ("main", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('auth', '0012_alter_user_first_name_max_length'),
+        ("auth", "0012_alter_user_first_name_max_length"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GroupConnector',
+            name="GroupConnector",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_admins', models.BooleanField(default=False)),
-                ('wt_id', models.CharField(max_length=24, unique=True, verbose_name='Group ID in Whole Tale')),
-                ('corere_group', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='wholetale_group', to='auth.group')),
-                ('manuscript', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='manuscript_wtgroups', to='main.manuscript')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("is_admins", models.BooleanField(default=False)),
+                ("wt_id", models.CharField(max_length=24, unique=True, verbose_name="Group ID in Whole Tale")),
+                (
+                    "corere_group",
+                    models.OneToOneField(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name="wholetale_group", to="auth.group"
+                    ),
+                ),
+                (
+                    "manuscript",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name="manuscript_wtgroups", to="main.manuscript"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ImageChoice',
+            name="ImageChoice",
             fields=[
-                ('wt_id', models.CharField(max_length=24, primary_key=True, serialize=False, verbose_name='Image ID in Whole Tale')),
-                ('name', models.CharField(max_length=200, verbose_name='Image Name in Whole Tale')),
-                ('show_last', models.BooleanField(default=False)),
-                ('hidden', models.BooleanField(default=False)),
+                ("wt_id", models.CharField(max_length=24, primary_key=True, serialize=False, verbose_name="Image ID in Whole Tale")),
+                ("name", models.CharField(max_length=200, verbose_name="Image Name in Whole Tale")),
+                ("show_last", models.BooleanField(default=False)),
+                ("hidden", models.BooleanField(default=False)),
             ],
             options={
-                'ordering': ['show_last', 'name'],
+                "ordering": ["show_last", "name"],
             },
         ),
         migrations.CreateModel(
-            name='Tale',
+            name="Tale",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('wt_id', models.CharField(max_length=24, unique=True, verbose_name='Tale ID in Whole Tale')),
-                ('group_connector', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='groupconnector_tales', to='wholetale.groupconnector')),
-                ('manuscript', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='manuscript_tales', to='main.manuscript')),
-                ('original_tale', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='tale_copies', to='wholetale.tale')),
-                ('submission', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='submission_tales', to='main.submission', verbose_name='The submission whose files are in the tale')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("wt_id", models.CharField(max_length=24, unique=True, verbose_name="Tale ID in Whole Tale")),
+                (
+                    "group_connector",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="groupconnector_tales", to="wholetale.groupconnector"
+                    ),
+                ),
+                ("manuscript", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="manuscript_tales", to="main.manuscript")),
+                (
+                    "original_tale",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name="tale_copies", to="wholetale.tale"
+                    ),
+                ),
+                (
+                    "submission",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="submission_tales",
+                        to="main.submission",
+                        verbose_name="The submission whose files are in the tale",
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('submission', 'group_connector')},
+                "unique_together": {("submission", "group_connector")},
             },
         ),
         migrations.CreateModel(
-            name='Instance',
+            name="Instance",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('wt_id', models.CharField(max_length=200, verbose_name='Instance ID for container in Whole Tale')),
-                ('instance_url', models.URLField(blank=True, max_length=500, null=True, verbose_name='Container URL')),
-                ('corere_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='user_instances', to=settings.AUTH_USER_MODEL)),
-                ('tale', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tale_instances', to='wholetale.tale')),
+                ("id", models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("wt_id", models.CharField(max_length=200, verbose_name="Instance ID for container in Whole Tale")),
+                ("instance_url", models.URLField(blank=True, max_length=500, null=True, verbose_name="Container URL")),
+                (
+                    "corere_user",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="user_instances", to=settings.AUTH_USER_MODEL),
+                ),
+                ("tale", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="tale_instances", to="wholetale.tale")),
             ],
             options={
-                'unique_together': {('tale', 'corere_user')},
+                "unique_together": {("tale", "corere_user")},
             },
         ),
     ]
