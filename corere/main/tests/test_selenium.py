@@ -24,6 +24,7 @@ class LoggingInTestCase(LiveServerTestCase):
         self.options.headless = True
         # This was enabled to fix CORS post errors after tests ran fine for a while. It may have been due to a refactor but it also seems likely that it was due to a chrome update
         self.options.add_argument("--disable-web-security")
+        # self.options.add_argument("--user-data-dir=/tmp/chrome_dev_test")
         # self.selenium = webdriver.Chrome(options=self.options)
         self.selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         m.User.objects.create_superuser("admin", "admin@test.test", "password")
@@ -39,8 +40,8 @@ class LoggingInTestCase(LiveServerTestCase):
 
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
-    # TODO: Hardcode no edition setting
     @unittest.skip("This test is not required, all functionality is covered by test_3_user. Can be used if that fails to help isolate issues.")
+    @override_settings(SKIP_EDITION=True)
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
 
@@ -236,17 +237,22 @@ class LoggingInTestCase(LiveServerTestCase):
     # ...
     # This code does deep access tests as the manuscript/submission status changes
     # ...
-    # This code only does one submission
-    # TODO: Hardcode no edition setting
+    # TODO: Test across multiple submissions
     # TODO: This test downloads zips, do we need to get rid of them?
     # TODO: This doesn't test access to previous submissions yet
     # @unittest.skip("testing others now")
+    @override_settings(SKIP_EDITION=True)
     def test_3_user_workflow_with_access_checks(self):
+        ## If you use these settings, you have to skip our POST test currently because they seem to be contigent on headless...
+        # self.options_not_headless = Options()
+        # self.options_not_headless.add_argument("--disable-web-security")
+        # self.options_not_headless.add_argument("--user-data-dir=/tmp/chrome_dev_test")
+
         admin_selenium = self.selenium
         anon_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_out_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_in_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
-        c_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        c_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options) #_not_headless)
 
         ##### ADMIN LOGIN #####
 
@@ -428,6 +434,10 @@ class LoggingInTestCase(LiveServerTestCase):
         manuscript_add_author_submit.send_keys(Keys.RETURN)
         c_selenium.switch_to.alert.accept()
 
+        ##############################
+        #####    SUBMISSION 1    #####
+        ##############################
+
         ##### MANUSCRIPT LANDING #####
 
         manuscript_create_submit_continue = c_selenium.find_element_by_id("createSubmissionButton")
@@ -442,10 +452,6 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_in_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
         check_access(self, c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
-
-        ###############################
-        ##### CREATE SUBMISSION 1 #####
-        ###############################
 
         Select(c_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         manuscript_update_submit_continue = c_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
@@ -489,7 +495,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### CURATOR REVIEW - ISSUES #####
 
-        Select(c_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("No Issues")
+        Select(c_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("Major Issues")
         c_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
         c_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
         Select(c_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
@@ -521,6 +527,155 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### VERIFIER REVIEW - ISSUES #####
 
+        Select(v_in_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Major Issues")
+        v_in_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
+        v_in_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
+        submission_info_submit_continue_verification = v_in_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[12]')
+        submission_info_submit_continue_verification.send_keys(Keys.RETURN)
+        v_in_selenium.switch_to.alert.accept()
+
+        ##### TEST ACCESS SUBMISSION : REVIEWED_AWAITING_REPORT #####
+
+        time.sleep(0.5)  # wait for status to update in db
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.REVIEWED_AWAITING_REPORT)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### MANUSCRIPT LANDING SEND REPORT (currently just progresses status) #####
+
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        c_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_send_report = c_selenium.find_element_by_id("sendReportButton")
+        manuscript_send_report.send_keys(Keys.RETURN)
+        time.sleep(0.5)  # wait for status to update in db
+
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### MANUSCRIPT LANDING RETURN SUBMISSION (editor step done by curator currently) #####
+
+        # manuscript = m.Manuscript.objects.latest("updated_at")
+        # c_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_return_submission = c_selenium.find_element_by_id("returnSubmissionButton")
+        manuscript_return_submission.send_keys(Keys.RETURN)
+        time.sleep(0.5)  # wait for status to update in db
+
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.RETURNED)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##############################
+        #####    SUBMISSION 2    #####
+        ##############################
+
+        ##### MANUSCRIPT LANDING #####
+
+        manuscript_create_submit_continue = c_selenium.find_element_by_id("createSubmissionButton")
+        manuscript_create_submit_continue.send_keys(Keys.RETURN)
+
+        ##### TEST ACCESS MANUSCRIPT : AWAITING_INITIAL #####
+
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
+
+        check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, v_out_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_in_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
+        check_access(self, c_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+
+        Select(c_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
+        manuscript_update_submit_continue = c_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
+        manuscript_update_submit_continue.send_keys(Keys.RETURN)
+
+        ##### TEST ACCESS SUBMISSION : NEW #####
+
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.NEW)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        # time.sleep(999999)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### ADD SUBMISSION NOTES (none currently) #####
+
+        c_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        submission_info_submit_continue = c_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
+        submission_info_submit_continue.send_keys(Keys.RETURN)
+        c_selenium.switch_to.alert.accept()
+
+        ##### TEST ACCESS SUBMISSION : IN_PROGRESS_CURATION #####
+
+        time.sleep(0.5)  # wait for status to update in db
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_CURATION)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### MANUSCRIPT LANDING REVIEW CURATION #####
+
+        manuscript_review_submission = c_selenium.find_element_by_id("reviewSubmissionButtonMain")
+        manuscript_review_submission.send_keys(Keys.RETURN)
+
+        ##### CURATOR REVIEW - NO ISSUES #####
+
+        Select(c_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("No Issues")
+        c_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
+        c_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
+        Select(c_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
+        Select(c_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_day")).select_by_visible_text("1")
+        Select(c_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_year")).select_by_visible_text("2020")
+        submission_info_submit_continue_curation = c_selenium.find_element_by_id("submit_progress_curation_button")
+        submission_info_submit_continue_curation.send_keys(Keys.RETURN)
+        c_selenium.switch_to.alert.accept()
+
+        ##### TEST ACCESS SUBMISSION : IN_PROGRESS_VERIFICATION #####
+
+        time.sleep(0.5)  # wait for status to update in db
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_VERIFICATION)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
+
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        v_in_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_review_submission = v_in_selenium.find_element_by_id("reviewSubmissionButtonMain")
+        manuscript_review_submission.send_keys(Keys.RETURN)
+
+        ##### VERIFIER REVIEW - NO ISSUES #####
+
         Select(v_in_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Success")
         v_in_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         v_in_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
@@ -531,6 +686,7 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### TEST ACCESS SUBMISSION : PENDING_DATAVERSE_PUBLISH #####
 
         time.sleep(0.5)  # wait for status to update in db
+        
         manuscript = m.Manuscript.objects.latest("updated_at")
         self.assertEqual(manuscript._status, m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH)
         submission = m.Submission.objects.latest("updated_at")

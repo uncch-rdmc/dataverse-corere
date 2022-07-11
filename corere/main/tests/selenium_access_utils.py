@@ -41,6 +41,8 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                 elif method == "POST":
                     # This is for posting without a body, which we use in a few places to progress the manuscript etc.
                     # We'll need something more verbose if we want to pass a body
+
+                    #NOTE: Comment the below call/assert out if you are not running headless. Currently it'll blow up
                     result_status = call_request_method(browser, method, full_url)
                     test.assertEqual(status_code, result_status, msg=method + " " + full_url)
                 else:
@@ -162,10 +164,7 @@ g_dict_normal_editor_access.update(
 # TODO: Most todos in this are stale
 m_dict_no_access = {
     "": {"GET": 404, "POST": 405},
-    "submission_table/": {
-        "GET": 404,
-        "POST": 405,
-    },  # TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
+    "submission_table/": {"GET": 404, "POST": 405},  # TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
     "edit/": {"GET": 404, "POST": 404},  # TODO: No access anon gets 500?
     "update/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},
@@ -183,19 +182,13 @@ m_dict_no_access = {
     "assignverifier/": {"GET": 404, "POST": 404},
     #'unassignverifier/': {'GET': 404}, #this needs a user id
     "deletefile/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
-    "downloadfile/": {
-        "GET": 404,
-        "POST": 404,
-    },  # TODO: This is probably correct (I think without passing a file name we should 404), but right now we wipe it out with our admin access setting, so I've disabled it
+    "downloadfile/": {"GET": 404, "POST": 404},  # TODO: This is probably correct (I think without passing a file name we should 404), but right now we wipe it out with our admin access setting, so I've disabled it
     "downloadall/": {"GET": 404, "POST": 404},
     "reportdownload/": {"GET": 404, "POST": 404},
     #'deletenotebook/': {'GET': 404}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
     "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
     "confirm/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
-    "pullcitation/": {
-        "GET": 404,
-        "POST": 404,
-    },  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
+    "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
 }
 
 m_dict_no_access_anon = dict.fromkeys(m_dict_no_access, {"GET": 302})
@@ -243,10 +236,7 @@ m_dict_admin_access = {
     #'deletenotebook/': {'GET': 200}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
     "file_table/": {"GET": 200, "POST": 405},
     "confirm/": {"GET": 404, "POST": 404},  # TODO: This is conditionally available, and maybe requires post
-    "pullcitation/": {
-        "GET": 404,
-        "POST": 404,
-    },  # TODO: This is conditionally available, and maybe requires post. | POST 404s because its called out of phase and TransistionPermissionMixin happens first I think
+    "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is conditionally available, and maybe requires post. | POST 404s because its called out of phase and TransistionPermissionMixin happens first I think
 }
 
 #############################
