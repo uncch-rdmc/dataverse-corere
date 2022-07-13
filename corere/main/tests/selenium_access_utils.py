@@ -29,7 +29,7 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
 
             try:
 
-                if method == "GET":
+                if method.startswith("GET"): #TODO: Add debug for GET
                     browser.get(full_url)
                     # for request in browser.requests:
                     #     if(request.response):
@@ -38,13 +38,19 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                         if request.url == full_url and request.response:
                             test.assertEqual(status_code, request.response.status_code, msg=method + " " + full_url)
                             del browser.requests
-                elif method == "POST":
+                elif method.startswith("POST"):
                     # This is for posting without a body, which we use in a few places to progress the manuscript etc.
                     # We'll need something more verbose if we want to pass a body
 
                     #NOTE: Comment the below call/assert out if you are not running headless. Currently it'll blow up
-                    result_status = call_request_method(browser, method, full_url)
-                    test.assertEqual(status_code, result_status, msg=method + " " + full_url)
+                    result_status = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
+                    test.assertEqual(status_code, result_status, msg="POST " + full_url)
+
+                # elif method == "POST-DEBUG":
+                #     result_status = call_request_method(browser, "POST", full_url, debug=True)
+                #     test.assertEqual(status_code, result_status, msg=method + " " + full_url)
+
+
                 else:
                     raise Exception("NO OTHER METHODS SUPPORTED")
 
@@ -98,9 +104,11 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
     #     test.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
 
 
-def call_request_method(browser, method, endpoint):
+def call_request_method(browser, method, endpoint, debug=False):
     fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
     result = browser.execute_script(fetch_javascript)
+    if debug:
+        print(result)
     return result["status"]
     # TODO: see manuscript_landing.postToSubUrl and the .then() section if we want to go to the endpoint after.
 
@@ -133,8 +141,10 @@ g_dict_admin_access = {  #'': {'GET': 200}, #blows up due to oauth code
     "user_table/": {"GET": 200, "POST": 405},
 }
 
-# Takes all the keys and sets their values to `{'GET': 302}`
-g_dict_no_access_anon = dict.fromkeys(g_dict_admin_access, {"GET": 302})
+# Django's @login_required decorator (and the guardian mixin that uses it) end up with a 200 when redirecting to login.
+# ... This may just be due to the different ways we are testing get vs post, not sure
+# ... TODO: Add a better test for the anon post calls to ensure that the 200 includes a redirect to login
+g_dict_no_access_anon = dict.fromkeys(g_dict_admin_access, {"GET": 302, "POST": 200})
 
 g_dict_normal_access = g_dict_admin_access.copy()
 g_dict_normal_access.update(
@@ -191,7 +201,7 @@ m_dict_no_access = {
     "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
 }
 
-m_dict_no_access_anon = dict.fromkeys(m_dict_no_access, {"GET": 302})
+m_dict_no_access_anon = dict.fromkeys(m_dict_no_access, {"GET": 302, "POST": 200})
 
 # TODO: Add editor/curator/verifier when we test all roles
 
@@ -291,7 +301,7 @@ s_dict_no_access = {
     "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
 }
 
-s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302})
+s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302, "POST": 200}) #TODO: Should we be testing post for anon?
 
 s_dict_verifier_access__out_of_phase = s_dict_no_access.copy()
 s_dict_verifier_access__out_of_phase.update({"file_table/": {"GET": 200, "POST": 405}})  # TODO: This should probably 404
@@ -299,7 +309,7 @@ s_dict_verifier_access__out_of_phase.update({"file_table/": {"GET": 200, "POST":
 s_dict_verifier_access__in_phase = s_dict_no_access.copy()
 s_dict_verifier_access__in_phase.update(
     {
-        "info/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
+        "info/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe its a phase issue (happens during NEW). Or a lack of files?
         "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
@@ -308,3 +318,41 @@ s_dict_verifier_access__in_phase.update(
         "file_table/": {"GET": 200, "POST": 405},
     }
 )
+
+# These don't test all previous endpoints currently, just a sampling
+
+s_dict_previous_submission_write_access_verifier = {
+    "view/": {"GET": 200, "POST": 200},
+    "info/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
+    "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
+    "uploadfiles/": {"GET": 404, "POST": 404} #I guess uploading files should 404 for everyone? The submission is over? #Nope, 200 for curator admin, 404 for verifier... tho this may be because verifier could never upload?
+}
+
+s_dict_previous_submission_write_access_admin = {
+    "view/": {"GET": 200, "POST": 200},
+    "info/": {"GET": 200, "POST": 500}, #TODO: Why 500?
+    "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
+    "uploadfiles/": {"GET": 200, "POST": 200} 
+}
+
+# s_dict_previous_submission_read_access = {
+#     "view/": {"GET": 200, "POST": 200}, #Should out of phase be able to post notes in view?
+#     "info/": {"GET": 404, "POST": 404},
+#     "viewfiles/": {"GET": 200, "POST": 404},
+#     "uploadfiles/": {"GET": 404, "POST": 404}
+# }
+
+s_dict_previous_submission_no_access = {
+    "view/": {"GET": 404, "POST": 404},
+    "info/": {"GET": 404, "POST": 404},
+    "viewfiles/": {"GET": 404, "POST": 404},
+    "uploadfiles/": {"GET": 404, "POST": 404}
+}
+
+#TODO: When we test post for other anon, add here too
+s_dict_previous_submission_no_access_anon = {
+    "view/": {"GET": 302},
+    "info/": {"GET": 302},
+    "viewfiles/": {"GET": 302},
+    "uploadfiles/": {"GET": 302}
+}

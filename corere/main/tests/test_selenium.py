@@ -587,6 +587,8 @@ class LoggingInTestCase(LiveServerTestCase):
         #####    SUBMISSION 2    #####
         ##############################
 
+        submission_previous = submission
+
         ##### MANUSCRIPT LANDING #####
 
         manuscript_create_submit_continue = c_selenium.find_element_by_id("createSubmissionButton")
@@ -637,6 +639,12 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
+        # Test previous submission access
+        check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
+        check_access(self, v_out_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
+        check_access(self, v_in_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
+        check_access(self, c_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
+
         ##### MANUSCRIPT LANDING REVIEW CURATION #####
 
         manuscript_review_submission = c_selenium.find_element_by_id("reviewSubmissionButtonMain")
@@ -666,6 +674,12 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        # Test previous submission access
+        check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
+        check_access(self, v_out_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
+        check_access(self, v_in_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
+        check_access(self, c_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
 
         ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
 
@@ -697,6 +711,12 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
 
+        # Test previous submission access
+        check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
+        check_access(self, v_out_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
+        check_access(self, v_in_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
+        check_access(self, c_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
+
         ##### NOTE: Test ends here because we don't test the dataverse steps currently #####
 
         # ##### MANUSCRIPT GENERATE REPORT #####
@@ -717,3 +737,7 @@ class LoggingInTestCase(LiveServerTestCase):
         # check_access(self, v_out_selenium, submission=submission, assert_dict=s_dict_no_access)
         # check_access(self, v_in_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         # check_access(self, c_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+    @override_settings(SKIP_EDITION=False)
+    def test_4_user_workflow_with_access_checks(self):
+        pass

@@ -1334,6 +1334,10 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 # Removed TransitionPermissionMixin because multiple cases can edit. We do all the checking inside the view
 # TODO: Should we combine this view with the read view? There will be cases where you can edit a review but not the main form maybe?
 # NOTE: This is currently used for editing by author as well as for review by editor/curator/verifier
+# ...
+# NOTE 2022: The edit logic in GenericSubmissionFormView is pretty complicated, and now that we moved most of the info from submission to manuscript
+#            maybe we should redo/simplify how we check these perms
+#            Also remember that even though we let curators/verifiers edit their reviews out of phase, we block the actual review status from being changed
 class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = "edit_noop"
     page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
