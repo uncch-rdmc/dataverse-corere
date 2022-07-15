@@ -103,6 +103,13 @@ Install libmagic for identifying MIME-type of files during Dataverse uploads (ne
 brew install libmagic
 ```
 
+or if you are on Rocky Linux
+
+```
+sudo dnf --enablerepo=powertools install file-devel
+sudo dnf install file-libs
+```
+
 ```
 python3 manage.py migrate
 python3 manage.py createsuperuser --noinput

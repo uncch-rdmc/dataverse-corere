@@ -104,7 +104,7 @@
 
     {% comment %} Putting read_only checks around every submit was done to make the view page show up right even when you are a role that could edit at that point {% endcomment %}
     {%comment%} here we need to add an option for when we are in "read only" to show the submit button still {%endcomment%}
-    {% if read_only or not can_progress%}
+    {% if read_only or not can_progress %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
     {% elif verification_formset %}

@@ -862,7 +862,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.can_progress = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
-                self.can_progress = False
+                #When a submission is rejected by the editor, it is returned. This causes it to hit the first two try/catch blocks
+                if not self.object._status == m.Submission.Status.REJECTED_EDITOR: 
+                    self.can_progress = False
         except (m.Edition.DoesNotExist, KeyError):
             pass
         try:
@@ -1104,8 +1106,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             self.object.save()
 
                     if (self.object.manuscript.skip_edition and request.POST.get("submit_progress_curation")) or (
-                        not self.object.manuscript.skip_edition and request.POST.get("submit_progress_edition")
-                    ):
+                        not self.object.manuscript.skip_edition and request.POST.get("submit_progress_edition") and self.object._status != m.Submission.Status.REJECTED_EDITOR):
                         if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
                             # Here we create the wholetale version.
                             # If not skipping editor, we do this after the editors approval because it isn't really a "done" submission then
