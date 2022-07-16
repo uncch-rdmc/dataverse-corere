@@ -2585,7 +2585,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
         messages.add_message(request, messages.SUCCESS, msg)
         logger.info(msg)
-        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(submission.manuscript.id))
+        recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(submission.manuscript.id))
         notification_msg = _("submission_objectTransfer_notification_forEditorCuratorVerifier").format(
             object_id=submission.manuscript.id,
             object_title=submission.manuscript.get_display_name(),
