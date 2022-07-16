@@ -1,4 +1,4 @@
-import logging, os, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
+import logging, os, io, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -30,9 +30,10 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from notifications.signals import notify
-from templated_email import send_templated_mail
+from templated_email import send_templated_mail, get_templated_mail
 from django.utils.datastructures import MultiValueDictKeyError
 from django.db import transaction
+from django_renderpdf.helpers import render_pdf
 from django_renderpdf.views import PDFView
 
 logger = logging.getLogger(__name__)
@@ -1983,7 +1984,6 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 #             messages.add_message(request, messages.ERROR, self.msg)
 #         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
-
 class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericCorereObjectView):
     parent_reference_name = "manuscript"
     parent_id_name = "manuscript_id"
@@ -2005,11 +2005,55 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             except TransitionNotAllowed as e:
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
+            ### Messaging ###
             self.msg = _("submission_objectTransferEditorReturnSuccess_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
             )
             list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.SUCCESS, self.msg)
+            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.manuscript.id))
+            # if self.object._status == m.Submission.Status.RETURNED:
+            if self.object.manuscript._status == m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH:
+                notification_msg = _("submission_objectTransfer_notification_forEditorAccepted").format(
+                    object_id=self.object.manuscript.id,
+                    object_title=self.object.manuscript.get_display_name(),
+                    object_url=self.object.manuscript.get_landing_url(request),
+                )
+            else:
+                notification_msg = _("submission_objectTransfer_notification_forEditorRejected").format(
+                    object_id=self.object.manuscript.id,
+                    object_title=self.object.manuscript.get_display_name(),
+                    object_url=self.object.manuscript.get_landing_url(request),
+                )
+            notify.send(request.user, verb="passed", recipient=recipients, target=self.object.manuscript, public=False, description=notification_msg)
+            
+            # Generate pdf and attach to emails to each editor
+            f = io.BytesIO()
+            render_pdf("main/manuscript_report_download.html", 
+                f, 
+                context= {
+                    "manuscript": self.object.manuscript,
+                })
+            for u in recipients:  # We have to loop to get the user model fields
+                email = get_templated_mail(
+                    template_name="base",
+                    from_email=settings.EMAIL_HOST_USER,
+                    to=[u.email],
+                    context={
+                        "subject": "CORE2 Update",
+                        "notification_msg": notification_msg,
+                        "user_first_name": u.first_name,
+                        "user_last_name": u.last_name,
+                        "user_email": u.email,
+                    },
+                )
+                # f.seek(0)
+                # print(f.read())
+                f.seek(0)
+                email.attach("verification_report.pdf", f.read(), "application/pdf")
+                email.send()
+            ### End Messaging ###
+
         except (TransitionNotAllowed):
             self.msg = _("submission_objectTransferEditorReturnFailure_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
