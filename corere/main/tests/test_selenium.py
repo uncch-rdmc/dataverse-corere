@@ -553,11 +553,12 @@ class LoggingInTestCase(LiveServerTestCase):
         c_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
         manuscript_send_report = c_selenium.find_element_by_id("sendReportButton")
         manuscript_send_report.send_keys(Keys.RETURN)
-        time.sleep(0.5)  # wait for status to update in db
+        time.sleep(2.5)  # wait for status to update in db, also our pdf code to generate
 
         manuscript = m.Manuscript.objects.latest("updated_at")
         self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
         submission = m.Submission.objects.latest("updated_at")
+        #TODO: Test is blowing up here. I'm assuming its because something related to the report email fails when testing?...
         self.assertEqual(submission._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
