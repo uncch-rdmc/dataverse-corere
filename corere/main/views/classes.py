@@ -2011,15 +2011,16 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             )
             list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
             messages.add_message(request, messages.SUCCESS, self.msg)
-            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.manuscript.id))
-            # if self.object._status == m.Submission.Status.RETURNED:
-            if self.object.manuscript._status == m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH:
+            
+            if self.object.manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT:
+                recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.manuscript.id)+ " " + c.GROUP_COMPLETED_SUFFIX)
                 notification_msg = _("submission_objectTransfer_notification_forEditorAccepted").format(
                     object_id=self.object.manuscript.id,
                     object_title=self.object.manuscript.get_display_name(),
                     object_url=self.object.manuscript.get_landing_url(request),
                 )
             else:
+                recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.manuscript.id))
                 notification_msg = _("submission_objectTransfer_notification_forEditorRejected").format(
                     object_id=self.object.manuscript.id,
                     object_title=self.object.manuscript.get_display_name(),
