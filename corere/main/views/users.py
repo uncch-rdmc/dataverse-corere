@@ -513,7 +513,7 @@ def unassign_verifier(request, id=None, user_id=None):
 @require_http_methods(["GET"])
 def account_associate_oauth(request, key=None):
     logout(request)
-    user = get_object_or_404(User, invite__key=key)
+    user = get_object_or_404(m.User, invite__key=key)
     login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])  # select a "fake" backend for our auth
 
     return render(request, "main/new_user_oauth.html")
