@@ -23,3 +23,6 @@ export SERVER_ADDRESS="localhost:8000"
 
 #Only used if using wholetale
 export WHOLETALE_BASE_URL="wholetale.org"
+
+# Enable this variable (also in settings.py) to email a single email when a manuscript is ready for curation (instead of unassigned curators)
+# export CURATION_MAILING_LIST_EMAIL=

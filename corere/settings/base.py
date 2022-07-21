@@ -299,3 +299,6 @@ SKIP_EDITION = False
 
 # This is a selenium-only flag, do not use in a real environment
 SKIP_GIT = False
+
+# Enable this setting (also in env.sh) to email a single email when a manuscript is ready for curation (instead of unassigned curators)
+# CURATION_MAILING_LIST_EMAIL = os.environ["CURATION_MAILING_LIST_EMAIL"]
