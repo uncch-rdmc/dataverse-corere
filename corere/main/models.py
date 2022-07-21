@@ -1351,7 +1351,7 @@ class Manuscript(AbstractCreateUpdateModel):
                     or instance._status == instance.Status.AWAITING_INITIAL
                     or instance._status == instance.Status.AWAITING_RESUBMISSION
                 )
-                or user.is_superuser
+                or user.is_superuser or user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).exists()
             )
         ),
     )
@@ -1372,7 +1372,7 @@ class Manuscript(AbstractCreateUpdateModel):
                     or instance._status == instance.Status.AWAITING_INITIAL
                     or instance._status == instance.Status.AWAITING_RESUBMISSION
                 )
-                or user.is_superuser
+                or user.is_superuser or user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)).exists()
             )
         ),
     )
