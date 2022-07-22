@@ -1154,11 +1154,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                                 object_assignees= ", ".join(recipients_assigned.values_list('email', flat=True)) if recipients_assigned else "no one", #if queryset empty say no one
                                 object_url=self.object.manuscript.get_landing_url(request),
                             )
-                            if hasattr(settings, 'CURATION_MAILING_LIST_EMAIL'):
+                            if hasattr(settings, 'CURATION_GROUP_EMAIL'):
                                 send_templated_mail(
                                     template_name="base",
                                     from_email=settings.EMAIL_HOST_USER,
-                                    recipient_list=[settings.CURATION_MAILING_LIST_EMAIL],
+                                    recipient_list=[settings.CURATION_GROUP_EMAIL],
                                     context={
                                         "subject": "CORE2 Update",
                                         "notification_msg": notification_msg_unassigned,
@@ -1920,7 +1920,6 @@ class SubmissionFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
                 "page_help_text": self.page_help_text,
             },
         )
-
 
 class SubmissionFilesCheckNewness(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
     template = "file_datatable/file_datatable.html"  # I think this is not actually used here

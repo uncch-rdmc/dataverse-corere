@@ -25,4 +25,5 @@ export SERVER_ADDRESS="localhost:8000"
 export WHOLETALE_BASE_URL="wholetale.org"
 
 # Enable this variable (also in settings.py) to email a single email when a manuscript is ready for curation (instead of unassigned curators)
-# export CURATION_MAILING_LIST_EMAIL=
+# Note that the email about a manuscript being ready does not happen if "SKIP_EDITION" is enabled in settings.
+# export CURATION_GROUP_EMAIL=
