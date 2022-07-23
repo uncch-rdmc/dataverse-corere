@@ -2078,7 +2078,7 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
             ### Messaging ###
-            self.msg = _("submission_objectTransferEditorReturnSuccess_banner").format(
+            self.msg = _("submission_sendReport_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
             )
             list(messages.get_messages(request))  # Clears messages if there are any already.
@@ -2153,15 +2153,15 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                # self.object.finish_submission()
-                # self.object.save()
+                self.object.finish_submission()
+                self.object.save()
 
-                # # Delete all tale copies both locally and in WT. This also deletes running instances.
-                # if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
-                #     wtc = w.WholeTaleCorere(admin=True)
-                #     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
-                #         wtc.delete_tale(wtm_tale.wt_id)
-                #         wtm_tale.delete()
+                # Delete all tale copies both locally and in WT. This also deletes running instances.
+                if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
+                    wtc = w.WholeTaleCorere(admin=True)
+                    for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
+                        wtc.delete_tale(wtm_tale.wt_id)
+                        wtm_tale.delete()
 
                 ### Messaging ###
                 if self.object._status == m.Submission.Status.RETURNED:
@@ -2249,7 +2249,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             )
             list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.ERROR, self.msg)
-            
+
         return redirect("/manuscript/" + str(self.object.manuscript.id))
 
 

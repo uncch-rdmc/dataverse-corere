@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-23 20:02+0000\n"
+"POT-Creation-Date: 2022-07-23 21:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -169,7 +169,7 @@ msgid "submission_reviewSubmittedRejectedCuratorNoReview_banner"
 msgstr "Your review has been submitted, rejecting the manuscript without the need for verification. Please send the report to the editor."
 
 #: corere/main/views/classes.py:1152 corere/main/views/classes.py:1225
-#: corere/main/views/classes.py:2663
+#: corere/main/views/classes.py:2664
 msgid "submission_objectTransfer_notification_forEditorCuratorVerifier"
 msgstr "Manuscript #{object_id}: {object_title} has been assigned to you. Please review this submission as your earliest convenience. You can access the manuscript at {object_url}"
 
@@ -230,8 +230,8 @@ msgid "submission_reconcileFiles_pageTitle"
 msgstr "Upload Submission {submission_version} Files for Manuscript"
 
 #: corere/main/views/classes.py:2081
-msgid "submission_objectTransferEditorReturnSuccess_banner"
-msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} was handed to the editors for review."
+msgid "submission_sendReport_banner"
+msgstr "The report for manuscript #{manuscript_id}: {manuscript_display_name} has been sent to the editor, for them to review and then assign the author."
 
 #: corere/main/views/classes.py:2089
 msgid "submission_objectTransfer_notification_forEditorAccepted"
@@ -265,11 +265,11 @@ msgstr "Manuscript #{object_id}: {object_title} has been assigned to you. Please
 msgid "submission_objectTransferAuthorFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} could not be returned to the authors, please contact the administrator."
 
-#: corere/main/views/classes.py:2360
+#: corere/main/views/classes.py:2361
 msgid "submission_notebook_pageTitle"
 msgstr "Submission {submission_version} Notebook for Manuscript"
 
-#: corere/main/views/classes.py:2655
+#: corere/main/views/classes.py:2656
 msgid "submission_objectTransferEditorBeginSuccess_banner_forAuthor"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} was handed to the editors for review."
 
