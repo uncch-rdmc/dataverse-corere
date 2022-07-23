@@ -115,7 +115,7 @@ class GenericCorereObjectView(View):
         if self.form.is_valid():
             if not self.read_only:
                 self.form.save()  # Note: this is what saves a newly created model instance
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, self.msg)
             return redirect(self.redirect)
         else:
@@ -285,7 +285,7 @@ class GenericManuscriptView(GenericCorereObjectView):
         # print(self.from_submission)
         if self.from_submission:
             self.msg = _("manuscript_additionalInfoDuringSubmissionFlowHelpText_banner")
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.INFO, self.msg)
 
         context = {
@@ -300,7 +300,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             "role_name": self.role_name,
             "helper": self.helper,
             "manuscript_id": self.object.id,
-        }  #'
+        }  
 
         if not self.create:
             context["manuscript_display_name"] = manuscript_display_name
@@ -362,13 +362,13 @@ class GenericManuscriptView(GenericCorereObjectView):
             #     self.v_metadata_formset.save()
 
             if request.POST.get("submit_continue"):
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 # return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect("manuscript_uploadfiles", id=self.object.id)
 
             if request.POST.get("submit_confirm"):
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.SUCCESS, self.msg)
                 # return redirect('manuscript_addauthor', id=self.object.id)
                 return redirect("submission_confirmfilesbeforedataverseupload", id=self.object.get_latest_submission().id)
@@ -376,7 +376,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # This logic needs a different way of detecting whether to go to the edit of a submission or creation
             # We should get the latest submission and check its status?
             elif request.POST.get("submit_continue_submission"):
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.SUCCESS, self.msg)
 
                 try:  # If it already exists from the user going between the form pages
@@ -736,7 +736,7 @@ class ManuscriptFilesListAjaxView(LoginRequiredMixin, GetOrGenerateObjectMixin, 
 #         except (TransitionNotAllowed):
 #             ### Messaging ###
 #             self.msg = _("manuscript_objectTransferAuthorFailure_banner_forEditor").format(object_id=self.object_id, object_title=self.object.get_display_name())
-#             list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#             list(messages.get_messages(request)) #Clears messages if there are any already.
 #             messages.add_message(request, messages.ERROR, self.msg)
 #             ### End Messaging ###
 #         return redirect('/manuscript/'+str(self.object.id))
@@ -802,14 +802,14 @@ class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateO
                 + self.object.dataverse_fetched_doi
                 + ' has been fetched. Information can be confirmed by viewing the <a href="./reportdownload">verification report</a>.'
             )
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
             self.object.dataverse_pull_citation()
             self.object.save()
 
         except Exception as e:  # for now we catch all exceptions and present them as a message
             self.msg = "An error has occurred attempting to pull citation data from Dataverse: " + str(e)
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.ERROR, self.msg)
 
         return redirect("manuscript_landing", id=self.object.id)
@@ -1092,12 +1092,36 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             raise Http404()
                         status = self.object.submit_edition()
                         self.object.save()
+
+                        ### Messaging - Display banner message that the review is completed ###
+                        if status == m.Submission.Status.IN_PROGRESS_CURATION:
+                            role_text = "curation team"
+                        else:
+                            role_text = "authors"
+                        self.msg = _("submission_reviewSubmitted_banner").format(role_text=role_text)
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+
                     elif request.POST.get("submit_progress_curation"):
                         if not fsm_check_transition_perm(self.object.review_curation, request.user):
                             logger.debug("PermissionDenied")
                             raise Http404()
                         status = self.object.review_curation()
                         self.object.save()
+
+                        ### Messaging - Display banner message that the review is completed ###
+                        if status == m.Submission.Status.IN_PROGRESS_VERIFICATION:
+                            role_text = "verifier"
+                            self.msg = _("submission_reviewSubmitted_banner").format(role_text=role_text)
+                        elif self.object.manuscript._status == m.Manuscript.Status.PENDING_DATAVERSE_PUBLISH:
+                            # No verification needed, submission accepted by curator
+                            self.msg = _("submission_reviewSubmittedAcceptedCuratorNoReview_banner")
+                        else:
+                            # No verification needed, submission rejected by curator
+                            self.msg = _("submission_reviewSubmittedRejectedCuratorNoReview_banner")
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
+                        messages.add_message(request, messages.SUCCESS, self.msg)
+
                     elif request.POST.get("submit_progress_verification"):
                         if self.verification_formset and self.verification_formset.is_valid():
                             if not fsm_check_transition_perm(self.object.review_verification, request.user):
@@ -1105,6 +1129,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                                 raise Http404()
                             status = self.object.review_verification()
                             self.object.save()
+
+                            ### Messaging - Display banner message that the review is completed ###
+                            self.msg = _("submission_reviewSubmitted_banner").format(role_text="curator")
+                            list(messages.get_messages(request))  # Clears messages if there are any already.
+                            messages.add_message(request, messages.SUCCESS, self.msg)
 
                     if (self.object.manuscript.skip_edition and request.POST.get("submit_progress_curation")) or (
                         not self.object.manuscript.skip_edition and request.POST.get("submit_progress_edition") and self.object._status != m.Submission.Status.REJECTED_EDITOR):
@@ -1190,7 +1219,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                                             "user_email": u.email,
                                         },
                                     )
-
                         elif status == m.Submission.Status.IN_PROGRESS_VERIFICATION:
                             # Send message/notification to verifiers that the submission is ready
                             recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.manuscript.id))
@@ -1259,7 +1287,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     return redirect("submission_notebook", id=self.object.id)
 
                 if request.POST.get("submit_continue"):
-                    list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                    list(messages.get_messages(request))  # Clears messages if there are any already.
                     messages.add_message(request, messages.SUCCESS, self.msg)
                     return _helper_submit_submission_and_redirect(request, self.object)
 
@@ -1449,7 +1477,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #                 if request.POST.get('back_save'):
 #                     if (settings.SKIP_DOCKER):
 #                         self.msg = "SKIP_DOCKER enabled in settings. Docker container step has been bypassed."
-#                         list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#                         list(messages.get_messages(request)) #Clears messages if there are any already.
 #                         messages.add_message(request, messages.INFO, self.msg)
 #                         return redirect('submission_uploadfiles', id=self.object.id)
 #                     container_flow_address = _helper_get_oauth_url(request, self.object)
@@ -1464,7 +1492,7 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 
 #                     ## Messaging ###
 #                     self.msg= _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
-#                     list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#                     list(messages.get_messages(request)) #Clears messages if there are any already.
 #                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     logger.info(self.msg)
 #                     recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id))
@@ -1475,11 +1503,11 @@ class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transitio
 #                     ## End Messaging ###
 
 #                     # self.msg = _("submission_submitted_banner")
-#                     # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#                     # list(messages.get_messages(request)) #Clears messages if there are any already.
 #                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     return redirect('manuscript_landing', id=self.object.manuscript.id)
 #                 else:
-#                     list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#                     list(messages.get_messages(request)) #Clears messages if there are any already.
 #                     messages.add_message(request, messages.SUCCESS, self.msg)
 #                     return redirect('manuscript_landing', id=self.object.manuscript.id)
 #         else:
@@ -1634,17 +1662,17 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                             + old_doi
                             + "</a> and delete the previous dataset."
                         )
-                        list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
                     else:
                         self.msg = "You have uploaded the manuscript data to Dataverse, creating a new dataset."
-                        list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, mark_safe(self.msg))
                     return redirect("manuscript_landing", id=self.object.manuscript.id)
 
                 except Exception as e:  # for now we catch all exceptions and present them as a message
                     self.msg = "An error has occurred attempting to upload to Dataverse: " + str(e)
-                    list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                    list(messages.get_messages(request))  # Clears messages if there are any already.
                     messages.add_message(request, messages.ERROR, self.msg)
                     logger.error(
                         "An error has occurred attempting to upload manuscript {} to Dataverse: {}".format(str(self.object.manuscript.id), str(e))
@@ -2024,7 +2052,7 @@ class SubmissionReconcileFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
 
 #         except (TransitionNotAllowed):
 #             self.msg= _("submission_objectTransferEditorBeginFailure_banner").format(manuscript_id=self.object.manuscript.id ,manuscript_display_name=self.object.manuscript.get_display_name())
-#             list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+#             list(messages.get_messages(request)) #Clears messages if there are any already.
 #             messages.add_message(request, messages.ERROR, self.msg)
 #         return redirect('/manuscript/'+str(self.object.manuscript.id))
 
@@ -2053,7 +2081,7 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             self.msg = _("submission_objectTransferEditorReturnSuccess_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
             )
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, self.msg)
             
             if self.object.manuscript._status == m.Manuscript.Status.COMPLETED_REPORT_SENT:
@@ -2103,7 +2131,7 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
             self.msg = _("submission_objectTransferEditorReturnFailure_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
             )
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.ERROR, self.msg)
         return redirect("/manuscript/" + str(self.object.manuscript.id))
 
@@ -2125,15 +2153,15 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                 logger.debug("PermissionDenied")
                 raise Http404()
             try:
-                self.object.finish_submission()
-                self.object.save()
+                # self.object.finish_submission()
+                # self.object.save()
 
-                # Delete all tale copies both locally and in WT. This also deletes running instances.
-                if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
-                    wtc = w.WholeTaleCorere(admin=True)
-                    for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
-                        wtc.delete_tale(wtm_tale.wt_id)
-                        wtm_tale.delete()
+                # # Delete all tale copies both locally and in WT. This also deletes running instances.
+                # if self.object.manuscript.is_containerized() and settings.CONTAINER_DRIVER == "wholetale":
+                #     wtc = w.WholeTaleCorere(admin=True)
+                #     for wtm_tale in wtm.Tale.objects.filter(submission=self.object, original_tale__isnull=False):
+                #         wtc.delete_tale(wtm_tale.wt_id)
+                #         wtm_tale.delete()
 
                 ### Messaging ###
                 if self.object._status == m.Submission.Status.RETURNED:
@@ -2142,7 +2170,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         self.msg = _("submission_objectComplete_banner").format(
                             manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
                         )
-                        list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(
                             groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)
@@ -2178,7 +2206,7 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
                         self.msg = _("submission_objectTransferAuthorSuccess_banner").format(
                             manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
                         )
-                        list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                        list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, self.msg)
                         recipients = m.User.objects.filter(
                             groups__name__startswith=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.manuscript.id)
@@ -2219,8 +2247,9 @@ class SubmissionFinishView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
             self.msg = _("submission_objectTransferAuthorFailure_banner").format(
                 manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
             )
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.ERROR, self.msg)
+            
         return redirect("/manuscript/" + str(self.object.manuscript.id))
 
 
@@ -2627,7 +2656,7 @@ def _helper_submit_submission_and_redirect(request, submission):
         msg = _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(
             manuscript_id=submission.manuscript.id, manuscript_display_name=submission.manuscript.get_display_name()
         )
-        list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+        list(messages.get_messages(request))  # Clears messages if there are any already.
         messages.add_message(request, messages.SUCCESS, msg)
         logger.info(msg)
         if not submission.manuscript.skip_edition:
@@ -2654,15 +2683,14 @@ def _helper_submit_submission_and_redirect(request, submission):
         ## End Messaging ###
 
         # self.msg = _("submission_submitted_banner")
-        # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+        # list(messages.get_messages(request)) #Clears messages if there are any already.
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect("manuscript_landing", id=submission.manuscript.id)
     else:
         # TODO: Add different message here?
-        # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+        # list(messages.get_messages(request)) #Clears messages if there are any already.
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect("manuscript_landing", id=submission.manuscript.id)
-
 
 # TODO: The error validation calling this could use refinement. It'll bail out after the first error and doesn't attach errors to file names.
 def _helper_sanitary_file_check(path):

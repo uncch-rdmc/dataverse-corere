@@ -63,7 +63,7 @@ def invite_assign_author(request, id=None):
                     # def helper_create_user_and_invite(request, email, first_name, last_name, role):
                     new_user = helper_create_user_and_invite(request, email, first_name, last_name, author_role, manuscript=manuscript)
                     # msg = _("user_inviteRole_banner").format(email=email, role="author")
-                    # list(messages.get_messages(request)) #Clears messages if there are any already. Stopgap measure to not show multiple
+                    # list(messages.get_messages(request)) #Clears messages if there are any already.
                     # messages.add_message(request, messages.INFO, msg)
                     users.append(new_user)  # add new new_user to the other users provided
                 except IntegrityError:  # If user entered in email field already exists
@@ -85,22 +85,23 @@ def invite_assign_author(request, id=None):
                         role="author", email=u.email, manuscript_display_name=manuscript.get_display_name()
                     )
                     logger.info(msg)
-                    list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                    list(messages.get_messages(request))  # Clears messages if there are any already.
                     messages.add_message(request, messages.INFO, msg)
-                    notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
-                        role="author",
-                        email=request.user.email,
-                        manuscript_display_name=manuscript.get_display_name(),
-                        object_url=manuscript.get_landing_url(request),
-                    )
-                    if u != new_user:
-                        notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
-                        send_templated_mail(
-                            template_name="base",
-                            from_email=settings.EMAIL_HOST_USER,
-                            recipient_list=[u.email],
-                            context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
+                    if request.user != u:
+                        notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
+                            role="author",
+                            email=request.user.email,
+                            manuscript_display_name=manuscript.get_display_name(),
+                            object_url=manuscript.get_landing_url(request),
                         )
+                        if u != new_user:
+                            notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
+                            send_templated_mail(
+                                template_name="base",
+                                from_email=settings.EMAIL_HOST_USER,
+                                recipient_list=[u.email],
+                                context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
+                            )
                     ### End Messaging ###
 
             return redirect("/manuscript/" + str(manuscript.id))
@@ -167,29 +168,31 @@ def add_author(request, id=None):
             manuscript.save()
 
             ### Messaging ###
-            msg = _("user_addAsRoleToManuscript_banner").format(
-                role="author", email=user.email, manuscript_display_name=manuscript.get_display_name()
-            )
-            logger.info(msg.format(user.email, manuscript.get_display_name()))
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
-            messages.add_message(request, messages.INFO, msg)
-            notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
-                role="author",
-                email=request.user.email,
-                manuscript_display_name=manuscript.get_display_name(),
-                object_url=manuscript.get_landing_url(request),
-            )
-            if not new_user:
-                notify.send(request.user, verb="assigned", recipient=user, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail(
-                    template_name="base",
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[user.email],
-                    context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": user.email},
+            # #NOTE: This banner message here will never show up because the one below clears it out
+            # msg = _("user_addAsRoleToManuscript_banner").format(
+            #     role="author", email=user.email, manuscript_display_name=manuscript.get_display_name()
+            # )
+            # logger.info(msg.format(user.email, manuscript.get_display_name()))
+            # list(messages.get_messages(request))  # Clears messages if there are any already.
+            # messages.add_message(request, messages.INFO, msg)
+            if request.user != user:
+                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
+                    role="author",
+                    email=request.user.email,
+                    manuscript_display_name=manuscript.get_display_name(),
+                    object_url=manuscript.get_landing_url(request),
                 )
+                if not new_user:
+                    notify.send(request.user, verb="assigned", recipient=user, target=manuscript, public=False, description=notification_msg)
+                    send_templated_mail(
+                        template_name="base",
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[user.email],
+                        context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": user.email},
+                    )
 
-            msg = _("manuscript_submitted_banner").format(manuscript_display_name=manuscript.get_display_name(), manuscript_id=manuscript.id)
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            msg = _("manuscript_submitted_banner").format(manuscript_display_name=manuscript.get_display_name(), manuscript_id=manuscript.id, email=user.email)
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.INFO, msg)
             ### End Messaging ###
 
@@ -267,22 +270,23 @@ def assign_editor(request, id=None):
                 msg = _("user_addAsRoleToManuscript_banner").format(
                     role="editor", email=u.email, manuscript_display_name=manuscript.get_display_name()
                 )
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
-                    role="editor",
-                    email=request.user.email,
-                    manuscript_display_name=manuscript.get_display_name(),
-                    object_url=manuscript.get_landing_url(request),
-                )
-                notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail(
-                    template_name="base",
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[u.email],
-                    context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
-                )
+                if request.user != u:
+                    notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
+                        role="editor",
+                        email=request.user.email,
+                        manuscript_display_name=manuscript.get_display_name(),
+                        object_url=manuscript.get_landing_url(request),
+                    )
+                    notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
+                    send_templated_mail(
+                        template_name="base",
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[u.email],
+                        context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
+                    )
                 ### End Messaging ###
 
             return redirect("/manuscript/" + str(manuscript.id))
@@ -359,22 +363,23 @@ def assign_curator(request, id=None):
                 msg = _("user_addAsRoleToManuscript_banner").format(
                     role="curator", email=u.email, manuscript_display_name=manuscript.get_display_name()
                 )
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
-                    role="curator",
-                    email=request.user.email,
-                    manuscript_display_name=manuscript.get_display_name(),
-                    object_url=manuscript.get_landing_url(request),
-                )
-                notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail(
-                    template_name="base",
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[u.email],
-                    context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
-                )
+                if request.user != u:
+                    notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
+                        role="curator",
+                        email=request.user.email,
+                        manuscript_display_name=manuscript.get_display_name(),
+                        object_url=manuscript.get_landing_url(request),
+                    )
+                    notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
+                    send_templated_mail(
+                        template_name="base",
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[u.email],
+                        context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
+                    )
                 ### End Messaging ###
 
             return redirect("/manuscript/" + str(manuscript.id))
@@ -452,22 +457,23 @@ def assign_verifier(request, id=None):
                 msg = _("user_addAsRoleToManuscript_banner").format(
                     role="verifier", email=u.email, manuscript_display_name=manuscript.get_display_name()
                 )
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.INFO, msg)
                 logger.info(msg)
-                notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
-                    role="verifier",
-                    email=request.user.email,
-                    manuscript_display_name=manuscript.get_display_name(),
-                    object_url=manuscript.get_landing_url(request),
-                )
-                notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
-                send_templated_mail(
-                    template_name="base",
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[u.email],
-                    context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
-                )
+                if request.user != u:
+                    notification_msg = _("user_addedYouAsRoleToManuscript_notify").format(
+                        role="verifier",
+                        email=request.user.email,
+                        manuscript_display_name=manuscript.get_display_name(),
+                        object_url=manuscript.get_landing_url(request),
+                    )
+                    notify.send(request.user, verb="assigned", recipient=u, target=manuscript, public=False, description=notification_msg)
+                    send_templated_mail(
+                        template_name="base",
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[u.email],
+                        context={"subject": "CORE2 Update", "notification_msg": notification_msg, "user_email": u.email},
+                    )
                 ### End Messaging ###
 
             return redirect("/manuscript/" + str(manuscript.id))
@@ -562,7 +568,7 @@ def account_user_details(request):
         if form.is_valid():
             form.save()
             msg = _("user_infoUpdated_banner")
-            list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+            list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, msg)
             return redirect("/")
         else:
@@ -608,7 +614,7 @@ def account_user_details(request):
 def logout_view(request):
     logout(request)
     msg = _("user_loggedOut_banner") + ' <a href="https://auth.globus.org/v2/web/logout">click here</a>.'
-    list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+    list(messages.get_messages(request))  # Clears messages if there are any already.
     messages.add_message(request, messages.INFO, mark_safe(msg))
     return redirect("/")
 
@@ -663,7 +669,7 @@ def invite_user_not_author(request, role, role_text):
                 ### Messaging ###
                 msg = _("user_inviteRole_banner").format(email=email, role=role_text)
                 new_user = helper_create_user_and_invite(request, email, first_name, last_name, role)
-                list(messages.get_messages(request))  # Clears messages if there are any already. Stopgap measure to not show multiple
+                list(messages.get_messages(request))  # Clears messages if there are any already.
                 messages.add_message(request, messages.INFO, "You have invited {0} to CORE2 as an {1}!".format(email, role_text))
                 ### End Messaging ###
             else:

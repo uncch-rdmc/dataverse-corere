@@ -42,7 +42,8 @@ function fill_notification_list(data) {
     if (menus) {
         var messages = data.unread_list.map(function (item) {
             
-            var message = item.description;
+            linkReplacePattern = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+            var message = item.description.replace(linkReplacePattern, '<a href="$1">$1</a>');
 
             return '<div class="alert alert-info alert-dismissible fade show " role="alert">'
             +    message
