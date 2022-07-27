@@ -1,6 +1,35 @@
 {% load static %}
 
 <script> username = '{{ user.get_username }}' </script>
+{% comment %} 
+Grabbed from: https://stackoverflow.com/questions/25651204/
+This code creates fake disabled buttons/inputs upon submit while hiding the real ones. This is because if we disable the real buttons then the value of the button does not pass in the form body.
+
+At the bottom the code also sets the cursor to spin for the whole document
+{% endcomment %}
+<script>
+    for (let i = 0; i < document.forms.length; i++) {
+        $(document.forms[i]).submit(function(e){    
+            if ($.validator && !$(this).valid()) return;
+
+            var form = $(this);
+            $(this).find('input[type="submit"], input[type="button"], button[type="submit"]').each(function (index) {
+                $(this).clone(false).removeAttr('id').prop('disabled', true).insertBefore($(this));
+
+                $(this).hide();
+                form.prepend($(this));
+            });
+
+            const style = document.createElement('style');
+            style.innerHTML = `
+                * {
+                    cursor: wait !important;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    }
+</script>
 {% comment %} <script src="{% static 'main/note_table_modifications.js' %}"></script> {% endcomment %}
 
 

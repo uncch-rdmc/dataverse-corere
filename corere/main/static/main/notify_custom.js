@@ -29,13 +29,11 @@ function fill_notification_badge(data) {
         return parseInt($(this).text()) == 0;
     }).hide();
 
-    //Custom update page title
-    //if(data.unread_count > 0)
-    //var pageTitle = $("title").text();
+    var pageTitle = $("title").text().split(/\(\d+\) /).pop() //We extract the existing unread count if there is one
     if(data.unread_count > 0){
-        $("title").text("(" + data.unread_count + ") Dataverse CORE2");
+        $("title").text("(" + data.unread_count + ") " + pageTitle);
     } else {
-        $("title").text("Dataverse CORE2");
+        $("title").text(pageTitle);
     }
 }
 
@@ -44,20 +42,9 @@ function fill_notification_list(data) {
     if (menus) {
         var messages = data.unread_list.map(function (item) {
             
-            var message = item.description;
-            // var message = "";
-            // if(typeof item.actor !== 'undefined'){
-            //     message = item.actor;
-            // }
-            // if(typeof item.verb !== 'undefined'){
-            //     message = message + " " + item.verb;
-            // }
-            // if(typeof item.target !== 'undefined'){
-            //     message = message + " " + item.target;
-            // }
-            // if(typeof item.timestamp !== 'undefined'){
-            //     message = message + " " + item.timestamp;
-            // }
+            linkReplacePattern = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+            var message = item.description.replace(linkReplacePattern, '<a href="$1">$1</a>');
+
             return '<div class="alert alert-info alert-dismissible fade show " role="alert">'
             +    message
             +    '<button type="button" class="btn-close" data-dismiss="alert" aria-label="Clear notification" onclick="'
@@ -106,23 +93,8 @@ function fetch_api_data() {
     if (consecutive_misfires < 10) {
         setTimeout(fetch_api_data,notify_refresh_period);
     } else {
-        // var badges = document.getElementsByClassName(notify_badge_class);
-        // if (badges) {
-        //     for (var i = 0; i < badges.length; i++){
-        //         badges[i].innerHTML = "!";
-        //         badges[i].title = "Connection lost!"
-        //     }
-        // }
+
     }
 }
-
-// //Custom corere
-// function delete_and_fetch(slug) {
-//     const userAction = async () => {
-//         const response = await fetch('inbox/notifications/delete/'+slug+'/');
-//         const myJson = await response.json(); //extract JSON from the http response
-//         // do something with myJson
-//       }
-// }
 
 setTimeout(fetch_api_data, 1000);

@@ -98,6 +98,18 @@ Source the config files:
 . ./env.secret.sample.sh
 ```
 
+Install libmagic for identifying MIME-type of files during Dataverse uploads (needed to support Dataverse 5.3)
+```
+brew install libmagic
+```
+
+or if you are on Rocky Linux
+
+```
+sudo dnf --enablerepo=powertools install file-devel
+sudo dnf install file-libs
+```
+
 ```
 python3 manage.py migrate
 python3 manage.py createsuperuser --noinput
@@ -164,6 +176,10 @@ Note that the `wholetale.py` file located in `corere/apps/wholetale/` has been b
 Once the app is up and running, go to the Sites section of the admin console and change the names to match your current site. This is used mainly for email formatting.
 
 Upon running the application for the first time, you will also want to set up an admin user. Use `manage.py createsuperuser` and then log in through `youraddress:yourport/admin` . You’ll need to use the admin console though to add these roles to the user so they can access all parts of the workflow. From the admin main page, go to “Users” and select your admin user. Then add these 4 roles: “Role Editor”, “Role Author”, “Role Curator”, “Role Verifier”.
+
+## Development
+
+If you are contributing to this project, know that it uses [Black](https://github.com/psf/black) code formatting with a `line-length` of 150.
 
 ## Credits
 Odum Institute 

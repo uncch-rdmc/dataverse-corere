@@ -3,10 +3,13 @@
 {% blocktrans %}
 
 Hello {{first_name}} {{last_name}},
-
+<br><br>
 You have been invited to join {{ site_name }}
-
+<br><br>
 If you'd like to join, please go to {{ invite_url }}
+<br><br>
+
+{{ extra_text|default_if_none:"" }}
 
 {% endblocktrans %}
 {% endautoescape %}

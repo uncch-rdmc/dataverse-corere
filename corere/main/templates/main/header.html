@@ -19,7 +19,7 @@
             {{ user.get_username }} <span class="notification_count badge bg-danger align-middle">{% live_notify_badge %}</span>
           </a>
           <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-            {% comment %} {% register_notify_callbacks callbacks='fill_notification_badge' %} {% endcomment %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
+            {% register_notify_callbacks callbacks='fill_notification_badge' %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
             <a class="dropdown-item" href="/notifications" title="View notification list" aria-label="View notification list">Notifications <span class="notification_count badge bg-danger align-middle" >{% live_notify_badge %}</span></a>
             <a class="dropdown-item" href="/" title="View manuscripts you are involved with" aria-label="View manuscripts you are involved with">My Manuscripts</a>
             {% if request.user|has_group:"Role Curator" %} 

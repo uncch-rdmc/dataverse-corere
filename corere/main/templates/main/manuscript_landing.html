@@ -46,21 +46,6 @@
         });
     }
 
-    function postToSubUrl(endpoint) {
-        console.log('/submission/{{latest_submission_id}}/'+endpoint+'/')
-        var headers = new Headers();
-        headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch('/submission/{{latest_submission_id}}/'+endpoint+'/', {
-            method: 'POST',
-            headers: headers, 
-            credentials: 'include'
-        }).then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            }
-        })
-    }
-
     $(document).ready(function() {
         console.log("Create sub outside")
         $.ajax({
@@ -367,7 +352,7 @@
     
 </script>
 
-{% include "main/page_title.html" with no_hr=True %}
+{% include "main/page_header.html" with no_hr=True %}
 <br>
 
 <p id="manuscript_overview"> 
@@ -422,11 +407,19 @@
     <button type="button" class="btn btn-secondary buttons-collection" id="updateReviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Update your review of the latest submission" aria-label="Update your review of the latest submission">Update Review</button>    
     {% endif %}
     {% if sendReportButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>    
+    <form action="/submission/{{latest_submission_id}}/sendreport/" method="post" id="sendReportForm"> {% comment %} It seems this form breaks our button curving {% endcomment %}
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary buttons-collection" id="sendReportButton" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>    
+    </form>
+    {% comment %} <button type="button" class="btn btn-secondary buttons-collection" id="sendReportButton" onclick="postToSubUrl('sendreport')" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>     {% endcomment %}
     <button type="button" class="btn btn-secondary buttons-collection" id="downloadReportButton" onclick="location.href='/manuscript/{{manuscript_id}}/reportdownload/'" title="" aria-label="">Download Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
-    <button type="button" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" onclick="postToSubUrl('finish')" title="Return this manuscript record to the authors to resubmit their data/code" aria-label="Return this manuscript record to the authors to resubmit their data/code">Return Submission to Authors</button>    
+    <form action="/submission/{{latest_submission_id}}/finish/" method="post" id="returnForm"> {% comment %} It seems this form breaks our button curving {% endcomment %}
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" title="Return this manuscript record to the authors to resubmit their data/code" aria-label="Return this manuscript record to the authors to resubmit their data/code">Return Submission to Authors</button> 
+    </form>
+    {% comment %} <button type="button" class="btn btn-secondary buttons-collection" id="returnSubmissionButtonz" onclick="postToSubUrl('finish')" title="Return this manuscript record to the authors to resubmit their data/code" aria-label="Return this manuscript record to the authors to resubmit their data/code">Return Submission to Authors</button>     {% endcomment %}
     {% endif %}
 
     {% if dataverseUploadManuscriptButtonMain %}
@@ -498,7 +491,7 @@
           <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
             <div class="accordion-body">                
               <div id="files_list_holder">
-                {% include "main/file_list.html" with landing_page=True read_only=True file_download_url='downloadfile/?file_path=' %}
+                {% include "file_datatable/file_datatable.html" with obj_id=obj_id read_only=True file_url_base=''%}
               </div>
             </div>
           </div>

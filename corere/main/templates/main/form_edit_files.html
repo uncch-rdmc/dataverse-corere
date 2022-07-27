@@ -4,7 +4,7 @@
 {% load crispy_forms_tags %}
 {% load always_escape %}
 
-{% include "main/page_title.html" with no_hr=True %}    
+{% include "main/page_header.html" with no_hr=True %}    
 <br>
 <form id="file_note_nested_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -14,13 +14,13 @@
         <input type="submit" name="back_save" value="Back" title="Save and return to previous page" aria-label="Save and return to previous page">
         <input type="button" name="downloadall" value="Download submission" title="Download all current data/code for the submission" aria-label="Download all current data/code for the submission" onClick="window.location.href = '../downloadall/';">
         {% if not read_only %}
-        <input type="submit" name="submit" value="Submit" title="Finish your submission of data/code for the manuscript, and hand it off for review" aria-label="Finish your submission of data/code for the manuscript, and hand it off for review" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');">
+        <input type="submit" value="Submit" title="Finish your submission of data/code for the manuscript, and hand it off for review" aria-label="Finish your submission of data/code for the manuscript, and hand it off for review" onClick="return confirm('This submission will be handed off to the editor, and then the curation team. Is that ok?');">
         {% endif %}
     {% else %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onclick="location.href='/manuscript/{{parent_id}}/'">
         <input type="button" name="downloadall" value="Download submission" title="Download all current data/code for the submission" aria-label="Download all current data/code for the submission" onClick="window.location.href = '../downloadall/';">
         {% if not read_only %}
-        <input type="submit" name="submit" value="Save">
+        <input type="submit" value="Save">
         {% endif %}
     {% endif %}
     {% comment %} {% if not read_only %}

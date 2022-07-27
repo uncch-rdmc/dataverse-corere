@@ -1,6 +1,6 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
-{% include "main/page_title.html" %}
+{% include "main/page_header.html" %}
 
 {% if not read_only %}
 {% include "main/file_upload.html" %}
@@ -27,7 +27,7 @@
 
         <div class="accordion-body">                
           <div id="files_list_holder">
-            {% include "main/file_list.html" %}
+            {% include "file_datatable/file_datatable.html" with obj_id=obj_id %}
           </div>
         </div>
       </div>
@@ -43,21 +43,22 @@
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            var table = $('#file_table').DataTable();
+            var table = $('#file_table_{{obj_type}}').DataTable();
             table.ajax.reload(function(){ 
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });
         })
     }
     function delete_all_and_refresh(submission_url){
+        console.log(submission_url)
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
-        fetch(submission_url+"/deleteallfiles/", {
+        fetch(submission_url+"deleteallfiles/", {
             method: 'POST',
             headers: headers, 
             credentials: 'include'
         }).then(response => {
-            var table = $('#file_table').DataTable();
+            var table = $('#file_table_{{obj_type}}').DataTable();
             table.ajax.reload(function(){ 
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });
@@ -68,22 +69,22 @@
     {% csrf_token %}
     {% if dataverse_upload %}
         <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='/manuscript/{{manuscript_id}}/confirm/'">
-        <input type="button" name="submit_dataverse_upload" value="Upload To Dataverse" title="Create new dataset in your chosen dataverse and upload files" aria-label="Create new dataset in your chosen dataverse and upload files" onclick="document.getElementById('submit_dataverse_upload_fileslist').click()" >
+        <input type="submit" name="submit_dataverse_upload" value="Upload To Dataverse" title="Create new dataset in your chosen dataverse and upload files" aria-label="Create new dataset in your chosen dataverse and upload files" >
     {% elif m_status == "new" or s_status == "new" or s_status == "rejected_editor" and not read_only %}
         {% if obj_type == 'submission' %}
             <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='/manuscript/{{manuscript_id}}/update/'">
             {% if skip_docker or not containerized %}
-                <input type="button" name="submit_continue" value="Continue" title="Continue to add notes about this submission" aria-label="Continue to add notes about this submission" onclick="document.getElementById('submit_continue_fileslist').click()" >
+                <input type="submit" name="submit_continue" value="Continue" title="Continue to add notes about this submission" aria-label="Continue to add notes about this submission" >
             {% else %}
-                <input type="button" name="submit_continue" value="Launch Container" title="Launch container for this submission of data/code" aria-label="Launch container for this submission of data/code" onclick="document.getElementById('submit_continue_fileslist').click()" >
+                <input type="submit" name="submit_continue" value="Launch Container" title="Launch container for this submission of data/code" aria-label="Launch container for this submission of data/code" >
             {% endif %}
             
         {% else %}
             <input type="button" value="Back" title="Return to previous page" aria-label="Return to previous page" onclick="location.href='../edit/'">
-            <input type="button" name="submit_continue" value="Continue" onclick="document.getElementById('submit_continue_fileslist').click()">
+            <input type="submit" name="submit_continue" value="Continue" >
         {% endif %}
     {% else %}
-        <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
+        <input type="button" value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
     {% endif %}
 </form>
 {% if obj_type == "submission" and not read_only and containerized and not dataverse_upload %}

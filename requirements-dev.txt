@@ -1,3 +1,4 @@
+black==22.6.0 #For formatting code during development
 coverage==6.3.2
 django-sslserver==0.22
 django-extensions==3.1.5

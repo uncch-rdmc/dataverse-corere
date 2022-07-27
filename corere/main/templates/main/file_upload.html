@@ -51,7 +51,7 @@
             init: function () {
                 //this.hiddenFileInput.setAttribute("webkitdirectory", true);
                 this.on('success', function(file) {
-                    var table = $('#file_table').DataTable();
+                    var table = $('#file_table_{{obj_type}}').DataTable();
                     table.ajax.reload( function(){ 
                         document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
                     });

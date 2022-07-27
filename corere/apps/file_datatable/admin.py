@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 # from corere.apps.wholetale import models as wtm
 
 # # Register your models here.

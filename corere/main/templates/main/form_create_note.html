@@ -4,13 +4,13 @@
 
 {% comment %} Unused {% endcomment %}
 
-{% include "main/page_title.html" %}    
+{% include "main/page_header.html" %}    
 <form action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <table>
         {{form|crispy}}
     </table>
-    <input type="submit" name="submit" value="Save">
+    <input type="submit" value="Save">
     <input type=button value="Back" onClick="javascript:history.go(-1);">
 </form>
 

@@ -1,6 +1,7 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
 {% load concat %}
+{% load auth_extras %} {% comment %} added this for our manuscript form {% endcomment %}
 {% load crispy_forms_tags %}
 
 {% load static %}
@@ -8,14 +9,14 @@
 <script type="text/javascript">
     $(function () {
         var launch_issues_text_box = document.getElementById('id_launch_issues');
-        if (launch_issues_text_box.value.trim() == "") {
+        if (launch_issues_text_box && launch_issues_text_box.value.trim() == "") {
             var launch_issues_text_box_div = document.getElementById('div_id_launch_issues');
             launch_issues_text_box_div.style.display = "none";
         }
     })
 </script>
 
-{% include "main/page_title.html" %}    
+{% include "main/page_header.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% crispy form helper %}
@@ -50,19 +51,72 @@
         <hr>   
     {% endif %}
 
+    {% comment %} The commented out links in this review block should be re-enabled with logic to ensure they only show when the option is available 
+                  The launch container link remains because if you are in review you are able to launch a container {% endcomment %}
+    {% if verification_formset or curation_formset or edition_formset and s_status != "rejected_editor" %}
+    <h5 class="title-text">Info</h5>
+    <div class="accordion" id="manuscriptAccordionPanels">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="panelsStayOpen-headingOne">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="false" aria-controls="panelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
+                Manuscript Metadata
+              </button>
+            </h2>
+            <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingOne">
+              <div class="accordion-body">                
+                {{ manuscript_metadata_html|safe}}
+                {% comment %} <a href="/manuscript/{{parent_id}}/edit/" target="_blank">Edit Metadata</a> {% endcomment %}
+              </div>
+            </div>
+          </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
+              Manuscript Files
+            </button>
+          </h2>
+          <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+            <div class="accordion-body">                
+                <div id="m_files_list_holder">
+                    {% include "file_datatable/file_datatable.html" with obj_id=parent_id obj_type='manuscript' read_only=True file_url_base=m_file_url_base%}
+                    {% comment %} <a href="/manuscript/{{parent_id}}/uploadfiles/" target="_blank">Edit Files</a> {% endcomment %}
+                </div>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="panelsStayOpen-headingThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+              Submission Files
+            </button>
+          </h2>
+          <div id="panelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingThree">
+            <div class="accordion-body">    
+                <div id="s_files_list_holder">
+                    {% include "file_datatable/file_datatable.html" with obj_id=object_id obj_type='submission' read_only=True file_url_base=s_file_url_base%}
+                    {% comment %} <a href="../uploadfiles/" target="_blank">Edit Files</a> {% endcomment %}
+                    <a href="../notebook/" target="_blank">Launch Container</a>
+                </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    <hr>
+    {% endif %}
+
     {% comment %} Putting read_only checks around every submit was done to make the view page show up right even when you are a role that could edit at that point {% endcomment %}
     {%comment%} here we need to add an option for when we are in "read only" to show the submit button still {%endcomment%}
-    {% if read_only or not can_progress%}
+    {% if read_only or not can_progress %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
     {% elif verification_formset %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_verification" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off your review" aria-label="Save note changes for this submission of data/code, and hand off your review" onclick="return confirm('Once you hand off this form, editing the status will be locked. Is this ok?');">
     {% elif curation_formset %}
         {% comment %}cases to add: curation issues and no verification, curation issues and verification, no curation issues and no verification, no curation issues and no verification{%endcomment%}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
-        <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
+        <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
         <input type="submit" name="submit_progress_curation" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off your review" aria-label="Save note changes for this submission of data/code, and hand off your review" id="submit_progress_curation_button" >
 
         <script>
@@ -110,8 +164,8 @@
         <!-- <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';"> -->
         <input type="submit" name="submit_continue" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
     {% endif %}
-
 </form>
+
 {% if obj_type != 'manuscript' %}
 {% comment %} WHY ISN'T THIS IN note_list.html {% endcomment%}
 <script>

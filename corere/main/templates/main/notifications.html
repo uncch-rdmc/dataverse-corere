@@ -1,7 +1,7 @@
 {% extends "main/layout_fixed.html" %}
 
 {% block content %}
-    {% include "main/page_title.html" %}
+    {% include "main/page_header.html" %}
     {% load notifications_tags %}
     {% register_notify_callbacks callbacks='fill_notification_list' fetch='100'%}
     {% live_notify_list %}
