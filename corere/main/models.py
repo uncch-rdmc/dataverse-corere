@@ -856,8 +856,8 @@ class Author(models.Model):
         REID = "ResearcherID", "ResearcherID"
         SCID = "ScopusID", "ScopusID"
 
-    first_name = models.CharField(max_length=150, blank=False, null=False, verbose_name="First Name")
-    last_name = models.CharField(max_length=150, blank=False, null=False, verbose_name="Last Name")
+    first_name = models.CharField(max_length=150, blank=False, null=False, verbose_name="Given Name")
+    last_name = models.CharField(max_length=150, blank=False, null=False, verbose_name="Surname")
     identifier_scheme = models.CharField(max_length=14, blank=True, null=True, choices=IdScheme.choices, verbose_name="Identifier Scheme")
     identifier = models.CharField(max_length=150, blank=True, null=True, verbose_name="Identifier")
     # position = models.IntegerField(verbose_name='Position', help_text='Position/order of the author in the list of authors')
