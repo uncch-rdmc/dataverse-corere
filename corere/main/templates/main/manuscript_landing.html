@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
-    var table_show_timestamps = true;
+    {% comment %} var table_show_timestamps = true; {% endcomment %}
     var createSubButton = {{create_sub_allowed}};
 
     function sub_table_callback(table) {
@@ -260,6 +260,7 @@
                             },
                             enabled: false
                         },
+                        {% comment %}
                         {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
                         {
                             text: '<i class="far fa-eye"></i> Timestamps Shown',
@@ -290,6 +291,7 @@
                             },
                         },
                         {% endif %}
+                        {% endcomment %}
 
                     ]
                 })
@@ -342,7 +344,26 @@
                 // for(var i in manuscript_avail_buttons) {
                 //     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                 //     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
-                // } {% endcomment %}
+                // } 
+                {% endcomment %}
+
+                {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
+                document.getElementById("submission_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Shown" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Timestamps Hidden" data-offstyle="secondary" data-height="38px" data-width="210px">`);
+                mine_toggle = $("#mine_toggle");
+                mine_toggle.change(function(event){
+                    var column = table.column(4);
+                    column.visible( ! column.visible() );
+                    var column = table.column(7);
+                    column.visible( ! column.visible() );
+                    var column = table.column(9);
+                    column.visible( ! column.visible() );
+                    var column = table.column(11);
+                    column.visible( ! column.visible() );
+                });
+                mine_toggle.bootstrapToggle()
+                {% endif %}
 
                 fixButtonGroupCurve();
             }

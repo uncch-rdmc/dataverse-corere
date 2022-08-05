@@ -7,7 +7,7 @@
 {% comment %} Manuscript Table {% endcomment %}
 
 <script type="text/javascript">
-    var search_completed_vis_toggle = true;
+    {% comment %} var search_completed_vis_toggle = true; {% endcomment %}
     {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
@@ -60,7 +60,7 @@
                                 'aria-label': 'Work on a manuscript record'
                             }
                         },
-                        
+                        {% comment %} 
                         //the default for the searches controlled by these two buttons is set later down
                         {
                             text: '<i class="far fa-eye-slash"></i> Completed',
@@ -122,14 +122,13 @@
 
                                     this.text( 'Show User Filter Table' );        
                                 }
-
                             },
                             attr: {
                                 title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
                                 'aria-label': 'Show/hide additional table where you can see the manuscripts assigned to individual users'
                             }
-                        },
-                        {% endif %}
+                        }, {% endif %}{% endcomment %}
+
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -161,7 +160,7 @@
                     table.cell({ row: selected_row, column: 0 }).focus();
                 }
                 //table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
-                table.buttons().container().prependTo("#manuscript_buttons");
+                //table.buttons().container().prependTo("#manuscript_buttons");
                 table.order.neutral().draw();
                 table.row(':first').select(); //Select first row always
 
@@ -173,7 +172,41 @@
                 {% endif %}
                 document.getElementById('manuscript_table_loading').style.display = "none";
                 document.getElementById('manuscript_table_holder').style.display = "block";
-                document.getElementById('user_table_holder').style.display = "block";
+                {% comment %} document.getElementById('user_table_holder').style.display = "block"; {% endcomment %}
+
+                //TODO: because I am setting the innner html this is breaking existing listeners
+                document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="active_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Active" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Complete" data-offstyle="secondary" data-height="38px" data-width="140px">`);
+                active_toggle = $("#active_toggle")
+                active_toggle.change(function(event){
+                    var checkbox = event.target;
+                    if(checkbox.checked) {
+                        //Implicit globals are not best practice
+                        table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
+                    } else {
+                        table.columns( 4 ).search( "Completed Report Sent" ).draw();
+                    }
+                });
+                active_toggle.bootstrapToggle()
+                
+                {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
+                document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Mine" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> All" data-offstyle="secondary" data-height="38px" data-width="140px">`);
+                mine_toggle = $("#mine_toggle");
+                mine_toggle.change(function(event){
+                    var checkbox = event.target;
+                    if(checkbox.checked) {
+                        //Implicit globals are not best practice
+                        table.search( "{{request.user.username}}" ).draw();
+                    } else {
+                        table.search( "" ).draw();
+                    }
+                });
+                mine_toggle.bootstrapToggle()
+                {% endif %}
+
             }
         })
     });
@@ -206,7 +239,7 @@
     } 
 </script>
 
-<div id="user_table_holder" style="display:none;" hidden>
+{% comment %} <div id="user_table_holder" style="display:none;" hidden>
     <br>
     <h2>Users</h2>
     <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
@@ -219,7 +252,7 @@
         </tbody>
     </table>
     <hr>
-</div>
+</div> {% endcomment %}
 
 {% include "main/page_header.html" with no_hr=True %}
 <br>
@@ -242,7 +275,7 @@
 
 {% comment %} USER TABLE {% endcomment %}
 
-<script type="text/javascript">
+{% comment %} <script type="text/javascript">
     var search_completed_vis_toggle = true;
     var USER_LIST_JSON_URL = '{% url "user_table" %}';
 
@@ -395,10 +428,6 @@
         }
         return [columns_config, button_index];
     } 
-</script>
-
-
-
-
+</script> {% endcomment %}
 
 {% endblock %}
