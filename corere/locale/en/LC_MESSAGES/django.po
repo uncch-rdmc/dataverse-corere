@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-07-23 21:53+0000\n"
+"POT-Creation-Date: 2022-08-04 22:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -275,7 +275,7 @@ msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_nam
 
 #: corere/main/views/main.py:61
 msgid "index_pageTitle"
-msgstr "My Manuscripts"
+msgstr "Manuscripts"
 
 #: corere/main/views/main.py:276
 msgid "manuscript_landing_pageTitle"

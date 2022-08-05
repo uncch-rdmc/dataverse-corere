@@ -11,6 +11,7 @@
     {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
+    {% comment %} //TODO: We search username across all columns because multi-column OR searches are a pain. If it causes false positives investigate further. {% endcomment %}
     $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
@@ -91,11 +92,11 @@
                             action: function ( e, dt, node, config ) {
                                 if(!$('#manuscript_table').hasClass("visibleMe")) {
                                     //Implicit globals are not best practice
-                                    table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                                    table.search( "{{request.user.username}}" ).draw();
                                     $('#manuscript_table').addClass("visibleMe")
                                     this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
                                 } else {
-                                    table.columns( 5 ).search( "" ).draw();
+                                    table.search( "" ).draw();
                                     $('#manuscript_table').removeClass("visibleMe")
                                     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
@@ -121,16 +122,7 @@
 
                                     this.text( 'Show User Filter Table' );        
                                 }
-                                // if(!$('#manuscript_table').hasClass("visibleMe")) {
-                                //     //Implicit globals are not best practice
-                                //     table.columns( 5 ).search( "{{request.user.username}}" ).draw();
-                                //     $('#manuscript_table').addClass("visibleMe")
-                                //     this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
-                                // } else {
-                                //     table.columns( 5 ).search( "" ).draw();
-                                //     $('#manuscript_table').removeClass("visibleMe")
-                                //     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
-                                // }
+
                             },
                             attr: {
                                 title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
@@ -177,7 +169,7 @@
                 table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
-                table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                table.search( "{{request.user.username}}" ).draw();
                 {% endif %}
                 document.getElementById('manuscript_table_loading').style.display = "none";
                 document.getElementById('manuscript_table_holder').style.display = "block";
@@ -198,7 +190,7 @@
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
             } 
-            else if(columns[c][0] === 'users' || columns[c][0] === 'id') {
+            else if(columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'id') {
                 column_settings.visible = false;
             } else if(columns[c][0] === 'pub_name') {
                 column_settings.render = function ( data, type, row ) {
@@ -207,7 +199,7 @@
                         data;
                 }
             }
-            console.log(columns[c][0])
+            //console.log(columns[c][0])
             columns_config[c] = column_settings
         }
         return [columns_config, button_index];
@@ -362,7 +354,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     username = dt.rows( { selected: true } ).data()[0][2]
-                    $('#manuscript_table').DataTable().columns(5).search(username).draw();
+                    $('#manuscript_table').DataTable().search(username).draw();
                     if(! $('#manuscript_table').hasClass("visibleMe")) {
                         $('#manuscript_table').addClass("visibleMe")
                     }
@@ -376,7 +368,7 @@
                     }
 
                     $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> All Manuscripts' );
-                    $('#manuscript_table').DataTable().columns(5).search('').draw();
+                    $('#manuscript_table').DataTable().search('').draw();
                     // dt.button('workOnManuscript:name').enable(false);
                 } );
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
@@ -384,7 +376,6 @@
 
             }
         })
-
     });
 
     function constructTable(columns) {

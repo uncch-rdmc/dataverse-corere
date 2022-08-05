@@ -106,7 +106,10 @@ def helper_manuscript_columns(user):
     columns = [["selected", ""], ["id", "ID"], ["pub_id", "Pub ID"], ["pub_name", "Pub Name"], ["_status", "Status"]]
     if user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists():
         # columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
-        columns.append(["users", "Users"])
+        columns.append(["authors", "Authors"])
+        columns.append(["editors", "Editors"])
+        columns.append(["curators", "Curators"])
+        columns.append(["verifiers", "Verifiers"])
         columns.append(["updated_at", "Last Update Date"])
     return columns
     # return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
@@ -117,6 +120,7 @@ def helper_manuscript_columns(user):
 class ManuscriptJson(CorereBaseDatatableView):
     http_method_names = ["get"]
     max_display_length = 500
+    all_users_list = None
 
     ### get() and get_json_response() are copied from the JSONResponseMixin and slightly modified to allow caching
     @cache_control(max_age=9999999)
@@ -144,14 +148,67 @@ class ManuscriptJson(CorereBaseDatatableView):
         return response
 
     def get_columns(self):
+        # This user list is used in render_column to figure out which users are assigned to each manuscript by what role
+        # We switched to prefetching all users and groups instead of doing 4 database queries PER manuscript
+        # NOTE: This may become less useful if our list of users goes up, but I think the benefit will remain constant (well unless we run out of memory somehow)
+        # TODO: Make sure the implementation of the datatables doesn't hold onto the class and then not update the list... Or just get this list earlier :P
+        self.all_users_list = list(m.User.objects.all().prefetch_related('groups'))
         return helper_manuscript_columns(self.request.user)
 
     # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
     def render_column(self, manuscript, column):
-        if column[0] == "users":
-            return ", ".join(
-                list(set(m.User.objects.filter(groups__name__contains="Manuscript " + str(manuscript.id)).values_list("username", flat=True)))
-            )
+        if column[0] == "authors":
+            authors = ""
+            group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, manuscript)
+            for user in self.all_users_list:
+                for group in user.groups.all():
+                    if group.name == group_name:
+                        authors = authors + user.username + ", "
+                        break
+                    
+            return authors.rstrip(', ')
+            # return ", ".join(
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            # )
+        if column[0] == "editors":
+            editors = ""
+            group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, manuscript)
+            for user in self.all_users_list:
+                for group in user.groups.all():
+                    if group.name == group_name:
+                        editors = editors + user.username + ", "
+                        break
+
+            return editors.rstrip(', ')
+            # return ", ".join(
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            # )
+        if column[0] == "curators":
+            curators = ""
+            group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, manuscript)
+            for user in self.all_users_list:
+                for group in user.groups.all():
+                    if group.name == group_name:
+                        curators = curators + user.username + ", "
+                        break
+
+            return curators.rstrip(', ')
+            # return ", ".join(
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            # )
+        if column[0] == "verifiers":
+            verifiers = ""
+            group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, manuscript)
+            for user in self.all_users_list:
+                for group in user.groups.all():
+                    if group.name == group_name:
+                        verifiers = verifiers + user.username + ", "
+                        break
+
+            return verifiers.rstrip(', ')
+            # return ", ".join(
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, manuscript)).values_list("username", flat=True)))
+            # )
         elif column[0] == "created_at":
             return "{0}".format(manuscript.created_at.strftime("%b %d %Y %H:%M"))  #%H:%M:%S"
         elif column[0] == "updated_at":
