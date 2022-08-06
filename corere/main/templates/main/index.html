@@ -193,16 +193,16 @@
 
                 {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                 document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
-                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Mine" data-onstyle="secondary" 
-                        data-off="<i class='far fa-eye'></i> All" data-offstyle="secondary" data-height="38px" data-width="140px">`);
+                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> All" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Mine" data-offstyle="secondary" data-height="38px" data-width="140px">`);
                 mine_toggle = $("#mine_toggle");
                 mine_toggle.change(function(event){
                     var checkbox = event.target;
                     if(checkbox.checked) {
                         //Implicit globals are not best practice
-                        table.search( "{{request.user.username}}" ).draw();
-                    } else {
                         table.search( "" ).draw();
+                    } else {
+                        table.search( "{{request.user.username}}" ).draw();
                     }
                 });
                 mine_toggle.bootstrapToggle()
