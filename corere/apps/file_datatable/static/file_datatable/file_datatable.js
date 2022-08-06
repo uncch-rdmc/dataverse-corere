@@ -40,6 +40,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
         stateSave: true,
         paging: true,
         select: 'single',
+        autoWidth: false,
         // dom: 'Bftlp',
         dom: 'Bfrtpl',
         // keys: true, //for keyboard
@@ -70,7 +71,10 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
             },
         ],
         columnDefs: [
-            { "width": "33px", "targets": 0 }
+            { "width": "3%", "targets": 0 },
+            { "width": "20%", "targets": 1 },
+            { "width": "40%", "targets": 2 },
+            { "width": "1%", "targets": 3 },
             ],
         buttons: top_buttons
     }

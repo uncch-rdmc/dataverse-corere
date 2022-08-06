@@ -31,6 +31,7 @@
                     cache: true,
                     select: 'single',
                     columns: columns_config,
+                    autoWidth: false,
                     dom: 'Bfrtpl',
                     keys: true, //for keyboard
                     rowId: 'id', //for retaining selected row
@@ -189,7 +190,7 @@
                     }
                 });
                 active_toggle.bootstrapToggle()
-                
+
                 {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
                 document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
                     `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Mine" data-onstyle="secondary" 
@@ -218,20 +219,34 @@
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
                 column_settings.visible = true;
+                column_settings.width = "12%";
             } 
             else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
+                column_settings.width = "2%";
             } 
             else if(columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'id') {
                 column_settings.visible = false;
-            } else if(columns[c][0] === 'pub_name') {
+            } 
+            else if(columns[c][0] === 'curators' || columns[c][0] === 'verifiers') {
+                column_settings.width = "22%";
+            } 
+            else if(columns[c][0] === 'pub_name') {
                 column_settings.render = function ( data, type, row ) {
                     return type === 'display' && data.length > 60 ?
                         data.substr( 0, 60 ) +'…' :
                         data;
                 }
+                column_settings.width = "15%";
             }
+            else if(columns[c][0] === 'pub_id' || columns[c][0] === '_status') {
+                column_settings.width = "10%";
+            } 
+            else {
+                column_settings.width = "15%";
+            }
+
             //console.log(columns[c][0])
             columns_config[c] = column_settings
         }
@@ -260,7 +275,7 @@
 <div>
     <div class="title-text" id="manuscript_table_loading">Loading...</div>
     <div class="title-text" id="manuscript_table_holder" style="display:none;">
-        <table id="manuscript_table" class="datatable table table-striped table-bordered visibleMe" cellspacing="0" width="100%">
+        <table id="manuscript_table" class="datatable table table-striped table-bordered table-fixed visibleMe" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}
                     <th>{{ field }}</th>
