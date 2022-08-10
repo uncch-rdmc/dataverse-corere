@@ -567,7 +567,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         check_access(self, c_admin_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
-        ##### MANUSCRIPT LANDING SEND REPORT (currently just progresses status) #####
+        ##### MANUSCRIPT LANDING SEND REPORT #####
 
         manuscript = m.Manuscript.objects.latest("updated_at")
         c_admin_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
@@ -1096,8 +1096,6 @@ class LoggingInTestCase(LiveServerTestCase):
         #################################################
 
         e_yes_selenium.get(self.live_server_url + "/manuscript/create/")
-        #time.sleep(999999)
-#TODO: Change some info here???
         e_yes_selenium.find_element_by_id("id_pub_name").send_keys("pub_name")
         e_yes_selenium.find_element_by_id("id_pub_id").send_keys("pub_id")
         e_yes_selenium.find_element_by_id("id_contact_first_name").send_keys("author_yes")
@@ -1130,7 +1128,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, assert_dict=g_dict_no_access_anon)
         check_access(self, v_no_selenium, assert_dict=g_dict_normal_access)
         check_access(self, v_yes_selenium, assert_dict=g_dict_normal_access)
-        check_access(self, c_admin_yes_selenium, assert_dict=g_dict_admin_access)
+        check_access(self, c_yes_selenium, assert_dict=g_dict_admin_access)
 
         ##### TEST ACCESS MANUSCRIPT : NEW #####
 
@@ -1139,7 +1137,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
-        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         # ##### ASSIGN AUTHOR (SELF) TO MANUSCRIPT #####
 
@@ -1170,7 +1168,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         Select(a_yes_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         a_yes_selenium.find_element_by_id("id_description").send_keys("description")
@@ -1207,7 +1205,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
         # time.sleep(999999)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
@@ -1227,7 +1225,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1259,7 +1257,7 @@ class LoggingInTestCase(LiveServerTestCase):
         # check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
         # check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         # check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        # check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        # check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         #Resubmit manuscript before updating submission
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
@@ -1274,7 +1272,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
@@ -1294,7 +1292,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1313,25 +1311,25 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### MANUSCRIPT LANDING REVIEW CURATION #####
 
         time.sleep(1)  # wait for status to update in db
-        c_admin_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
-        manuscript_review_submission = c_admin_yes_selenium.find_element_by_id("reviewSubmissionButtonMain")
+        c_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_review_submission = c_yes_selenium.find_element_by_id("reviewSubmissionButtonMain")
         manuscript_review_submission.send_keys(Keys.RETURN)
 
         ##### CURATOR REVIEW - ISSUES #####
 
-        Select(c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("Major Issues")
-        c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
-        c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_day")).select_by_visible_text("1")
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_year")).select_by_visible_text("2020")
-        submission_info_submit_continue_curation = c_admin_yes_selenium.find_element_by_id("submit_progress_curation_button")
+        Select(c_yes_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("Major Issues")
+        c_yes_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
+        c_yes_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_day")).select_by_visible_text("1")
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_year")).select_by_visible_text("2020")
+        submission_info_submit_continue_curation = c_yes_selenium.find_element_by_id("submit_progress_curation_button")
         submission_info_submit_continue_curation.send_keys(Keys.RETURN)
-        c_admin_yes_selenium.switch_to.alert.accept()
+        c_yes_selenium.switch_to.alert.accept()
 
         ##### TEST ACCESS SUBMISSION : IN_PROGRESS_VERIFICATION #####
 
-        time.sleep(0.5)  # wait for status to update in db
+        time.sleep(1)  # wait for status to update in db
         manuscript = m.Manuscript.objects.latest("updated_at")
         self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
         submission = m.Submission.objects.latest("updated_at")
@@ -1340,7 +1338,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
 
@@ -1369,13 +1367,13 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
-        ##### MANUSCRIPT LANDING SEND REPORT (currently just progresses status) #####
+        ##### MANUSCRIPT LANDING SEND REPORT #####
 
         manuscript = m.Manuscript.objects.latest("updated_at")
-        c_admin_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
-        manuscript_send_report = c_admin_yes_selenium.find_element_by_id("sendReportButton")
+        c_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_send_report = c_yes_selenium.find_element_by_id("sendReportButton")
         manuscript_send_report.send_keys(Keys.RETURN)
         time.sleep(2.5)  # wait for status to update in db, also our pdf code to generate
 
@@ -1388,13 +1386,13 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
-        ##### MANUSCRIPT LANDING RETURN SUBMISSION (editor step done by curator currently) #####
+        ##### MANUSCRIPT LANDING RETURN SUBMISSION #####
 
-        # manuscript = m.Manuscript.objects.latest("updated_at")
-        # c_admin_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
-        manuscript_return_submission = c_admin_yes_selenium.find_element_by_id("returnSubmissionButton")
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        e_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_return_submission = e_yes_selenium.find_element_by_id("returnSubmissionButton")
         manuscript_return_submission.send_keys(Keys.RETURN)
         time.sleep(0.5)  # wait for status to update in db
 
@@ -1406,7 +1404,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##############################
         #####    SUBMISSION 2    #####
@@ -1416,7 +1414,8 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### MANUSCRIPT LANDING #####
 
-        manuscript_create_submit_continue = c_admin_yes_selenium.find_element_by_id("createSubmissionButton")
+        a_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_create_submit_continue = a_yes_selenium.find_element_by_id("createSubmissionButton")
         manuscript_create_submit_continue.send_keys(Keys.RETURN)
 
         ##### TEST ACCESS MANUSCRIPT : AWAITING_INITIAL #####
@@ -1427,10 +1426,9 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
-        Select(c_admin_yes_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
-        manuscript_update_submit_continue = c_admin_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
+        manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
 
         ##### TEST ACCESS SUBMISSION : NEW #####
@@ -1442,14 +1440,14 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
         # time.sleep(999999)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        c_admin_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
-        submission_info_submit_continue = c_admin_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        submission_info_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
-        c_admin_yes_selenium.switch_to.alert.accept()
+        a_yes_selenium.switch_to.alert.accept()
 
         ##### TEST ACCESS SUBMISSION : IN_PROGRESS_EDITION #####
 
@@ -1462,7 +1460,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1489,30 +1487,30 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
         check_access(self, v_no_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
         check_access(self, v_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
-        check_access(self, c_admin_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
+        check_access(self, c_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
 
         ##### MANUSCRIPT LANDING REVIEW CURATION #####
-
-        manuscript_review_submission = c_admin_yes_selenium.find_element_by_id("reviewSubmissionButtonMain")
+        c_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
+        manuscript_review_submission = c_yes_selenium.find_element_by_id("reviewSubmissionButtonMain")
         manuscript_review_submission.send_keys(Keys.RETURN)
 
         ##### CURATOR REVIEW - NO ISSUES #####
 
-        Select(c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("No Issues")
-        c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
-        c_admin_yes_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_day")).select_by_visible_text("1")
-        # Select(c_admin_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_year")).select_by_visible_text("2020")
-        submission_info_submit_continue_curation = c_admin_yes_selenium.find_element_by_id("submit_progress_curation_button")
+        Select(c_yes_selenium.find_element_by_id("id_curation_formset-0-_status")).select_by_visible_text("No Issues")
+        c_yes_selenium.find_element_by_id("id_curation_formset-0-report").send_keys("report")
+        c_yes_selenium.find_element_by_id("id_curation_formset-0-needs_verification").click()
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_month")).select_by_visible_text("January")
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_day")).select_by_visible_text("1")
+        # Select(c_yes_selenium.find_element_by_id("id_submission_editor_date_formset-0-editor_submit_date_year")).select_by_visible_text("2020")
+        submission_info_submit_continue_curation = c_yes_selenium.find_element_by_id("submit_progress_curation_button")
         submission_info_submit_continue_curation.send_keys(Keys.RETURN)
-        c_admin_yes_selenium.switch_to.alert.accept()
+        c_yes_selenium.switch_to.alert.accept()
 
         ##### TEST ACCESS SUBMISSION : IN_PROGRESS_VERIFICATION #####
 
@@ -1525,13 +1523,13 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
         check_access(self, v_no_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
         check_access(self, v_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
-        check_access(self, c_admin_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
+        check_access(self, c_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
 
         ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
 
@@ -1561,10 +1559,10 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
         check_access(self, v_no_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access)
         check_access(self, v_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_verifier)
-        check_access(self, c_admin_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
+        check_access(self, c_yes_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_write_access_admin)
