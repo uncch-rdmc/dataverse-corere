@@ -392,7 +392,7 @@
         <span>
             Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}}
             {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_curators|length == 0 %}
-            <i class="fas fa-exclamation" style="color:maroon;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assigncurator/" title="Add curator to this manuscript" aria-label="Add curator to this manuscript">Add Curator</a>
+            <i class="fas fa-exclamation" style="color:#DC3545;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assigncurator/" title="Add curator to this manuscript" aria-label="Add curator to this manuscript">Add Curator</a>
             {% comment %} <button type="button" class="btn btn-secondary btn-sm" id="addCuratorInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Curator</button> {% endcomment %}
             {% endif %}
         </span>
@@ -400,7 +400,7 @@
         <span>
             Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
             {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_verifiers|length == 0 %}
-            <span style="margin-left:3px;" ><i class="fas fa-exclamation" style="color:maroon;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assignverifier/" title="Add verifier to this manuscript" aria-label="Add verifier to this manuscript">Add Verifier</a></span>
+            <span style="margin-left:3px;" ><i class="fas fa-exclamation" style="color:#DC3545;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assignverifier/" title="Add verifier to this manuscript" aria-label="Add verifier to this manuscript">Add Verifier</a></span>
             {% comment %} <button type="button" class="btn btn-secondary btn-sm" style="margin-left:3px;" id="addVerifierInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Verifier</button> {% endcomment %}
             {% endif %}
         </span>
