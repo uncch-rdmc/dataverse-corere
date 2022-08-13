@@ -491,8 +491,8 @@ class SubmissionFileJson(LoginRequiredMixin, fdtv.FileBaseDatatableView):
             submission = m.Submission.objects.get(id=submission_id)
         except ObjectDoesNotExist:
             raise Http404()
-        #TODO: This was submission.manuscript.view_noop. I changed it and its causing errors with non-admin curators. 
-        if has_transition_perm(submission.view_noop, self.request.user):
+        #TODO: This probably should be submission.view_noop. But it needs to be changed alongside applying submission view_noop correctly (see non-admin curators)
+        if has_transition_perm(submission.manuscript.view_noop, self.request.user):
             # if(self.request.user.has_any_perm(c.PERM_MANU_VIEW_M, submission.manuscript)):
             # print(m.GitFile.objects.values('path','name').filter(parent_manuscript=manuscript))
             return m.GitFile.objects.filter(parent_submission=submission).order_by("-date")

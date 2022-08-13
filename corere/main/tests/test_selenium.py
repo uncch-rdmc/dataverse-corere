@@ -49,7 +49,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
-    @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
+    # @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
     @override_settings(SKIP_EDITION=True)
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
@@ -249,7 +249,7 @@ class LoggingInTestCase(LiveServerTestCase):
     # TODO: Test across multiple submissions
     # TODO: This test downloads zips, do we need to get rid of them?
     # TODO: This doesn't test access to previous submissions yet
-    @unittest.skip("Disabled for test writing")
+    # @unittest.skip("Disabled for test writing")
     @override_settings(SKIP_EDITION=True)
     def test_3_user_workflow_with_access_checks(self):
         ## If you use these settings, you have to skip our POST test currently because they seem to be contigent on headless...
@@ -484,7 +484,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
         # time.sleep(999999)
         check_access(self, c_admin_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
@@ -636,7 +636,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
         # time.sleep(999999)
         check_access(self, c_admin_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
@@ -1226,14 +1226,11 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
         check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-
-#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
-        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
-        
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)        
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
@@ -1259,7 +1256,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1316,12 +1313,11 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
         check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
-        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
@@ -1347,7 +1343,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1381,7 +1377,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1419,7 +1415,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1455,7 +1451,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1481,7 +1477,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase_finish)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1506,7 +1502,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1552,14 +1548,11 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
         check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-
-#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
-        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
-
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_exception)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
@@ -1585,7 +1578,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1619,7 +1612,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1662,7 +1655,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
@@ -1705,7 +1698,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
-        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator__in_phase)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
         check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
         check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)

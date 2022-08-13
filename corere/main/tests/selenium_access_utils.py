@@ -246,7 +246,7 @@ m_dict_no_curator_access.update(
 m_dict_no_verifier_access = m_dict_no_access.copy()
 m_dict_no_verifier_access.update(
     {
-        "": {"GET": 404, "POST": 404},
+        "": {"GET": 404, "POST": 405},
     }
 )
 
@@ -367,10 +367,10 @@ s_dict_yes_access_curator__out_of_phase.update(
         "viewfiles/": {"GET": 404, "POST": 404}, #TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
         "downloadall/": {"GET": 404, "POST": 404}, #TODO: I really don't understand why this is 404ing
         "newfilecheck/": {"GET": 404, "POST": 404},  # Need a query string to not 404
-        "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
-        "confirmfiles/": {}, #{"GET": 404}, #, "POST": 500   #TODO: Disabled because it causes an ajax error / 500s. Probably due to changing file_table perms check.
-        "uploader/": {},  #TODO: Disabled because it causes an ajax error. Probably due to changing file_table perms check.
-        "fileslist/": {}, #TODO: Disabled because it causes an ajax error. Probably due to changing file_table perms check.
+        "file_table/": {"GET": 200, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
+        "confirmfiles/": {"GET": 404 , "POST": 404},   #TODO: Disabled because it causes an ajax error / 500s. Probably due to changing file_table perms check.
+        "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
+        "fileslist/": {"GET": 200, "POST": 405},
     }
 )
 
@@ -402,6 +402,14 @@ s_dict_no_access = {
     #    'wtdownloadall/': {'GET': 404},
     "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
 }
+
+#TODO: This is really a fix for a broken piece of code. file_table shouldn't 200. Then we can delete this and just use s_dict_no_access
+s_dict_no_access_exception = s_dict_no_access.copy()
+s_dict_no_access_exception.update(
+    {
+         "file_table/": {"GET": 200, "POST": 405},
+    }
+)
 
 s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302, "POST": 200}) #TODO: Should we be testing post for anon?
 
@@ -468,8 +476,8 @@ s_dict_editor_access__in_phase_finish.update(
 
 #TODO: Are these accesses what we want for non-admin curator? Surprised they can't do view or info
 #Curators still have access even when they aren't assigned. The access is the same regardless of phase
-s_dict_no_access_curator = s_dict_no_access.copy()
-s_dict_no_access_curator.update(
+s_dict_no_access_curator__in_phase = s_dict_no_access.copy()
+s_dict_no_access_curator__in_phase.update(
     {
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
         "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
