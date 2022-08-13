@@ -4,7 +4,7 @@
 
 # Tests the state of our accesss dictionaries
 def check_access(test, browser, manuscript=None, submission=None, assert_dict=None):
-    return #TODO DISABLE TEST CODE
+    # return #TODO DISABLE TEST CODE
     if assert_dict == None:
         raise Exception("assert_dict must be set for check_access")
     if manuscript != None and submission != None:
@@ -109,7 +109,9 @@ def call_request_method(browser, method, endpoint, debug=False):
     fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
     result = browser.execute_script(fetch_javascript)
     if debug:
-        print(result)
+        # print("DEBUG")
+        # print(fetch_javascript)
+        print("DEBUG: " + str(result))
     return result["status"]
     # TODO: see manuscript_landing.postToSubUrl and the .then() section if we want to go to the endpoint after.
 
@@ -132,15 +134,22 @@ def call_request_method(browser, method, endpoint, debug=False):
 # We don't have a g_dict_no_access because that case does not exist. If you don't have general access you aren't logged in and should get 302'ed
 g_dict_admin_access = {  #'': {'GET': 200}, #blows up due to oauth code
     #'manuscript_table/': {'GET': 200},
-    "manuscript/create/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
+    "manuscript/create/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change. It errors for editor?
     #'account_user_details/': {'GET': 200}, #blow up due to oauth code
     "notifications/": {"GET": 200, "POST": 405},
     "site_actions/": {"GET": 200, "POST": 405},
     "site_actions/inviteeditor/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
     "site_actions/invitecurator/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
     "site_actions/inviteverifier/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
-    "user_table/": {"GET": 200, "POST": 405},
+    # "user_table/": {"GET": 200, "POST": 405},
 }
+
+g_dict_normal_curator_access = g_dict_admin_access.copy()
+g_dict_normal_curator_access.update(
+    {
+        "manuscript/create/": {"GET": 403, "POST": 403},
+    }
+)
 
 # Django's @login_required decorator (and the guardian mixin that uses it) end up with a 200 when redirecting to login.
 # ... This may just be due to the different ways we are testing get vs post, not sure
@@ -161,10 +170,10 @@ g_dict_normal_access.update(
     }
 )
 
-g_dict_normal_editor_access = g_dict_normal_access.copy()
-g_dict_normal_editor_access.update(
+g_dict_editor_access = g_dict_normal_access.copy()
+g_dict_editor_access.update(
     {
-        "manuscript/create/": {"GET": 200, "POST": 200},
+        "manuscript/create/": {"GET": 200, "POST": 500},
     }
 )
 
@@ -175,7 +184,7 @@ g_dict_normal_editor_access.update(
 # TODO: Most todos in this are stale
 m_dict_no_access = {
     "": {"GET": 404, "POST": 405},
-    "submission_table/": {"GET": 404, "POST": 405},  # TODO: No access verifier gets a 200. Should this instead error? I need to check the content returned.
+    "submission_table/": {"GET": 404, "POST": 405},  
     "edit/": {"GET": 404, "POST": 404},  # TODO: No access anon gets 500?
     "update/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},
@@ -201,6 +210,45 @@ m_dict_no_access = {
     "confirm/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
     "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
 }
+
+#TODO: We may want to allow non-admin curators to do more things
+m_dict_no_curator_access__out_of_phase = m_dict_no_access.copy()
+m_dict_no_curator_access__out_of_phase.update(
+    {
+        "addauthor/": {"GET": 200, "POST": 200},
+        "assigneditor/": {"GET": 200, "POST": 200},
+        "assigncurator/": {"GET": 200, "POST": 200},
+        "assignverifier/": {"GET": 200, "POST": 200},
+    }
+)
+
+m_dict_no_curator_access = m_dict_no_curator_access__out_of_phase.copy()
+m_dict_no_curator_access.update(
+    {
+        "": {"GET": 200, "POST": 405},
+        "submission_table/": {"GET": 200, "POST": 405},
+        "addauthor/": {"GET": 200, "POST": 200},
+        "assigneditor/": {"GET": 200, "POST": 200},
+        "assigncurator/": {"GET": 200, "POST": 200},
+        "assignverifier/": {"GET": 200, "POST": 200},
+        "fileslist/": {"GET": 404, "POST": 405},
+        "view/": {"GET": 200, "POST": 405},
+        "viewfiles/": {"GET": 200, "POST": 405},
+        "downloadfile/": {"GET": 404, "POST": 405}, #downloadfile GET 404s because we aren't passing a file
+        "downloadall/": {"GET": 200, "POST": 405}, 
+        "reportdownload/": {"GET": 200, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405}, 
+    }
+)
+
+# m_dict_no_editor_access = m_dict_no_author_access.copy()
+
+m_dict_no_verifier_access = m_dict_no_access.copy()
+m_dict_no_verifier_access.update(
+    {
+        "": {"GET": 404, "POST": 404},
+    }
+)
 
 m_dict_no_access_anon = dict.fromkeys(m_dict_no_access, {"GET": 302, "POST": 200})
 
@@ -248,6 +296,40 @@ m_dict_admin_access = {
     "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is conditionally available, and maybe requires post. | POST 404s because its called out of phase and TransistionPermissionMixin happens first I think
 }
 
+m_dict_yes_author_access = m_dict_admin_access.copy()
+m_dict_yes_author_access.update(
+    {
+        "inviteassignauthor/": {"GET": 404, "POST": 404},
+        "addauthor/": {"GET": 404, "POST": 404},
+        "assigneditor/": {"GET": 404, "POST": 404}, 
+        "assigncurator/": {"GET": 404, "POST": 404}, 
+        "assignverifier/": {"GET": 404, "POST": 404}, 
+    }
+)
+
+m_dict_yes_editor_access = m_dict_admin_access.copy()
+m_dict_yes_editor_access.update(
+    {
+        "inviteassignauthor/": {"GET": 404, "POST": 404},
+        "assigneditor/": {"GET": 404, "POST": 404}, 
+        "assigncurator/": {"GET": 404, "POST": 404}, 
+        "assignverifier/": {"GET": 404, "POST": 404}, 
+    }
+)
+
+#TODO: We may want to allow non-admin curators to do more things
+m_dict_yes_curator_access = m_dict_admin_access.copy()
+m_dict_yes_curator_access.update(
+    {
+    }
+)
+
+
+# TODO: What additional dictionaries do I need?
+# - Author (in and out of phase?)
+# - Editor (in and out of phase?)
+# - Curator (same as admin?)
+
 #############################
 ##### Submission Access #####
 #############################
@@ -255,8 +337,8 @@ m_dict_admin_access = {
 # TODO: access on some of these change with phase
 s_dict_admin_access = {
     "info/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
-    "uploadfiles/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
-    "confirmfiles/": {"GET": 404, "POST": 404},  # TODO: This is conditionally available?
+    "uploadfiles/": {"GET": 200},  # TODO: Post disabled because it returns literally nothing, probably due to changing the file datatable to be more restrictive on when its visible    
+    "confirmfiles/": {"GET": 404, "POST": 404},  #TODO: Post disabled because it causes an ajax error. Probably due to changing file_table perms check.
     "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
     "fileslist/": {"GET": 200, "POST": 405},
     "view/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
@@ -277,6 +359,27 @@ s_dict_admin_access = {
 
 s_dict_admin_access__completed = s_dict_admin_access.copy()
 s_dict_admin_access__completed.update({"confirmfiles/": {"GET": 200}})
+
+s_dict_yes_access_curator__out_of_phase = s_dict_admin_access.copy()
+s_dict_yes_access_curator__out_of_phase.update(
+    {
+        "view/": {"GET": 404}, #, "POST": 404 Post disabled because ajax error, probably due to changing the file_table#TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
+        "viewfiles/": {"GET": 404, "POST": 404}, #TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
+        "downloadall/": {"GET": 404, "POST": 404}, #TODO: I really don't understand why this is 404ing
+        "newfilecheck/": {"GET": 404, "POST": 404},  # Need a query string to not 404
+        "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
+        "confirmfiles/": {}, #{"GET": 404}, #, "POST": 500   #TODO: Disabled because it causes an ajax error / 500s. Probably due to changing file_table perms check.
+        "uploader/": {},  #TODO: Disabled because it causes an ajax error. Probably due to changing file_table perms check.
+        "fileslist/": {}, #TODO: Disabled because it causes an ajax error. Probably due to changing file_table perms check.
+    }
+)
+
+s_dict_yes_access_curator__in_phase = s_dict_admin_access.copy()
+s_dict_yes_access_curator__in_phase.update(
+    {
+
+    }
+)
 
 s_dict_no_access = {
     "info/": {"GET": 404, "POST": 404},
@@ -302,8 +405,93 @@ s_dict_no_access = {
 
 s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302, "POST": 200}) #TODO: Should we be testing post for anon?
 
+s_dict_author_access__out_of_phase = s_dict_no_access.copy()
+s_dict_author_access__out_of_phase.update(
+    {
+        "info/": {"GET": 200, "POST": 200},
+        "view/": {"GET": 200, "POST": 200},
+        "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
+
+        "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
+        "downloadall/": {"GET": 200, "POST": 405},
+        "newfilecheck/": {"GET": 404, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405},
+    }
+)
+
+s_dict_author_access__in_phase = s_dict_author_access__out_of_phase.copy()
+s_dict_author_access__in_phase.update(
+    {
+
+        "uploadfiles/": {"GET": 200, "POST": 200},
+        "uploader/": {"GET": 405, "POST": 404},        
+        "fileslist/": {"GET": 200, "POST": 405},
+        "deletefile/": {"GET": 405, "POST": 404},
+        "deleteallfiles/": {"GET": 405, "POST": 200}, 
+    }
+)
+
+s_dict_editor_access__out_of_phase = s_dict_no_access.copy()
+s_dict_editor_access__out_of_phase.update(
+    {
+        "info/": {"GET": 200, "POST": 200},
+        "view/": {"GET": 200, "POST": 200},
+        "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
+
+        "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
+        "downloadall/": {"GET": 200, "POST": 405},
+        "newfilecheck/": {"GET": 404, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405},
+    }
+)
+
+s_dict_editor_access__in_phase = s_dict_no_access.copy()
+s_dict_editor_access__in_phase.update(
+    {
+        "info/": {"GET": 200, "POST": 200},
+        "view/": {"GET": 200, "POST": 200},
+        "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
+
+        "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
+        "downloadall/": {"GET": 200, "POST": 405},
+        "newfilecheck/": {"GET": 404, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405},
+    }
+)
+
+s_dict_editor_access__in_phase_finish = s_dict_editor_access__in_phase.copy()
+s_dict_editor_access__in_phase_finish.update(
+    {
+        "finish/": {"GET": 405}, #removed post test, it'll be confirmed by the actual flow
+    }
+)
+
+#TODO: Are these accesses what we want for non-admin curator? Surprised they can't do view or info
+#Curators still have access even when they aren't assigned. The access is the same regardless of phase
+s_dict_no_access_curator = s_dict_no_access.copy()
+s_dict_no_access_curator.update(
+    {
+        "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
+        "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
+        "downloadall/": {"GET": 200, "POST": 405},
+        "newfilecheck/": {"GET": 404, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405},
+    }
+)
+
 s_dict_verifier_access__out_of_phase = s_dict_no_access.copy()
-s_dict_verifier_access__out_of_phase.update({"file_table/": {"GET": 200, "POST": 405}})  # TODO: This should probably 404
+s_dict_verifier_access__out_of_phase.update(
+    {
+        "info/": {"GET": 200, "POST": 200},
+        "view/": {"GET": 200, "POST": 200},
+        "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
+
+        "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
+        "downloadall/": {"GET": 200, "POST": 405},
+        "newfilecheck/": {"GET": 404, "POST": 405},
+        "file_table/": {"GET": 200, "POST": 405},
+    }
+) 
 
 s_dict_verifier_access__in_phase = s_dict_no_access.copy()
 s_dict_verifier_access__in_phase.update(

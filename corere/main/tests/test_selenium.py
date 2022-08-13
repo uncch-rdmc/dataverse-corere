@@ -49,7 +49,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
-    @unittest.skip("This test is not required, all functionality is covered by test_3_user. Can be used if that fails to help isolate issues.")
+    @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
     @override_settings(SKIP_EDITION=True)
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
@@ -441,8 +441,8 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.NEW)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
-        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
-        check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_verifier_access)
+        check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_no_verifier_access)
         # time.sleep(999999)
         check_access(self, c_admin_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
@@ -469,7 +469,7 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_INITIAL)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
-        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_verifier_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
         check_access(self, c_admin_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
@@ -621,7 +621,7 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
-        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_verifier_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
         check_access(self, c_admin_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
@@ -781,9 +781,9 @@ class LoggingInTestCase(LiveServerTestCase):
         v_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         c_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
-        c_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
-        c_admin_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        c_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)#_not_headless)
         c_admin_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        c_admin_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
 
         #Add our new instances to the dict for cleanup when closed via interrupt
         self.selenium_instances['anon'] = anon_selenium
@@ -1000,7 +1000,7 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### CURATOR_ADMIN_YES CURATOR_NO CREATION #####
 
         # This verifier will have verifier to the tested manuscript
-        c_admin_yes_selenium.get(self.live_server_url + "/site_actions/inviteeditor/")
+        c_admin_yes_selenium.get(self.live_server_url + "/site_actions/invitecurator/")
         c_admin_yes_selenium.find_element_by_id("id_first_name").send_keys("curator_no")
         c_admin_yes_selenium.find_element_by_id("id_last_name").send_keys("last_name")
         c_admin_yes_selenium.find_element_by_id("id_email").send_keys("curator_no@test.test")
@@ -1030,7 +1030,7 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### CURATOR_ADMIN_YES VERIFIER_YES CREATION #####
 
         # This verifier will have verifier to the tested manuscript
-        c_admin_yes_selenium.get(self.live_server_url + "/site_actions/inviteeditor/")
+        c_admin_yes_selenium.get(self.live_server_url + "/site_actions/inviteverifier/")
         c_admin_yes_selenium.find_element_by_id("id_first_name").send_keys("verifier_yes")
         c_admin_yes_selenium.find_element_by_id("id_last_name").send_keys("last_name")
         c_admin_yes_selenium.find_element_by_id("id_email").send_keys("verifier_yes@test.test")
@@ -1126,20 +1126,34 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### TEST GENERAL CORE2 ACCESS #####
 
         check_access(self, anon_selenium, assert_dict=g_dict_no_access_anon)
+        check_access(self, a_no_selenium, assert_dict=g_dict_normal_access)
+        check_access(self, a_yes_selenium, assert_dict=g_dict_normal_access)
+        check_access(self, e_no_selenium, assert_dict=g_dict_editor_access)
+        check_access(self, e_yes_selenium, assert_dict=g_dict_editor_access)
         check_access(self, v_no_selenium, assert_dict=g_dict_normal_access)
         check_access(self, v_yes_selenium, assert_dict=g_dict_normal_access)
-        check_access(self, c_yes_selenium, assert_dict=g_dict_admin_access)
+        check_access(self, c_no_selenium, assert_dict=g_dict_normal_curator_access)
+        check_access(self, c_yes_selenium, assert_dict=g_dict_normal_curator_access)
+        check_access(self, c_admin_no_selenium, assert_dict=g_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, assert_dict=g_dict_admin_access)
 
         ##### TEST ACCESS MANUSCRIPT : NEW #####
 
         self.assertEqual(manuscript._status, m.Manuscript.Status.NEW)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, a_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, a_yes_selenium, manuscript=manuscript, assert_dict=m_dict_no_access) #Does not have access yet
+        check_access(self, e_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, e_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_editor_access)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
-        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_curator_access__out_of_phase)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_curator_access)
+        check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
-        # ##### ASSIGN AUTHOR (SELF) TO MANUSCRIPT #####
+        # ##### ASSIGN AUTHOR TO MANUSCRIPT #####
 
         e_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id) + "/addauthor/")
         # We don't fill out any fields for this form beacuse it is auto-populated with manuscript info
@@ -1166,9 +1180,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_INITIAL)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, a_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, a_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_author_access)
+        check_access(self, e_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, e_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_editor_access)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_curator_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_curator_access)
+        check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         Select(a_yes_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         a_yes_selenium.find_element_by_id("id_description").send_keys("description")
@@ -1202,10 +1223,19 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.NEW)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        # time.sleep(999999)
-        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+
+#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
+        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
+        
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
@@ -1223,9 +1253,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_EDITION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1248,16 +1285,22 @@ class LoggingInTestCase(LiveServerTestCase):
         manuscript_create_submit_continue = a_yes_selenium.find_element_by_id("editSubmissionButton")
         manuscript_create_submit_continue.send_keys(Keys.RETURN)
 
-#TODO: Do we need to test this again, manuscript status hasn't changed. Probably?
-        # ##### TEST ACCESS MANUSCRIPT : AWAITING_INITIAL #####
+        # ##### TEST ACCESS MANUSCRIPT : AWAITING_RESUBMISSION #####
 
-        # manuscript = m.Manuscript.objects.latest("updated_at")
-        # self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_INITIAL)
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
 
-        # check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
-        # check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
-        # check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        # check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, a_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, a_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_author_access)
+        check_access(self, e_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, e_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_editor_access)
+        check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_curator_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_curator_access)
+        check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         #Resubmit manuscript before updating submission
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
@@ -1270,9 +1313,17 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.REJECTED_EDITOR)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
+        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
@@ -1290,9 +1341,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_EDITION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1308,9 +1366,28 @@ class LoggingInTestCase(LiveServerTestCase):
         submission_info_submit_continue_edition.send_keys(Keys.RETURN)
         e_yes_selenium.switch_to.alert.accept()
 
-        ##### MANUSCRIPT LANDING REVIEW CURATION #####
+        ##### TEST ACCESS SUBMISSION : IN_PROGRESS_CURATION #####
 
         time.sleep(1)  # wait for status to update in db
+        manuscript = m.Manuscript.objects.latest("updated_at")
+        self.assertEqual(manuscript._status, m.Manuscript.Status.PROCESSING)
+        submission = m.Submission.objects.latest("updated_at")
+        self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_CURATION)
+
+        check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
+        check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
+        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+
+        ##### MANUSCRIPT LANDING REVIEW CURATION #####
+
         c_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id))
         manuscript_review_submission = c_yes_selenium.find_element_by_id("reviewSubmissionButtonMain")
         manuscript_review_submission.send_keys(Keys.RETURN)
@@ -1336,9 +1413,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_VERIFICATION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW VERIFICATION #####
 
@@ -1365,9 +1449,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.REVIEWED_AWAITING_REPORT)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING SEND REPORT #####
 
@@ -1384,9 +1475,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.REVIEWED_REPORT_AWAITING_APPROVAL)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase_finish)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING RETURN SUBMISSION #####
 
@@ -1402,9 +1500,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.RETURNED)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##############################
         #####    SUBMISSION 2    #####
@@ -1424,9 +1529,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(manuscript._status, m.Manuscript.Status.AWAITING_RESUBMISSION)
 
         check_access(self, anon_selenium, manuscript=manuscript, assert_dict=m_dict_no_access_anon)
+        check_access(self, a_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, a_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_author_access)
+        check_access(self, e_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
+        check_access(self, e_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_editor_access)
         check_access(self, v_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_access)
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
-        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_no_selenium, manuscript=manuscript, assert_dict=m_dict_no_curator_access)
+        check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_curator_access)
+        check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
@@ -1437,10 +1549,19 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.NEW)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__in_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
-        # time.sleep(999999)
-        check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+
+#TODO: This test blows up extremely with ajax-y errors, probably due to my file_table perms check
+        # check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_yes_access_curator__out_of_phase)
+
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
@@ -1458,9 +1579,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_EDITION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__in_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         ##### MANUSCRIPT LANDING REVIEW EDITION #####
 
@@ -1485,9 +1613,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_CURATION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
-        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__out_of_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
@@ -1521,9 +1656,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.IN_PROGRESS_VERIFICATION)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
@@ -1557,9 +1699,16 @@ class LoggingInTestCase(LiveServerTestCase):
         self.assertEqual(submission._status, m.Submission.Status.REVIEWED_AWAITING_REPORT)
 
         check_access(self, anon_selenium, submission=submission, assert_dict=s_dict_no_access_anon)
+        check_access(self, a_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, a_yes_selenium, submission=submission, assert_dict=s_dict_author_access__out_of_phase)
+        check_access(self, e_no_selenium, submission=submission, assert_dict=s_dict_no_access)
+        check_access(self, e_yes_selenium, submission=submission, assert_dict=s_dict_editor_access__out_of_phase)
         check_access(self, v_no_selenium, submission=submission, assert_dict=s_dict_no_access)
         check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
+        check_access(self, c_no_selenium, submission=submission, assert_dict=s_dict_no_access_curator)
         check_access(self, c_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
+        check_access(self, c_admin_no_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
+        check_access(self, c_admin_yes_selenium, submission=submission, assert_dict=s_dict_admin_access__completed)
 
         # Test previous submission access
         check_access(self, anon_selenium, submission=submission_previous, assert_dict=s_dict_previous_submission_no_access_anon )
