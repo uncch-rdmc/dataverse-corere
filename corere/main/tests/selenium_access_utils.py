@@ -514,20 +514,26 @@ s_dict_verifier_access__in_phase.update(
     }
 )
 
+##### PREVIOUS VERSION TESTS #####
+
 # These don't test all previous endpoints currently, just a sampling
 
-s_dict_previous_submission_write_access_verifier = {
+s_dict_yes_general_access__previous = {
     "view/": {"GET": 200, "POST": 200},
     "info/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
-    "uploadfiles/": {"GET": 404, "POST": 404} #I guess uploading files should 404 for everyone? The submission is over? #Nope, 200 for curator admin, 404 for verifier... tho this may be because verifier could never upload?
+    "uploadfiles/": {"GET": 404, "POST": 404}, #I guess uploading files should 404 for everyone? The submission is over? #Nope, 200 for curator admin, 404 for verifier... tho this may be because verifier could never upload?
+    "uploader/": {"GET": 404, "POST": 404},
+    "deleteallfiles/": {"GET": 404, "POST": 404},
 }
 
-s_dict_previous_submission_write_access_admin = {
+s_dict_yes_full_access__previous = {
     "view/": {"GET": 200, "POST": 200},
     "info/": {"GET": 200, "POST": 500}, #TODO: Why 500?
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
-    "uploadfiles/": {"GET": 200, "POST": 200} 
+    "uploadfiles/": {"GET": 200, "POST": 200},
+    "uploader/": {"GET": 405, "POST": 404},
+    "deleteallfiles/": {"GET": 405, "POST": 200}, #TODO: Why 200? That's no bueno.
 }
 
 # s_dict_previous_submission_read_access = {
@@ -537,17 +543,30 @@ s_dict_previous_submission_write_access_admin = {
 #     "uploadfiles/": {"GET": 404, "POST": 404}
 # }
 
-s_dict_previous_submission_no_access = {
+s_dict_no_curator_access__previous = {
+    "view/": {"GET": 404, "POST": 404},
+    "info/": {"GET": 404, "POST": 404},
+    "viewfiles/": {"GET": 200, "POST": 500}, #TODO: Why can curator not view but can viewfiles. Fix with other normal curator fixes
+    "uploadfiles/": {"GET": 404, "POST": 404},
+    "uploader/": {"GET": 404, "POST": 404},
+    "deleteallfiles/": {"GET": 404, "POST": 404},
+}
+
+s_dict_no_access__previous = {
     "view/": {"GET": 404, "POST": 404},
     "info/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 404, "POST": 404},
-    "uploadfiles/": {"GET": 404, "POST": 404}
+    "uploadfiles/": {"GET": 404, "POST": 404},     
+    "uploader/": {"GET": 404, "POST": 404},
+    "deleteallfiles/": {"GET": 404, "POST": 404},
 }
 
-#TODO: When we test post for other anon, add here too
-s_dict_previous_submission_no_access_anon = {
-    "view/": {"GET": 302},
-    "info/": {"GET": 302},
-    "viewfiles/": {"GET": 302},
-    "uploadfiles/": {"GET": 302}
+#TODO: All posts 200??
+s_dict_anon_no_access__previous = {
+    "view/": {"GET": 302, "POST": 200},
+    "info/": {"GET": 302, "POST": 200},
+    "viewfiles/": {"GET": 302, "POST": 200},
+    "uploadfiles/": {"GET": 302, "POST": 200},
+    "uploader/": {"GET": 302, "POST": 200},
+    "deleteallfiles/": {"GET": 302, "POST": 200},
 }
