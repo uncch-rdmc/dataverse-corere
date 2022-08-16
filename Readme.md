@@ -1,7 +1,9 @@
 # CORERE
 
 ## Description:
-The main goal of the project is to make these verification tools cost-effective and easily accessible, so journals may implement and enforce more rigorous data policies. This will oblige researchers to in turn adopt more transparent practices and promote reproducible research of the highest quality and integrity throughout the scientific community. 
+CoRe2 is a Python (Django) web environment built for the execution of science data curation workflows by the various stakeholders in the publication verification process. Publication editors can create new workflow instances, authors can upload their science data/code, curators can confirm the metadata around the data/code as well as the organizational structure, and verifiers can run the data/code and confirm it generates outputs that match what is present in the publication. This is achieved by integrating with various technologies, including git (file management) and Whole Tale (scientific web-based computing environments).
+
+![CoRe2 Architecture 2022 white](https://user-images.githubusercontent.com/8901015/184963513-0d9b8e0a-4101-4856-b813-ddb7c2f7462a.png) 
 
 ## Table of Contents:
 
