@@ -153,8 +153,8 @@ class UserDetailsFormHelper(FormHelper):
 
 # For editors adding authors during manuscript creation
 class AuthorAddForm(forms.Form):
-    first_name = forms.CharField(label="Invitee First Name", max_length=150, required=True)
-    last_name = forms.CharField(label="Invitee Last Name", max_length=150, required=True)
+    first_name = forms.CharField(label="Invitee Given Name", max_length=150, required=True)
+    last_name = forms.CharField(label="Invitee Surname", max_length=150, required=True)
     email = forms.EmailField(label="Invitee Email", max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=True)
 
 
@@ -168,8 +168,8 @@ class CustomSelect2UserWidget(forms.SelectMultiple):
 
 # For admins add/removing authors
 class AuthorInviteAddForm(forms.Form):
-    first_name = forms.CharField(label="Invitee First Name", max_length=150, required=False)
-    last_name = forms.CharField(label="Invitee Last Name", max_length=150, required=False)
+    first_name = forms.CharField(label="Invitee Given Name", max_length=150, required=False)
+    last_name = forms.CharField(label="Invitee Surname", max_length=150, required=False)
     email = forms.EmailField(label="Invitee Email", max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
     # TODO: Add a text -or- inbetween here on the form. Also don't require First/Last/Email if the existing user is selected
     users_to_add = ModelMultipleChoiceField(
@@ -247,8 +247,8 @@ class EditUserForm(forms.ModelForm):
 
 # Note: not used on Authors, as we always want them assigned when created
 class UserInviteForm(forms.Form):
-    first_name = forms.CharField(label="Invitee First Name", max_length=150, required=True)
-    last_name = forms.CharField(label="Invitee Last Name", max_length=150, required=True)
+    first_name = forms.CharField(label="Invitee Given Name", max_length=150, required=True)
+    last_name = forms.CharField(label="Invitee Surname", max_length=150, required=True)
     email = forms.CharField(label="Invitee Email", max_length=settings.INVITATIONS_EMAIL_MAX_LENGTH, required=False)
 
 

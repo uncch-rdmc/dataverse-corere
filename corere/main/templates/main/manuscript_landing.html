@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
     var manuscript_id = {{manuscript_id}};
-    var table_show_timestamps = true;
+    {% comment %} var table_show_timestamps = true; {% endcomment %}
     var createSubButton = {{create_sub_allowed}};
 
     function sub_table_callback(table) {
@@ -260,6 +260,7 @@
                             },
                             enabled: false
                         },
+                        {% comment %}
                         {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
                         {
                             text: '<i class="far fa-eye"></i> Timestamps Shown',
@@ -290,6 +291,7 @@
                             },
                         },
                         {% endif %}
+                        {% endcomment %}
 
                     ]
                 })
@@ -342,7 +344,26 @@
                 // for(var i in manuscript_avail_buttons) {
                 //     table.button(manuscript_avail_buttons[i]+':name').enable(true);
                 //     table.button(manuscript_avail_buttons[i]+':name').nodes().css("display", "block");
-                // } {% endcomment %}
+                // } 
+                {% endcomment %}
+
+                {% if request.user|has_group:GROUP_ROLE_EDITOR or request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER  %} 
+                document.getElementById("submission_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Shown" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Timestamps Hidden" data-offstyle="secondary" data-height="38px" data-width="210px">`);
+                mine_toggle = $("#mine_toggle");
+                mine_toggle.change(function(event){
+                    var column = table.column(4);
+                    column.visible( ! column.visible() );
+                    var column = table.column(7);
+                    column.visible( ! column.visible() );
+                    var column = table.column(9);
+                    column.visible( ! column.visible() );
+                    var column = table.column(11);
+                    column.visible( ! column.visible() );
+                });
+                mine_toggle.bootstrapToggle()
+                {% endif %}
 
                 fixButtonGroupCurve();
             }
@@ -371,7 +392,7 @@
         <span>
             Curator{% if manuscript_curators|length > 1 %}s{% endif %}: {{manuscript_curators|join:', '}}
             {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_curators|length == 0 %}
-            <a href="/manuscript/{{manuscript_id}}/assigncurator/" title="Add curator to this manuscript" aria-label="Add curator to this manuscript">Add Curator</a>
+            <i class="fas fa-exclamation" style="color:#DC3545;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assigncurator/" title="Add curator to this manuscript" aria-label="Add curator to this manuscript">Add Curator</a>
             {% comment %} <button type="button" class="btn btn-secondary btn-sm" id="addCuratorInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Curator</button> {% endcomment %}
             {% endif %}
         </span>
@@ -379,7 +400,7 @@
         <span>
             Verifier{% if manuscript_verifiers|length > 1 %}s{% endif %}: {{manuscript_verifiers|join:', '}}
             {% if request.user|has_group:GROUP_ROLE_CURATOR and manuscript_verifiers|length == 0 %}
-            <a style="margin-left:3px;" href="/manuscript/{{manuscript_id}}/assignverifier/" title="Add verifier to this manuscript" aria-label="Add verifier to this manuscript">Add Verifier</a>
+            <span style="margin-left:3px;" ><i class="fas fa-exclamation" style="color:#DC3545;"></i>&nbsp;<a href="/manuscript/{{manuscript_id}}/assignverifier/" title="Add verifier to this manuscript" aria-label="Add verifier to this manuscript">Add Verifier</a></span>
             {% comment %} <button type="button" class="btn btn-secondary btn-sm" style="margin-left:3px;" id="addVerifierInlineButton" onclick="location.href='/manuscript/{{manuscript_id}}/assigncurator/'"><i class="fas fa-exclamation" style="color:darkred;"></i> Add Verifier</button> {% endcomment %}
             {% endif %}
         </span>

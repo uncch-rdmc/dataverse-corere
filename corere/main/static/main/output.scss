@@ -388,6 +388,14 @@ select.custom-select {
     border-width: 1px;
 }
 
+.table-fixed {
+    table-layout: fixed;
+}
+
+.table-fixed td {
+    word-wrap: break-word;
+}
+
 #div_id_note_formset-0-scope {
     width:160px;
 }

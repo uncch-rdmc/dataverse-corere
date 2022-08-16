@@ -158,7 +158,7 @@
     {% elif edition_formset %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" name="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code" onclick="return confirm('This will save the current state of the form, but you will need to return to this page to submit your review.');">
-        <input type="submit" name="submit_progress_edition" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off to the curation team" aria-label="Save note changes for this submission of data/code, and hand off to the curation team" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
+        <input type="submit" name="submit_progress_edition" id="submit_progress_edition_button" value="Submit and Progress" title="Save note changes for this submission of data/code, and hand off to the curation team" aria-label="Save note changes for this submission of data/code, and hand off to the curation team" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');">
     {% else %}
         {% comment %} <input type="submit" name="submit_progress_submission" value="Submit and Progress" onclick="return confirm('Once you hand off this form, editing will be locked. Is this ok?');"> {% endcomment %}
         <!-- <input type=button value="Home" onClick="location.href='/manuscript/{{parent_id}}/';"> -->

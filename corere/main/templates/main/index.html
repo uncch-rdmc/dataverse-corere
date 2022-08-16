@@ -7,10 +7,11 @@
 {% comment %} Manuscript Table {% endcomment %}
 
 <script type="text/javascript">
-    var search_completed_vis_toggle = true;
+    {% comment %} var search_completed_vis_toggle = true; {% endcomment %}
     {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
+    {% comment %} //TODO: We search username across all columns because multi-column OR searches are a pain. If it causes false positives investigate further. {% endcomment %}
     $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
@@ -30,6 +31,7 @@
                     cache: true,
                     select: 'single',
                     columns: columns_config,
+                    autoWidth: false,
                     dom: 'Bfrtpl',
                     keys: true, //for keyboard
                     rowId: 'id', //for retaining selected row
@@ -59,7 +61,7 @@
                                 'aria-label': 'Work on a manuscript record'
                             }
                         },
-                        
+                        {% comment %} 
                         //the default for the searches controlled by these two buttons is set later down
                         {
                             text: '<i class="far fa-eye-slash"></i> Completed',
@@ -91,11 +93,11 @@
                             action: function ( e, dt, node, config ) {
                                 if(!$('#manuscript_table').hasClass("visibleMe")) {
                                     //Implicit globals are not best practice
-                                    table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                                    table.search( "{{request.user.username}}" ).draw();
                                     $('#manuscript_table').addClass("visibleMe")
                                     this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
                                 } else {
-                                    table.columns( 5 ).search( "" ).draw();
+                                    table.search( "" ).draw();
                                     $('#manuscript_table').removeClass("visibleMe")
                                     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
                                 }
@@ -121,23 +123,13 @@
 
                                     this.text( 'Show User Filter Table' );        
                                 }
-                                // if(!$('#manuscript_table').hasClass("visibleMe")) {
-                                //     //Implicit globals are not best practice
-                                //     table.columns( 5 ).search( "{{request.user.username}}" ).draw();
-                                //     $('#manuscript_table').addClass("visibleMe")
-                                //     this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
-                                // } else {
-                                //     table.columns( 5 ).search( "" ).draw();
-                                //     $('#manuscript_table').removeClass("visibleMe")
-                                //     this.text( '<i class="far fa-eye"></i> All Manuscripts' );
-                                // }
                             },
                             attr: {
                                 title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
                                 'aria-label': 'Show/hide additional table where you can see the manuscripts assigned to individual users'
                             }
-                        },
-                        {% endif %}
+                        }, {% endif %}{% endcomment %}
+
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
@@ -169,7 +161,7 @@
                     table.cell({ row: selected_row, column: 0 }).focus();
                 }
                 //table.row(selected_row).select(); //uses 'keys' retained row it was on to actually select the row
-                table.buttons().container().prependTo("#manuscript_buttons");
+                //table.buttons().container().prependTo("#manuscript_buttons");
                 table.order.neutral().draw();
                 table.row(':first').select(); //Select first row always
 
@@ -177,11 +169,45 @@
                 table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
-                table.columns( 5 ).search( "{{request.user.username}}" ).draw();
+                table.search( "{{request.user.username}}" ).draw();
                 {% endif %}
                 document.getElementById('manuscript_table_loading').style.display = "none";
                 document.getElementById('manuscript_table_holder').style.display = "block";
-                document.getElementById('user_table_holder').style.display = "block";
+                {% comment %} document.getElementById('user_table_holder').style.display = "block"; {% endcomment %}
+
+                //TODO: because I am setting the innner html this is breaking existing listeners
+                document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="active_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Active" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Complete" data-offstyle="secondary" data-height="38px" data-width="140px">`);
+                active_toggle = $("#active_toggle")
+                active_toggle.change(function(event){
+                    var checkbox = event.target;
+                    if(checkbox.checked) {
+                        //Implicit globals are not best practice
+                        table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
+                    } else {
+                        table.columns( 4 ).search( "Completed Report Sent" ).draw();
+                    }
+                });
+                active_toggle.bootstrapToggle()
+
+                {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
+                document.getElementById("manuscript_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> All" data-onstyle="secondary" 
+                        data-off="<i class='far fa-eye'></i> Mine" data-offstyle="secondary" data-height="38px" data-width="140px">`);
+                mine_toggle = $("#mine_toggle");
+                mine_toggle.change(function(event){
+                    var checkbox = event.target;
+                    if(checkbox.checked) {
+                        //Implicit globals are not best practice
+                        table.search( "" ).draw();
+                    } else {
+                        table.search( "{{request.user.username}}" ).draw();
+                    }
+                });
+                mine_toggle.bootstrapToggle()
+                {% endif %}
+
             }
         })
     });
@@ -193,28 +219,42 @@
             var column_settings = {name: columns[c][0], title:columns[c][1]}
             if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
                 column_settings.visible = true;
+                column_settings.width = "12%";
             } 
             else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;
                 column_settings.className = 'select-checkbox';
+                column_settings.width = "2%";
             } 
-            else if(columns[c][0] === 'users' || columns[c][0] === 'id') {
+            else if(columns[c][0] === 'authors' || columns[c][0] === 'editors' || columns[c][0] === 'id') {
                 column_settings.visible = false;
-            } else if(columns[c][0] === 'pub_name') {
+            } 
+            else if(columns[c][0] === 'curators' || columns[c][0] === 'verifiers') {
+                column_settings.width = "22%";
+            } 
+            else if(columns[c][0] === 'pub_name') {
                 column_settings.render = function ( data, type, row ) {
                     return type === 'display' && data.length > 60 ?
                         data.substr( 0, 60 ) +'…' :
                         data;
                 }
+                column_settings.width = "15%";
             }
-            console.log(columns[c][0])
+            else if(columns[c][0] === 'pub_id' || columns[c][0] === '_status') {
+                column_settings.width = "10%";
+            } 
+            else {
+                column_settings.width = "15%";
+            }
+
+            //console.log(columns[c][0])
             columns_config[c] = column_settings
         }
         return [columns_config, button_index];
     } 
 </script>
 
-<div id="user_table_holder" style="display:none;" hidden>
+{% comment %} <div id="user_table_holder" style="display:none;" hidden>
     <br>
     <h2>Users</h2>
     <table id="user_table" class="datatable table table-striped table-bordered" cellspacing="0" width="100%">
@@ -227,7 +267,7 @@
         </tbody>
     </table>
     <hr>
-</div>
+</div> {% endcomment %}
 
 {% include "main/page_header.html" with no_hr=True %}
 <br>
@@ -235,7 +275,7 @@
 <div>
     <div class="title-text" id="manuscript_table_loading">Loading...</div>
     <div class="title-text" id="manuscript_table_holder" style="display:none;">
-        <table id="manuscript_table" class="datatable table table-striped table-bordered visibleMe" cellspacing="0" width="100%">
+        <table id="manuscript_table" class="datatable table table-striped table-bordered table-fixed visibleMe" cellspacing="0" width="100%">
             <thead>
                 {% for field in manuscript_columns %}
                     <th>{{ field }}</th>
@@ -250,7 +290,7 @@
 
 {% comment %} USER TABLE {% endcomment %}
 
-<script type="text/javascript">
+{% comment %} <script type="text/javascript">
     var search_completed_vis_toggle = true;
     var USER_LIST_JSON_URL = '{% url "user_table" %}';
 
@@ -362,7 +402,7 @@
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
                     username = dt.rows( { selected: true } ).data()[0][2]
-                    $('#manuscript_table').DataTable().columns(5).search(username).draw();
+                    $('#manuscript_table').DataTable().search(username).draw();
                     if(! $('#manuscript_table').hasClass("visibleMe")) {
                         $('#manuscript_table').addClass("visibleMe")
                     }
@@ -376,7 +416,7 @@
                     }
 
                     $('#manuscript_table').DataTable().buttons( "viewnotuserassigned:name" ).text( '<i class="far fa-eye"></i> All Manuscripts' );
-                    $('#manuscript_table').DataTable().columns(5).search('').draw();
+                    $('#manuscript_table').DataTable().search('').draw();
                     // dt.button('workOnManuscript:name').enable(false);
                 } );
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load and draw
@@ -384,7 +424,6 @@
 
             }
         })
-
     });
 
     function constructTable(columns) {
@@ -404,10 +443,6 @@
         }
         return [columns_config, button_index];
     } 
-</script>
-
-
-
-
+</script> {% endcomment %}
 
 {% endblock %}
