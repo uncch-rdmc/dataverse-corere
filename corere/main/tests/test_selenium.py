@@ -49,7 +49,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
-    # @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
+    @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
     @override_settings(SKIP_EDITION=True)
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
@@ -249,7 +249,7 @@ class LoggingInTestCase(LiveServerTestCase):
     # TODO: Test across multiple submissions
     # TODO: This test downloads zips, do we need to get rid of them?
     # TODO: This doesn't test access to previous submissions yet
-    # @unittest.skip("Disabled for test writing")
+    @unittest.skip("Disabled for test writing")
     @override_settings(SKIP_EDITION=True)
     def test_3_user_workflow_with_access_checks(self):
         ## If you use these settings, you have to skip our POST test currently because they seem to be contigent on headless...

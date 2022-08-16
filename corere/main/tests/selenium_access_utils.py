@@ -181,14 +181,13 @@ g_dict_editor_access.update(
 ##### Manuscript Access #####
 #############################
 
-# TODO: Most todos in this are stale
 m_dict_no_access = {
     "": {"GET": 404, "POST": 405},
     "submission_table/": {"GET": 404, "POST": 405},  
-    "edit/": {"GET": 404, "POST": 404},  # TODO: No access anon gets 500?
+    "edit/": {"GET": 404, "POST": 404}, 
     "update/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},
-    "uploader/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
+    "uploader/": {"GET": 404, "POST": 404}, 
     "fileslist/": {"GET": 404, "POST": 404},
     "view/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 404, "POST": 404},
@@ -201,14 +200,14 @@ m_dict_no_access = {
     #'unassigncurator/': {'GET': 404}, #this needs a user id
     "assignverifier/": {"GET": 404, "POST": 404},
     #'unassignverifier/': {'GET': 404}, #this needs a user id
-    "deletefile/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
-    "downloadfile/": {"GET": 404, "POST": 404},  # TODO: This is probably correct (I think without passing a file name we should 404), but right now we wipe it out with our admin access setting, so I've disabled it
+    "deletefile/": {"GET": 404, "POST": 404},  
+    "downloadfile/": {"GET": 404, "POST": 404},
     "downloadall/": {"GET": 404, "POST": 404},
     "reportdownload/": {"GET": 404, "POST": 404},
     #'deletenotebook/': {'GET': 404}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
     "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
-    "confirm/": {"GET": 404, "POST": 404},  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
-    "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is correct but right now we wipe it out with our admin access setting, so I've disabled it
+    "confirm/": {"GET": 404, "POST": 404}, 
+    "pullcitation/": {"GET": 404, "POST": 404}  
 }
 
 #TODO: We may want to allow non-admin curators to do more things
@@ -292,8 +291,8 @@ m_dict_admin_access = {
     "reportdownload/": {"GET": 200, "POST": 405},
     #'deletenotebook/': {'GET': 200}, #TODO: This errors asking for a cookie (WT). Should this work on a get? I may have done that out of laziness.
     "file_table/": {"GET": 200, "POST": 405},
-    "confirm/": {"GET": 404, "POST": 404},  # TODO: This is conditionally available, and maybe requires post
-    "pullcitation/": {"GET": 404, "POST": 404}  # TODO: This is conditionally available, and maybe requires post. | POST 404s because its called out of phase and TransistionPermissionMixin happens first I think
+    "confirm/": {"GET": 404, "POST": 404}, 
+    "pullcitation/": {"GET": 404, "POST": 404} 
 }
 
 m_dict_yes_author_access = m_dict_admin_access.copy()
@@ -324,12 +323,6 @@ m_dict_yes_curator_access.update(
     }
 )
 
-
-# TODO: What additional dictionaries do I need?
-# - Author (in and out of phase?)
-# - Editor (in and out of phase?)
-# - Curator (same as admin?)
-
 #############################
 ##### Submission Access #####
 #############################
@@ -337,8 +330,8 @@ m_dict_yes_curator_access.update(
 # TODO: access on some of these change with phase
 s_dict_admin_access = {
     "info/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
-    "uploadfiles/": {"GET": 200},  # TODO: Post disabled because it returns literally nothing, probably due to changing the file datatable to be more restrictive on when its visible    
-    "confirmfiles/": {"GET": 404, "POST": 404},  #TODO: Post disabled because it causes an ajax error. Probably due to changing file_table perms check.
+    "uploadfiles/": {"GET": 200, "POST": 200},  # TODO: Post disabled because it returns literally nothing, probably due to changing the file datatable to be more restrictive on when its visible    
+    "confirmfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
     "fileslist/": {"GET": 200, "POST": 405},
     "view/": {"GET": 200, "POST": 200},  # TODO: POST - I'm surprised an empty body doesn't error, maybe change
