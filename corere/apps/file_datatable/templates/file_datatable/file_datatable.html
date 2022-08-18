@@ -11,6 +11,43 @@
     </table>
 </div>
 
+{% comment %} 
+    How am I passing name and path to this. A hidden field? 
+    Also am I just going to have two almost identical modals? I think so... 
+{% endcomment %}
+<div class="modal fade" id="exampleModalLong" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Rename File</h5>
+        {% comment %} <button type="button" class="close" onclick="$('#exampleModalLong').modal('hide');" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button> {% endcomment %}
+      </div>
+      <div class="modal-body">
+        <table>
+            <tr>
+                <td>Old Name: </td>
+                <td>&nbsp<input type="text" id="file_name_old" value="" style="width:370px" disabled></td>
+            </tr>
+            <tr>
+                <td>New Name:</td>
+                <td>&nbsp<input type="text" id="file_name_new" style="width:370px"></td>
+            </tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="file_url_base" value="">
+        <input type="hidden" id="file_path" value="">
+        <button type="button" class="btn btn-secondary" onclick="$('#exampleModalLong').modal('hide');">Close</button>
+        <button type="button" id="name_save_changes" class="btn btn-primary" onclick="submit_edit_name_popup_and_reload()">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% comment %}If we want this library to truly be portable, all this CORE2 specific stuff should not be here? {% endcomment %}
+{% comment %}Also file_datatable.js references delete_and_refresh which exists in the main app {% endcomment %}
 {% load static %}
 <script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}?v=2"></script>
 <script type="text/javascript">
@@ -39,6 +76,12 @@
         $.extend(config, {
             "initComplete": function(settings, json) {
                 document.getElementById('files_count_text').textContent = '('+$('#file_table_{{obj_type}}').DataTable().page.info().recordsTotal+')';
+            }
+        });
+        {% comment %}Also add a click listener for our modal{% endcomment%}
+        $("#file_name_new").keyup(function(event) {
+            if (event.keyCode === 13) {
+                $("#name_save_changes").click();
             }
         });
         {% endif %}

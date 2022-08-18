@@ -259,7 +259,7 @@ def download_all_manuscript_files(manuscript):
 
 ### The repo contains a sub-folder containing all the files. This is half to support downloading zips with a root folder
 
-
+#TODO: Maybe rename these path endpoints to communicate they are getting the system path not the relative path in the code folder
 def get_manuscript_repo_path(manuscript):
     return settings.GIT_ROOT + "/" + str(manuscript.id) + "_-_manuscript_-_" + manuscript.slug + "/"
 

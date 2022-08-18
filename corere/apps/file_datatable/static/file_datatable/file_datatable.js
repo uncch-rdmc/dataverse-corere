@@ -39,7 +39,6 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
         processing: true,
         stateSave: true,
         paging: true,
-        select: 'single',
         autoWidth: false,
         // dom: 'Bftlp',
         dom: 'Bfrtpl',
@@ -60,13 +59,19 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
             {
                 data: 'path',
                 render: function(data,type,row,meta){
-                    return row[0];
+                    if(readonly) { return row[0]; }
+
+                    //TODO: Stale, doing name first
+                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="edit_field(\''+row[0]+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
+
                 }
             },
             {
                 data: 'name',
                 render: function(data,type,row,meta){
-                    return row[1];
+                    if(readonly) { return row[1]; }
+
+                    return row[1] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_name_popup(\''+file_url_base+'\', \''+encodeURIComponent(row[0])+'\', \''+encodeURIComponent(row[1])+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
                 }
             },
         ],
@@ -78,4 +83,32 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
         buttons: top_buttons
     }
     return config
+}
+
+function show_edit_name_popup(file_url_base, file_path, old_name){
+    $('#file_name_old').val(decodeURIComponent(old_name));
+    $('#file_path').val(file_path);
+    $('#file_url_base').val(file_url_base);
+    $('#exampleModalLong').modal('show');
+}
+
+function submit_edit_name_popup_and_reload(file_url_base){
+    file_name_old = encodeURIComponent($('#file_name_old').val())
+    file_name_new = $('#file_name_new').val()
+    file_url_base = $('#file_url_base').val()
+    file_path = $('#file_path').val()
+
+    old_full_path = file_path + file_name_old
+    new_full_path = file_path + file_name_new
+
+    //TODO: Lets generate the url here
+    rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
+    rename_and_refresh(rename_url)
+
+    //TODO: Clear existing fields?
+
+    console.log(file_path)
+    console.log(file_name_old)
+    console.log(file_name_new)
+    $('#exampleModalLong').modal('hide');
 }

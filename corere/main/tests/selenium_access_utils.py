@@ -173,7 +173,7 @@ g_dict_normal_access.update(
 g_dict_editor_access = g_dict_normal_access.copy()
 g_dict_editor_access.update(
     {
-        "manuscript/create/": {"GET": 200, "POST": 500},
+        "manuscript/create/": {"GET": 200, "POST": 500}, #TODO: Why 500?
     }
 )
 
@@ -347,7 +347,7 @@ s_dict_admin_access = {
     "newfilecheck/": {"GET": 404, "POST": 405},  # Need a query string to not 404
     #    'wtstream/': {'GET': 200},
     #    'wtdownloadall/': {'GET': 200},
-    "file_table/": {"GET": 200, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
+    "file_table/": {"GET": 200, "POST": 405},
 }
 
 s_dict_admin_access__completed = s_dict_admin_access.copy()
@@ -356,11 +356,11 @@ s_dict_admin_access__completed.update({"confirmfiles/": {"GET": 200}})
 s_dict_yes_access_curator__out_of_phase = s_dict_admin_access.copy()
 s_dict_yes_access_curator__out_of_phase.update(
     {
-        "view/": {"GET": 404}, #, "POST": 404 Post disabled because ajax error, probably due to changing the file_table#TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
+        "view/": {"GET": 404}, #, "POST": 404 Post disabled because ajax error, probably due to changing the file_table #TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
         "viewfiles/": {"GET": 404, "POST": 404}, #TODO: Why does this 404? Because view is disabled when you have edit if you are non admin?
         "downloadall/": {"GET": 404, "POST": 404}, #TODO: I really don't understand why this is 404ing
         "newfilecheck/": {"GET": 404, "POST": 404},  # Need a query string to not 404
-        "file_table/": {"GET": 200, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
+        "file_table/": {"GET": 200, "POST": 405}, 
         "confirmfiles/": {"GET": 404 , "POST": 404},   #TODO: Disabled because it causes an ajax error / 500s. Probably due to changing file_table perms check.
         "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
         "fileslist/": {"GET": 200, "POST": 405},
@@ -393,7 +393,7 @@ s_dict_no_access = {
     "newfilecheck/": {"GET": 404, "POST": 404},
     #    'wtstream/': {'GET': 404},
     #    'wtdownloadall/': {'GET': 404},
-    "file_table/": {"GET": 404, "POST": 405},  # TODO: Should this 404 instead and hit the access restriction first?
+    "file_table/": {"GET": 404, "POST": 405},  
 }
 
 #TODO: This is really a fix for a broken piece of code. file_table shouldn't 200. Then we can delete this and just use s_dict_no_access

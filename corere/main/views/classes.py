@@ -658,6 +658,36 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
 
         return HttpResponse(status=200)
 
+#TODO: implement (switch from delete code). See submission version. Include sanitization
+#      ... this should probably be ONE endpoint for renaming file and path, as we have to pass both anyways and I think its the same in the backend
+class ManuscriptRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ["post"]
+    transition_method_name = "edit_files_noop"
+
+    def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        file_path = request.GET.get("file_path")
+        if not file_path:
+            raise Http404()
+        file_path = unescape(file_path)
+        g.delete_manuscript_file(self.object, file_path)
+
+        folder_path, file_name = file_path.rsplit("/", 1)
+        folder_path = folder_path + "/"
+        try:
+            m.GitFile.objects.get(parent_manuscript=self.object, path=folder_path, name=file_name).delete()
+        except m.GitFile.DoesNotExist:
+            logger.warning(
+                "While deleting file "
+                + file_path
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the associated GitFile was not found. This could be due to a previous error during upload."
+            )
+
+        return HttpResponse(status=200)
+
 
 # TODO: Pass less parameters, especially token stuff. Could combine with ManuscriptUploadFilesView, but how to handle parameters with that...
 class ManuscriptReadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
@@ -1912,6 +1942,57 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
         # New Strat: Delete files folder and then get every GitFile object for the submission and delete. Way cleaner.
         g.delete_all_submission_files(self.object.manuscript)
         m.GitFile.objects.filter(parent_submission=self.object).delete()
+
+        self.object.files_changed = True
+        self.object.save()
+
+        return HttpResponse(status=200)
+
+#TODO: needs sanitization
+class SubmissionRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ["post"]
+    transition_method_name = "edit_noop"
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = "submission"
+
+    def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        print("HERE")
+
+        #Note: This code assumes the name+path are combined
+        old_file_path = request.GET.get("old_path")
+        new_file_path = request.GET.get("new_path")
+        if not (old_file_path and new_file_path):
+            print("HERE sad")
+            raise Http404()
+        old_file_path = unescape(old_file_path)
+        new_file_path = unescape(new_file_path)
+
+        #First rename actual file
+        rename_for_git = [{"old":old_file_path, "new":new_file_path}]
+        g.rename_submission_files(self.object.manuscript, rename_for_git)
+
+        #Then rename GitFile in database
+        old_folder_path, old_file_name = old_file_path.rsplit("/", 1)
+        old_folder_path = old_folder_path + "/"
+        new_folder_path, new_file_name = new_file_path.rsplit("/", 1)
+        new_folder_path = new_folder_path + "/"
+
+        try:
+            model_file = m.GitFile.objects.get(parent_submission=self.object, path=old_folder_path, name=old_file_name)
+            model_file.path = new_folder_path
+            model_file.name = new_file_name
+            model_file.save()
+        except m.GitFile.DoesNotExist:
+            logger.warning(
+                "While renaming file "
+                + file_path
+                + " on submission "
+                + str(self.object.id)
+                + ", the associated GitFile was not found. This could be due to a previous error during upload."
+            )
 
         self.object.files_changed = True
         self.object.save()
