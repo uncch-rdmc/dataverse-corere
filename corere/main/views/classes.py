@@ -2855,6 +2855,6 @@ def _helper_sanitary_file_check(path):
     if re.search("[*?\"<>|;#:\\\/]", file_name):
         return "File name cannot include these characters: * ? \" < > | ; # : \ /"
     if re.search("[^a-zA-Z0-9 /_\-\.]", folders_name):
-        return "File folder can only contain the alphanumerics, _ - . and whitespace"
+        return "File folder can only contain the alphanumerics, _ - . / and whitespace"
 
     return ""

@@ -62,7 +62,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
                     if(readonly) { return row[0]; }
 
                     //TODO: Stale, doing name first
-                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="edit_field(\''+row[0]+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
+                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_path_popup(\''+file_url_base+'\', \''+encodeURIComponent(row[1])+'\', \''+encodeURIComponent(row[0])+'\')" title="Edit file path" aria-label="Edit file path"><span class="fas fa-pencil-alt"></span></button></span>';
 
                 }
             },
@@ -86,37 +86,76 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
 }
 
 function show_edit_name_popup(file_url_base, file_path, old_name){
-    $('#modal_sanitize_error').attr("hidden",true);
-    $('#file_name_old').val(decodeURIComponent(old_name));
-    $('#file_path').val(file_path);
-    $('#file_url_base').val(file_url_base);
-    $('#exampleModalLong').modal('show');
+    // $('#name_modal_sanitize_error').attr("hidden",true);
+    $('#name_modal_file_name_old').val(decodeURIComponent(old_name));
+    $('#name_modal_file_path').val(file_path);
+    $('#name_modal_file_url_base').val(file_url_base);
+    $('#name_modal').modal('show');
 }
 
-function submit_edit_name_popup_and_reload(file_url_base){
-    file_name_old = encodeURIComponent($('#file_name_old').val())
-    file_name_new = $('#file_name_new').val()
-    file_url_base = $('#file_url_base').val()
-    file_path = $('#file_path').val()
+function show_edit_path_popup(file_url_base, file_name, old_path){
+    // $('#path_modal_sanitize_error').attr("hidden",true);
+    $('#path_modal_file_path_old').val(decodeURIComponent(old_path));
+    $('#path_modal_file_name').val(file_name);
+    $('#path_modal_file_url_base').val(file_url_base);
+    $('#path_modal').modal('show');
+}
+
+//TODO: Why are we only encoding one of the two text fields in both?
+function submit_edit_name_modal_and_reload(){
+    file_name_old = encodeURIComponent($('#name_modal_file_name_old').val())
+    file_name_new = $('#name_modal_file_name_new').val()
+    file_url_base = $('#name_modal_file_url_base').val()
+    file_path = $('#name_modal_file_path').val()
 
     var regex1 = /[*?"<>|;#:\\\/]/;
     var regex2 = /\.\./;
     if($.trim(file_name_new).length === 0 || regex1.test(file_name_new) || regex2.test(file_name_new)) {
-        $('#modal_sanitize_error').removeAttr('hidden');
+        $('#name_modal_sanitize_error').removeAttr('hidden');
         return;
     }
 
     old_full_path = file_path + file_name_old
     new_full_path = file_path + file_name_new
 
-    //TODO: Lets generate the url here
     rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
     rename_and_refresh(rename_url)
 
-    //TODO: Clear existing fields?
+    clear_name_modal()
+}
 
-    console.log(file_path)
-    console.log(file_name_old)
-    console.log(file_name_new)
-    $('#exampleModalLong').modal('hide');
+function clear_name_modal() {
+    $('#name_modal_sanitize_error').attr("hidden",true);
+    $('#name_modal_file_name_new').val('') 
+    $('#name_modal').modal('hide');
+}
+
+function submit_edit_path_modal_and_reload(){
+    file_path_old = encodeURIComponent($('#path_modal_file_path_old').val())
+    file_path_new = $('#path_modal_file_path_new').val()
+    file_url_base = $('#path_modal_file_url_base').val()
+    file_name = $('#path_modal_file_name').val()
+
+    //TODO: We need to ensure path begins and ends with /
+    var regex1 = /[^a-zA-Z0-9 /_\-\.]/;
+    var regex2 = /\.\./;
+    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new)) {
+        $('#path_modal_sanitize_error').removeAttr('hidden');
+        return;
+    }
+
+    old_full_path = file_path_old + file_name
+    new_full_path = file_path_new + file_name
+
+    rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
+    rename_and_refresh(rename_url)
+
+    clear_path_modal()
+    
+}
+
+function clear_path_modal() {
+    $('#path_modal_sanitize_error').attr("hidden",true);
+    $('#path_modal_file_path_new').val('') 
+    $('#path_modal').modal('hide');
 }

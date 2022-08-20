@@ -103,7 +103,7 @@ def _rename_files(repo_path, files_folder, files_dict_list):
         old_path = files_folder + d.get("old")
         new_path = files_folder + d.get("new")
         try:
-            os.rename(repo_path + old_path, repo_path + new_path)
+            os.renames(repo_path + old_path, repo_path + new_path)
             repo.index.add(repo_path + new_path)
             repo.index.remove(repo_path + old_path)
             repo.index.commit("File " + repo_path + old_path + " renamed to " + repo_path + new_path)
