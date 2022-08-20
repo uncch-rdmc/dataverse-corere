@@ -121,7 +121,49 @@
                         data.append("fullPath", file.fullPath);
                     }
                 });
-            }
+            },
+            //TODO: Here we also need to validate folder path
+            accept: function(file, done) {
+                {% comment %} // similar regex in submit_edit_name_popup_and_reload
+                {% endcomment %}
+
+                var regex1 = /[*?"<>|;#:\\\/]/;
+                var regex2 = /\.\./;
+
+                if(file.name.length === 0 || regex1.test(file.name) || regex2.test(file.name)) {
+                    done('File name cannot be empty, contain .. or any of the following characters: * ? " < > | ; # : \ /');
+                }
+
+                //TODO: Set the correct length we need here
+                else if (file.name.length > 259) {
+                    done("Filename + path exceeds 260 characters!");
+                }
+
+                {% comment %} console.log(file.name) {% endcomment %}
+                else if (file.fullPath) {
+                    last_slash = file.fullPath.lastIndexOf('/');
+                    folder_path = file.fullPath.slice(0, last_slash);
+                    console.log(folder_path)
+                    regex_path = /[^a-zA-Z0-9 _\-\.]/;
+                    //console.log(regex_path.test(folder_path));
+                    if (file.fullPath > 260) {
+                        done("Filename + path exceeds 260 characters!");
+                    }
+                    else if(regex2.test(folder_path)) {
+                        done("File folder cannot contain ..");
+                    }
+                    else if(regex_path.test(folder_path)){
+                        done("File folder can only contain the alphanumerics, _ - . and whitespace");
+                    }
+                    else {
+                        done();
+                    }
+                }
+
+                else {
+                    done();
+                }
+            },
         };
     </script>
 {% endif %}

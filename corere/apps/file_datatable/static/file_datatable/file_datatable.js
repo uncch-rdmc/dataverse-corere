@@ -86,6 +86,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
 }
 
 function show_edit_name_popup(file_url_base, file_path, old_name){
+    $('#modal_sanitize_error').attr("hidden",true);
     $('#file_name_old').val(decodeURIComponent(old_name));
     $('#file_path').val(file_path);
     $('#file_url_base').val(file_url_base);
@@ -97,6 +98,13 @@ function submit_edit_name_popup_and_reload(file_url_base){
     file_name_new = $('#file_name_new').val()
     file_url_base = $('#file_url_base').val()
     file_path = $('#file_path').val()
+
+    var regex1 = /[*?"<>|;#:\\\/]/;
+    var regex2 = /\.\./;
+    if($.trim(file_name_new).length === 0 || regex1.test(file_name_new) || regex2.test(file_name_new)) {
+        $('#modal_sanitize_error').removeAttr('hidden');
+        return;
+    }
 
     old_full_path = file_path + file_name_old
     new_full_path = file_path + file_name_new
