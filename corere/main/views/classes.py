@@ -1877,10 +1877,22 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     def get(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        new_result = _helper_sanitary_file_check(file_path)
+        if(new_result):
+            logger.warning(
+                "While downloading the file "
+                + file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + new_result
+            )
+            return HttpResponse(status=400)
 
         return g.get_submission_file(self.object, file_path, True)
 
@@ -1908,10 +1920,23 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     def post(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        new_result = _helper_sanitary_file_check(file_path)
+        if(new_result):
+            logger.warning(
+                "While deleting the file "
+                + file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + new_result
+            )
+            return HttpResponse(status=400)
+
         g.delete_submission_file(self.object.manuscript, file_path)
 
         folder_path, file_name = file_path.rsplit("/", 1)
