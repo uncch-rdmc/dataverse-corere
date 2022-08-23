@@ -679,7 +679,7 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
                 + validation_error
             )
             return HttpResponse(status=400)
-            
+
         g.delete_manuscript_file(self.object, file_path)
 
         folder_path, file_name = file_path.rsplit("/", 1)
@@ -743,7 +743,8 @@ class ManuscriptRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
 
         #First rename actual file
         rename_for_git = [{"old":old_file_path, "new":new_file_path}]
-        g.rename_manuscript_files(self.object, rename_for_git)
+        if not g.rename_manuscript_files(self.object, rename_for_git):
+            return HttpResponse(status=400)
 
         #Then rename GitFile in database
         old_folder_path, old_file_name = old_file_path.rsplit("/", 1)
@@ -2113,7 +2114,8 @@ class SubmissionRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
 
         #First rename actual file
         rename_for_git = [{"old":old_file_path, "new":new_file_path}]
-        g.rename_submission_files(self.object.manuscript, rename_for_git)
+        if not g.rename_submission_files(self.object.manuscript, rename_for_git):
+            return HttpResponse(status=400)
 
         #Then rename GitFile in database
         old_folder_path, old_file_name = old_file_path.rsplit("/", 1)

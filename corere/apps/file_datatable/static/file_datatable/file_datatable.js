@@ -123,13 +123,16 @@ function submit_edit_name_modal_and_reload(){
     new_full_path = file_path + file_name_new
 
     rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
-    rename_and_refresh(rename_url)
+    rename_and_refresh(rename_url, clear_name_modal, show_name_modal_generic_error)
+}
 
-    clear_name_modal()
+function show_name_modal_generic_error() {
+    $('#name_modal_unexpected_error').removeAttr('hidden')
 }
 
 function clear_name_modal() {
     $('#name_modal_sanitize_error').attr("hidden",true);
+    $('#name_modal_unexpected_error').attr("hidden",true);
     $('#name_modal_file_name_new').val('') 
     $('#name_modal').modal('hide');
 }
@@ -152,14 +155,17 @@ function submit_edit_path_modal_and_reload(){
     new_full_path = file_path_new + file_name
 
     rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
-    rename_and_refresh(rename_url)
-
-    clear_path_modal()
+    rename_and_refresh(rename_url, clear_path_modal, show_path_modal_generic_error)
     
+}
+
+function show_path_modal_generic_error() {
+    $('#path_modal_unexpected_error').removeAttr('hidden')
 }
 
 function clear_path_modal() {
     $('#path_modal_sanitize_error').attr("hidden",true);
+    $('#path_modal_unexpected_error').attr("hidden",true);
     $('#path_modal_file_path_new').val('') 
     $('#path_modal').modal('hide');
 }
