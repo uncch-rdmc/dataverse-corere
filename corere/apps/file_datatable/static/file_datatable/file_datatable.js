@@ -62,7 +62,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
                     if(readonly) { return row[0]; }
 
                     //TODO: Stale, doing name first
-                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_path_popup(\''+file_url_base+'\', \''+encodeURIComponent(row[1])+'\', \''+encodeURIComponent(row[0])+'\')" title="Edit file path" aria-label="Edit file path"><span class="fas fa-pencil-alt"></span></button></span>';
+                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_path_modal(\''+file_url_base+'\', \''+encodeURIComponent(row[1])+'\', \''+encodeURIComponent(row[0])+'\')" title="Edit file path" aria-label="Edit file path"><span class="fas fa-pencil-alt"></span></button></span>';
 
                 }
             },
@@ -71,7 +71,7 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
                 render: function(data,type,row,meta){
                     if(readonly) { return row[1]; }
 
-                    return row[1] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_name_popup(\''+file_url_base+'\', \''+encodeURIComponent(row[0])+'\', \''+encodeURIComponent(row[1])+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
+                    return row[1] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_name_modal(\''+file_url_base+'\', \''+encodeURIComponent(row[0])+'\', \''+encodeURIComponent(row[1])+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
                 }
             },
         ],
@@ -85,16 +85,20 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
     return config
 }
 
-function show_edit_name_popup(file_url_base, file_path, old_name){
-    // $('#name_modal_sanitize_error').attr("hidden",true);
+//TODO: When we show these modals, we need to look at the length of the path/name (that is hidden) to determine the length of the input field
+
+function show_edit_name_modal(file_url_base, file_path, old_name){
+    name_length = 260 - decodeURIComponent(file_path).length;
+    $('#name_modal_file_name_new').attr('maxlength', name_length);
     $('#name_modal_file_name_old').val(decodeURIComponent(old_name));
     $('#name_modal_file_path').val(file_path);
     $('#name_modal_file_url_base').val(file_url_base);
     $('#name_modal').modal('show');
 }
 
-function show_edit_path_popup(file_url_base, file_name, old_path){
-    // $('#path_modal_sanitize_error').attr("hidden",true);
+function show_edit_path_modal(file_url_base, file_name, old_path){
+    path_length = 260 - decodeURIComponent(file_name).length;
+    $('#path_modal_file_path_new').attr('maxlength', path_length);
     $('#path_modal_file_path_old').val(decodeURIComponent(old_path));
     $('#path_modal_file_name').val(file_name);
     $('#path_modal_file_url_base').val(file_url_base);
@@ -139,7 +143,7 @@ function submit_edit_path_modal_and_reload(){
     //TODO: We need to ensure path begins and ends with /
     var regex1 = /[^a-zA-Z0-9 /_\-\.]/;
     var regex2 = /\.\./;
-    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new)) {
+    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new) || !file_path_new.startsWith("/") || !file_path_new.endsWith("/")) {
         $('#path_modal_sanitize_error').removeAttr('hidden');
         return;
     }
