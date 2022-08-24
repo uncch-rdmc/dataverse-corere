@@ -1,4 +1,4 @@
-import logging, os, io, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
+import logging, os, io, re, requests, urllib, time, git, sseclient, threading, base64, json, tempfile
 from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -588,6 +588,20 @@ class ManuscriptUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             try:
                 file = request.FILES.get("file")
                 fullRelPath = request.POST.get("fullPath", "")
+
+                validation_error = _helper_sanitary_file_check("/" + fullRelPath + file.name)
+                if(validation_error):
+                    logger.warning(
+                        "While uploading the file "
+                        + fullRelPath
+                        + " on manuscript "
+                        + str(self.object.id)
+                        + ", the sanitization check on the new path failed : "
+                        + validation_error
+                    )
+                    return HttpResponse(status=400)
+
+
                 path = "/" + fullRelPath.rsplit(file.name)[0]  # returns '' if fullPath is blank, e.g. file is on root
 
                 if gitfiles := m.GitFile.objects.filter(parent_manuscript=self.object, path=path, name=file.name):
@@ -622,10 +636,22 @@ class ManuscriptDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     def get(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        validation_error = _helper_sanitary_file_check(file_path)
+        if(validation_error):
+            logger.warning(
+                "While downloading the file "
+                + file_path_escaped
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
 
         return g.get_manuscript_file(self.object, file_path, True)
 
@@ -637,10 +663,23 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     def post(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        validation_error = _helper_sanitary_file_check(file_path)
+        if(validation_error):
+            logger.warning(
+                "While deleting the file "
+                + file_path_escaped
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
+
         g.delete_manuscript_file(self.object, file_path)
 
         folder_path, file_name = file_path.rsplit("/", 1)
@@ -655,6 +694,80 @@ class ManuscriptDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
                 + str(self.object.id)
                 + ", the associated GitFile was not found. This could be due to a previous error during upload."
             )
+
+        return HttpResponse(status=200)
+
+#TODO: implement (switch from delete code). See submission version. Include sanitization
+#      ... this should probably be ONE endpoint for renaming file and path, as we have to pass both anyways and I think its the same in the backend
+class ManuscriptRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ["post"]
+    transition_method_name = "edit_files_noop"
+
+    def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        #Note: This code assumes the name+path are combined
+        old_file_path_escaped = request.GET.get("old_path")
+        new_file_path_escaped = request.GET.get("new_path")
+        if not (old_file_path_escaped and new_file_path_escaped):
+            raise Http404()
+
+        old_file_path = unescape(old_file_path_escaped)
+        new_file_path = unescape(new_file_path_escaped)
+
+        old_result = _helper_sanitary_file_check(old_file_path)
+        if(old_result):
+            logger.warning(
+                "While renaming the supposed file "
+                + old_file_path_escaped
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the sanitization check on the old path failed : "
+                + old_result
+            )
+            return HttpResponse(status=400)
+
+        validation_error = _helper_sanitary_file_check(old_file_path)
+        if(validation_error):
+            logger.warning(
+                "While renaming the file "
+                + old_file_path_escaped
+                + " to "
+                + new_file_path_escaped
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
+
+        #First rename actual file
+        rename_for_git = [{"old":old_file_path, "new":new_file_path}]
+        if not g.rename_manuscript_files(self.object, rename_for_git):
+            return HttpResponse(status=400)
+
+        #Then rename GitFile in database
+        old_folder_path, old_file_name = old_file_path.rsplit("/", 1)
+        old_folder_path = old_folder_path + "/"
+        new_folder_path, new_file_name = new_file_path.rsplit("/", 1)
+        new_folder_path = new_folder_path + "/"
+
+        try:
+            model_file = m.GitFile.objects.get(parent_manuscript=self.object, path=old_folder_path, name=old_file_name)
+            model_file.path = new_folder_path
+            model_file.name = new_file_name
+            model_file.save()
+        except m.GitFile.DoesNotExist:
+            logger.warning(
+                "While renaming file "
+                + old_file_path
+                + " on manuscript "
+                + str(self.object.id)
+                + ", the associated GitFile was not found. This could be due to a previous error during upload."
+            )
+
+        self.object.files_changed = True
+        self.object.save()
 
         return HttpResponse(status=200)
 
@@ -1786,7 +1899,7 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
     object_friendly_name = "submission"
     http_method_names = ["post"]
 
-    # TODO: Should we making sure these files are safe?
+    # TODO: Should we making sure these files are safe? We are escaping in rename
     def post(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
@@ -1794,8 +1907,19 @@ class SubmissionUploaderView(LoginRequiredMixin, GetOrGenerateObjectMixin, Trans
             try:
                 file = request.FILES.get("file")
                 fullRelPath = request.POST.get("fullPath", "")
-                # print(file)
-                # print(fullRelPath)
+
+                validation_error = _helper_sanitary_file_check("/" + fullRelPath + file.name)
+                if(validation_error):
+                    logger.warning(
+                        "While uploading the file "
+                        + fullRelPath
+                        + " on submission "
+                        + str(self.object.id)
+                        + ", the sanitization check on the new path failed : "
+                        + validation_error
+                    )
+                    return HttpResponse(status=400)
+
                 path = "/" + fullRelPath.rsplit(file.name)[0]  # returns '' if fullPath is blank, e.g. file is on root
                 # print(path)
                 if gitfiles := m.GitFile.objects.filter(parent_submission=self.object, path=path, name=file.name):
@@ -1833,10 +1957,22 @@ class SubmissionDownloadFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, T
     def get(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        validation_error = _helper_sanitary_file_check(file_path)
+        if(validation_error):
+            logger.warning(
+                "While downloading the file "
+                + file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
 
         return g.get_submission_file(self.object, file_path, True)
 
@@ -1864,10 +2000,23 @@ class SubmissionDeleteFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tra
     def post(self, request, *args, **kwargs):
         self.general(request, *args, **kwargs)
 
-        file_path = request.GET.get("file_path")
-        if not file_path:
+        file_path_escaped = request.GET.get("file_path")
+        if not file_path_escaped:
             raise Http404()
-        file_path = unescape(file_path)
+        file_path = unescape(file_path_escaped)
+
+        validation_error = _helper_sanitary_file_check(file_path)
+        if(validation_error):
+            logger.warning(
+                "While deleting the file "
+                + file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
+
         g.delete_submission_file(self.object.manuscript, file_path)
 
         folder_path, file_name = file_path.rsplit("/", 1)
@@ -1912,6 +2061,81 @@ class SubmissionDeleteAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin,
         # New Strat: Delete files folder and then get every GitFile object for the submission and delete. Way cleaner.
         g.delete_all_submission_files(self.object.manuscript)
         m.GitFile.objects.filter(parent_submission=self.object).delete()
+
+        self.object.files_changed = True
+        self.object.save()
+
+        return HttpResponse(status=200)
+
+class SubmissionRenameFileView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericCorereObjectView):
+    http_method_names = ["post"]
+    transition_method_name = "edit_noop"
+    model = m.Submission
+    parent_model = m.Manuscript
+    object_friendly_name = "submission"
+
+    def post(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        #Note: This code assumes the name+path are combined
+        old_file_path_escaped = request.GET.get("old_path")
+        new_file_path_escaped = request.GET.get("new_path")
+        if not (old_file_path_escaped and new_file_path_escaped):
+            raise Http404()
+
+        old_file_path = unescape(old_file_path_escaped)
+        new_file_path = unescape(new_file_path_escaped)
+
+        old_result = _helper_sanitary_file_check(old_file_path)
+        if(old_result):
+            logger.warning(
+                "While renaming the supposed file "
+                + old_file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the old path failed : "
+                + old_result
+            )
+            return HttpResponse(status=400)
+
+        validation_error = _helper_sanitary_file_check(old_file_path)
+        if(validation_error):
+            logger.warning(
+                "While renaming the file "
+                + old_file_path_escaped
+                + " to "
+                + new_file_path_escaped
+                + " on submission "
+                + str(self.object.id)
+                + ", the sanitization check on the new path failed : "
+                + validation_error
+            )
+            return HttpResponse(status=400)
+
+        #First rename actual file
+        rename_for_git = [{"old":old_file_path, "new":new_file_path}]
+        if not g.rename_submission_files(self.object.manuscript, rename_for_git):
+            return HttpResponse(status=400)
+
+        #Then rename GitFile in database
+        old_folder_path, old_file_name = old_file_path.rsplit("/", 1)
+        old_folder_path = old_folder_path + "/"
+        new_folder_path, new_file_name = new_file_path.rsplit("/", 1)
+        new_folder_path = new_folder_path + "/"
+
+        try:
+            model_file = m.GitFile.objects.get(parent_submission=self.object, path=old_folder_path, name=old_file_name)
+            model_file.path = new_folder_path
+            model_file.name = new_file_name
+            model_file.save()
+        except m.GitFile.DoesNotExist:
+            logger.warning(
+                "While renaming file "
+                + old_file_path
+                + " on submission "
+                + str(self.object.id)
+                + ", the associated GitFile was not found. This could be due to a previous error during upload."
+            )
 
         self.object.files_changed = True
         self.object.save()
@@ -2692,12 +2916,27 @@ def _helper_submit_submission_and_redirect(request, submission):
         # messages.add_message(request, messages.SUCCESS, self.msg)
         return redirect("manuscript_landing", id=submission.manuscript.id)
 
-# TODO: The error validation calling this could use refinement. It'll bail out after the first error and doesn't attach errors to file names.
+# TODO: This is a good candidate for a unit test
+# TODO: This could maybe use additional python-based sanitization https://pathvalidate.readthedocs.io/en/latest/pages/examples/sanitize.html
+# NOTE: We don't actually show these messages anywhere other than logs currently. Browser-side JS also enforces this sanitization, this is just a back-up to prevent malice.\
 def _helper_sanitary_file_check(path):
+    try:
+        folders_name, file_name = path.rsplit("/", 1)
+    except ValueError:
+        return "File must have a name and a path: " + path
+    folders_name = folders_name + "/"
+
     if path.find("..") != -1:
         return "File name with .. not allowed."
-    if path.strip() == "" or (path.rsplit("/", 1) and path.rsplit("/", 1)[1].strip() == ""):
-        return "File name must include a character other than just spaces."
     if len(path) > 260:
-        return "File paths + cannot be longer than 260 characters."
-    # TODO: Maybe include slugify check. Not using right now because that'll remove spaces among other things.
+        return "File paths + names cannot be longer than 260 characters."        
+    if file_name.strip() == "":
+        return "File name must include a character other than just spaces."
+    if re.search('\/\s*\/', folders_name):
+        return "Folder names cannot be blank or just spaces"
+    if re.search("[*?\"<>|;#:\\\/]", file_name):
+        return "File name cannot include these characters: * ? \" < > | ; # : \ /"
+    if re.search("[^a-zA-Z0-9\s/_\-\.]", folders_name):
+        return "File folder can only contain the alphanumerics, _ - . / and whitespace"
+
+    return ""

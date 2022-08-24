@@ -35,7 +35,7 @@
 </div>
 
 <script>
-    function delete_and_refresh(delete_url, id, obj_type){
+    function delete_and_refresh(delete_url){
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
         fetch(delete_url, {
@@ -63,6 +63,28 @@
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });
         })
+    }
+    function rename_and_refresh(rename_url, success_function, fail_function){
+        var headers = new Headers();
+        headers.append('X-CSRFToken', '{{ csrf_token }}');
+
+        fetch(rename_url, {
+            method: 'POST',
+            headers: headers, 
+            credentials: 'include'
+        }).then(response => {
+            var table = $('#file_table_{{obj_type}}').DataTable();
+            table.ajax.reload(function(){ 
+                document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
+            });
+
+            if (response.ok) {
+                success_function();
+            } else {
+                fail_function();
+            }
+        })
+
     }
 </script>
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">

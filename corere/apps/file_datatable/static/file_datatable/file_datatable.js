@@ -39,7 +39,6 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
         processing: true,
         stateSave: true,
         paging: true,
-        select: 'single',
         autoWidth: false,
         // dom: 'Bftlp',
         dom: 'Bfrtpl',
@@ -60,13 +59,19 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
             {
                 data: 'path',
                 render: function(data,type,row,meta){
-                    return row[0];
+                    if(readonly) { return row[0]; }
+
+                    //TODO: Stale, doing name first
+                    return row[0] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_path_modal(\''+file_url_base+'\', \''+encodeURIComponent(row[1])+'\', \''+encodeURIComponent(row[0])+'\')" title="Edit file path" aria-label="Edit file path"><span class="fas fa-pencil-alt"></span></button></span>';
+
                 }
             },
             {
                 data: 'name',
                 render: function(data,type,row,meta){
-                    return row[1];
+                    if(readonly) { return row[1]; }
+
+                    return row[1] + '<span style="float:right;"><button class="btn btn-secondary btn-sm" type="button" onclick="show_edit_name_modal(\''+file_url_base+'\', \''+encodeURIComponent(row[0])+'\', \''+encodeURIComponent(row[1])+'\')" title="Edit file name" aria-label="Edit file name"><span class="fas fa-pencil-alt"></span></button></span>';
                 }
             },
         ],
@@ -78,4 +83,90 @@ function create_file_table_config(table_path, readonly, is_submission, file_url_
         buttons: top_buttons
     }
     return config
+}
+
+//TODO: When we show these modals, we need to look at the length of the path/name (that is hidden) to determine the length of the input field
+
+function show_edit_name_modal(file_url_base, file_path, old_name){
+    name_length = 260 - decodeURIComponent(file_path).length;
+    $('#name_modal_file_name_new').attr('maxlength', name_length);
+    $('#name_modal_file_name_old').val(decodeURIComponent(old_name));
+    $('#name_modal_file_path').val(file_path);
+    $('#name_modal_file_url_base').val(file_url_base);
+    $('#name_modal').modal('show');
+}
+
+function show_edit_path_modal(file_url_base, file_name, old_path){
+    path_length = 260 - decodeURIComponent(file_name).length;
+    $('#path_modal_file_path_new').attr('maxlength', path_length);
+    $('#path_modal_file_path_old').val(decodeURIComponent(old_path));
+    $('#path_modal_file_name').val(file_name);
+    $('#path_modal_file_url_base').val(file_url_base);
+    $('#path_modal').modal('show');
+}
+
+//TODO: Why are we only encoding one of the two text fields in both?
+function submit_edit_name_modal_and_reload(){
+    file_name_old = encodeURIComponent($('#name_modal_file_name_old').val())
+    file_name_new = $('#name_modal_file_name_new').val()
+    file_url_base = $('#name_modal_file_url_base').val()
+    file_path = $('#name_modal_file_path').val()
+
+    var regex1 = /[*?"<>|;#:\\\/]/;
+    var regex2 = /\.\./;
+    if($.trim(file_name_new).length === 0 || regex1.test(file_name_new) || regex2.test(file_name_new)) {
+        $('#name_modal_sanitize_error').removeAttr('hidden');
+        return;
+    }
+
+    old_full_path = file_path + file_name_old
+    new_full_path = file_path + file_name_new
+
+    rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
+    rename_and_refresh(rename_url, clear_name_modal, show_name_modal_generic_error)
+}
+
+function show_name_modal_generic_error() {
+    $('#name_modal_unexpected_error').removeAttr('hidden')
+}
+
+function clear_name_modal() {
+    $('#name_modal_sanitize_error').attr("hidden",true);
+    $('#name_modal_unexpected_error').attr("hidden",true);
+    $('#name_modal_file_name_new').val('') 
+    $('#name_modal').modal('hide');
+}
+
+function submit_edit_path_modal_and_reload(){
+    file_path_old = encodeURIComponent($('#path_modal_file_path_old').val())
+    file_path_new = $('#path_modal_file_path_new').val()
+    file_url_base = $('#path_modal_file_url_base').val()
+    file_name = $('#path_modal_file_name').val()
+
+    //TODO: We need to ensure path begins and ends with /
+    var regex1 = /[^a-zA-Z0-9 /_\-\.]/;
+    var regex2 = /\.\./;
+    var regex3 = /\/\s*\//
+    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new) || regex3.test(file_path_new) || !file_path_new.startsWith("/") || !file_path_new.endsWith("/")) {
+        $('#path_modal_sanitize_error').removeAttr('hidden');
+        return;
+    }
+
+    old_full_path = file_path_old + file_name
+    new_full_path = file_path_new + file_name
+
+    rename_url = file_url_base+'renamefile/?old_path='+old_full_path+'&new_path='+new_full_path
+    rename_and_refresh(rename_url, clear_path_modal, show_path_modal_generic_error)
+    
+}
+
+function show_path_modal_generic_error() {
+    $('#path_modal_unexpected_error').removeAttr('hidden')
+}
+
+function clear_path_modal() {
+    $('#path_modal_sanitize_error').attr("hidden",true);
+    $('#path_modal_unexpected_error').attr("hidden",true);
+    $('#path_modal_file_path_new').val('') 
+    $('#path_modal').modal('hide');
 }

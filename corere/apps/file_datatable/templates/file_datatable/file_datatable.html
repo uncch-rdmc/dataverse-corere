@@ -11,6 +11,68 @@
     </table>
 </div>
 
+<div class="modal fade" id="name_modal" tabindex="-1" role="dialog" aria-labelledby="name_modalTitle" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="name_modalTitle">Rename File</h5>
+      </div>
+      <div class="modal-body">
+        <table>
+            <div id="name_modal_sanitize_error" class="alert alert-danger" role="alert" hidden>File name cannot contain '..', be emtpy, or any of the following characters: * ? " < > | ; # : \ /</div>
+            <div id="name_modal_unexpected_error" class="alert alert-danger" role="alert" hidden>An unexpected error occurred. This may be due to a naming/path collision.</div>
+            <tr>
+                <td>Old Name: </td>
+                <td>&nbsp<input type="text" id="name_modal_file_name_old" value="" style="width:370px" disabled></td>
+            </tr>
+            <tr>
+                <td>New Name:</td>
+                <td>&nbsp<input type="text" id="name_modal_file_name_new" style="width:370px"></td>
+            </tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="name_modal_file_url_base" value="">
+        <input type="hidden" id="name_modal_file_path" value="">
+        <button type="button" class="btn btn-secondary" onclick="clear_name_modal()">Close</button>
+        <button type="button" id="name_modal_save_changes" class="btn btn-primary" onclick="submit_edit_name_modal_and_reload()">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="path_modal" tabindex="-1" role="dialog" aria-labelledby="path_modalTitle" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="path_modalTitle">Change Path</h5>
+      </div>
+      <div class="modal-body">
+        <table>
+            <div id="path_modal_sanitize_error" class="alert alert-danger" role="alert" hidden>File path cannot contain '..' or be emtpy. It must begin and end with '/'. Also, it must only contain the following characters: alphanumericals _ - . / and whitespace</div>
+            <div id="path_modal_unexpected_error" class="alert alert-danger" role="alert" hidden>An unexpected error occurred. This may be due to a naming/path collision.</div>
+            <tr>
+                <td>Old Path: </td>
+                <td>&nbsp<input type="text" id="path_modal_file_path_old" value="" style="width:370px" disabled></td>
+            </tr>
+            <tr>
+                <td>New Path:</td>
+                <td>&nbsp<input type="text" id="path_modal_file_path_new" style="width:370px"></td>
+            </tr>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <input type="hidden" id="path_modal_file_url_base" value="">
+        <input type="hidden" id="path_modal_file_name" value="">
+        <button type="button" class="btn btn-secondary" onclick="clear_path_modal()">Close</button>
+        <button type="button" id="path_modal_save_changes" class="btn btn-primary" onclick="submit_edit_path_modal_and_reload()">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% comment %}If we want this library to truly be portable, all this CORE2 specific stuff should not be here? {% endcomment %}
+{% comment %}Also file_datatable.js references delete_and_refresh which exists in the main app {% endcomment %}
 {% load static %}
 <script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}?v=2"></script>
 <script type="text/javascript">
@@ -39,6 +101,12 @@
         $.extend(config, {
             "initComplete": function(settings, json) {
                 document.getElementById('files_count_text').textContent = '('+$('#file_table_{{obj_type}}').DataTable().page.info().recordsTotal+')';
+            }
+        });
+        {% comment %}Also add a click listener for our modal{% endcomment%}
+        $("#name_modal_file_name_new").keyup(function(event) {
+            if (event.keyCode === 13) {
+                $("#name_modal_save_changes").click();
             }
         });
         {% endif %}

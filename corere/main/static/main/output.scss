@@ -411,6 +411,13 @@ select.custom-select {
     margin-right:0px !important;
 }
 
+//Dropzone error svg x
+.dz-error-mark svg g g{
+    fill: #be2626;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+}
+
 //Add back bootstrap 3 tiny buttons, for our grid. We aren't targeting mobile anyways
 // .btn-group-xs > .btn, .btn-xs {
 //     padding: .25rem .4rem;
