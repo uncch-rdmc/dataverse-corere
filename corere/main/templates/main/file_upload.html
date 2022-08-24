@@ -40,6 +40,7 @@
     {% endcomment %}
     <script type="text/javascript">
         history.replaceState(null, document.title, location.href); //{%comment%}clears post body on refresh, was causing issues with my custom formness {%endcomment%}
+        var complete;
 
         obj_type = "{{obj_type}}"
         obj_id = {{ obj_id }}
@@ -59,10 +60,16 @@
                     this.removeFile(file);
                 });
                 this.on("sending", function(file, xhr, data) {
+                    complete = false; {% comment %} // Used by our datatable {% endcomment %}
+                    console.log("sending")
                     // if file is actually a folder
                     if(file.fullPath){
                         data.append("fullPath", file.fullPath);
                     }
+                });
+                this.on("queuecomplete", function (file) {
+                    complete = true;  {% comment %} // Used by our datatable {% endcomment %}
+                    console.log("queuecomplete")
                 });
             },
 

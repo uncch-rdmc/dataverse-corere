@@ -77,7 +77,7 @@
 <script type="text/javascript" src="{% static 'file_datatable/file_datatable.js' %}?v=2"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        {% comment %}Add our UI components specific to CORE2 {% endcomment %}
+        {% comment %}//Add our UI components specific to CORE2 {% endcomment %}
         {% if obj_type == "submission" %}
         config = create_file_table_config("/submission/{{obj_id}}/file_table/", {{read_only|lower}}, true, '{{ file_url_base }}')
             {% comment %}{% if not dataverse_upload %} //Disabled because it broke column formatting, maybe try later  {% endcomment %}
@@ -85,8 +85,12 @@
                         data: 'newness',
                         render: function(data,type,row,meta){
                             encoded = encodeURIComponent(row[0]+row[1])
-                            button = '<td><img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/></td>'
-
+                            button = '<td>'
+                            if(typeof complete == 'undefined' || complete) {
+                              {% comment %}//We only show the newness icons after uploads complete. The variable is set in dropzone {% endcomment %}
+                              button += '<img style="height:30px; width:30px" src="../newfilecheck/?file_path='+encoded+'&timestamp='+Date.now()+'"/>'
+                            } 
+                            button += '</td>'
                             return button;
                         }
                     },
