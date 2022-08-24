@@ -146,7 +146,8 @@ function submit_edit_path_modal_and_reload(){
     //TODO: We need to ensure path begins and ends with /
     var regex1 = /[^a-zA-Z0-9 /_\-\.]/;
     var regex2 = /\.\./;
-    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new) || !file_path_new.startsWith("/") || !file_path_new.endsWith("/")) {
+    var regex3 = /\/\s*\//
+    if($.trim(file_path_new).length === 0 || regex1.test(file_path_new) || regex2.test(file_path_new) || regex3.test(file_path_new) || !file_path_new.startsWith("/") || !file_path_new.endsWith("/")) {
         $('#path_modal_sanitize_error').removeAttr('hidden');
         return;
     }

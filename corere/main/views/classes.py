@@ -2932,9 +2932,11 @@ def _helper_sanitary_file_check(path):
         return "File paths + names cannot be longer than 260 characters."        
     if file_name.strip() == "":
         return "File name must include a character other than just spaces."
+    if re.search('\/\s*\/', folders_name):
+        return "Folder names cannot be blank or just spaces"
     if re.search("[*?\"<>|;#:\\\/]", file_name):
         return "File name cannot include these characters: * ? \" < > | ; # : \ /"
-    if re.search("[^a-zA-Z0-9 /_\-\.]", folders_name):
+    if re.search("[^a-zA-Z0-9\s/_\-\.]", folders_name):
         return "File folder can only contain the alphanumerics, _ - . / and whitespace"
 
     return ""

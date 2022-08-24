@@ -67,7 +67,7 @@
     function rename_and_refresh(rename_url, success_function, fail_function){
         var headers = new Headers();
         headers.append('X-CSRFToken', '{{ csrf_token }}');
-        //var result;
+
         fetch(rename_url, {
             method: 'POST',
             headers: headers, 
@@ -77,22 +77,13 @@
             table.ajax.reload(function(){ 
                 document.getElementById('files_count_text').textContent = '('+table.page.info().recordsTotal+')'
             });
-            console.log(response.ok)
+
             if (response.ok) {
                 success_function();
             } else {
                 fail_function();
             }
         })
-
-        //return true;
-
-        //if (!response.ok) {
-        //    console.log("NOT OK")
-        //    return false;
-        //}
-        //console.log(response)
-        //return true;
 
     }
 </script>

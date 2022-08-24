@@ -97,10 +97,6 @@ def rename_submission_files(manuscript, files_dict_list):
 def _rename_files(repo_path, files_folder, files_dict_list):
     repo = git.Repo(repo_path)
 
-    # TODO: This doesn't handle name collisions that may happen during rename
-    # TODO: This also doesn't handle issues attempting to rename a folder that matches the name of a file
-    # ...
-    # For now we are catching the exception and returning a generic error.
     for d in files_dict_list:
         old_path = files_folder + d.get("old")
         new_path = files_folder + d.get("new")
