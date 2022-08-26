@@ -39,6 +39,7 @@ PERM_MANU_ADD_SUBMISSION = "add_submission_to_manuscript"
 PERM_MANU_APPROVE = "approve_manuscript"
 PERM_MANU_CURATE = "curate_manuscript"
 PERM_MANU_VERIFY = "verify_manuscript"
+PERM_MANU_NOTIFY = "notify_about_manuscript"
 
 # Note perm strings
 # PERM_NOTE_ADD_N = 'add_note'

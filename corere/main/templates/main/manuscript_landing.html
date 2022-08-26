@@ -428,7 +428,7 @@
     <button type="button" class="btn btn-secondary buttons-collection" id="updateReviewSubmissionButtonMain" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Update your review of the latest submission" aria-label="Update your review of the latest submission">Update Review</button>    
     {% endif %}
     {% if sendReportButton %}
-    <form action="/submission/{{latest_submission_id}}/sendreport/" method="post" id="sendReportForm"> {% comment %} It seems this form breaks our button curving {% endcomment %}
+    <form action="/submission/{{latest_submission_id}}/sendreport/" method="post" id="sendReportForm">
         {% csrf_token %}
         <button type="submit" class="btn btn-secondary buttons-collection" id="sendReportButton" title="Send current verification report for the manuscript to the editors" aria-label="Send current verification report for the manuscript to the editors">Send Report</button>    
     </form>
@@ -436,7 +436,7 @@
     <button type="button" class="btn btn-secondary buttons-collection" id="downloadReportButton" onclick="location.href='/manuscript/{{manuscript_id}}/reportdownload/'" title="" aria-label="">Download Report</button>    
     {% endif %}
     {% if returnSubmissionButton %}
-    <form action="/submission/{{latest_submission_id}}/finish/" method="post" id="returnForm"> {% comment %} It seems this form breaks our button curving {% endcomment %}
+    <form action="/submission/{{latest_submission_id}}/finish/" method="post" id="returnForm">
         {% csrf_token %}
         <button type="submit" class="btn btn-secondary buttons-collection" id="returnSubmissionButton" title="Return this manuscript record to the authors to resubmit their data/code" aria-label="Return this manuscript record to the authors to resubmit their data/code">Return Submission to Authors</button> 
     </form>
@@ -469,7 +469,7 @@
                 <a class="dropdown-item" id="updateReviewSubmissionButtonLinkMore" href="/submission/{{latest_submission_id}}/info/" title="Update latest submission review" aria-label="Update latest submission review">Update Review</a>
             {% endif %}
             <a class="dropdown-item" id="viewManuscriptButtonLinkMore" href="/manuscript/{{manuscript_id}}/view/" title="View additional manuscript info" aria-label="View additional manuscript info">Additional Info</a>
-            <!-- <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> -->
+            {% comment %} <li><a class="dropdown-item" href="/manuscript/{{manuscript_id}}/viewfiles/">Files</a></li> --> {% endcomment %}
             {% if not sendReportButton %}
             <a class="dropdown-item" id="reportDownloadButtonLinkMore" href="/manuscript/{{manuscript_id}}/reportdownload/" title="Download current verification report" aria-label="Download current verification report">Download Report</a>
             {% endif %}
@@ -486,6 +486,15 @@
             {% endif %}
             {% if dataversePullCitationButtonMore %}
                 <a class="dropdown-item" id="dataversePullCitationButtonLinkMore" title="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published." aria-label="Fetch additional info from the dataset created for this manuscript. Please ensure the dataset has been published." href='/manuscript/{{manuscript_id}}/pullcitation/'>Fetch Dataset Info</a>
+            {% endif %}
+            {% if notifyManuscriptButtonMore %}
+                {% comment %} TODO: We probably need to change the button text if it is an editor to specify we are notifying the author {% endcomment %} 
+                <a class="dropdown-item" id="notifyManuscriptLinkMore" title="Remind the user assigned and in phase to work on this manuscript that it is ready." aria-label="Remind the user assigned and in phase to work on this manuscript that it is ready." href='/manuscript/{{manuscript_id}}/remind/'>Send Reminder</a>
+
+                {% comment %} <form action="/manuscript/{{manuscript_id}}/remind/" method="post" id="notifyForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary buttons-collection" id="notifyManuscriptMore" title="Remind the user assigned and in phase to work on this manuscript that it is ready." aria-label="Remind the user assigned and in phase to work on this manuscript that it is ready.">Send Reminder</button> 
+                </form> {% endcomment %}
             {% endif %}
         </div>
     </div>

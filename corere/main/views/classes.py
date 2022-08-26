@@ -888,7 +888,7 @@ class ManuscriptDownloadAllFilesView(LoginRequiredMixin, GetOrGenerateObjectMixi
 class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ["get", "post"]
     transition_method_name = (
-        "dataverse_upload_noop"  # TODO: is it ok to call as non noop transition here? If so, remove comment in TransitionPermissionMixin
+        "dataverse_upload_noop"
     )
     model = m.Manuscript
     object_friendly_name = "manuscript"
@@ -896,7 +896,7 @@ class ManuscriptEditConfirmBeforeDataverseUploadView(LoginRequiredMixin, GetOrGe
     page_help_text = "Please confirm the information in these fields before they are pushed to Dataverse"  # _("manuscript_edit_helpText")
     dataverse_upload = True
 
-
+#TODO: This should be a post. Requires fixing the dropdown button as well. Check other functions.
 class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
     http_method_names = ["get"]
     transition_method_name = (
@@ -924,6 +924,78 @@ class ManuscriptPullCitationFromDataverseView(LoginRequiredMixin, GetOrGenerateO
             self.msg = "An error has occurred attempting to pull citation data from Dataverse: " + str(e)
             list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.ERROR, self.msg)
+
+        return redirect("manuscript_landing", id=self.object.id)
+
+# Send email to assigned users who are in phase to work on the manuscript
+# TODO: This should be a post. Requires fixing the dropdown button as well. Check other functions.
+class ManuscriptRemindView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GenericManuscriptView):
+    http_method_names = ["get"]
+    transition_method_name = (
+        "notify_noop" 
+    )
+    model = m.Manuscript
+    object_friendly_name = "manuscript"
+
+    def get(self, request, *args, **kwargs):
+        self.general(request, *args, **kwargs)
+
+        if self.object._status == self.object.Status.NEW or self.object._status == self.object.Status.REVIEWING:
+            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.id))
+            banner_role_text = "editor"
+        elif self.object._status == self.object.Status.AWAITING_INITIAL or self.object._status == self.object.Status.AWAITING_RESUBMISSION:
+            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_AUTHOR_PREFIX + " " + str(self.object.id))
+            banner_role_text = "author"
+        elif self.object._status == self.object.Status.PROCESSING:
+            latest_sub = self.object.get_latest_submission()
+            if latest_sub._status == latest_sub.Status.IN_PROGRESS_CURATION or latest_sub._status == latest_sub.Status.REVIEWED_AWAITING_REPORT:
+                recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.id))
+                banner_role_text = "curator"
+            elif latest_sub._status == latest_sub.Status.IN_PROGRESS_VERIFICATION:
+                recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_VERIFIER_PREFIX + " " + str(self.object.id))
+                banner_role_text = "verifier"
+            elif latest_sub._status == latest_sub.Status.REVIEWED_REPORT_AWAITING_APPROVAL:
+                recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(self.object.id))
+                banner_role_text = "editor"
+            else:
+                logger.error("Manuscript and latest submission phases are out of sync, encountered during Manuscript Remind. Manuscript id: " + str(self.object.id))
+                raise Http404()
+        elif self.object._status == self.object.Status.PENDING_DATAVERSE_PUBLISH or self.object._status == self.object.Status.PUBLISHED_TO_DATAVERSE:
+            recipients = m.User.objects.filter(groups__name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.id))
+            banner_role_text = "curator"
+        else:
+            logger.error("Manuscript not in a phase to remind users. It is probably complete. Manuscript id: " + str(self.object.id))
+            raise Http404()
+
+        ### Messaging ###
+
+        msg = _("manuscript_reminderSent_banner").format(
+            manuscript_id=self.object.id, banner_role_text=banner_role_text
+        )
+        list(messages.get_messages(request))  # Clears messages if there are any already.
+        messages.add_message(request, messages.SUCCESS, msg)
+
+        notification_msg = _("manuscript_reminderSent_notification_forRemindee").format(
+            object_id=self.object.id,
+            object_title=self.object.get_display_name(),
+            object_url=self.object.get_landing_url(request),
+        )
+        notify.send(request.user, verb="passed", recipient=recipients, target=self.object, public=False, description=notification_msg)
+        for u in recipients:
+            send_templated_mail(
+                template_name="base",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[u.email],
+                context={
+                    "subject": "CORE2 Update",
+                    "notification_msg": notification_msg,
+                    "user_first_name": u.first_name,
+                    "user_last_name": u.last_name,
+                    "user_email": u.email,
+                },
+            )
+
+        ### End Messaging ###
 
         return redirect("manuscript_landing", id=self.object.id)
 

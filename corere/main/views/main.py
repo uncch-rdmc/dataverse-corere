@@ -139,8 +139,12 @@ def manuscript_landing(request, id=None):
     dataverseUploadManuscriptButtonMore = False
     dataversePullCitationButtonMain = False
     dataversePullCitationButtonMore = False
+    notifyManuscriptButtonMore = False
 
     submission_count = manuscript.manuscript_submissions.count()
+
+    if has_transition_perm(manuscript.notify_noop, request.user):
+        notifyManuscriptButtonMore = True
 
     if has_transition_perm(manuscript.add_submission_noop, request.user):
         createSubmissionButton = True
@@ -240,7 +244,7 @@ def manuscript_landing(request, id=None):
                             launchContainerCurrentSubButton = True
 
         except m.Submission.DoesNotExist:
-            pass
+            pass #TODO: When do we hit this?
 
     args = {
         "user": request.user,
@@ -288,6 +292,7 @@ def manuscript_landing(request, id=None):
         "dataverseUploadManuscriptButtonMore": dataverseUploadManuscriptButtonMore,
         "dataversePullCitationButtonMain": dataversePullCitationButtonMain,
         "dataversePullCitationButtonMore": dataversePullCitationButtonMore,
+        "notifyManuscriptButtonMore": notifyManuscriptButtonMore,
         "file_url_base": "/manuscript/" + str(manuscript.id) + "/",
         "obj_id": id,  # for file table
         "obj_type": "manuscript",  # for file table

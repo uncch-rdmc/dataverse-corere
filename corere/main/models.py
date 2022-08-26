@@ -1067,6 +1067,7 @@ class Manuscript(AbstractCreateUpdateModel):
             (c.PERM_MANU_APPROVE, "Can review submissions for processing"),
             (c.PERM_MANU_CURATE, "Can curate manuscript/submission"),
             (c.PERM_MANU_VERIFY, "Can verify manuscript/submission"),
+            (c.PERM_MANU_NOTIFY, "Can notify users about manuscript being ready"),
         ]
 
     # There are 3 types of groups in this code. Django groups, Whole Tale groups stored in Whole Tale, and wholetale app groups connecting the two and storing the info locally
@@ -1447,6 +1448,24 @@ class Manuscript(AbstractCreateUpdateModel):
     # def send_final_report(self):
     #     return #self._status
 
+    # -----------------------
+
+    def can_notify(self):
+        return True
+
+    # If user can have CORE2 send a notification to whichever users are assigned and in phase to work on the manuscript
+    @transition(
+        field=_status,
+        source="*",
+        target=RETURN_VALUE(),
+        conditions=[can_notify],
+        permission=lambda instance, user: (
+            ( instance._status != instance.Status.COMPLETED_REPORT_SENT and (user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(instance.id)) or user.is_superuser))
+            or ((instance._status == instance.Status.AWAITING_INITIAL or instance._status == instance.Status.AWAITING_INITIAL) and (user.groups.filter(name=c.GROUP_MANUSCRIPT_EDITOR_PREFIX + " " + str(instance.id)) or user.is_superuser))
+        ),
+    )
+    def notify_noop(self):
+        return self._status
 
 # -----------------------
 
