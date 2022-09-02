@@ -148,11 +148,10 @@
                         dt.row( cell.index().row ).select();
                         last_row = cell.index().row;
                     }
-                }).on('dblclick', function(e, dt, type, indexes) {
-                    //manuscript_id = dt.rows( { selected: true } ).data()[0][1] //Implicit globals are not best practice
-                    //window.open("manuscript/" + manuscript_id);
-                    window.location.href = "manuscript/" + manuscript_id;
                 });
+
+
+
                 table.search( '' ).columns().search( '' ).draw(); //clear all previous searches on load
                 var selected_row = 0
                 if(table.cell( { focused: true } ) && table.cell( { focused: true } ).length) { 
@@ -166,7 +165,7 @@
                 table.row(':first').select(); //Select first row always
 
                 //Implicit globals are not best practice
-                table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
+                table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
                 table.search( "{{request.user.username}}" ).draw();
@@ -184,9 +183,9 @@
                     var checkbox = event.target;
                     if(checkbox.checked) {
                         //Implicit globals are not best practice
-                        table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
+                        table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                     } else {
-                        table.columns( 4 ).search( "Completed Report Sent" ).draw();
+                        table.columns( 5 ).search( "Completed Report Sent" ).draw();
                     }
                 });
                 active_toggle.bootstrapToggle()
@@ -210,6 +209,10 @@
 
             }
         })
+        $('#manuscript_table tbody').on('dblclick', 'tr', function(e, dt, type, indexes) {
+            $('#main_spinner').show();
+            window.location.href = "manuscript/" + manuscript_id;
+        });
     });
 
     function constructTableM(columns) {
@@ -240,8 +243,16 @@
                 }
                 column_settings.width = "15%";
             }
-            else if(columns[c][0] === 'pub_id' || columns[c][0] === '_status') {
+            else if(columns[c][0] === 'pub_id') {
                 column_settings.width = "10%";
+            } 
+            else if(columns[c][0] === '_status_sort') {
+                column_settings.width = "0%";
+                column_settings.visible = false;
+            } 
+            else if(columns[c][0] === '_status') {
+                column_settings.width = "10%";
+                column_settings.orderData = [c-1]; //This assumes _status_sort always comes before status
             } 
             else {
                 column_settings.width = "15%";

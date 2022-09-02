@@ -1232,6 +1232,27 @@ class Manuscript(AbstractCreateUpdateModel):
         else:
             return values_list
 
+    # Used for Datatables
+    def get_status_sort_value(self):
+        if self._status == self.Status.NEW:
+            return 0
+        elif self._status == self.Status.AWAITING_INITIAL:
+            return 1
+        elif self._status == self.Status.AWAITING_RESUBMISSION:
+            return 2
+        elif self._status == self.Status.REVIEWING:
+            return 3
+        elif self._status == self.Status.PROCESSING:
+            return 4
+        elif self._status == self.Status.PENDING_DATAVERSE_PUBLISH:
+            return 5
+        elif self._status == self.Status.PUBLISHED_TO_DATAVERSE:
+            return 6
+        elif self._status == self.Status.COMPLETED_REPORT_SENT:
+            return 7
+        else:
+            return 999
+
     # def __str__(self):
     #     return '{0}: {1}'.format(self.id, self.title)
 

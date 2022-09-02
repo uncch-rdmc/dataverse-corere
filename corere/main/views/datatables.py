@@ -103,7 +103,7 @@ class CorereBaseDatatableView(LoginRequiredMixin, BaseDatatableView):
 
 
 def helper_manuscript_columns(user):
-    columns = [["selected", ""], ["id", "ID"], ["pub_id", "Pub ID"], ["pub_name", "Pub Name"], ["_status", "Status"]]
+    columns = [["selected", ""], ["id", "ID"], ["pub_id", "Pub ID"], ["pub_name", "Pub Name"], ["_status_sort", "_status_sort"], ["_status", "Status"]]
     if user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists():
         # columns.append(['created_at','Create Date']) #Right now we don't show it so why provide it?
         columns.append(["authors", "Authors"])
@@ -157,6 +157,8 @@ class ManuscriptJson(CorereBaseDatatableView):
 
     # If you need the old render_column code, look at commit aa36e9b87b8d8504728ff2365219beb917210eae or earlier
     def render_column(self, manuscript, column):
+        if column[0] == "_status_sort":
+            return manuscript.get_status_sort_value()
         if column[0] == "authors":
             authors = ""
             group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, manuscript)
