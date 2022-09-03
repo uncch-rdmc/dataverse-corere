@@ -45,14 +45,16 @@ function fill_notification_list(data) {
             linkReplacePattern = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
             var message = item.description.replace(linkReplacePattern, '<a href="$1">$1</a>');
 
+            date = new Date(item.timestamp).toLocaleString('default', { hourCycle: 'h23', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' })
+
             return '<div class="alert alert-info alert-dismissible fade show " role="alert">'
-            +    message
+            +    '<span style="font-weight: 600;">' + date + "</span><br> " + message
             +    '<button type="button" class="btn-close" data-dismiss="alert" aria-label="Clear notification" onclick="'
             + `
               $.ajax({
                   url:'/inbox/notifications/mark-as-read/`+item.slug+`/',
                   type:'get' 
-              });
+              }); 
               fetch_api_data();
               `
             +'">'

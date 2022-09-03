@@ -27,6 +27,7 @@ ul.live_notify_list {
     margin-left: -32px; //I don't understand the styling I'm having to override with this
 }
 
+//TODO: maybe improve notify_custom.js to not use alert-info at all
 ul.live_notify_list div.alert-info {
     // color: #055160;
     // background-color: #cff4fc;
