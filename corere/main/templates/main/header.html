@@ -4,6 +4,26 @@
 {% load auth_extras %}
 {% load groups_contain_count_no_completed %}
 
+{% comment %} this code also exists in notify_custom.js to be run when the notification count is refreshed {% endcomment %}
+<script> 
+  $( "span.notification_count").filter(function() {
+      return parseInt($(this).text()) > 0;
+  }).show();
+  $( "span.notification_count").filter(function() {
+      return parseInt($(this).text()) == 0;
+  }).hide();
+
+  function custom_show_additional(data) {
+    $(".show-with-list-always").show();
+
+    if(data.unread_count > 10) {
+      $(".show-with-list").show();
+    } else {
+      $(".show-with-list").hide();
+    }
+  }
+</script>
+
 {# NOTE: if you edit this navbar, edit the oauth2-proxy file sign_in.html  #}
 <nav class="navbar navbar-expand-sm navbar-light ">
   <div class="container-fluid">
@@ -19,8 +39,7 @@
             {{ user.get_username }} <span class="notification_count badge bg-danger align-middle">{% live_notify_badge %}</span>
           </a>
           <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-            {% register_notify_callbacks callbacks='fill_notification_badge' %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
-            <a class="dropdown-item" href="/notifications" title="View notification list" aria-label="View notification list">Notifications <span class="notification_count badge bg-danger align-middle" >{% live_notify_badge %}</span></a>
+            {% register_notify_callbacks callbacks='fill_notification_badge,fill_notification_list,custom_show_additional' fetch='10' %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}
             <a class="dropdown-item" href="/" title="View manuscripts you are involved with" aria-label="View manuscripts you are involved with">Manuscripts</a>
             {% if request.user|has_group:"Role Curator" %} 
               <a class="dropdown-item" href="/site_actions" title="Additional actions for curating admins" aria-label="Additional actions for curating admins">Site Actions</a>
@@ -64,18 +83,27 @@
                 {% endif %}   
               {% endif%}
             {% endif%} {% endcomment %}
-            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="/notifications" title="View notification list" aria-label="View notification list">Notifications <span class="notification_count badge bg-danger align-middle" >{% live_notify_badge %}</span></a>
+            <div class="dropdown-divider condensed-top show-with-list-always" style="display: none;"></div>
+            {% load notifications_tags %}
+            {% comment %} Maybe only show a few here and add a link to a page to view all or clear all {% endcomment %}
+            <div style="overflow-y:auto; max-height:50vh; ">
+              <div class="dropdown-notify" style="margin-left:0rem; margin-right:0rem;">
+                {% live_notify_list %}
+                <div class="show-with-list" style="padding: 0.25rem 1rem; background-color: #f8f8f8; display: none; " >
+                  <a href="/notifications/" title="View all notifications" aria-label="View all notifications" >View All Notifications </a>
+                </div>
+              </div>
+            </div>
+            <div class="dropdown-divider condensed-bottom"></div>
+            {% comment %} <button type="button" class="button button-secondary" data-dismiss="alert" aria-label="Close" onclick="
+                $.ajax({
+                    url:'/inbox/notifications/mark-all-as-read/',
+                    type:'get' 
+                }); 
+                fetch_api_data();">  Clear all notifications </button> {% endcomment %}
             <a class="dropdown-item" href="/logout">Logout</a>
           </div>
-          {% comment %} this code also exists in notify_custom.js to be run when the notification count is refreshed {% endcomment %}
-          <script> 
-              $( "span.notification_count").filter(function() {
-                  return parseInt($(this).text()) > 0;
-              }).show();
-              $( "span.notification_count").filter(function() {
-                  return parseInt($(this).text()) == 0;
-              }).hide();
-          </script>
         </li>
       </ul>
     </div>

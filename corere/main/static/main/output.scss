@@ -27,6 +27,30 @@ ul.live_notify_list {
     margin-left: -32px; //I don't understand the styling I'm having to override with this
 }
 
+ul.live_notify_list div.alert-info {
+    // color: #055160;
+    // background-color: #cff4fc;
+    // border-color: #b6effb;
+    color: #000000;
+    background-color: #f8f8f8;
+    border-color: rgba(0,0,0,.15);
+    border-radius: 0rem; 
+    margin-bottom: -1px;
+}
+
+div.dropdown-notify ul.live_notify_list div:first-child {
+    border-top: 0px;
+  }
+
+.dropdown-divider.condensed-top {
+    margin: 0.25rem 0 0 0;
+}
+
+.dropdown-divider.condensed-bottom {
+    margin: 0 0 0.25rem 0;
+}
+
+
 //Adding alert-danger and alert to formset errors (without having to touch styles)
 ul.errorlist { 
     color: #721c24;
