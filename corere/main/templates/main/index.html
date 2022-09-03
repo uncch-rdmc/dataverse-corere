@@ -63,50 +63,7 @@
                         },
                         {% comment %} 
                         //the default for the searches controlled by these two buttons is set later down
-                        {
-                            text: '<i class="far fa-eye-slash"></i> Completed',
-                            name: 'viewcompleted',
-                            className: 'visibilityButton',
-                            action: function ( e, dt, node, config ) {
-                                if(search_completed_vis_toggle == false) {
-                                    //Implicit globals are not best practice
-                                    table.columns( 4 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
-                                    search_completed_vis_toggle = true;
-                                    this.text( '<i class="far fa-eye-slash"></i> Completed' );
-                                    
-                                } else {
-                                    table.columns( 4 ).search( "Completed Report Sent" ).draw();
-                                    search_completed_vis_toggle = false;
-                                    this.text( '<i class="far fa-eye"></i> Completed' );
-                                }
-                            },
-                            attr: {
-                                title: 'Show/hide completed manuscripts',
-                                'aria-label': 'Show/hide completed manuscripts'
-                            }
-                        },
                         {% if request.user|has_group:GROUP_ROLE_CURATOR or request.user|has_group:GROUP_ROLE_VERIFIER%} 
-                        {
-                            text: '<i class="far fa-eye-slash"></i> My Manuscripts',
-                            name: 'viewnotuserassigned',
-                            className: 'visibilityButton',
-                            action: function ( e, dt, node, config ) {
-                                if(!$('#manuscript_table').hasClass("visibleMe")) {
-                                    //Implicit globals are not best practice
-                                    table.search( "{{request.user.username}}" ).draw();
-                                    $('#manuscript_table').addClass("visibleMe")
-                                    this.text( '<i class="far fa-eye-slash"></i> My Manuscripts' );                                    
-                                } else {
-                                    table.search( "" ).draw();
-                                    $('#manuscript_table').removeClass("visibleMe")
-                                    this.text( '<i class="far fa-eye"></i> All Manuscripts' );
-                                }
-                            },
-                            attr: {
-                                title: 'Show/hide manuscripts not assigned to you',
-                                'aria-label': 'Show/hide manuscripts not assigned to you'
-                            }
-                        },
                         {
                             text: 'Show User Filter Table',
                             name: 'userFilterTable',
@@ -128,7 +85,8 @@
                                 title: 'Show/hide additional table where you can see the manuscripts assigned to individual users',
                                 'aria-label': 'Show/hide additional table where you can see the manuscripts assigned to individual users'
                             }
-                        }, {% endif %}{% endcomment %}
+                        }, {% endif %}
+                        {% endcomment %}
 
                     ]
                 })
@@ -220,9 +178,14 @@
         var button_index;
         for (var c in columns) {
             var column_settings = {name: columns[c][0], title:columns[c][1]}
-            if( columns[c][0] === 'created_at' || columns[c][0] === 'updated_at' ) {
+            if(columns[c][0] === 'updated_at_sort' ) {
+                column_settings.width = "0%";
+                column_settings.visible = false;
+            } 
+            else if(columns[c][0] === 'updated_at' ) {
                 column_settings.visible = true;
                 column_settings.width = "12%";
+                column_settings.orderData = [c-1];
             } 
             else if(columns[c][0] === 'selected') {
                 column_settings.orderable = false;

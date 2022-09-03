@@ -110,6 +110,7 @@ def helper_manuscript_columns(user):
         columns.append(["editors", "Editors"])
         columns.append(["curators", "Curators"])
         columns.append(["verifiers", "Verifiers"])
+        columns.append(["updated_at_sort", "updated_at_sort"])
         columns.append(["updated_at", "Last Update Date"])
     return columns
     # return list(dict.fromkeys(columns)) #remove duplicates, keeps order in python 3.7 and up
@@ -211,15 +212,18 @@ class ManuscriptJson(CorereBaseDatatableView):
             # return ", ".join(
             #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, manuscript)).values_list("username", flat=True)))
             # )
-        elif column[0] == "created_at":
-            return "{0}".format(manuscript.created_at.strftime("%b %d %Y %H:%M"))  #%H:%M:%S"
+        # elif column[0] == "created_at":
+        #     return "{0}".format(manuscript.created_at.strftime("%b %d %Y %H:%M"))  #%H:%M:%S"
+        elif column[0] == "updated_at_sort":
+            # NOTE: Instead of passing this back for sorting, we could potential use js on the browser side for this. But we already do this for status so it was easy.
+            return int(manuscript.updated_at.timestamp())
         elif column[0] == "updated_at":
             return "{0}".format(manuscript.updated_at.strftime("%b %d %Y %H:%M"))
         else:
             return super(ManuscriptJson, self).render_column(manuscript, column[0])
 
     def get_initial_queryset(self):
-        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=m.Manuscript).order_by("-id")
+        return get_objects_for_user(self.request.user, c.PERM_MANU_VIEW_M, klass=m.Manuscript).order_by("-updated_at")
 
     # Note: this isn't tied to the search bar in the datatable, that happens solely browserside
     def filter_queryset(self, qs):
