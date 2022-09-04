@@ -5,7 +5,7 @@
 {% comment %} {{ form.media.css }} {% endcomment %}
 
 {% comment %} See the failed attempt html for more form customization and stuff trying to use dropzone {% endcomment %}
-<script type="text/javascript">
+{% comment %} <script type="text/javascript">
     {% autoescape off %}
     user_table_map=new Map({{ select_table_info }});
     {% endautoescape %}
@@ -22,7 +22,7 @@
             }
         })
     }
-</script>
+</script> {% endcomment %}
 
 {% include "main/page_header.html" %}
 <form action="" method="post">

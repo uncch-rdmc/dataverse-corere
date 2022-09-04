@@ -211,7 +211,7 @@ def add_author(request, id=None):
             "form": form,
             "helper": helper,
             "id": id,
-            "select_table_info": helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring),
+            # "select_table_info": helper_generate_select_table_info(c.GROUP_ROLE_AUTHOR, group_substring),
             "group_substring": group_substring,
             "role_name": "Author",
             "manuscript_display_name": manuscript.get_display_name(),
