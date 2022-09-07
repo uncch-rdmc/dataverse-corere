@@ -1246,13 +1246,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             # NOTE: The user.is_superuser and extra verification formset valid checks are in here to handle editing out of phase by curator-admins.
             #      Curator-admins need to be able to edit their curation while a verification is happening, and without this verification validation will stop saving.
             #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.
+            
             if (
                 self.form.is_valid()
                 and (self.edition_formset is None or self.edition_formset.is_valid())
                 and (self.curation_formset is None or self.curation_formset.is_valid())
                 and (
                     self.verification_formset is None or self.verification_formset.is_valid() or hide_v_errors
-                )  # and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid())
+                ) and (self.submission_editor_date_formset is None or self.submission_editor_date_formset.is_valid()) 
+                # and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid())
             ):
                 self.form.save()
 

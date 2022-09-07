@@ -1556,6 +1556,12 @@ class SubmissionEditorDateForm(forms.ModelForm):
             "editor_submit_date": SelectDateWidget(years=range(2020, datetime.date.today().year + 1)),
         }
 
+    def clean(self):
+        editor_submit_date = self.cleaned_data.get("editor_submit_date")
+
+        if not editor_submit_date and not 'editor_submit_date' in self.errors.as_data():
+            self.add_error("editor_submit_date", "This field is required.") #We only add this error if there are no other ones (e.g. date is invalid)
+    
     # def __init__ (self, *args, **kwargs):
     #     super(SubmissionEditorDateForm, self).__init__(*args, **kwargs)
     #     self.layout = Layout(
