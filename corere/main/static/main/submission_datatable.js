@@ -23,180 +23,182 @@ function constructTable(columns) {
 function construct_buttons() {
     buttons = [];
 
-    if(Sub_Table_Params.has_group_author) {
-        buttons.push({
-                text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
-                name: 'createSubmission',
+    if(Sub_Table_Params.landingView) {
+        if(Sub_Table_Params.has_group_author) {
+            buttons.push({
+                    text: '<i class="fas fa-plus"></i> &nbsp;Create Submission',
+                    name: 'createSubmission',
+                    action: function ( e, dt, node, config ) {
+                        window.location.href = "/manuscript/"+ Sub_Table_Params.manuscript_id +"/update/";
+                    },
+                    attr: {
+                        title: 'Create a new submission of data/code for this manuscript',
+                        'aria-label': 'Create a new submission of data/code for this manuscript'
+                    },
+                    enabled: Sub_Table_Params.createSubButton
+                })
+        }
+
+        buttons.push(
+            {
+                text: 'Edit Notes',
+                name: 'editSubmission',
                 action: function ( e, dt, node, config ) {
-                    window.location.href = "/manuscript/"+ Sub_Table_Params.manuscript_id +"/update/";
+                    window.location.href = "/submission/"+submission_id+"/info/";
+                    
                 },
                 attr: {
-                    title: 'Create a new submission of data/code for this manuscript',
-                    'aria-label': 'Create a new submission of data/code for this manuscript'
+                    title: 'Edit notes for this submission round',
+                    'aria-label': 'Edit notes for this submission round'
                 },
-                enabled: Sub_Table_Params.createSubButton
-            })
+                init: function ( dt, node, config ) {
+                    node.css("display", "none");
+                },
+                enabled: false
+            },
+            {
+                text: 'Review',
+                name: 'reviewSubmission',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/info/";
+                    
+                },
+                attr: {
+                    title: 'Review the data/code/metadata for this submission round',
+                    'aria-label': 'Review the data/code/metadata for this submission round'
+                },
+                init: function ( dt, node, config ) {
+                    node.css("display", "none");
+                },
+                enabled: false
+            },
+            {
+                text: 'Edit Files',
+                name: 'editSubmissionFiles',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/editfiles/";
+                },
+                attr: {
+                    title: 'Edit the data/code submitted for review',
+                    'aria-label': 'Edit the data/code submitted for review'
+                },
+                init: function ( dt, node, config ) {
+                    node.css("display", "none");
+                },
+                enabled: false
+            },
+            {
+                text: 'View',
+                name: 'viewSubmission',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/view/";
+                },
+                attr: {
+                    title: 'View information related to this submission round',
+                    'aria-label': 'View information related to this submission round'
+                },
+                init: function ( dt, node, config ) {
+                        node.css("display", "none");
+                    },
+                enabled: false
+            },
+            {
+                text: 'View Files',
+                name: 'viewSubmissionFiles',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/viewfiles/";
+                },
+                attr: {
+                    title: 'View the data/code submitted for review',
+                    'aria-label': 'View the data/code submitted for review'
+                },
+                init: function ( dt, node, config ) {
+                        node.css("display", "none");
+                    },
+                enabled: false
+            },
+            {
+                text: 'Launch Container',
+                name: 'launchSubmissionContainer',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/notebook/";
+                },
+                attr: {
+                    title: 'Launch a virtual environment containing the data/code submitted for review',
+                    'aria-label': 'Launch a virtual environment containing the data/code submitted for review'
+                },
+                init: function ( dt, node, config ) {
+                        node.css("display", "none");
+                    },
+                enabled: false
+            },
+            {
+                text: 'Download Container Files',
+                name: 'downloadContainerFiles',
+                action: function ( e, dt, node, config ) {
+                    window.location.href = "/submission/"+submission_id+"/wtdownloadall/";
+                },
+                attr: {
+                    title: 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.',
+                    'aria-label': 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.'
+                },
+                init: function ( dt, node, config ) {
+                        node.css("display", "none");
+                    },
+                enabled: false
+            },
+            {
+                text: 'Send Report',
+                name: 'sendReportForSubmission',
+                action: function ( e, dt, node, config ) {
+                    var headers = new Headers();
+                    headers.append('X-CSRFToken', '{{ csrf_token }}');
+                    fetch('/submission/'+submission_id+'/sendreport/', {
+                        method: 'POST',
+                        headers: headers, 
+                        credentials: 'include'
+                    }).then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    })
+                },
+                attr: {
+                    title: 'Send current verification report for the manuscript to the editors',
+                    'aria-label': 'Send current verification report for the manuscript to the editors'
+                },
+                init: function ( dt, node, config ) {
+                    node.css("display", "none");
+                },
+                enabled: false
+            },
+            {
+                text: 'Return Submission to Authors',
+                name: 'returnSubmission',
+                action: function ( e, dt, node, config ) {
+                    var headers = new Headers();
+                    headers.append('X-CSRFToken', '{{ csrf_token }}');
+                    fetch('/submission/'+submission_id+'/finish/', {
+                        method: 'POST',
+                        headers: headers, 
+                        credentials: 'include'
+                    }).then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        }
+                    })
+                },
+                attr: {
+                    title: 'Return this manuscript record to the authors to resubmit their data/code',
+                    'aria-label': 'Return this manuscript record to the authors to resubmit their data/code'
+                },
+                init: function ( dt, node, config ) {
+                    node.css("display", "none");
+                },
+                enabled: false
+            }
+        );
     }
-
-    buttons.push(
-        {
-            text: 'Edit Notes',
-            name: 'editSubmission',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/info/";
-                
-            },
-            attr: {
-                title: 'Edit notes for this submission round',
-                'aria-label': 'Edit notes for this submission round'
-            },
-            init: function ( dt, node, config ) {
-                node.css("display", "none");
-            },
-            enabled: false
-        },
-        {
-            text: 'Review',
-            name: 'reviewSubmission',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/info/";
-                
-            },
-            attr: {
-                title: 'Review the data/code/metadata for this submission round',
-                'aria-label': 'Review the data/code/metadata for this submission round'
-            },
-            init: function ( dt, node, config ) {
-                node.css("display", "none");
-            },
-            enabled: false
-        },
-        {
-            text: 'Edit Files',
-            name: 'editSubmissionFiles',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/editfiles/";
-            },
-            attr: {
-                title: 'Edit the data/code submitted for review',
-                'aria-label': 'Edit the data/code submitted for review'
-            },
-            init: function ( dt, node, config ) {
-                node.css("display", "none");
-            },
-            enabled: false
-        },
-        {
-            text: 'View',
-            name: 'viewSubmission',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/view/";
-            },
-            attr: {
-                title: 'View information related to this submission round',
-                'aria-label': 'View information related to this submission round'
-            },
-            init: function ( dt, node, config ) {
-                    node.css("display", "none");
-                },
-            enabled: false
-        },
-        {
-            text: 'View Files',
-            name: 'viewSubmissionFiles',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/viewfiles/";
-            },
-            attr: {
-                title: 'View the data/code submitted for review',
-                'aria-label': 'View the data/code submitted for review'
-            },
-            init: function ( dt, node, config ) {
-                    node.css("display", "none");
-                },
-            enabled: false
-        },
-        {
-            text: 'Launch Container',
-            name: 'launchSubmissionContainer',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/notebook/";
-            },
-            attr: {
-                title: 'Launch a virtual environment containing the data/code submitted for review',
-                'aria-label': 'Launch a virtual environment containing the data/code submitted for review'
-            },
-            init: function ( dt, node, config ) {
-                    node.css("display", "none");
-                },
-            enabled: false
-        },
-        {
-            text: 'Download Container Files',
-            name: 'downloadContainerFiles',
-            action: function ( e, dt, node, config ) {
-                window.location.href = "/submission/"+submission_id+"/wtdownloadall/";
-            },
-            attr: {
-                title: 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.',
-                'aria-label': 'Download the files contained in the virtual environment created for this round of review. Note that this data/code may be different than what is held the CORE2 system, due to user interactions in the virtual environment.'
-            },
-            init: function ( dt, node, config ) {
-                    node.css("display", "none");
-                },
-            enabled: false
-        },
-        {
-            text: 'Send Report',
-            name: 'sendReportForSubmission',
-            action: function ( e, dt, node, config ) {
-                var headers = new Headers();
-                headers.append('X-CSRFToken', '{{ csrf_token }}');
-                fetch('/submission/'+submission_id+'/sendreport/', {
-                    method: 'POST',
-                    headers: headers, 
-                    credentials: 'include'
-                }).then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                    }
-                })
-            },
-            attr: {
-                title: 'Send current verification report for the manuscript to the editors',
-                'aria-label': 'Send current verification report for the manuscript to the editors'
-            },
-            init: function ( dt, node, config ) {
-                node.css("display", "none");
-            },
-            enabled: false
-        },
-        {
-            text: 'Return Submission to Authors',
-            name: 'returnSubmission',
-            action: function ( e, dt, node, config ) {
-                var headers = new Headers();
-                headers.append('X-CSRFToken', '{{ csrf_token }}');
-                fetch('/submission/'+submission_id+'/finish/', {
-                    method: 'POST',
-                    headers: headers, 
-                    credentials: 'include'
-                }).then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                    }
-                })
-            },
-            attr: {
-                title: 'Return this manuscript record to the authors to resubmit their data/code',
-                'aria-label': 'Return this manuscript record to the authors to resubmit their data/code'
-            },
-            init: function ( dt, node, config ) {
-                node.css("display", "none");
-            },
-            enabled: false
-        }
-    );
     
     return buttons;
 }
@@ -225,13 +227,13 @@ $(document).ready(function() {
         success: function (response) {
             var [columns_config, button_index] = constructTable(response.data[0]);
             var table = $('#submission_table').DataTable({
-                lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
                 searching: false,
                 processing: true,
                 stateSave: true,
-                select: 'single',
+                select: Sub_Table_Params.landingView ? 'single': false,
                 columns: columns_config,
-                dom: 'Bfrt',
+                ordering: false,
+                dom: Sub_Table_Params.landingView ? 'Bfrt' : 'rt' ,
                 data: response.data.slice(1),
                 buttons: construct_buttons()
             })
@@ -271,27 +273,50 @@ $(document).ready(function() {
             
             sub_table_callback(table)
 
-            if(Sub_Table_Params.has_group_editor || Sub_Table_Params.has_group_curator || Sub_Table_Params.has_group_verifier ) {
+            if(!Sub_Table_Params.landingView) {
+                $('#submission_table tbody').on('dblclick', 'tr', function(e, dt, type, indexes) {
+                    window.open("/submission/"+table.row( this ).data()[1]+"/info/", '_blank');
+                }); 
 
-                document.getElementById("submission_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
-                    `<input id="mine_toggle" type="checkbox" checked data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Shown" data-onstyle="secondary" 
-                        data-off="<i class='far fa-eye'></i> Timestamps Hidden" data-offstyle="secondary" data-height="38px" data-width="210px">`);
-                mine_toggle = $("#mine_toggle");
-                mine_toggle.change(function(event){
-                    var column = table.column(4);
-                    column.visible( ! column.visible() );
-                    var column = table.column(7);
-                    column.visible( ! column.visible() );
-                    var column = table.column(9);
-                    column.visible( ! column.visible() );
-                    var column = table.column(11);
-                    column.visible( ! column.visible() );
-                });
-                mine_toggle.bootstrapToggle()
+                table.column(0).visible(false);
+                table.row(0).remove().draw(false);
+            }    
+
+            if(Sub_Table_Params.landingView) {
+                if(Sub_Table_Params.has_group_editor || Sub_Table_Params.has_group_curator || Sub_Table_Params.has_group_verifier ) {
+
+                    document.getElementById("submission_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
+                        `<input id="mine_toggle" type="checkbox" data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Shown" data-onstyle="secondary" 
+                            data-off="<i class='far fa-eye'></i> Timestamps Hidden" data-offstyle="secondary" data-height="38px" data-width="210px">`);
+                    mine_toggle = $("#mine_toggle");
+                    mine_toggle.change(function(event){
+                        var column = table.column(4);
+                        column.visible( ! column.visible() );
+                        var column = table.column(7);
+                        column.visible( ! column.visible() );
+                        var column = table.column(9);
+                        column.visible( ! column.visible() );
+                        var column = table.column(11);
+                        column.visible( ! column.visible() );
+                    });
+                    mine_toggle.bootstrapToggle() 
+                }
             }
+
+            //Hide date columns by default
+            //TODO: I think this will blow up for authors
+            // var column = table.column(4);
+            // column.visible( ! column.visible() );
+            // var column = table.column(7);
+            // column.visible( ! column.visible() );
+            // var column = table.column(9);
+            // column.visible( ! column.visible() );
+            // var column = table.column(11);
+            // column.visible( ! column.visible() );
 
             fixButtonGroupCurve();
         }
-        })
-        
+    })
+
+
 });
