@@ -483,6 +483,8 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### Queries #####
 
+    #Note queries are used for our report generation mostly
+    
     def get_public_curator_notes_general(self):
         return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
 

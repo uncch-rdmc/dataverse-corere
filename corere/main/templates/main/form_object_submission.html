@@ -113,10 +113,15 @@
     <hr>
     {% endif %}
 
-    {% if obj_type != 'manuscript' %} {% comment %} and note_formset and note_helper | This may lead to view mistakes failing silently {% endcomment %}
-        {% include "main/note_list.html" %} 
-        <hr>   
-    {% endif %}
+    {% include "main/note_list.html" with note_formset=note_formset_author title="Author Notes"%} 
+    <hr>   
+    {% include "main/note_list.html" with note_formset=note_formset_editor title="Editor Notes"%} 
+    <hr>   
+    {% include "main/note_list.html" with note_formset=note_formset_curator title="Curator Notes"%} 
+    <hr>   
+    {% include "main/note_list.html" with note_formset=note_formset_verifier title="Verifier Notes"%} 
+    <hr>   
+
 
     {% if verification_formset %}
         <h5 class="title-text">Verifier Review</h5>
@@ -205,7 +210,6 @@
     {% endif %}
 </form>
 
-{% if obj_type != 'manuscript' %}
 {% comment %} WHY ISN'T THIS IN note_list.html {% endcomment%}
 <script>
     {% comment %} 
@@ -247,6 +251,5 @@
 
     
 </script>
-{% endif %}
 
 {% endblock content %}
