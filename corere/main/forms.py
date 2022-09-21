@@ -1344,10 +1344,20 @@ class VerifierNoteFormSetHelper(GenericNoteFormSetHelper):
         super().__init__(*args, **kwargs)
         self.form_id = "verifier_note"
 
-NoteSubmissionFormset = inlineformset_factory(
+NoteSubmissionFormsetInPhase = inlineformset_factory(
     m.Submission,
     m.Note,
     extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator", "text"),
+    widgets={"text": Textarea(attrs={"rows": 1, "placeholder": "Write your new note..."})},
+)
+
+NoteSubmissionFormsetOutOfPhase = inlineformset_factory(
+    m.Submission,
+    m.Note,
+    extra=0,
     form=NoteForm,
     formset=BaseNoteFormSet,
     fields=("creator", "text"),

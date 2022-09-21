@@ -5,26 +5,31 @@
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
 <script type="text/javascript">
     $(function () {
-        $('#author_note_table tbody tr').formset({
-            prefix: 'author_note',
-            formCssClass: 'author_note_table',
-            addText: 'add note'
-        });
-        $('#editor_note_table tbody tr').formset({
-            prefix: 'editor_note',
-            formCssClass: 'editor_note_table',
-            addText: 'add note'
-        });
-        $('#curator_note_table tbody tr').formset({
-            prefix: 'curator_note',
-            formCssClass: 'curator_note_table',
-            addText: 'add note'
-        });
+        {% if verification_formset %}
         $('#verifier_note_table tbody tr').formset({
             prefix: 'verifier_note',
             formCssClass: 'verifier_note_table',
             addText: 'add note'
         });
+        {% elif curation_formset %}
+        $('#curator_note_table tbody tr').formset({
+            prefix: 'curator_note',
+            formCssClass: 'curator_note_table',
+            addText: 'add note'
+        });
+        {% elif edition_formset %}
+        $('#editor_note_table tbody tr').formset({
+            prefix: 'editor_note',
+            formCssClass: 'editor_note_table',
+            addText: 'add note'
+        });
+        {% else %}
+        $('#author_note_table tbody tr').formset({
+            prefix: 'author_note',
+            formCssClass: 'author_note_table',
+            addText: 'add note'
+        });
+        {% endif %}
     })
 </script>
 
