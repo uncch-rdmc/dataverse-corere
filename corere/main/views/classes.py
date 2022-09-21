@@ -1015,7 +1015,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     note_formset_editor = f.NoteSubmissionFormset
     note_formset_curator = f.NoteSubmissionFormset
     note_formset_verifier = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
+    note_helper_author = f.AuthorNoteFormSetHelper()
+    note_helper_editor = f.EditorNoteFormSetHelper()
+    note_helper_curator = f.CuratorNoteFormSetHelper()
+    note_helper_verifier = f.VerifierNoteFormSetHelper()
     prev_sub_vmetadata = None
 
     edition_formset = None
@@ -1245,8 +1248,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
             context["s_file_url_base"] = "../"
 
-        if self.note_helper is not None:
-            context["note_helper"] = self.note_helper
+        if self.note_helper_author is not None:
+            context["note_helper_author"] = self.note_helper_author
+        if self.note_helper_editor is not None:
+            context["note_helper_editor"] = self.note_helper_editor
+        if self.note_helper_curator is not None:
+            context["note_helper_curator"] = self.note_helper_curator
+        if self.note_helper_verifier is not None:
+            context["note_helper_verifier"] = self.note_helper_verifier
 
         return render(request, self.template, context)
 
@@ -1786,8 +1795,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if self.submission_editor_date_formset is not None:
             context["submission_editor_date_formset"] = self.submission_editor_date_formset
 
-        if self.note_helper is not None:
-            context["note_helper"] = self.note_helper
+        if self.note_helper_author is not None:
+            context["note_helper_author"] = self.note_helper_author
+        if self.note_helper_editor is not None:
+            context["note_helper_editor"] = self.note_helper_editor
+        if self.note_helper_curator is not None:
+            context["note_helper_curator"] = self.note_helper_curator
+        if self.note_helper_verifier is not None:
+            context["note_helper_verifier"] = self.note_helper_verifier
 
         return render(request, self.template, context)
 

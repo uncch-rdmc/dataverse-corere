@@ -131,7 +131,7 @@ class Edition(AbstractCreateUpdateModel):
         NO_ISSUES = "no_issues", "No Issues"
 
     _status = FSMField(
-        max_length=15, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission approved by the editor"
+        max_length=15, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission approved by the editor"
     )
     report = models.TextField(default="", verbose_name="Details")
     submission = models.OneToOneField("Submission", on_delete=models.CASCADE, related_name="submission_edition")
@@ -211,7 +211,7 @@ class Curation(AbstractCreateUpdateModel):
         NO_ISSUES = "no_issues", "No Issues"
 
     _status = FSMField(
-        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission approved by the curator"
+        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission approved by the curator"
     )
     report = models.TextField(default="", verbose_name="Details")
     needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
@@ -293,7 +293,7 @@ class Verification(AbstractCreateUpdateModel):
         SUCCESS = "success", "Success"
 
     _status = FSMField(
-        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission able to be verified"
+        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission able to be verified"
     )
     submission = models.OneToOneField("Submission", on_delete=models.CASCADE, related_name="submission_verification")
     report = models.TextField(default="", verbose_name="Details")

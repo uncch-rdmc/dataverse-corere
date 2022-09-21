@@ -1281,7 +1281,10 @@ class BaseNoteFormSet(BaseInlineFormSet):
     # only show private notes if user is curator/verifier on manuscript
     def get_queryset(self):
         if not hasattr(self, "_queryset"):
+            print("IN QUERYSET")
+            print(self.queryset)
             self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
+#TODO NOTE: Make sure this filtering actually works to prevent private notes. If we keep this query logic at all...
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)
         return self._queryset
@@ -1312,16 +1315,34 @@ class BaseNoteFormSet(BaseInlineFormSet):
     #         # print("")
 
 
-class NoteFormSetHelper(FormHelper):
+class GenericNoteFormSetHelper(FormHelper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_method = "post"
         self.form_class = "form-inline"
         self.template = "bootstrap4/table_inline_formset.html"
         self.form_tag = False
-        self.form_id = "note"
         self.render_required_fields = True
 
+class AuthorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "author_note"
+
+class EditorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "editor_note"
+
+class CuratorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "curator_note"
+
+class VerifierNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "verifier_note"
 
 NoteSubmissionFormset = inlineformset_factory(
     m.Submission,

@@ -17,6 +17,12 @@ textarea.shortarea {
     height: 38px;
 }
 
+#note_table {
+    th {
+        font-weight: 500;
+    }
+}
+
 table.filestable {
     td.filespath {
         padding-left: 10px;

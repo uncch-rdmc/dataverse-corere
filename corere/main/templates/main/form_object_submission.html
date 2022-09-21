@@ -1,9 +1,33 @@
 {% extends "main/layout_fixed.html" %}
 {% block content %}
-{% load concat auth_extras crispy_forms_tags %}
+{% load static concat auth_extras crispy_forms_tags %}
 
-{% load static %}
 <script src="{% static 'main/jquery.formset.20201005.coreremod.js' %}"></script>
+<script type="text/javascript">
+    $(function () {
+        $('#author_note_table tbody tr').formset({
+            prefix: 'author_note',
+            formCssClass: 'author_note_table',
+            addText: 'add note'
+        });
+        $('#editor_note_table tbody tr').formset({
+            prefix: 'editor_note',
+            formCssClass: 'editor_note_table',
+            addText: 'add note'
+        });
+        $('#curator_note_table tbody tr').formset({
+            prefix: 'curator_note',
+            formCssClass: 'curator_note_table',
+            addText: 'add note'
+        });
+        $('#verifier_note_table tbody tr').formset({
+            prefix: 'verifier_note',
+            formCssClass: 'verifier_note_table',
+            addText: 'add note'
+        });
+    })
+</script>
+
 {% if s_version > 1%}
 <script type="text/javascript">
     $(function () {
@@ -31,21 +55,19 @@
 
 {% include "main/page_header.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {% crispy form helper %}
 
     {% comment %} The commented out links in this review block should be re-enabled with logic to ensure they only show when the option is available 
     The launch container link remains because if you are in review you are able to launch a container {% endcomment %}
     {% if verification_formset or curation_formset or edition_formset and s_status != "rejected_editor" %}
     <h5 class="title-text">Info</h5>
-    <div class="accordion" id="manuscriptAccordionPanels">
+    <div class="accordion" id="manuscriptInfoAccordionPanels">
         <div class="accordion-item">
-            <h2 class="accordion-header" id="panelsStayOpen-headingOne">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="false" aria-controls="panelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
-                Manuscript Metadata
+            <h2 class="accordion-header" id="infoPanelsStayOpen-headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#infoPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="infoPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
+                Manuscript Info
             </button>
             </h2>
-            <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingOne">
+            <div id="infoPanelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingOne">
                 <div class="accordion-body">                
                     {{ manuscript_metadata_html|safe}}
                     {% comment %} <a href="/manuscript/{{parent_id}}/edit/" target="_blank">Edit Metadata</a> {% endcomment %}
@@ -53,12 +75,12 @@
             </div>
         </div>
         <div class="accordion-item">
-            <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
+            <h2 class="accordion-header" id="infoPanelsStayOpen-headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#infoPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="infoPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
                 Manuscript Files
                 </button>
             </h2>
-            <div id="panelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingTwo">
+            <div id="infoPanelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingTwo">
                 <div class="accordion-body">                
                     <div id="m_files_list_holder">
                         {% include "file_datatable/file_datatable.html" with obj_id=parent_id obj_type='manuscript' read_only=True file_url_base=m_file_url_base%}
@@ -68,12 +90,33 @@
             </div>
         </div>
         <div class="accordion-item">
-            <h2 class="accordion-header" id="panelsStayOpen-headingThree">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseThree" aria-expanded="false" aria-controls="panelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+            <h2 class="accordion-header" id="infoPanelsStayOpen-headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#infoPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="infoPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+                Submission Info
+                </button>
+            </h2>
+            <div id="infoPanelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingThree">
+                <div class="accordion-body">    
+                    {% csrf_token %}
+                    {% crispy form helper %}
+
+                    <h5 class="title-text">Notes</h5>
+                    {{ note_formset_author.non_form_errors }}
+                    {% crispy note_formset_author note_helper_author %}
+                    {% comment %} <div id="s_files_list_holder">
+                        {% include "file_datatable/file_datatable.html" with obj_id=object_id obj_type='submission' read_only=True file_url_base=s_file_url_base%}
+                        <a href="../notebook/" target="_blank">Launch Container</a>
+                    </div> {% endcomment %}
+                </div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="infoPanelsStayOpen-headingFour">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#infoPanelsStayOpen-collapseFour" aria-expanded="false" aria-controls="infoPanelsStayOpen-collapseFour" aria-label="Show/hide list of submissions">
                 Submission Files
                 </button>
             </h2>
-            <div id="panelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingThree">
+            <div id="infoPanelsStayOpen-collapseFour" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingFour">
                 <div class="accordion-body">    
                     <div id="s_files_list_holder">
                         {% include "file_datatable/file_datatable.html" with obj_id=object_id obj_type='submission' read_only=True file_url_base=s_file_url_base%}
@@ -85,12 +128,12 @@
         </div>
         {% if s_version > 1%}
         <div class="accordion-item">
-            <h2 class="accordion-header" id="panelsStayOpen-headingFour">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseFour" aria-expanded="false" aria-controls="panelsStayOpen-collapseFour" aria-label="Show/hide list of submissions">
+            <h2 class="accordion-header" id="infoPanelsStayOpen-headingFive">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#infoPanelsStayOpen-collapseFive" aria-expanded="false" aria-controls="infoPanelsStayOpen-collapseFive" aria-label="Show/hide list of submissions">
                 Previous Submissions
                 </button>
             </h2>
-            <div id="panelsStayOpen-collapseFour" class="accordion-collapse collapse" data-bs-parent="#manuscriptAccordionPanels" aria-labelledby="panelsStayOpen-headingFour">
+            <div id="infoPanelsStayOpen-collapseFive" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingFive">
                 <div class="accordion-body">    
                     <h6><i><span style="color:#666666; margin-left:1px;"> Double-click a submission to open its info in a new tab </span></i></h6>
                     <div id="submission_table_holder">
@@ -113,40 +156,76 @@
     <hr>
     {% endif %}
 
-    {% include "main/note_list.html" with note_formset=note_formset_author title="Author Notes"%} 
-    <hr>   
-    {% include "main/note_list.html" with note_formset=note_formset_editor title="Editor Notes"%} 
-    <hr>   
-    {% include "main/note_list.html" with note_formset=note_formset_curator title="Curator Notes"%} 
-    <hr>   
-    {% include "main/note_list.html" with note_formset=note_formset_verifier title="Verifier Notes"%} 
-    <hr>   
+    {% comment %} Add a second accordion here for reviews {% endcomment %}
 
+    <h5 class="title-text">Reviews</h5>
+    <div class="accordion" id="submissionReviewAccordionPanels">
+        {% if edition_formset %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="reviewPanelsStayOpen-headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
+                Editor Review
+            </button>
+            </h2>
+            <div id="reviewPanelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingOne">
+                <div class="accordion-body">                
+                    {{ edition_formset.non_form_errors }}
+                    <h5 class="title-text">Review</h5>
+                    {% crispy edition_formset helper %}
 
-    {% if verification_formset %}
-        <h5 class="title-text">Verifier Review</h5>
-        {{ verification_formset.non_form_errors }}
-        {% crispy verification_formset helper %}
-        <hr>
-    {% endif %}
-    {% if curation_formset %}
-        <h5 class="title-text">Curator Review</h5>
-        {{ curation_formset.non_form_errors }}
-        {% crispy curation_formset helper %}
-        {% if submission_editor_date_formset %}
-            <!-- <h5 class="title-text">Curator Review</h5> -->
-            {{ submission_editor_date_formset.non_form_errors }}
-            {% crispy submission_editor_date_formset helper %}
+                    <h5 class="title-text">Notes</h5>
+                    {{ note_formset_editor.non_form_errors }}
+                    {% crispy note_formset_editor note_helper_editor %}
+                </div>
+            </div>
+        </div>
         {% endif %}
-        <hr>
-    {% endif %}
+        {% if curation_formset %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="reviewPanelsStayOpen-headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
+                Curator Review
+                </button>
+            </h2>
+            <div id="reviewPanelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingTwo">
+                <div class="accordion-body">                
+                    {{ curation_formset.non_form_errors }}
+                    <h5 class="title-text">Review</h5>
+                    {% crispy curation_formset helper %}
+                    {% if submission_editor_date_formset %}
+                        {{ submission_editor_date_formset.non_form_errors }}
+                        {% crispy submission_editor_date_formset helper %}
+                    {% endif %}
 
-    {% if edition_formset %}
-        <h5 class="title-text">Editor Review</h5>
-        {{ edition_formset.non_form_errors }}
-        {% crispy edition_formset helper %}
-        <hr>
-    {% endif %}
+                    <h5 class="title-text">Notes</h5>
+                    {{ note_formset_curator.non_form_errors }}
+                    {% crispy note_formset_curator note_helper_curator %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if verification_formset %}
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="reviewPanelsStayOpen-headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+                Verifier Review
+                </button>
+            </h2>
+            <div id="reviewPanelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingThree">
+                <div class="accordion-body">    
+                    {{ verification_formset.non_form_errors }}
+                    <h5 class="title-text">Review</h5>
+                    {% crispy verification_formset helper %}
+
+                    <h5 class="title-text">Notes</h5>
+                    {{ note_formset_verifier.non_form_errors }}
+                    {% crispy note_formset_verifier note_helper_verifier %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <hr>
 
     {% comment %} Putting read_only checks around every submit was done to make the view page show up right even when you are a role that could edit at that point {% endcomment %}
     {%comment%} here we need to add an option for when we are in "read only" to show the submit button still {%endcomment%}
@@ -210,7 +289,6 @@
     {% endif %}
 </form>
 
-{% comment %} WHY ISN'T THIS IN note_list.html {% endcomment%}
 <script>
     {% comment %} 
     // Goes through each note and checks if the author is our user. If not, disables the delete checkbox
@@ -220,36 +298,40 @@
     // Technically in the backend we use a perm on each note but since we always assign that perm to curators this is a way around having to pass all that info
     {% endcomment %}
 
-    if('False' == '{{is_manu_curator}}')
-        for( let elem of document.getElementById('note_table').lastElementChild.childNodes){
-            if(elem.tagName == 'TR') {
-                if(elem.firstElementChild.tagName == 'TD'){
-                    creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
+    if('False' == '{{is_manu_curator}}') {
+        for (table in $("[id$=note_table]")) {
+            for( let elem of table.lastElementChild.childNodes){
+                if(elem.tagName == 'TR') {
+                    if(elem.firstElementChild.tagName == 'TD'){
+                        creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
 
-                    if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
-                        for(let celem of elem.childNodes) {
-                            if(celem.tagName == 'TD') {
-                                if(celem.id.endsWith('DELETE')) {
-                                    celem.firstElementChild.firstElementChild.style.display = 'none'
+                        if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
+                            for(let celem of elem.childNodes) {
+                                if(celem.tagName == 'TD') {
+                                    if(celem.id.endsWith('DELETE')) {
+                                        celem.firstElementChild.firstElementChild.style.display = 'none'
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+
+            {% comment %}
+            // Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
+            // This was required to set the field to be the username. 
+            // Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
+            // That being said, this is pretty brittle as well.
+
+            // TODO-NOTES: Test this works. I bet it blows up when adding an additional note if it works period
+            {% endcomment %}
+
+            var lastTr = table.lastElementChild.lastElementChild;
+            lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
         }
+    }
 
-    {% comment %}
-    // Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
-    // This was required to set the field to be the username. 
-    // Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
-    // That being said, this is pretty brittle as well.
-    {% endcomment %}
-
-    var lastTr = document.getElementById('note_table').lastElementChild.lastElementChild;
-    lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
-
-    
 </script>
 
 {% endblock content %}
