@@ -54,9 +54,9 @@
     Sub_Table_Params.has_group_curator = {{request.user|has_group:GROUP_ROLE_CURATOR|yesno:"true,false"}};
     Sub_Table_Params.has_group_verifier = {{request.user|has_group:GROUP_ROLE_VERIFIER|yesno:"true,false"}}; {% endcomment %}
 </script>
-{% endif %}
 
 <script src="{% static 'main/submission_datatable.js' %}" type="text/javascript"></script>
+{% endif %}
 
 {% include "main/page_header.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">
@@ -72,7 +72,7 @@
                 Manuscript Info
             </button>
             </h2>
-            <div id="infoPanelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingOne">
+            <div id="infoPanelsStayOpen-collapseOne" class="accordion-collapse collapse" aria-labelledby="infoPanelsStayOpen-headingOne">
                 <div class="accordion-body">                
                     {{ manuscript_metadata_html|safe}}
                     {% comment %} <a href="/manuscript/{{parent_id}}/edit/" target="_blank">Edit Metadata</a> {% endcomment %}
@@ -85,7 +85,7 @@
                 Manuscript Files
                 </button>
             </h2>
-            <div id="infoPanelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingTwo">
+            <div id="infoPanelsStayOpen-collapseTwo" class="accordion-collapse collapse" aria-labelledby="infoPanelsStayOpen-headingTwo">
                 <div class="accordion-body">                
                     <div id="m_files_list_holder">
                         {% include "file_datatable/file_datatable.html" with obj_id=parent_id obj_type='manuscript' read_only=True file_url_base=m_file_url_base%}
@@ -100,7 +100,7 @@
                 Submission Info
                 </button>
             </h2>
-            <div id="infoPanelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingThree">
+            <div id="infoPanelsStayOpen-collapseThree" class="accordion-collapse collapse" aria-labelledby="infoPanelsStayOpen-headingThree">
                 <div class="accordion-body">    
                     {% csrf_token %}
                     {% crispy form helper %}
@@ -121,7 +121,7 @@
                 Submission Files
                 </button>
             </h2>
-            <div id="infoPanelsStayOpen-collapseFour" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingFour">
+            <div id="infoPanelsStayOpen-collapseFour" class="accordion-collapse collapse" aria-labelledby="infoPanelsStayOpen-headingFour">
                 <div class="accordion-body">    
                     <div id="s_files_list_holder">
                         {% include "file_datatable/file_datatable.html" with obj_id=object_id obj_type='submission' read_only=True file_url_base=s_file_url_base%}
@@ -138,7 +138,7 @@
                 Previous Submissions
                 </button>
             </h2>
-            <div id="infoPanelsStayOpen-collapseFive" class="accordion-collapse collapse" data-bs-parent="#manuscriptInfoAccordionPanels" aria-labelledby="infoPanelsStayOpen-headingFive">
+            <div id="infoPanelsStayOpen-collapseFive" class="accordion-collapse collapse" aria-labelledby="infoPanelsStayOpen-headingFive">
                 <div class="accordion-body">    
                     <h6><i><span style="color:#666666; margin-left:1px;"> Double-click a submission to open its info in a new tab </span></i></h6>
                     <div id="submission_table_holder">
@@ -168,11 +168,11 @@
         {% if edition_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingOne">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
+            <button class="accordion-button {% if curation_formset or verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
                 Editor Review
             </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseOne" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingOne">
+            <div id="reviewPanelsStayOpen-collapseOne" class="accordion-collapse collapse {% if not curation_formset and not verification_formset %}show{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingOne">
                 <div class="accordion-body">                
                     {{ edition_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>
@@ -188,11 +188,11 @@
         {% if curation_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingTwo">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
+                <button class="accordion-button {% if verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
                 Curator Review
                 </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseTwo" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingTwo">
+            <div id="reviewPanelsStayOpen-collapseTwo" class="accordion-collapse collapse {% if not verification_formset %}show{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingTwo">
                 <div class="accordion-body">                
                     {{ curation_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>
@@ -212,11 +212,11 @@
         {% if verification_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingThree">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
                 Verifier Review
                 </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseThree" class="accordion-collapse collapse" data-bs-parent="#submissionReviewAccordionPanels" aria-labelledby="reviewPanelsStayOpen-headingThree">
+            <div id="reviewPanelsStayOpen-collapseThree" class="accordion-collapse collapse show" aria-labelledby="reviewPanelsStayOpen-headingThree">
                 <div class="accordion-body">    
                     {{ verification_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>

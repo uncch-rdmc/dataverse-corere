@@ -1134,6 +1134,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.note_formset_author = self.note_formset_author(
                 request.POST if request.method == 'POST' else None,
                 instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
                 prefix="note_formset_author",
                 form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
             )
@@ -1153,6 +1154,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.note_formset_editor = self.note_formset_editor(
                 request.POST if request.method == 'POST' else None,
                 instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
                 prefix="note_formset_editor",
                 form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
             )    
@@ -1172,6 +1174,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.note_formset_curator = self.note_formset_curator(
                 request.POST if request.method == 'POST' else None,
                 instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
                 prefix="note_formset_curator",
                 form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
             )    
@@ -1191,6 +1194,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.note_formset_verifier = self.note_formset_verifier(
                 request.POST if request.method == 'POST' else None,
                 instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
                 prefix="note_formset_verifier",
                 form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
             )    
