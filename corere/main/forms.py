@@ -1281,8 +1281,6 @@ class BaseNoteFormSet(BaseInlineFormSet):
     # only show private notes if user is curator/verifier on manuscript
     def get_queryset(self):
         if not hasattr(self, "_queryset"):
-            print("IN QUERYSET")
-            print(self.queryset)
             self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
 #TODO NOTE: Make sure this filtering actually works to prevent private notes. If we keep this query logic at all...
             if not self._queryset.ordered:

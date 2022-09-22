@@ -195,7 +195,7 @@ msgstr "Create Submission for Manuscript"
 
 #: corere/main/views/classes.py:1589 corere/main/views/classes.py:1606
 msgid "submission_info_helpText"
-msgstr "Please enter a summary of the changes made for this submission"
+msgstr "Please review your submission contents and enter a summary of the changes made for this submission"
 
 #: corere/main/views/classes.py:1610
 msgid "submission_info_pageTitle"

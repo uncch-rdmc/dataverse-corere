@@ -23,13 +23,8 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
 
     for url_post, status_dict in assert_dict.items():
         full_url = test.live_server_url + url_pre + url_post
-        for method, status_code in status_dict.items():
-            # print("")
-            # print(full_url)
-            # print("...")
-
+        for method, expected_status_code in status_dict.items():
             try:
-
                 if method.startswith("GET"): #TODO: Add debug for GET
                     browser.get(full_url)
                     # for request in browser.requests:
@@ -37,23 +32,45 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                     #         print("{} - {}".format(request.url, request.response.status_code))
                     for request in browser.requests:
                         if request.url == full_url and request.response:
-                            test.assertEqual(status_code, request.response.status_code, msg=method + " " + full_url)
+                            returned_status_code = request.response.status_code
+                            # test.assertEqual(expected_status_code, request.response.status_code, msg=method + " " + full_url)
                             del browser.requests
                 elif method.startswith("POST"):
                     # This is for posting without a body, which we use in a few places to progress the manuscript etc.
                     # We'll need something more verbose if we want to pass a body
 
-                    #NOTE: Comment the below call/assert out if you are not running headless. Currently it'll blow up
-                    result_status = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
-                    test.assertEqual(status_code, result_status, msg="POST " + full_url)
+                    #NOTE: Comment the below call out if you are not running headless. Currently it'll blow up
+                    result = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
+                    returned_status_code = result["status"]
+
+                    # test.assertEqual(expected_status_code, result["status"], msg="POST " + full_url)
 
                 # elif method == "POST-DEBUG":
                 #     result_status = call_request_method(browser, "POST", full_url, debug=True)
                 #     test.assertEqual(status_code, result_status, msg=method + " " + full_url)
 
-
                 else:
                     raise Exception("NO OTHER METHODS SUPPORTED")
+
+                if returned_status_code != expected_status_code and result["status"] == 500:
+                    try:
+                        print("")
+                        print("=== Error text from HTML ===")
+                        print("")
+                        html_string = 'Traceback (most recent call last):' + call_request_method(browser, "POST", full_url, print_html=True).split('Traceback (most recent call last):',1)[1] #get all starting at traceback
+                        html_string = html_string.split('</textarea>',1)[0]
+                        print(html_string) #NOTE: I tried using unquote here to fix things like &#x27;NoteFormFormSet&#x27; , but I think it should be done on the javascript side instead
+                        print("")
+                        print("=== End error text ===")
+                        print("")
+                    except IndexError:
+                        print("No error presented on the 500 page that could be found by our selenium test.")
+                    #print(result)
+                    # print(call_request_method(browser, "POST", full_url, print_html=True))
+
+                test.assertEqual(expected_status_code, returned_status_code, msg=method + " " + full_url)
+
+
 
             except Exception as e:
                 # This block was disabled as we now just disable cors for our selenium tests
@@ -105,14 +122,25 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
     #     test.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
 
 
-def call_request_method(browser, method, endpoint, debug=False):
-    fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
+def call_request_method(browser, method, endpoint, debug=False, print_html=False):
+    if print_html:
+        fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then((response) => {return response.text();})"
+    else:
+        fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
+    # NOTE: These calls below are failed attempts to return both the status and the response text at the same time. This requires a better understanding of JS promises than I have.
+    # This was in an attempt to get the html body back so it could be printed when there is a 500.
+    # Even if this worked it may have been too slow waiting for the response text each time before returning it.
+    # If we do want to go down this road later we may have to pass the status codes in here and check in the JS.
+    # ... or just call the same function again on a 500 error and just return the text. I may do that shortly
+
+    # fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then((response) => {return [response.status, response.text()];})"
+    # fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then(response => response.text().then(text => return {status: response.status, body: data})))"
     result = browser.execute_script(fetch_javascript)
     if debug:
         # print("DEBUG")
         # print(fetch_javascript)
         print("DEBUG: " + str(result))
-    return result["status"]
+    return result
     # TODO: see manuscript_landing.postToSubUrl and the .then() section if we want to go to the endpoint after.
 
 

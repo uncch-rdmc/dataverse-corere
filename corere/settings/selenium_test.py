@@ -12,3 +12,5 @@ SKIP_GIT = True
 SKIP_EDITION = False
 
 MIDDLEWARE.remove("django.middleware.csrf.CsrfViewMiddleware")
+MIDDLEWARE.remove("debug_toolbar.middleware.DebugToolbarMiddleware")
+INSTALLED_APPS.remove('debug_toolbar')
