@@ -1012,7 +1012,13 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     parent_model = m.Manuscript
     object_friendly_name = "submission"
     model = m.Submission
-    #These may be set to the InPhase formset depending on logic in general
+    # These may be set to the InPhase formset depending on logic in general
+    # We use the "selected" ones to keep the uninitialized formset stored for our re-init trick to hide errors.
+    # ... I think this trick also handles some weird duplication that was happening with notes when another thing errored.
+    selected_formset_author = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_editor = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_curator = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_verifier = f.NoteSubmissionFormsetOutOfPhase
     note_formset_author = f.NoteSubmissionFormsetOutOfPhase
     note_formset_editor = f.NoteSubmissionFormsetOutOfPhase
     note_formset_curator = f.NoteSubmissionFormsetOutOfPhase
@@ -1057,6 +1063,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_editionReview_helpText")
                 self.note_formset_editor = f.NoteSubmissionFormsetInPhase
+                self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
                 self.can_progress = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
@@ -1081,6 +1088,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
                 self.note_formset_curator = f.NoteSubmissionFormsetInPhase
+                self.selected_formset_curator = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
                 if self.object.manuscript.skip_edition:
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
@@ -1108,6 +1116,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
                 self.note_formset_verifier = f.NoteSubmissionFormsetInPhase
+                self.selected_formset_verifier = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
             elif has_transition_perm(self.object.submission_verification.view_noop, request.user):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
@@ -1290,7 +1299,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         self.redirect = "/manuscript/" + str(self.object.manuscript.id)
 
         manuscript_display_name = self.object.manuscript.get_display_name()
-        
+
         if self.edition_formset:
             self.edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if self.curation_formset:
@@ -1650,90 +1659,87 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             or request.user.is_superuser
         )  # Used to enable delete option for all notes in JS
 
+#TODO-NOTE: re-init note formsets here to hide validation errors? (See 1548)
+
         ### NOTES ###
 
         #TODO: Remove unused code below. We don't need it in post.
 
         # sub_files = None
         if self.note_formset_author is not None:
-            context["note_formset_author"] = self.note_formset_author
-            # print(self.note_formset_author)
-            # checkers = [
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            # ]
-            # notes = m.Note.objects.filter(parent_submission=self.object)
-            # for checker in checkers:
-            #     checker.prefetch_perms(notes)
-            # sub_files = self.object.submission_files.all().order_by("path", "name")
-            # context["note_formset_author"] = self.note_formset_author(
-            #     instance=self.object,
-            #     queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
-            #     prefix="note_formset_author",
-            #     form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            # )
+            checkers = [
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+            ]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_author"] = self.selected_formset_author(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
+                prefix="note_formset_author",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+            )
 
         if self.note_formset_editor is not None:
-            context["note_formset_editor"] = self.note_formset_editor
-            # checkers = [
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            # ]
-            # notes = m.Note.objects.filter(parent_submission=self.object)
-            # for checker in checkers:
-            #     checker.prefetch_perms(notes)
-            # if sub_files is None:
-            #     sub_files = self.object.submission_files.all().order_by("path", "name")
-            # context["note_formset_editor"] = self.note_formset_editor(
-            #     instance=self.object,
-            #     queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
-            #     prefix="note_formset_editor",
-            #     form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            # )    
+            checkers = [
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+            ]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_editor"] = self.selected_formset_editor(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
+                prefix="note_formset_editor",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+            )    
 
         if self.note_formset_curator is not None:
-            context["note_formset_curator"] = self.note_formset_curator
-            # checkers = [
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            # ]
-            # notes = m.Note.objects.filter(parent_submission=self.object)
-            # for checker in checkers:
-            #     checker.prefetch_perms(notes)
-            # if sub_files is None:
-            #     sub_files = self.object.submission_files.all().order_by("path", "name")
-            # context["note_formset_curator"] = self.note_formset_curator(
-            #     instance=self.object,
-            #     queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
-            #     prefix="note_formset_curator",
-            #     form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            # )    
+            checkers = [
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+            ]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_curator"] = self.selected_formset_curator(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
+                prefix="note_formset_curator",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+            )    
 
         if self.note_formset_verifier is not None:
-            context["note_formset_verifier"] = self.note_formset_verifier
-            # checkers = [
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-            #     ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            # ]
-            # notes = m.Note.objects.filter(parent_submission=self.object)
-            # for checker in checkers:
-            #     checker.prefetch_perms(notes)
-            # if sub_files is None:
-            #     sub_files = self.object.submission_files.all().order_by("path", "name")
-            # context["note_formset_verifier"] = self.note_formset_verifier(
-            #     instance=self.object,
-            #     queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
-            #     prefix="note_formset_verifier",
-            #     form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            # )    
+            checkers = [
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+            ]
+            notes = m.Note.objects.filter(parent_submission=self.object)
+            for checker in checkers:
+                checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_verifier"] = self.selected_formset_verifier(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
+                prefix="note_formset_verifier",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+            )    
 
         ### END NOTES ###
 
