@@ -111,16 +111,20 @@ def get_pretty_user_list_by_group_prefix(group):
 
 
 # TODO: Write one of these for manuscript? Even there really isn't logic?
-def get_progress_bar_html_submission(progress_step_text, submission):
+def get_progress_bar_html_submission(progress_step_text, submission=None):
     if (
-        submission._status == m.Submission.Status.NEW
-        or submission._status == m.Submission.Status.REJECTED_EDITOR
-        or submission._status == m.Submission.Status.RETURNED
+        not submission or submission._status == m.Submission.Status.NEW
     ):
         if submission.manuscript.is_containerized():
             return generate_progress_bar_html(c.progress_list_container_submission, progress_step_text)
         else:
             return generate_progress_bar_html(c.progress_list_external_submission, progress_step_text)
+    elif (submission._status == m.Submission.Status.REJECTED_EDITOR
+        or submission._status == m.Submission.Status.RETURNED):
+        if submission.manuscript.is_containerized():
+            return generate_progress_bar_html(c.progress_list_container_submission_rejected, progress_step_text)
+        else:
+            return generate_progress_bar_html(c.progress_list_external_submission_rejected, progress_step_text)
 
 
 def generate_progress_bar_html(step_list, last_active_step):

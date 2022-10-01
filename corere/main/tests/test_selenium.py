@@ -140,7 +140,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
@@ -200,7 +200,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
@@ -495,7 +495,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         c_admin_selenium.switch_to.alert.accept()
@@ -647,7 +647,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         c_admin_selenium.switch_to.alert.accept()
@@ -1246,7 +1246,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()
@@ -1333,7 +1333,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
         submission_info_submit.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()
@@ -1568,7 +1568,7 @@ class LoggingInTestCase(StaticLiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()

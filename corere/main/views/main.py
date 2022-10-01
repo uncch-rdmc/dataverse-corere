@@ -125,7 +125,10 @@ def manuscript_landing(request, id=None):
 
     # Submission button logic in top button row. Original from datatables.py
 
+    createSubmissionButton = False
+    createSubmissionButtonRejected = False
     editSubmissionButton = False
+    editSubmissionButtonRejected = False
     reviewSubmissionButtonMain = False
     reviewSubmissionButtonMore = False
     updateReviewSubmissionButtonMain = False
@@ -133,7 +136,6 @@ def manuscript_landing(request, id=None):
     sendReportButton = False
     returnSubmissionButton = False
     latest_submission_id = None
-    createSubmissionButton = False
     launchContainerCurrentSubButton = False
     dataverseUploadManuscriptButtonMain = False
     dataverseUploadManuscriptButtonMore = False
@@ -147,7 +149,12 @@ def manuscript_landing(request, id=None):
         notifyManuscriptButtonMore = True
 
     if has_transition_perm(manuscript.add_submission_noop, request.user):
-        createSubmissionButton = True
+        if not manuscript.has_submissions():
+            createSubmissionButton = True                    
+        else:
+            latestSubmission = manuscript.get_latest_submission()
+            latest_submission_id = latestSubmission.id
+            createSubmissionButtonRejected = True
     else:
         try:
             latestSubmission = manuscript.get_latest_submission()
@@ -231,7 +238,10 @@ def manuscript_landing(request, id=None):
                 or updateReviewSubmissionButtonMain
                 or updateReviewSubmissionButtonMore
             ) and has_transition_perm(latestSubmission.edit_noop, request.user):
-                editSubmissionButton = True
+                if latest_submission._status != m.Submssion.Status.REJECTED_EDITOR and latest_submission.version_id == 1:
+                    editSubmissionButton = True                    
+                else:
+                    editSubmissionButtonRejected = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
             if latestSubmission.manuscript.compute_env != "Other" and settings.CONTAINER_DRIVER == "wholetale":
                 dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
@@ -279,14 +289,16 @@ def manuscript_landing(request, id=None):
         # 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
         "page_title": _("manuscript_landing_pageTitle"),
         "create_sub_allowed": str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
+        "createSubmissionButton": createSubmissionButton,
+        "createSubmissionButtonRejected": createSubmissionButtonRejected,
         "editSubmissionButton": editSubmissionButton,
+        "editSubmissionButtonRejected": editSubmissionButtonRejected,
         "reviewSubmissionButtonMain": reviewSubmissionButtonMain,
         "reviewSubmissionButtonMore": reviewSubmissionButtonMore,
         "updateReviewSubmissionButtonMain": updateReviewSubmissionButtonMain,
         "updateReviewSubmissionButtonMore": updateReviewSubmissionButtonMore,
         "sendReportButton": sendReportButton,
         "returnSubmissionButton": returnSubmissionButton,
-        "createSubmissionButton": createSubmissionButton,
         "launchContainerCurrentSubButton": launchContainerCurrentSubButton,
         "dataverseUploadManuscriptButtonMain": dataverseUploadManuscriptButtonMain,
         "dataverseUploadManuscriptButtonMore": dataverseUploadManuscriptButtonMore,

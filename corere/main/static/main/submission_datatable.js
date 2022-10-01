@@ -44,7 +44,7 @@ function construct_buttons() {
                 text: 'Edit Notes',
                 name: 'editSubmission',
                 action: function ( e, dt, node, config ) {
-                    window.location.href = "/submission/"+submission_id+"/info/";
+                    window.location.href = "/submission/"+submission_id+"/review/";
                     
                 },
                 attr: {
@@ -60,7 +60,7 @@ function construct_buttons() {
                 text: 'Review',
                 name: 'reviewSubmission',
                 action: function ( e, dt, node, config ) {
-                    window.location.href = "/submission/"+submission_id+"/info/";
+                    window.location.href = "/submission/"+submission_id+"/review/";
                     
                 },
                 attr: {
@@ -275,7 +275,7 @@ $(document).ready(function() {
 
             if(!Sub_Table_Params.landingView) {
                 $('#submission_table tbody').on('dblclick', 'tr', function(e, dt, type, indexes) {
-                    window.open("/submission/"+table.row( this ).data()[1]+"/info/", '_blank');
+                    window.open("/submission/"+table.row( this ).data()[1]+"/review/", '_blank');
                 }); 
 
                 table.column(0).visible(false);

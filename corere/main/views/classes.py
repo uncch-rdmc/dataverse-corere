@@ -315,11 +315,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if self.from_submission:
-            if self.object.is_containerized():
-                progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, "Update Manuscript")
-            else:
-                progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, "Update Manuscript")
-            context["progress_bar_html"] = progress_bar_html
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript")
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -429,8 +425,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if self.from_submission:
             # We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, "Update Manuscript")
-            context["progress_bar_html"] = progress_bar_html
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript")
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -1034,6 +1029,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     verification_formset = None
     submission_editor_date_formset = None
     can_progress = False
+    read_only_note = False
 
     def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
@@ -1062,8 +1058,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_editionReview_helpText")
-                self.note_formset_editor = f.NoteSubmissionFormsetInPhase
-                self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
+                if self.read_only_note:
+                    self.note_formset_editor = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_editor = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_editor = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
                 self.can_progress = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
@@ -1087,8 +1087,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
-                self.note_formset_curator = f.NoteSubmissionFormsetInPhase
-                self.selected_formset_curator = f.NoteSubmissionFormsetInPhase
+                if self.read_only_note:
+                    self.note_formset_curator = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_curator = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_curator = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_curator = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
                 if self.object.manuscript.skip_edition:
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
@@ -1115,8 +1119,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.can_progress = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
-                self.note_formset_verifier = f.NoteSubmissionFormsetInPhase
-                self.selected_formset_verifier = f.NoteSubmissionFormsetInPhase
+                if self.read_only_note:
+                    self.note_formset_verifier = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_verifier = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_verifier = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_verifier = f.NoteSubmissionFormsetInPhase
                 other_note_add = True
             elif has_transition_perm(self.object.submission_verification.view_noop, request.user):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
@@ -1125,7 +1133,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             pass
 
         if not other_note_add:
-            self.note_formset_author = f.NoteSubmissionFormsetInPhase
+            if self.read_only_note:
+                self.note_formset_author = f.NoteSubmissionFormsetInPhaseReadOnly
+            else:
+                self.note_formset_author = f.NoteSubmissionFormsetInPhase
 
         ### NOTES ###
 
@@ -1146,7 +1157,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
                 prefix="note_formset_author",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )
 
         if self.note_formset_editor is not None:
@@ -1166,7 +1177,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
                 prefix="note_formset_editor",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         if self.note_formset_curator is not None:
@@ -1186,7 +1197,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
                 prefix="note_formset_curator",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         if self.note_formset_verifier is not None:
@@ -1206,7 +1217,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
                 prefix="note_formset_verifier",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         ### END NOTES ###
@@ -1312,43 +1323,43 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
 
         ### NOTES SAVE (We save notes even if readonly) ###
+        if not read_only_note:
+            if self.note_formset_author is not None:
+                if self.note_formset_author.is_valid():
+                    self.note_formset_author.save()
+                else:
+                    for fr in self.note_formset_author.forms:
+                        if fr.is_valid():
+                            fr.save(True)
 
-        if self.note_formset_author is not None:
-            if self.note_formset_author.is_valid():
-                self.note_formset_author.save()
-            else:
-                for fr in self.note_formset_author.forms:
-                    if fr.is_valid():
-                        fr.save(True)
+            if self.note_formset_editor is not None:
+                if self.note_formset_editor.is_valid():
+                    self.note_formset_editor.save()
+                else:
+                    for fr in self.note_formset_editor.forms:
+                        if fr.is_valid():
+                            fr.save(True)
 
-        if self.note_formset_editor is not None:
-            if self.note_formset_editor.is_valid():
-                self.note_formset_editor.save()
-            else:
-                for fr in self.note_formset_editor.forms:
-                    if fr.is_valid():
-                        fr.save(True)
+            if self.note_formset_curator is not None:
+                if self.note_formset_curator.is_valid():
+                    self.note_formset_curator.save()
+                else:
+                    for fr in self.note_formset_curator.forms:
+                        if fr.is_valid():
+                            fr.save(True)
 
-        if self.note_formset_curator is not None:
-            if self.note_formset_curator.is_valid():
-                self.note_formset_curator.save()
-            else:
-                for fr in self.note_formset_curator.forms:
-                    if fr.is_valid():
-                        fr.save(True)
+            if self.note_formset_verifier is not None:
+                if self.note_formset_verifier.is_valid():
+                    self.note_formset_verifier.save()
+                else:
+                    for fr in self.note_formset_verifier.forms:
+                        if fr.is_valid():
+                            fr.save(True)
 
-        if self.note_formset_verifier is not None:
-            if self.note_formset_verifier.is_valid():
-                self.note_formset_verifier.save()
-            else:
-                for fr in self.note_formset_verifier.forms:
-                    if fr.is_valid():
-                        fr.save(True)
-
-        if self.read_only and (self.note_formset_author is not None or self.note_formset_editor is not None or self.note_formset_curator is not None or self.note_formset_verifier is not None):
-            return redirect(
-                self.redirect
-            )
+            if self.read_only and (self.note_formset_author is not None or self.note_formset_editor is not None or self.note_formset_curator is not None or self.note_formset_verifier is not None):
+                return redirect(
+                    self.redirect
+                )
 
         ### END NOTES SAVE ###
 
@@ -1681,7 +1692,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
                 prefix="note_formset_author",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )
 
         if self.note_formset_editor is not None:
@@ -1700,7 +1711,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
                 prefix="note_formset_editor",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         if self.note_formset_curator is not None:
@@ -1719,7 +1730,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
                 prefix="note_formset_curator",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         if self.note_formset_verifier is not None:
@@ -1738,7 +1749,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 instance=self.object,
                 queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
                 prefix="note_formset_verifier",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )    
 
         ### END NOTES ###
@@ -1783,7 +1794,7 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 # NOTE 2022: The edit logic in GenericSubmissionFormView is pretty complicated, and now that we moved most of the info from submission to manuscript
 #            maybe we should redo/simplify how we check these perms
 #            Also remember that even though we let curators/verifiers edit their reviews out of phase, we block the actual review status from being changed
-class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+class SubmissionReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = "edit_noop"
     page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
     template = "main/form_object_submission.html"
@@ -1794,6 +1805,18 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSu
         )  # Sometimes overwritten by GenericSubmissionFormView
         return super().general(request, *args, **kwargs)
 
+class SubmissionInfoView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+    transition_method_name = "edit_noop"
+    page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
+    template = "main/form_object_submission.html"
+    read_only = True
+    read_only_note = True
+
+    def general(self, request, *args, **kwargs):
+        self.page_title = _("submission_info_pageTitle").format(
+            submission_version=self.object.version_id
+        )  # Sometimes overwritten by GenericSubmissionFormView
+        return super().general(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm

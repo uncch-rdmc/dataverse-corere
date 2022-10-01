@@ -1093,7 +1093,7 @@ class NoteForm(forms.ModelForm):
     # Checker is for passing prefeteched django-guardian permissions
     # https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
     # Other args are also passed in for performance improvements across all the notes
-    def __init__(self, *args, checkers, manuscript, submission, sub_files, **kwargs):
+    def __init__(self, *args, checkers, manuscript, submission, sub_files, read_only, **kwargs):
         # We have to populate the value of the creator before the super because it is based off an existing field
         # We are basing of an existing field so it correctly populates the default value for creating new notes (to the users name)
         # The best way found to do this was to do it before the super, otherwise it becomes uneditable?
@@ -1167,7 +1167,7 @@ class NoteForm(forms.ModelForm):
 
         if self.instance.id:  # if based off existing note
             # if self.instance.creator != user and not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.fields['scope'] and self.fields['scope'].initial == 'private'):
-            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance) or read_only:
                 for fkey, fval in self.fields.items():
                     # self.deny_edit = True
                     fval.disabled = True  # not sure this is doing anything
@@ -1346,6 +1346,16 @@ NoteSubmissionFormsetInPhase = inlineformset_factory(
     m.Submission,
     m.Note,
     extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator", "text"),
+    widgets={"text": Textarea(attrs={"rows": 1, "placeholder": "Write your new note..."})},
+)
+
+NoteSubmissionFormsetInPhaseReadOnly = inlineformset_factory(
+    m.Submission,
+    m.Note,
+    extra=0,
     form=NoteForm,
     formset=BaseNoteFormSet,
     fields=("creator", "text"),
