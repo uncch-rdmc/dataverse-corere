@@ -238,7 +238,7 @@ def manuscript_landing(request, id=None):
                 or updateReviewSubmissionButtonMain
                 or updateReviewSubmissionButtonMore
             ) and has_transition_perm(latestSubmission.edit_noop, request.user):
-                if latest_submission._status != m.Submssion.Status.REJECTED_EDITOR and latest_submission.version_id == 1:
+                if latest_submission._status != m.Submission.Status.REJECTED_EDITOR and latest_submission.version_id == 1:
                     editSubmissionButton = True                    
                 else:
                     editSubmissionButtonRejected = True

@@ -238,6 +238,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     create = False
     form_helper = None
     dataverse_upload = False
+    rejected_manuscript = False
 
     def general(self, request, *args, **kwargs):
         if self.read_only:
@@ -300,6 +301,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             "role_name": self.role_name,
             "helper": self.helper,
             "manuscript_id": self.object.id,
+            "rejected_manuscript": self.rejected_manuscript,
         }  
 
         if not self.create:
@@ -315,7 +317,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if self.from_submission:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript")
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript", self.object)
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -356,6 +358,19 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.keyword_formset.save()
             # if(self.v_metadata_formset):
             #     self.v_metadata_formset.save()
+
+            if request.POST.get("submit_back"):
+                #This is built to only happen to go back to submission info page on the author rejected flow
+                list(messages.get_messages(request))  # Clears messages if there are any already.
+                messages.add_message(request, messages.SUCCESS, self.msg)
+
+                latest_submission = self.object.get_latest_submission()
+                if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                    rejected_submission = latest_submission
+                else:
+                    rejected_submission = m.Submission.objects.get(manuscript=self.object, version_id=latest_submission.version_id-1)
+                
+                return redirect("submission_info", id=rejected_submission.id)
 
             if request.POST.get("submit_continue"):
                 list(messages.get_messages(request))  # Clears messages if there are any already.
@@ -409,6 +424,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             "role_name": self.role_name,
             "helper": self.helper,
             "manuscript_id": self.object.id,
+            "rejected_manuscript": self.rejected_manuscript,
         }
 
         if not self.create:
@@ -425,7 +441,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if self.from_submission:
             # We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript")
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript", self.object)
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -459,6 +475,13 @@ class ManuscriptUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     page_title = _("manuscript_edit_pageTitle")
     from_submission = True
     page_help_text = _("manuscript_edit_helpText")
+
+    def general(self, request, *args, **kwargs):
+        if self.object.has_submissions():
+            latest_submission = self.object.get_latest_submission()
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED or latest_submission.version_id > 1:
+                self.rejected_manuscript = True
+        return super(ManuscriptUpdateView, self).general(request, *args, **kwargs)
 
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
@@ -1030,6 +1053,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     submission_editor_date_formset = None
     can_progress = False
     read_only_note = False
+    progress_step = "Add Submission Info"
 
     def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
@@ -1131,6 +1155,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.can_progress = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
+
+        # If we are showing the info page after a reject, we set read_only_note and then that means we know to show the progress bar
+        if self.read_only_note:
+            self.can_progress = True
 
         if not other_note_add:
             if self.read_only_note:
@@ -1250,10 +1278,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
             "can_progress": self.can_progress,
+            "read_only_note": self.read_only_note,
         }
 
         if self.can_progress:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Add Submission Info", self.object)
+            context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
@@ -1331,7 +1360,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
 
         ### NOTES SAVE (We save notes even if readonly) ###
-        if not read_only_note:
+        if not self.read_only_note:
             if self.note_formset_author is not None:
                 if self.note_formset_author.is_valid():
                     self.note_formset_author.save()
@@ -1614,7 +1643,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get("back_save"):
-                    return redirect("submission_notebook", id=self.object.id)
+                    if self.object.manuscript.is_containerized():
+                        return redirect("submission_notebook", id=self.object.id)
+                    else:
+                        return redirect("submission_uploadfiles", id=self.object.id)
 
                 if request.POST.get("submit_continue"):
                     list(messages.get_messages(request))  # Clears messages if there are any already.
@@ -1647,6 +1679,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
             "can_progress": self.can_progress,
+            "read_only_note": self.read_only_note,
         }
 
         # We generate the info section providing read-only access to the manuscript metadata and files
@@ -1670,8 +1703,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context["s_file_url_base"] = "../"
         context["object_id"] = self.object.id
 
-        if not self.can_progress:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Add Submission Info", self.object)
+        # #TODO: Why are we doing progress on a not!?
+        # if not self.can_progress:
+        #     context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
@@ -1805,13 +1839,14 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 # NOTE 2022: The edit logic in GenericSubmissionFormView is pretty complicated, and now that we moved most of the info from submission to manuscript
 #            maybe we should redo/simplify how we check these perms
 #            Also remember that even though we let curators/verifiers edit their reviews out of phase, we block the actual review status from being changed
+#TODO: Maybe move more variables out of Generic into here that change for info. To make more clear
 class SubmissionReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = "edit_noop"
-    page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
+    page_help_text = _("submission_changes_helpText")  # Sometimes overwritten by GenericSubmissionFormView
     template = "main/form_object_submission.html"
 
     def general(self, request, *args, **kwargs):
-        self.page_title = _("submission_info_pageTitle").format(
+        self.page_title = _("submission_changes_pageTitle").format(
             submission_version=self.object.version_id
         )  # Sometimes overwritten by GenericSubmissionFormView
         return super().general(request, *args, **kwargs)
@@ -1822,6 +1857,7 @@ class SubmissionInfoView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSu
     template = "main/form_object_submission.html"
     read_only = True
     read_only_note = True
+    progress_step = "Read Review"
 
     def general(self, request, *args, **kwargs):
         self.page_title = _("submission_info_pageTitle").format(
@@ -2003,7 +2039,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             context["dataverse_upload"] = self.dataverse_upload
 
         if not self.read_only and not self.dataverse_upload:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object)
+            context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object.manuscript)
 
         return render(request, self.template, context)
 
@@ -2086,7 +2122,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if not errors and request.POST.get("submit_continue"):
                 if list(self.files_dict_list):
                     if settings.SKIP_DOCKER or not self.object.manuscript.is_containerized():
-                        return redirect("submission_info", id=self.object.id)
+                        return redirect("submission_review", id=self.object.id)
                     elif settings.CONTAINER_DRIVER == "wholetale":
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get("girderToken"))
@@ -2152,7 +2188,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 context["dataverse_upload"] = self.dataverse_upload
 
             if not self.read_only and not self.dataverse_upload:  # should never hit post if read_only but yea
-                context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object)
+                context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object.manuscript)
 
             if errors:
                 context["errors"] = errors
@@ -2920,7 +2956,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             context["notebook_url"] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
         if not self.read_only:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Run Code", self.object)
+            context["progress_bar_html"] = get_progress_bar_html_submission("Run Code", self.object.manuscript)
 
         return render(request, self.template, context)
 
@@ -2933,7 +2969,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 if self.form.is_valid():
                     self.form.save()  # This saves any launch issues reported by the author, for the curation team to review.
 
-            return redirect("submission_info", id=self.object.id)
+            return redirect("submission_review", id=self.object.id)
 
         if request.POST.get("back"):
             return redirect("submission_uploadfiles", id=self.object.id)

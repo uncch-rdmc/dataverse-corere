@@ -1358,6 +1358,7 @@ NoteSubmissionFormsetInPhaseReadOnly = inlineformset_factory(
     extra=0,
     form=NoteForm,
     formset=BaseNoteFormSet,
+    can_delete=False,
     fields=("creator", "text"),
     widgets={"text": Textarea(attrs={"rows": 1, "placeholder": "Write your new note..."})},
 )

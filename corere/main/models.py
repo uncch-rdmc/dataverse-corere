@@ -1276,6 +1276,7 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
 
+    #NOTE: While this works, its an extra db call to do this before getting the latest submission.
     def has_submissions(self):
         return self.get_max_submission_version_id() != None
 
