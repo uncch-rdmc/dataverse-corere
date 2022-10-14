@@ -18,7 +18,7 @@
                 formCssClass: 'curator_note_table',
                 addText: 'add note'
             });
-            {% elif edition_formset %}
+            {% elif edition_formset and s_status != "rejected_editor" %}
             $('#editor_note_table tbody tr').formset({
                 prefix: 'editor_note',
                 formCssClass: 'editor_note_table',
@@ -65,7 +65,8 @@
 
     {% comment %} The commented out links in this review block should be re-enabled with logic to ensure they only show when the option is available 
     The launch container link remains because if you are in review you are able to launch a container {% endcomment %}
-    <h5 class="title-text">Info {{s_status}}</h5>
+    {% if verification_formset or curation_formset or edition_formset and s_status != "rejected_editor" %}
+    <h5 class="title-text">Info</h5>
     <div class="accordion" id="manuscriptInfoAccordionPanels">
         <div class="accordion-item">
             <h2 class="accordion-header" id="infoPanelsStayOpen-headingOne">
@@ -159,6 +160,7 @@
         {% endif %}
     </div>
     <hr>
+    {% endif %}
 
     {% if verification_formset or curation_formset or edition_formset %}
     <h5 class="title-text">Reviews</h5>
@@ -176,7 +178,10 @@
                     <h5 class="title-text">Review</h5>
                     {% crispy edition_formset helper %}
 
+                    {% if note_formset_editor|length %}
                     <h5 class="title-text">Notes</h5>
+                    {% endif %}
+
                     {{ note_formset_editor.non_form_errors }}
                     {% crispy note_formset_editor note_helper_editor %}
                 </div>
@@ -200,7 +205,9 @@
                         {% crispy submission_editor_date_formset helper %}
                     {% endif %}
 
+                    {% if note_formset_curator|length %}
                     <h5 class="title-text">Notes</h5>
+                    {% endif %}
                     {{ note_formset_curator.non_form_errors }}
                     {% crispy note_formset_curator note_helper_curator %}
                 </div>
@@ -220,7 +227,9 @@
                     <h5 class="title-text">Review</h5>
                     {% crispy verification_formset helper %}
 
+                    {% if note_formset_verifier|length %}
                     <h5 class="title-text">Notes</h5>
+                    {% endif %}
                     {{ note_formset_verifier.non_form_errors }}
                     {% crispy note_formset_verifier note_helper_verifier %}
                 </div>
@@ -229,6 +238,17 @@
         {% endif %}
     </div>
     <hr>
+    {% endif %}
+
+    {% if not verification_formset and not curation_formset and not edition_formset or s_status == "rejected_editor" %}
+        {% csrf_token %}
+        {% crispy form helper %}
+
+        {% if note_formset_author|length %}
+        <h5 class="title-text">Notes</h5>
+        {% endif %}
+        {{ note_formset_author.non_form_errors }}
+        {% crispy note_formset_author note_helper_author %}
     {% endif %}
 
     {% comment %} Putting read_only checks around every submit was done to make the view page show up right even when you are a role that could edit at that point {% endcomment %}

@@ -1066,6 +1066,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             ):
                 self.form = f.SubmissionForms[role_name]
                 self.can_progress = True
+                print("CAN PROGRESS TRUE 1")
             elif has_transition_perm(self.object.view_noop, request.user):
                 self.form = f.ReadOnlySubmissionForm
                 self.can_progress = False
@@ -1088,8 +1089,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 else:
                     self.note_formset_editor = f.NoteSubmissionFormsetInPhase
                     self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
+                if self.object._status == m.Submission.Status.IN_PROGRESS_EDITION:
+                    self.can_progress = True
+                    print("CAN PROGRESS TRUE 2")
                 other_note_add = True
-                self.can_progress = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
                 #When a submission is rejected by the editor, it is returned. This causes it to hit the first two try/catch blocks
@@ -1109,6 +1112,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 else:
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
                     self.can_progress = True
+                    print("CAN PROGRESS TRUE 3")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
                 if self.read_only_note:
@@ -1141,6 +1145,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 else:
                     self.verification_formset = f.VerificationSubmissionFormsets[role_name]
                     self.can_progress = True
+                    print("CAN PROGRESS TRUE 4")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
                 if self.read_only_note:
@@ -1158,7 +1163,8 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         # If we are showing the info page after a reject, we set read_only_note and then that means we know to show the progress bar
         if self.read_only_note:
-            self.can_progress = True
+            self.can_progress = False
+            print("CAN PROGRESS FALSE END")
 
         if not other_note_add:
             if self.read_only_note:
@@ -1281,8 +1287,16 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "read_only_note": self.read_only_note,
         }
 
-        if self.can_progress:
+        #TODO: This is confusing, but "can_progress" refers to progressing the flow, while the progress_bar only shows up for authors. And for authors they still progress the flow... We should rename things
+        if not self.can_progress or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR:
+            print(self.can_progress)
+            print(self.object._status)
             context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
+
+#TODO BAD DELETE
+
+        # if self.can_progress:
+        #     context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
@@ -1456,7 +1470,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         if status == m.Submission.Status.IN_PROGRESS_CURATION:
                             role_text = "curation team"
                         else:
-                            role_text = "authors"
+                            role_text = "author"
                         self.msg = _("submission_reviewSubmitted_banner").format(role_text=role_text)
                         list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, self.msg)
@@ -1682,6 +1696,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "read_only_note": self.read_only_note,
         }
 
+        #TODO: This is confusing, but "can_progress" refers to progressing the flow, while the progress_bar only shows up for authors. And for authors they still progress the flow... We should rename things
+        if not self.can_progress or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR:
+            context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
+
         # We generate the info section providing read-only access to the manuscript metadata and files
         # This context dict is sent to our sub render_to_string call, it does not get added to our main render
         manu_context_dict = {
@@ -1702,10 +1720,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
         context["s_file_url_base"] = "../"
         context["object_id"] = self.object.id
-
-        # #TODO: Why are we doing progress on a not!?
-        # if not self.can_progress:
-        #     context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
