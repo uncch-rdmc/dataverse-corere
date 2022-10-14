@@ -1051,13 +1051,17 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     curation_formset = None
     verification_formset = None
     submission_editor_date_formset = None
-    can_progress = False
+    can_proceed = False
     read_only_note = False
+    updating = False
     progress_step = "Add Submission Info"
 
     def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
         other_note_add = False #If another note has add enabled, this is set
+
+        #TODO: This chunk of logic for the review forms is pretty hairy. There are probably edge cases where the different sub-views of this generic view can make the page show weird.
+        #      If I rewrite this logic, maybe stop using the status check for when to show the out-of-phase view, and instead just use the updating variable?
 
         try:
             if not self.read_only and (
@@ -1065,11 +1069,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 or has_transition_perm(self.object.edit_noop, request.user)
             ):
                 self.form = f.SubmissionForms[role_name]
-                self.can_progress = True
-                print("CAN PROGRESS TRUE 1")
+                self.can_proceed = True
+                print("CAN PROCEED TRUE 1")
             elif has_transition_perm(self.object.view_noop, request.user):
                 self.form = f.ReadOnlySubmissionForm
-                self.can_progress = False
+                self.can_proceed = False
             else:
                 raise Http404()
         except (m.Submission.DoesNotExist, KeyError):
@@ -1090,14 +1094,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.note_formset_editor = f.NoteSubmissionFormsetInPhase
                     self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
                 if self.object._status == m.Submission.Status.IN_PROGRESS_EDITION:
-                    self.can_progress = True
-                    print("CAN PROGRESS TRUE 2")
+                    self.can_proceed = True
+                    print("CAN PROCEED TRUE 2")
                 other_note_add = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
                 #When a submission is rejected by the editor, it is returned. This causes it to hit the first two try/catch blocks
                 if not self.object._status == m.Submission.Status.REJECTED_EDITOR: 
-                    self.can_progress = False
+                    self.can_proceed = False
         except (m.Edition.DoesNotExist, KeyError):
             pass
 
@@ -1108,11 +1112,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             ):
                 if self.object._status != m.Submission.Status.IN_PROGRESS_CURATION:  # We show our later edit form with only certain fields editable
                     self.curation_formset = f.EditOutOfPhaseCurationFormset
-                    self.can_progress = False
+                    self.can_proceed = False
                 else:
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
-                    self.can_progress = True
-                    print("CAN PROGRESS TRUE 3")
+                    self.can_proceed = True
+                    print("CAN PROCEED TRUE 3")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
                 if self.read_only_note:
@@ -1126,7 +1130,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif has_transition_perm(self.object.submission_curation.view_noop, request.user):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
-                self.can_progress = False
+                self.can_proceed = False
                 # We may need a read_only SubmissionEditorDateFormset for here
 
         except (m.Curation.DoesNotExist, KeyError):
@@ -1141,11 +1145,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.object._status != m.Submission.Status.IN_PROGRESS_VERIFICATION
                 ):  # We show our later edit form with only certain fields editable
                     self.verification_formset = f.EditOutOfPhaseVerificationFormset
-                    self.can_progress = False
+                    self.can_proceed = False
                 else:
                     self.verification_formset = f.VerificationSubmissionFormsets[role_name]
-                    self.can_progress = True
-                    print("CAN PROGRESS TRUE 4")
+                    self.can_proceed = True
+                    print("CAN PROCEED TRUE 4")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
                 if self.read_only_note:
@@ -1157,14 +1161,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 other_note_add = True
             elif has_transition_perm(self.object.submission_verification.view_noop, request.user):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
-                self.can_progress = False
+                self.can_proceed = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
 
         # If we are showing the info page after a reject, we set read_only_note and then that means we know to show the progress bar
         if self.read_only_note:
-            self.can_progress = False
-            print("CAN PROGRESS FALSE END")
+            self.can_proceed = False
+            print("CAN PROCEED FALSE END")
 
         if not other_note_add:
             if self.read_only_note:
@@ -1283,19 +1287,19 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "manuscript_display_name": manuscript_display_name,
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
-            "can_progress": self.can_progress,
+            "can_proceed": self.can_proceed,
             "read_only_note": self.read_only_note,
         }
 
-        #TODO: This is confusing, but "can_progress" refers to progressing the flow, while the progress_bar only shows up for authors. And for authors they still progress the flow... We should rename things
-        if not self.can_progress or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR:
-            print(self.can_progress)
+        #TODO: This still breaks and displays the progress bar when updating a submission later. We check out of phase above but interpreting that later isn't really possible
+        #      ... I wonder if the solution to all this is to add another variable for progress bar,
+        if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             print(self.object._status)
             context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
 #TODO BAD DELETE
 
-        # if self.can_progress:
+        # if self.can_proceed:
         #     context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
@@ -1692,12 +1696,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "manuscript_display_name": manuscript_display_name,
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
-            "can_progress": self.can_progress,
+            "can_proceed": self.can_proceed,
             "read_only_note": self.read_only_note,
         }
 
-        #TODO: This is confusing, but "can_progress" refers to progressing the flow, while the progress_bar only shows up for authors. And for authors they still progress the flow... We should rename things
-        if not self.can_progress or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR:
+        if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
             context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         # We generate the info section providing read-only access to the manuscript metadata and files
@@ -1865,6 +1868,7 @@ class SubmissionReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, Generic
         )  # Sometimes overwritten by GenericSubmissionFormView
         return super().general(request, *args, **kwargs)
 
+# Presented to author at beginning of flow
 class SubmissionInfoView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = "edit_noop"
     page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
@@ -1875,6 +1879,19 @@ class SubmissionInfoView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSu
 
     def general(self, request, *args, **kwargs):
         self.page_title = _("submission_info_pageTitle").format(
+            submission_version=self.object.version_id
+        )  # Sometimes overwritten by GenericSubmissionFormView
+        return super().general(request, *args, **kwargs)
+
+# Presented to userse editing out of phase
+class SubmissionUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+    transition_method_name = "edit_noop"
+    page_help_text = _("submission_changes_helpText")  # Sometimes overwritten by GenericSubmissionFormView
+    template = "main/form_object_submission.html"
+    updating = True
+
+    def general(self, request, *args, **kwargs):
+        self.page_title = _("submission_changes_pageTitle").format(
             submission_version=self.object.version_id
         )  # Sometimes overwritten by GenericSubmissionFormView
         return super().general(request, *args, **kwargs)

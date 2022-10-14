@@ -256,7 +256,7 @@
     {% if read_only_note %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type=button value="Continue" title="Continue to makes changes to your manuscript metadata" aria-label="Continue to makes changes to your manuscript metadata" onClick="location.href='/manuscript/{{parent_id}}/update/';">
-    {% elif read_only or not can_progress %}
+    {% elif read_only or not can_proceed %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{parent_id}}/';">
         <input type="submit" value="Save" title="Save note changes for this submission of data/code" aria-label="Save note changes for this submission of data/code">
     {% elif verification_formset %}
