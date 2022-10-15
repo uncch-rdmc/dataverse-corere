@@ -226,6 +226,11 @@ LOGGING = {
             "level": "DEBUG",
             "propagate": True,
         },
+        'django_datatables_view': { #datatables view prints an error to the console every time we pass it an error. This disables that.
+            'handlers': ["file"],
+            'level': 'CRITICAL',
+            "propagate": True,
+    },
     },
     "formatters": {
         "normal": {"format": "%(asctime)s %(levelname)-8s [%(module)s:%(lineno).3d] %(message)s", "datefmt": "%Y-%m-%d %H:%M:%S"},

@@ -45,6 +45,7 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
 
                     # test.assertEqual(expected_status_code, result["status"], msg="POST " + full_url)
 
+
                 # elif method == "POST-DEBUG":
                 #     result_status = call_request_method(browser, "POST", full_url, debug=True)
                 #     test.assertEqual(status_code, result_status, msg=method + " " + full_url)
@@ -52,21 +53,34 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                 else:
                     raise Exception("NO OTHER METHODS SUPPORTED")
 
-                if returned_status_code != expected_status_code and result["status"] == 500:
+                #TODO: How slow is this? should it be disabled?
+                #TODO: This was previously outside post, but the code calls a post. Can I add a version for get?
+                if returned_status_code != expected_status_code and returned_status_code == 500:
+
+                    if method.startswith("GET"):
+                        html_body = str(request.response._body.decode('unicode-escape'))
+                    elif method.startswith("POST"):
+                        html_body = call_request_method(browser, "POST", full_url, print_html=True)
+
                     try:
+                        html_error = 'Traceback (most recent call last):' + html_body.split('Traceback (most recent call last):',1)[1] #get all starting at traceback
+                        html_error = html_error.split('</textarea>',1)[0]
                         print("")
                         print("=== Error text from HTML ===")
                         print("")
-                        html_string = 'Traceback (most recent call last):' + call_request_method(browser, "POST", full_url, print_html=True).split('Traceback (most recent call last):',1)[1] #get all starting at traceback
-                        html_string = html_string.split('</textarea>',1)[0]
-                        print(html_string) #NOTE: I tried using unquote here to fix things like &#x27;NoteFormFormSet&#x27; , but I think it should be done on the javascript side instead
+
+                        print(html_error) #NOTE: I tried using unquote here to fix things like &#x27;NoteFormFormSet&#x27; , but I think it should be done on the javascript side instead
                         print("")
                         print("=== End error text ===")
                         print("")
                     except IndexError:
                         print("No error presented on the 500 page that could be found by our selenium test.")
+
+
                     #print(result)
                     # print(call_request_method(browser, "POST", full_url, print_html=True))
+
+
 
                 test.assertEqual(expected_status_code, returned_status_code, msg=method + " " + full_url)
 

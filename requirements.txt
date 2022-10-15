@@ -13,7 +13,7 @@ django-braces==1.15.0
 django-compressor==3.1
 django-crequest==2018.5.11
 django-crispy-forms==1.12.0
-django-datatables-view==1.19.1
+django-datatables-view==1.20.0
 django-fsm==2.8.0
 django-guardian==2.4.0
 
