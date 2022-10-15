@@ -65,7 +65,7 @@
 
     {% comment %} The commented out links in this review block should be re-enabled with logic to ensure they only show when the option is available 
     The launch container link remains because if you are in review you are able to launch a container {% endcomment %}
-    {% if verification_formset or curation_formset or edition_formset and s_status != "rejected_editor" %}
+    {% if not read_only_note %}{% if verification_formset or curation_formset or edition_formset and s_status != "rejected_editor" %}
     <h5 class="title-text">Info</h5>
     <div class="accordion" id="manuscriptInfoAccordionPanels">
         <div class="accordion-item">
@@ -160,7 +160,7 @@
         {% endif %}
     </div>
     <hr>
-    {% endif %}
+    {% endif %}{% endif %}
 
     {% if verification_formset or curation_formset or edition_formset %}
     <h5 class="title-text">Reviews</h5>
@@ -168,11 +168,11 @@
         {% if edition_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingOne">
-            <button class="accordion-button {% if curation_formset or verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
-                Editor Review
+            <button class="accordion-button {% if read_only_note or curation_formset or verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseOne" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseOne" aria-label="Show/hide manuscript files">
+                Editor Review {{ edition_status }}
             </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseOne" class="accordion-collapse collapse {% if not curation_formset and not verification_formset %}show{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingOne">
+            <div id="reviewPanelsStayOpen-collapseOne" class="accordion-collapse collapse {% if not read_only_note %}{% if not curation_formset and not verification_formset %}show{% endif %}{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingOne">
                 <div class="accordion-body">                
                     {{ edition_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>
@@ -191,11 +191,11 @@
         {% if curation_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingTwo">
-                <button class="accordion-button {% if verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
-                Curator Review
+                <button class="accordion-button {% if read_only_note or verification_formset %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseTwo" aria-label="Show/hide manuscript files">
+                Curator Review {{ curation_status }}
                 </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseTwo" class="accordion-collapse collapse {% if not verification_formset %}show{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingTwo">
+            <div id="reviewPanelsStayOpen-collapseTwo" class="accordion-collapse collapse {% if not read_only_note %}{% if not verification_formset %}show{% endif %}{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingTwo">
                 <div class="accordion-body">                
                     {{ curation_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>
@@ -217,11 +217,11 @@
         {% if verification_formset %}
         <div class="accordion-item">
             <h2 class="accordion-header" id="reviewPanelsStayOpen-headingThree">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
-                Verifier Review
+                <button class="accordion-button {% if read_only_note %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#reviewPanelsStayOpen-collapseThree" aria-expanded="false" aria-controls="reviewPanelsStayOpen-collapseThree" aria-label="Show/hide list of submissions">
+                Verifier Review {{ verification_status }}
                 </button>
             </h2>
-            <div id="reviewPanelsStayOpen-collapseThree" class="accordion-collapse collapse show" aria-labelledby="reviewPanelsStayOpen-headingThree">
+            <div id="reviewPanelsStayOpen-collapseThree" class="accordion-collapse collapse {% if not read_only_note %}show{% endif %}" aria-labelledby="reviewPanelsStayOpen-headingThree">
                 <div class="accordion-body">    
                     {{ verification_formset.non_form_errors }}
                     <h5 class="title-text">Review</h5>
@@ -327,8 +327,12 @@
     {% endcomment %}
 
     if('False' == '{{is_manu_curator}}') {
-        for (table in $("[id$=note_table]")) {
-            for( let elem of table.lastElementChild.childNodes){
+        //This is blowing up. Next suspect is to look at how I am getting the note tables here, I don't think it works. I need to somehow get object like in js?
+        //for (table in $("[id$=note_table]")) {
+        tables = $("[id$=note_table]")
+        for(let i = 0; i < tables.length; i++){
+            console.log(tables[i])
+            for( let elem of tables[i].lastElementChild.childNodes){
                 if(elem.tagName == 'TR') {
                     if(elem.firstElementChild.tagName == 'TD'){
                         creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
@@ -355,7 +359,7 @@
             // TODO-NOTES: Test this works. I bet it blows up when adding an additional note if it works period
             {% endcomment %}
 
-            var lastTr = table.lastElementChild.lastElementChild;
+            var lastTr = tables[i].lastElementChild.lastElementChild;
             lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
         }
     }

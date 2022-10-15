@@ -58,18 +58,20 @@
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'view_noop' as m_view_flag %}
     {% user_has_transition_perm request.user 'manuscript' manuscript_id 'begin' as m_begin_flag %}
 
+    {% comment %}I don't think i'm correctly populating the create sub / edit sub buttons. They should refer to the rejected sub id if there is one. Otherwise it should go to the manuscript update {% endcomment %}
+
     {% if createSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" id="createSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'" title="Create a new submission of data/code for this manuscript" aria-label="Create a new submission of data/code for this manuscript"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
     {% if createSubmissionButtonRejected %}
-    <button type="button" class="btn btn-secondary buttons-collection" id="createSubmissionButton" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Create a new submission of data/code for this manuscript" aria-label="Create a new submission of data/code for this manuscript"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
+    <button type="button" class="btn btn-secondary buttons-collection" id="createSubmissionButton" onclick="location.href='/submission/{{rejected_submission_id}}/info/'" title="Create a new submission of data/code for this manuscript" aria-label="Create a new submission of data/code for this manuscript"><i class="fas fa-plus"></i> &nbsp;Create Submission</button>
     {% endif %}
 
     {% if editSubmissionButton %}
     <button type="button" class="btn btn-secondary buttons-collection" id="editSubmissionButton" onclick="location.href='/manuscript/{{manuscript_id}}/update/'" title="Complete the current submission for this manuscript" aria-label="Complete the current submission for this manuscript">Complete Submission</button>    
     {% endif %}
     {% if editSubmissionButtonRejected %}
-    <button type="button" class="btn btn-secondary buttons-collection" id="editSubmissionButton" onclick="location.href='/submission/{{latest_submission_id}}/info/'" title="Complete the current submission for this manuscript" aria-label="Complete the current submission for this manuscript">Complete Submission</button>    
+    <button type="button" class="btn btn-secondary buttons-collection" id="editSubmissionButton" onclick="location.href='/submission/{{rejected_submission_id}}/info/'" title="Complete the current submission for this manuscript" aria-label="Complete the current submission for this manuscript">Complete Submission</button>    
     {% endif %}
 
 

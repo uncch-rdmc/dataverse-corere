@@ -253,8 +253,15 @@ def manuscript_landing(request, id=None):
         except m.Submission.DoesNotExist:
             pass #TODO: When do we hit this?
 
+        rejected_submission_id = None
+        if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+            rejected_submission_id = latest_submission.id
+        else:
+            rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
+
     args = {
         "user": request.user,
+        "rejected_submission_id": rejected_submission_id,
         "latest_submission_id": latest_submission.id,  # Will be None if no submissions
         "manuscript_id": id,
         "submission_count": submission_count,

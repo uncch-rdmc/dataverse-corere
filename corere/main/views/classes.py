@@ -1050,6 +1050,12 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     edition_formset = None
     curation_formset = None
     verification_formset = None
+
+    # These statuses are only set if the review is done. It is use to populate a header bar
+    edition_status = ""
+    curation_status = ""
+    verification_status = ""
+
     submission_editor_date_formset = None
     can_proceed = False
     read_only_note = False
@@ -1070,7 +1076,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             ):
                 self.form = f.SubmissionForms[role_name]
                 self.can_proceed = True
-                print("CAN PROCEED TRUE 1")
             elif has_transition_perm(self.object.view_noop, request.user):
                 self.form = f.ReadOnlySubmissionForm
                 self.can_proceed = False
@@ -1095,10 +1100,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
                 if self.object._status == m.Submission.Status.IN_PROGRESS_EDITION:
                     self.can_proceed = True
-                    print("CAN PROCEED TRUE 2")
                 other_note_add = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+                self.edition_status =  " - " + self.object.submission_edition.get__status_display()
                 #When a submission is rejected by the editor, it is returned. This causes it to hit the first two try/catch blocks
                 if not self.object._status == m.Submission.Status.REJECTED_EDITOR: 
                     self.can_proceed = False
@@ -1116,7 +1121,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 else:
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
                     self.can_proceed = True
-                    print("CAN PROCEED TRUE 3")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
                 if self.read_only_note:
@@ -1130,6 +1134,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif has_transition_perm(self.object.submission_curation.view_noop, request.user):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
+                self.curation_status = " - " + self.object.submission_curation.get__status_display()
                 self.can_proceed = False
                 # We may need a read_only SubmissionEditorDateFormset for here
 
@@ -1149,7 +1154,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 else:
                     self.verification_formset = f.VerificationSubmissionFormsets[role_name]
                     self.can_proceed = True
-                    print("CAN PROCEED TRUE 4")
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
                 if self.read_only_note:
@@ -1161,6 +1165,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 other_note_add = True
             elif has_transition_perm(self.object.submission_verification.view_noop, request.user):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
+                self.verification_status =  " - " + self.object.submission_verification.get__status_display()
                 self.can_proceed = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
@@ -1168,7 +1173,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         # If we are showing the info page after a reject, we set read_only_note and then that means we know to show the progress bar
         if self.read_only_note:
             self.can_proceed = False
-            print("CAN PROCEED FALSE END")
 
         if not other_note_add:
             if self.read_only_note:
@@ -1289,18 +1293,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "parent_id": self.object.manuscript.id,
             "can_proceed": self.can_proceed,
             "read_only_note": self.read_only_note,
+            "edition_status": self.edition_status,
+            "curation_status": self.curation_status,
+            "verification_status": self.verification_status
         }
 
         #TODO: This still breaks and displays the progress bar when updating a submission later. We check out of phase above but interpreting that later isn't really possible
         #      ... I wonder if the solution to all this is to add another variable for progress bar,
         if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
-            print(self.object._status)
             context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
-
-#TODO BAD DELETE
-
-        # if self.can_proceed:
-        #     context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
@@ -1698,6 +1699,9 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "parent_id": self.object.manuscript.id,
             "can_proceed": self.can_proceed,
             "read_only_note": self.read_only_note,
+            "edition_status": self.edition_status,
+            "curation_status": self.curation_status,
+            "verification_status": self.verification_status
         }
 
         if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
