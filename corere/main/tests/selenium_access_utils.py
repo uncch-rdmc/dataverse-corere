@@ -4,7 +4,7 @@
 
 # Tests the state of our accesss dictionaries
 def check_access(test, browser, manuscript=None, submission=None, assert_dict=None):
-    # return #TODO DISABLE TEST CODE
+    #return #TODO DISABLE TEST CODE
     if assert_dict == None:
         raise Exception("assert_dict must be set for check_access")
     if manuscript != None and submission != None:
@@ -27,23 +27,18 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
             try:
                 if method.startswith("GET"): #TODO: Add debug for GET
                     browser.get(full_url)
-                    # for request in browser.requests:
-                    #     if(request.response):
-                    #         print("{} - {}".format(request.url, request.response.status_code))
                     for request in browser.requests:
                         if request.url == full_url and request.response:
                             returned_status_code = request.response.status_code
-                            # test.assertEqual(expected_status_code, request.response.status_code, msg=method + " " + full_url)
                             del browser.requests
+                            
                 elif method.startswith("POST"):
-                    # This is for posting without a body, which we use in a few places to progress the manuscript etc.
-                    # We'll need something more verbose if we want to pass a body
+                    # # This is for posting without a body, which we use in a few places to progress the manuscript etc.
+                    # # We'll need something more verbose if we want to pass a body
 
-                    #NOTE: Comment the below call out if you are not running headless. Currently it'll blow up
+                    #continue #NOTE: Enable this continue to bypass post testing. This is needed when not running all your browsers headless
                     result = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
                     returned_status_code = result["status"]
-
-                    # test.assertEqual(expected_status_code, result["status"], msg="POST " + full_url)
 
 
                 # elif method == "POST-DEBUG":
@@ -371,7 +366,7 @@ m_dict_yes_curator_access.update(
 
 # TODO: access on some of these change with phase
 s_dict_admin_access = {
-    "info/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
+    "review/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
     "uploadfiles/": {"GET": 200, "POST": 200},  # TODO: Post disabled because it returns literally nothing, probably due to changing the file datatable to be more restrictive on when its visible    
     "confirmfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
@@ -417,7 +412,7 @@ s_dict_yes_access_curator__in_phase.update(
 )
 
 s_dict_no_access = {
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},
     "confirmfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 404, "POST": 404},
@@ -451,7 +446,7 @@ s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302, "POST": 200
 s_dict_author_access__out_of_phase = s_dict_no_access.copy()
 s_dict_author_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -477,7 +472,7 @@ s_dict_author_access__in_phase.update(
 s_dict_editor_access__out_of_phase = s_dict_no_access.copy()
 s_dict_editor_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -491,7 +486,7 @@ s_dict_editor_access__out_of_phase.update(
 s_dict_editor_access__in_phase = s_dict_no_access.copy()
 s_dict_editor_access__in_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -525,7 +520,7 @@ s_dict_no_access_curator__in_phase.update(
 s_dict_verifier_access__out_of_phase = s_dict_no_access.copy()
 s_dict_verifier_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -539,7 +534,7 @@ s_dict_verifier_access__out_of_phase.update(
 s_dict_verifier_access__in_phase = s_dict_no_access.copy()
 s_dict_verifier_access__in_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe its a phase issue (happens during NEW). Or a lack of files?
         "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
@@ -555,7 +550,7 @@ s_dict_verifier_access__in_phase.update(
 
 s_dict_yes_general_access__previous = {
     "view/": {"GET": 200, "POST": 200},
-    "info/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
+    "review/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
     "uploadfiles/": {"GET": 404, "POST": 404}, #I guess uploading files should 404 for everyone? The submission is over? #Nope, 200 for curator admin, 404 for verifier... tho this may be because verifier could never upload?
     "uploader/": {"GET": 404, "POST": 404},
@@ -564,7 +559,7 @@ s_dict_yes_general_access__previous = {
 
 s_dict_yes_full_access__previous = {
     "view/": {"GET": 200, "POST": 200},
-    "info/": {"GET": 200, "POST": 500}, #TODO: Why 500?
+    "review/": {"GET": 200, "POST": 500}, #TODO: Why 500?
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
     "uploadfiles/": {"GET": 200, "POST": 200},
     "uploader/": {"GET": 405, "POST": 404},
@@ -573,14 +568,14 @@ s_dict_yes_full_access__previous = {
 
 # s_dict_previous_submission_read_access = {
 #     "view/": {"GET": 200, "POST": 200}, #Should out of phase be able to post notes in view?
-#     "info/": {"GET": 404, "POST": 404},
+#     "review/": {"GET": 404, "POST": 404},
 #     "viewfiles/": {"GET": 200, "POST": 404},
 #     "uploadfiles/": {"GET": 404, "POST": 404}
 # }
 
 s_dict_no_curator_access__previous = {
     "view/": {"GET": 404, "POST": 404},
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: Why can curator not view but can viewfiles. Fix with other normal curator fixes
     "uploadfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 404, "POST": 404},
@@ -589,7 +584,7 @@ s_dict_no_curator_access__previous = {
 
 s_dict_no_access__previous = {
     "view/": {"GET": 404, "POST": 404},
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},     
     "uploader/": {"GET": 404, "POST": 404},
@@ -599,7 +594,7 @@ s_dict_no_access__previous = {
 #TODO: All posts 200??
 s_dict_anon_no_access__previous = {
     "view/": {"GET": 302, "POST": 200},
-    "info/": {"GET": 302, "POST": 200},
+    "review/": {"GET": 302, "POST": 200},
     "viewfiles/": {"GET": 302, "POST": 200},
     "uploadfiles/": {"GET": 302, "POST": 200},
     "uploader/": {"GET": 302, "POST": 200},

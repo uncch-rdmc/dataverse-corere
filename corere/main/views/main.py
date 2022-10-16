@@ -143,6 +143,8 @@ def manuscript_landing(request, id=None):
     notifyManuscriptButtonMore = False
 
     submission_count = manuscript.manuscript_submissions.count()
+    latest_submission_id = ""
+    rejected_submission_id = ""
 
     if has_transition_perm(manuscript.notify_noop, request.user):
         notifyManuscriptButtonMore = True
@@ -153,9 +155,15 @@ def manuscript_landing(request, id=None):
         else:
             latest_submission = manuscript.get_latest_submission()
             createSubmissionButtonRejected = True
+
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                rejected_submission_id = latest_submission.id
+            else:
+                rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
     else:
         try:
             latest_submission = manuscript.get_latest_submission()
+            latest_submission_id = latest_submission.id
 
             # TODO: I want a different label for edit/review even if they are the same page in the end
 
@@ -250,19 +258,19 @@ def manuscript_landing(request, id=None):
                         if has_transition_perm(latest_submission.view_noop, request.user):
                             launchContainerCurrentSubButton = True
 
+
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                rejected_submission_id = latest_submission.id
+            else:
+                rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
+
         except m.Submission.DoesNotExist:
             pass #TODO: When do we hit this?
-
-        rejected_submission_id = None
-        if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
-            rejected_submission_id = latest_submission.id
-        else:
-            rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
 
     args = {
         "user": request.user,
         "rejected_submission_id": rejected_submission_id,
-        "latest_submission_id": latest_submission.id,  # Will be None if no submissions
+        "latest_submission_id": latest_submission_id,  # Will be None if no submissions
         "manuscript_id": id,
         "submission_count": submission_count,
         "manuscript_display_name": manuscript.get_display_name(),
