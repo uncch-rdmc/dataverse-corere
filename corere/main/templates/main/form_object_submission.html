@@ -48,6 +48,10 @@
     var Sub_Table_Params = {};
 
     Sub_Table_Params.manuscript_id = {{parent_id}};
+    Sub_Table_Params.has_group_author = {{request.user|has_group:GROUP_ROLE_AUTHOR|yesno:"true,false"}};
+    Sub_Table_Params.has_group_edtior = {{request.user|has_group:GROUP_ROLE_EDITOR|yesno:"true,false"}};
+    Sub_Table_Params.has_group_curator = {{request.user|has_group:GROUP_ROLE_CURATOR|yesno:"true,false"}};
+    Sub_Table_Params.has_group_verifier = {{request.user|has_group:GROUP_ROLE_VERIFIER|yesno:"true,false"}};
     {% comment %} Sub_Table_Params.createSubButton = {{create_sub_allowed}}; {% endcomment %}
     Sub_Table_Params.landingView = false;
 

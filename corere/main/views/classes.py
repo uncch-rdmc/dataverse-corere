@@ -1295,7 +1295,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "read_only_note": self.read_only_note,
             "edition_status": self.edition_status,
             "curation_status": self.curation_status,
-            "verification_status": self.verification_status
+            "verification_status": self.verification_status,
+            "GROUP_ROLE_EDITOR": c.GROUP_ROLE_EDITOR,
+            "GROUP_ROLE_AUTHOR": c.GROUP_ROLE_AUTHOR,
+            "GROUP_ROLE_VERIFIER": c.GROUP_ROLE_VERIFIER,
+            "GROUP_ROLE_CURATOR": c.GROUP_ROLE_CURATOR,
         }
 
         #TODO: This still breaks and displays the progress bar when updating a submission later. We check out of phase above but interpreting that later isn't really possible
@@ -1701,7 +1705,11 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "read_only_note": self.read_only_note,
             "edition_status": self.edition_status,
             "curation_status": self.curation_status,
-            "verification_status": self.verification_status
+            "verification_status": self.verification_status,
+            "GROUP_ROLE_EDITOR": c.GROUP_ROLE_EDITOR,
+            "GROUP_ROLE_AUTHOR": c.GROUP_ROLE_AUTHOR,
+            "GROUP_ROLE_VERIFIER": c.GROUP_ROLE_VERIFIER,
+            "GROUP_ROLE_CURATOR": c.GROUP_ROLE_CURATOR,
         }
 
         if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):

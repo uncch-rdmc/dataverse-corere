@@ -282,12 +282,11 @@ $(document).ready(function() {
                 table.row(0).remove().draw(false);
             }    
 
-            if(Sub_Table_Params.landingView) {
-                if(Sub_Table_Params.has_group_editor || Sub_Table_Params.has_group_curator || Sub_Table_Params.has_group_verifier ) {
-
+            if(Sub_Table_Params.has_group_editor || Sub_Table_Params.has_group_curator || Sub_Table_Params.has_group_verifier ) {
+                if(Sub_Table_Params.landingView) {
                     document.getElementById("submission_table_wrapper").querySelector("div.dt-buttons").insertAdjacentHTML('beforeend',
-                        `<input id="mine_toggle" type="checkbox" data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Shown" data-onstyle="secondary" 
-                            data-off="<i class='far fa-eye'></i> Timestamps Hidden" data-offstyle="secondary" data-height="38px" data-width="210px">`);
+                        `<input id="mine_toggle" type="checkbox" data-toggle="toggle" data-on="<i class='far fa-eye'></i> Timestamps Hidden" data-onstyle="secondary" 
+                            data-off="<i class='far fa-eye'></i> Timestamps Shown" data-offstyle="secondary" data-height="38px" data-width="210px">`);
                     mine_toggle = $("#mine_toggle");
                     mine_toggle.change(function(event){
                         var column = table.column(4);
@@ -300,19 +299,18 @@ $(document).ready(function() {
                         column.visible( ! column.visible() );
                     });
                     mine_toggle.bootstrapToggle() 
+                } else {
+                    var column = table.column(4);
+                    column.visible( false );
+                    var column = table.column(7);
+                    column.visible( false );
+                    var column = table.column(9);
+                    column.visible( false );
+                    var column = table.column(11);
+                    column.visible( false );
                 }
-            }
 
-            //Hide date columns by default
-            //TODO: I think this will blow up for authors
-            // var column = table.column(4);
-            // column.visible( ! column.visible() );
-            // var column = table.column(7);
-            // column.visible( ! column.visible() );
-            // var column = table.column(9);
-            // column.visible( ! column.visible() );
-            // var column = table.column(11);
-            // column.visible( ! column.visible() );
+            }
 
             fixButtonGroupCurve();
         }
