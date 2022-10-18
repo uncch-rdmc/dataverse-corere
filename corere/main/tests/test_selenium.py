@@ -1,5 +1,6 @@
 import time, unittest, os
-from django.test import LiveServerTestCase, override_settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.test import override_settings
 from seleniumwire import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -13,13 +14,15 @@ from corere.main import models as m
 from corere.main import constants as c
 from corere.apps.wholetale import models as wtm
 
-#NOTE: If testing gives you an "OSError: [Errno 24] Too many open files:" error, try upping your files with ulimit -n
+# NOTE: If testing gives you an "OSError: [Errno 24] Too many open files:" error, try upping your files with ulimit -n
+# NOTE: Debug is enabled currently for the tests to get to 500 error full messages, but it causes noisy print statements in outputs. Maybe just disable
+#       ... could also try: https://stackoverflow.com/questions/72116043/how-to-silence-print-statements-in-for-python-selenium
 
 # Part of this testing is based upon finding elements. If they aren't available, the test errors out.
 # NOTE: Use the --keepdb flag between runs. The actions in the tests (creating accounts etc) get rolled back from the db each run
 # TODO: Future tests streamline login: https://stackoverflow.com/questions/22494583/login-with-code-when-using-liveservertestcase-with-django
 # TODO: Maybe use sys.argv to detect verbose and run print statements: https://www.knowledgehut.com/blog/programming/sys-argv-python-examples
-class LoggingInTestCase(LiveServerTestCase):
+class LoggingInTestCase(StaticLiveServerTestCase):
 
     def setUp(self):
         # os.environ['WDM_LOG_LEVEL'] = '0' #Should Disable webdriver_manager print statements... but doesn't.
@@ -49,8 +52,9 @@ class LoggingInTestCase(LiveServerTestCase):
 
     # This tests most of the flow with all actions done by an admin.
     # Not tested: Edition, Dataverse, Files, Whole Tale
-    @unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
+    #@unittest.skip("This test is not required, almost all functionality is covered by test_3_user (a few admin actions not covered). Can be used if that fails to help isolate issues.")
     @override_settings(SKIP_EDITION=True)
+    @override_settings(DEBUG=True)
     def test_admin_only_mostly_full_workflow(self):
         selenium = self.selenium
 
@@ -67,7 +71,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", selenium.title)
+        self.assertIn("| CORE2 Admin Site", selenium.title)
 
         # TODO: Investigate a way for the non-oauth user to skip being forced to select an oauth on the index page.
         #      We can't do any tests on it currently
@@ -136,7 +140,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
@@ -169,7 +173,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Minor Issues")
         selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[14]')
+        submission_info_submit_continue_verification = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
 
@@ -188,6 +192,12 @@ class LoggingInTestCase(LiveServerTestCase):
         ##### CREATE SUBMISSION 2 #####
         ###############################
 
+        ##### VIEW SUBMISSION REVIEWS #####
+        submission_info_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
+        submission_info_continue.send_keys(Keys.RETURN)
+
+        ##### UPDATE MANUSCRIPT #####
+
         Select(selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         manuscript_update_submit_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
@@ -196,7 +206,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
@@ -229,7 +239,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Success")
         selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[14]')
+        submission_info_submit_continue_verification = selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         selenium.switch_to.alert.accept()
 
@@ -249,8 +259,9 @@ class LoggingInTestCase(LiveServerTestCase):
     # TODO: Test across multiple submissions
     # TODO: This test downloads zips, do we need to get rid of them?
     # TODO: This doesn't test access to previous submissions yet
-    @unittest.skip("Disabled for test writing")
+    #@unittest.skip("Disabled for test writing")
     @override_settings(SKIP_EDITION=True)
+    @override_settings(DEBUG=True)
     def test_3_user_workflow_with_access_checks(self):
         ## If you use these settings, you have to skip our POST test currently because they seem to be contigent on headless...
         # self.options_not_headless = Options()
@@ -283,7 +294,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", admin_selenium.title)
+        self.assertIn("| CORE2 Admin Site", admin_selenium.title)
 
         ############################
         ##### ACCOUNT CREATION #####
@@ -312,7 +323,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", c_admin_selenium.title)
+        self.assertIn("| CORE2 Admin Site", c_admin_selenium.title)
 
         ##### CURATOR_ADMIN VERIFIER_IN CREATION #####
 
@@ -344,7 +355,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", v_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", v_yes_selenium.title)
 
         ##### CURATOR_ADMIN VERIFIER_OUT CREATION #####
 
@@ -376,7 +387,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", v_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", v_no_selenium.title)
 
         #############################################
         ##### CURATOR_ADMIN MANUSCRIPT CREATION #####
@@ -490,7 +501,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         c_admin_selenium.switch_to.alert.accept()
@@ -550,7 +561,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(v_yes_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Major Issues")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[12]')
+        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         v_yes_selenium.switch_to.alert.accept()
 
@@ -625,6 +636,11 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, v_yes_selenium, manuscript=manuscript, assert_dict=m_dict_verifier_access__out_of_phase)
         check_access(self, c_admin_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
+        ##### VIEW SUBMISSION REVIEWS #####
+        submission_info_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
+        submission_info_continue.send_keys(Keys.RETURN)
+    
+        ##### UPDATE MANUSCRIPT #####
         Select(c_admin_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         manuscript_update_submit_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
@@ -642,7 +658,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        c_admin_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = c_admin_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         c_admin_selenium.switch_to.alert.accept()
@@ -714,7 +730,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(v_yes_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Success")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[12]')
+        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         v_yes_selenium.switch_to.alert.accept()
 
@@ -759,8 +775,9 @@ class LoggingInTestCase(LiveServerTestCase):
         # check_access(self, v_yes_selenium, submission=submission, assert_dict=s_dict_verifier_access__in_phase)
         # check_access(self, c_admin_selenium, submission=submission, assert_dict=s_dict_admin_access)
 
-    # @unittest.skip("Disabled for test writing")
+    #@unittest.skip("Disabled for test writing")
     @override_settings(SKIP_EDITION=False)
+    @override_settings(DEBUG=True)
     def test_4_user_workflow_with_access_checks(self):
         
         # Thoughts:
@@ -774,15 +791,15 @@ class LoggingInTestCase(LiveServerTestCase):
 
         #Yes/No refers to their access to the manuscript
         admin_selenium = self.selenium
-        anon_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        anon_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)#_not_headless)
         a_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
-        a_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
+        a_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)#_not_headless)
         e_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         e_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         v_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         c_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
-        c_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)#_not_headless)
+        c_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         c_admin_no_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
         c_admin_yes_selenium = webdriver.Chrome(ChromeDriverManager().install(), options=self.options)
 
@@ -798,6 +815,7 @@ class LoggingInTestCase(LiveServerTestCase):
         self.selenium_instances['c_yes'] = c_yes_selenium
         self.selenium_instances['c_admin_yes'] = c_admin_yes_selenium
         self.selenium_instances['c_admin_no'] = c_admin_no_selenium
+        
         ##### ADMIN LOGIN #####
 
         admin_selenium.get(self.live_server_url + "/admin")
@@ -811,7 +829,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", admin_selenium.title)
+        self.assertIn("| CORE2 Admin Site", admin_selenium.title)
 
         ######################################
         ##### ACCOUNT CREATION AND LOGIN #####
@@ -866,7 +884,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         c_admin_yes_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", c_admin_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", c_admin_yes_selenium.title)
 
         ##### CURATOR_ADMIN_NO LOGIN #####
 
@@ -879,7 +897,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         c_admin_no_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", c_admin_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", c_admin_no_selenium.title)
 
         ##### AUTHOR_NO LOGIN #####
 
@@ -892,7 +910,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         a_no_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", a_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", a_no_selenium.title)
 
         ##### AUTHOR_YES LOGIN #####
 
@@ -905,7 +923,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         a_yes_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", a_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", a_yes_selenium.title)
 
 
         ##### CURATOR_ADMIN_YES EDITOR_YES CREATION #####
@@ -936,7 +954,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         e_yes_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", e_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", e_yes_selenium.title)
 
         ##### CURATOR_ADMIN_YES EDITOR_NO CREATION #####
 
@@ -966,7 +984,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         e_no_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", e_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", e_no_selenium.title)
 
         ##### CURATOR_ADMIN_YES CURATOR_YES CREATION #####
 
@@ -996,7 +1014,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         c_yes_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", c_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", c_yes_selenium.title)
 
         ##### CURATOR_ADMIN_YES CURATOR_NO CREATION #####
 
@@ -1026,7 +1044,7 @@ class LoggingInTestCase(LiveServerTestCase):
         password.send_keys("password")
         c_no_selenium.find_element_by_xpath("//div[@class='submit-row']//input[@type='submit']").send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", c_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", c_no_selenium.title)
 
         ##### CURATOR_ADMIN_YES VERIFIER_YES CREATION #####
 
@@ -1058,7 +1076,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", v_yes_selenium.title)
+        self.assertIn("| CORE2 Admin Site", v_yes_selenium.title)
 
         ##### CURATOR_ADMIN_YES VERIFIER_NO CREATION #####
 
@@ -1090,7 +1108,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         admin_login_submit.send_keys(Keys.RETURN)
 
-        self.assertIn("ion | Django site admin", v_no_selenium.title)
+        self.assertIn("| CORE2 Admin Site", v_no_selenium.title)
 
         #################################################
         ##### EDITOR_YES MANUSCRIPT CREATION #####
@@ -1171,7 +1189,6 @@ class LoggingInTestCase(LiveServerTestCase):
         time.sleep(3)  # wait for status to update in db
         a_yes_selenium.get(self.live_server_url + "/manuscript/" + str(manuscript.id) + "/")
         #Fields to fill: abstract, otherenvdetails, operating system, required packages, statistical software, authors, keywords
-        #time.sleep(999999)
         manuscript_create_submit_continue = a_yes_selenium.find_element_by_id("createSubmissionButton")
         manuscript_create_submit_continue.send_keys(Keys.RETURN)
 
@@ -1191,7 +1208,7 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, c_yes_selenium, manuscript=manuscript, assert_dict=m_dict_yes_curator_access)
         check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
         check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
-
+        
         Select(a_yes_selenium.find_element_by_id("id_subject")).select_by_visible_text("Agricultural Sciences")
         a_yes_selenium.find_element_by_id("id_description").send_keys("description")
         #a_yes_selenium.find_element_by_id('id_additional_info').send_keys('additional_info')
@@ -1215,11 +1232,13 @@ class LoggingInTestCase(LiveServerTestCase):
         a_yes_selenium.find_element_by_id("id_keyword_formset-0-text").send_keys("keyword_0_text")
 
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
+
+        #time.sleep(999999) 
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
 
         ##### TEST ACCESS SUBMISSION : NEW #####
 
-        time.sleep(.5)  # wait for status to update in db
+        time.sleep(2)  # wait for status to update in db
         submission = m.Submission.objects.latest("updated_at")
         self.assertEqual(submission._status, m.Submission.Status.NEW)
 
@@ -1237,7 +1256,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()
@@ -1300,6 +1319,10 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
         check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
+        #look over rejected submission info
+        submission_info_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
+        submission_info_continue.send_keys(Keys.RETURN)
+
         #Resubmit manuscript before updating submission
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
@@ -1324,8 +1347,8 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
-        submission_info_submit = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[8]')
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
+        submission_info_submit = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()
 
@@ -1433,7 +1456,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(v_yes_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Major Issues")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[15]')
+        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         v_yes_selenium.switch_to.alert.accept()
 
@@ -1537,6 +1560,10 @@ class LoggingInTestCase(LiveServerTestCase):
         check_access(self, c_admin_no_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
         check_access(self, c_admin_yes_selenium, manuscript=manuscript, assert_dict=m_dict_admin_access)
 
+        #look over rejected submission info
+        submission_info_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[2]')
+        submission_info_continue.send_keys(Keys.RETURN)
+
         manuscript_update_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[7]')
         manuscript_update_submit_continue.send_keys(Keys.RETURN)
 
@@ -1559,7 +1586,7 @@ class LoggingInTestCase(LiveServerTestCase):
 
         ##### ADD SUBMISSION NOTES (none currently) #####
 
-        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/info/")
+        a_yes_selenium.get(self.live_server_url + "/submission/" + str(manuscript.get_latest_submission().id) + "/review/")
         submission_info_submit_continue = a_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[5]')
         submission_info_submit_continue.send_keys(Keys.RETURN)
         a_yes_selenium.switch_to.alert.accept()
@@ -1693,7 +1720,7 @@ class LoggingInTestCase(LiveServerTestCase):
         Select(v_yes_selenium.find_element_by_id("id_verification_formset-0-_status")).select_by_visible_text("Success")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-code_executability").send_keys("report")
         v_yes_selenium.find_element_by_id("id_verification_formset-0-report").send_keys("report")
-        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[15]')
+        submission_info_submit_continue_verification = v_yes_selenium.find_element_by_xpath('//*[@id="generic_object_form"]/input[3]')
         submission_info_submit_continue_verification.send_keys(Keys.RETURN)
         v_yes_selenium.switch_to.alert.accept()
 

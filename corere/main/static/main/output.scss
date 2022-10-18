@@ -17,6 +17,12 @@ textarea.shortarea {
     height: 38px;
 }
 
+#note_table {
+    th {
+        font-weight: 500;
+    }
+}
+
 table.filestable {
     td.filespath {
         padding-left: 10px;
@@ -67,6 +73,9 @@ ul.errorlist {
         margin-left: 40px;
     }
 
+}
+table.dataTable {
+    cursor:pointer;
 }
 
 table.dataTable tr.selected td.select-checkbox:after, table.dataTable tr.selected th.select-checkbox:after {
@@ -383,7 +392,7 @@ button.sectional {
     border-color:#FFFFFF;
 }
 
-#submission_table_holder {
+#submission_table_holder_landing {
     padding: 15px;
 }
 
@@ -435,7 +444,7 @@ select.custom-select {
     word-wrap: break-word;
 }
 
-#div_id_note_formset-0-scope {
+#div_id_note_formset_author-0-scope, #div_id_note_formset_editor-0-scope, #div_id_note_formset_curator-0-scope, #div_id_note_formset_verifier-0-scope{
     width:160px;
 }
 

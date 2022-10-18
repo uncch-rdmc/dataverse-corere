@@ -66,7 +66,7 @@ class GenericCorereObjectView(View):
     helper = f.GenericFormSetHelper()
     page_title = ""
     page_help_text = None
-    note_formset = None
+    #note_formset = None
     note_helper = None
 
     create = False  # Used by default template
@@ -238,6 +238,7 @@ class GenericManuscriptView(GenericCorereObjectView):
     create = False
     form_helper = None
     dataverse_upload = False
+    rejected_manuscript = False
 
     def general(self, request, *args, **kwargs):
         if self.read_only:
@@ -300,6 +301,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             "role_name": self.role_name,
             "helper": self.helper,
             "manuscript_id": self.object.id,
+            "rejected_manuscript": self.rejected_manuscript,
         }  
 
         if not self.create:
@@ -315,11 +317,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             # context['v_metadata_formset'] = self.v_metadata_formset(instance=self.object, prefix="v_metadata_formset")
 
         if self.from_submission:
-            if self.object.is_containerized():
-                progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, "Update Manuscript")
-            else:
-                progress_bar_html = generate_progress_bar_html(c.progress_list_external_submission, "Update Manuscript")
-            context["progress_bar_html"] = progress_bar_html
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript", self.object)
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -360,6 +358,19 @@ class GenericManuscriptView(GenericCorereObjectView):
                 self.keyword_formset.save()
             # if(self.v_metadata_formset):
             #     self.v_metadata_formset.save()
+
+            if request.POST.get("submit_back"):
+                #This is built to only happen to go back to submission info page on the author rejected flow
+                list(messages.get_messages(request))  # Clears messages if there are any already.
+                messages.add_message(request, messages.SUCCESS, self.msg)
+
+                latest_submission = self.object.get_latest_submission()
+                if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                    rejected_submission = latest_submission
+                else:
+                    rejected_submission = m.Submission.objects.get(manuscript=self.object, version_id=latest_submission.version_id-1)
+                
+                return redirect("submission_info", id=rejected_submission.id)
 
             if request.POST.get("submit_continue"):
                 list(messages.get_messages(request))  # Clears messages if there are any already.
@@ -413,6 +424,7 @@ class GenericManuscriptView(GenericCorereObjectView):
             "role_name": self.role_name,
             "helper": self.helper,
             "manuscript_id": self.object.id,
+            "rejected_manuscript": self.rejected_manuscript,
         }
 
         if not self.create:
@@ -429,8 +441,7 @@ class GenericManuscriptView(GenericCorereObjectView):
 
         if self.from_submission:
             # We don't worry about compute_env = other here, as it won't normally be set. We default to showing "run code" even though it isn't certain.
-            progress_bar_html = generate_progress_bar_html(c.progress_list_container_submission, "Update Manuscript")
-            context["progress_bar_html"] = progress_bar_html
+            context["progress_bar_html"] = get_progress_bar_html_submission("Update Manuscript", self.object)
         elif self.create or self.object._status == m.Manuscript.Status.NEW:
             progress_bar_html = generate_progress_bar_html(c.progress_list_manuscript, "Create Manuscript")
             context["progress_bar_html"] = progress_bar_html
@@ -464,6 +475,13 @@ class ManuscriptUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
     page_title = _("manuscript_edit_pageTitle")
     from_submission = True
     page_help_text = _("manuscript_edit_helpText")
+
+    def general(self, request, *args, **kwargs):
+        if self.object.has_submissions():
+            latest_submission = self.object.get_latest_submission()
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED or latest_submission.version_id > 1:
+                self.rejected_manuscript = True
+        return super(ManuscriptUpdateView, self).general(request, *args, **kwargs)
 
 
 class ManuscriptReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericManuscriptView):
@@ -1004,6 +1022,7 @@ class ManuscriptRemindView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 
 # See commit f9f9a1f205c21f6e883bb91f767a57ba69879a35 or older for old saving code for v_metadata audit / badge / etc. We probably need this again for our "push to dataverse" step
 
+# TODO: Because we are calling this without permissionrequiredmixin due to our complex logic, we need to improve how early we kick out users
 # Do not call directly. Used for the main submission form
 class GenericSubmissionFormView(GenericCorereObjectView):
     parent_reference_name = "manuscript"
@@ -1011,32 +1030,60 @@ class GenericSubmissionFormView(GenericCorereObjectView):
     parent_model = m.Manuscript
     object_friendly_name = "submission"
     model = m.Submission
-    note_formset = f.NoteSubmissionFormset
-    note_helper = f.NoteFormSetHelper()
+    # These may be set to the InPhase formset depending on logic in general
+    # We use the "selected" ones to keep the uninitialized formset stored for our re-init trick to hide errors.
+    # ... I think this trick also handles some weird duplication that was happening with notes when another thing errored.
+    selected_formset_author = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_editor = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_curator = f.NoteSubmissionFormsetOutOfPhase
+    selected_formset_verifier = f.NoteSubmissionFormsetOutOfPhase
+    note_formset_author = f.NoteSubmissionFormsetOutOfPhase
+    note_formset_editor = f.NoteSubmissionFormsetOutOfPhase
+    note_formset_curator = f.NoteSubmissionFormsetOutOfPhase
+    note_formset_verifier = f.NoteSubmissionFormsetOutOfPhase
+    note_helper_author = f.AuthorNoteFormSetHelper()
+    note_helper_editor = f.EditorNoteFormSetHelper()
+    note_helper_curator = f.CuratorNoteFormSetHelper()
+    note_helper_verifier = f.VerifierNoteFormSetHelper()
     prev_sub_vmetadata = None
 
     edition_formset = None
     curation_formset = None
     verification_formset = None
+
+    # These statuses are only set if the review is done. It is use to populate a header bar
+    edition_status = ""
+    curation_status = ""
+    verification_status = ""
+
     submission_editor_date_formset = None
-    can_progress = False
+    can_proceed = False
+    read_only_note = False
+    updating = False
+    progress_step = "Add Submission Info"
 
     def general(self, request, *args, **kwargs):
         role_name = get_role_name_for_form(request.user, self.object.manuscript, request.session, False)
+        other_note_add = False #If another note has add enabled, this is set
+
+        #TODO: This chunk of logic for the review forms is pretty hairy. There are probably edge cases where the different sub-views of this generic view can make the page show weird.
+        #      If I rewrite this logic, maybe stop using the status check for when to show the out-of-phase view, and instead just use the updating variable?
+
         try:
             if not self.read_only and (
                 has_transition_perm(self.object.manuscript.add_submission_noop, request.user)
                 or has_transition_perm(self.object.edit_noop, request.user)
             ):
                 self.form = f.SubmissionForms[role_name]
-                self.can_progress = True
+                self.can_proceed = True
             elif has_transition_perm(self.object.view_noop, request.user):
                 self.form = f.ReadOnlySubmissionForm
-                self.can_progress = False
+                self.can_proceed = False
             else:
                 raise Http404()
         except (m.Submission.DoesNotExist, KeyError):
             pass
+
         try:
             if not self.read_only and (
                 has_transition_perm(self.object.add_edition_noop, request.user)
@@ -1045,14 +1092,24 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 self.edition_formset = f.EditionSubmissionFormsets[role_name]
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_editionReview_helpText")
-                self.can_progress = True
+                if self.read_only_note:
+                    self.note_formset_editor = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_editor = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_editor = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_editor = f.NoteSubmissionFormsetInPhase
+                if self.object._status == m.Submission.Status.IN_PROGRESS_EDITION:
+                    self.can_proceed = True
+                other_note_add = True
             elif has_transition_perm(self.object.submission_edition.view_noop, request.user):
                 self.edition_formset = f.ReadOnlyEditionSubmissionFormset
+                self.edition_status =  " - " + self.object.submission_edition.get__status_display()
                 #When a submission is rejected by the editor, it is returned. This causes it to hit the first two try/catch blocks
                 if not self.object._status == m.Submission.Status.REJECTED_EDITOR: 
-                    self.can_progress = False
+                    self.can_proceed = False
         except (m.Edition.DoesNotExist, KeyError):
             pass
+
         try:
             if not self.read_only and (
                 has_transition_perm(self.object.add_curation_noop, request.user)
@@ -1060,22 +1117,30 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             ):
                 if self.object._status != m.Submission.Status.IN_PROGRESS_CURATION:  # We show our later edit form with only certain fields editable
                     self.curation_formset = f.EditOutOfPhaseCurationFormset
-                    self.can_progress = False
+                    self.can_proceed = False
                 else:
                     self.curation_formset = f.CurationSubmissionFormsets[role_name]
-                    self.can_progress = True
+                    self.can_proceed = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_curationReview_helpText")
-
+                if self.read_only_note:
+                    self.note_formset_curator = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_curator = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_curator = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_curator = f.NoteSubmissionFormsetInPhase
+                other_note_add = True
                 if self.object.manuscript.skip_edition:
                     self.submission_editor_date_formset = f.SubmissionEditorDateFormset
             elif has_transition_perm(self.object.submission_curation.view_noop, request.user):
                 self.curation_formset = f.ReadOnlyCurationSubmissionFormset
-                self.can_progress = False
+                self.curation_status = " - " + self.object.submission_curation.get__status_display()
+                self.can_proceed = False
                 # We may need a read_only SubmissionEditorDateFormset for here
 
         except (m.Curation.DoesNotExist, KeyError):
             pass
+
         try:
             if not self.read_only and (
                 has_transition_perm(self.object.add_verification_noop, request.user)
@@ -1085,21 +1150,131 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     self.object._status != m.Submission.Status.IN_PROGRESS_VERIFICATION
                 ):  # We show our later edit form with only certain fields editable
                     self.verification_formset = f.EditOutOfPhaseVerificationFormset
-                    self.can_progress = False
+                    self.can_proceed = False
                 else:
                     self.verification_formset = f.VerificationSubmissionFormsets[role_name]
-                    self.can_progress = True
+                    self.can_proceed = True
                 self.page_title = _("submission_review_helpText").format(submission_version=self.object.version_id)
                 self.page_help_text = _("submission_verificationReview_helpText")
+                if self.read_only_note:
+                    self.note_formset_verifier = f.NoteSubmissionFormsetInPhaseReadOnly
+                    self.selected_formset_verifier = f.NoteSubmissionFormsetInPhaseReadOnly
+                else:
+                    self.note_formset_verifier = f.NoteSubmissionFormsetInPhase
+                    self.selected_formset_verifier = f.NoteSubmissionFormsetInPhase
+                other_note_add = True
             elif has_transition_perm(self.object.submission_verification.view_noop, request.user):
                 self.verification_formset = f.ReadOnlyVerificationSubmissionFormset
-                self.can_progress = False
+                self.verification_status =  " - " + self.object.submission_verification.get__status_display()
+                self.can_proceed = False
         except (m.Verification.DoesNotExist, KeyError):
             pass
+
+        # If we are showing the info page after a reject, we set read_only_note and then that means we know to show the progress bar
+        if self.read_only_note:
+            self.can_proceed = False
+
+        if not other_note_add:
+            if self.read_only_note:
+                self.note_formset_author = f.NoteSubmissionFormsetInPhaseReadOnly
+            else:
+                self.note_formset_author = f.NoteSubmissionFormsetInPhase
+
+        ### NOTES ###
+
+        checkers = None
+        sub_files = None
+
+        if self.note_formset_author is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if not sub_files:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            self.note_formset_author = self.note_formset_author(
+                request.POST if request.method == 'POST' else None,
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
+                prefix="note_formset_author",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )
+
+        if self.note_formset_editor is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if not sub_files:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            self.note_formset_editor = self.note_formset_editor(
+                request.POST if request.method == 'POST' else None,
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
+                prefix="note_formset_editor",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        if self.note_formset_curator is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if not sub_files:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            self.note_formset_curator = self.note_formset_curator(
+                request.POST if request.method == 'POST' else None,
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
+                prefix="note_formset_curator",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        if self.note_formset_verifier is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if not sub_files:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            self.note_formset_verifier = self.note_formset_verifier(
+                request.POST if request.method == 'POST' else None,
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
+                prefix="note_formset_verifier",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        ### END NOTES ###
 
         return super().general(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        
         self.general(request, *args, **kwargs)
 
         manuscript_display_name = self.object.manuscript.get_display_name()
@@ -1116,35 +1291,23 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "manuscript_display_name": manuscript_display_name,
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
-            "can_progress": self.can_progress,
+            "can_proceed": self.can_proceed,
+            "read_only_note": self.read_only_note,
+            "edition_status": self.edition_status,
+            "curation_status": self.curation_status,
+            "verification_status": self.verification_status
         }
 
-        if self.can_progress:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Add Submission Info", self.object)
+        #TODO: This still breaks and displays the progress bar when updating a submission later. We check out of phase above but interpreting that later isn't really possible
+        #      ... I wonder if the solution to all this is to add another variable for progress bar,
+        if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+            context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
             or request.user.is_superuser
         )  # Used to enable delete option for all notes in JS
-
-        if self.note_formset is not None:
-            checkers = [
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            ]
-            notes = m.Note.objects.filter(parent_submission=self.object)
-            for checker in checkers:
-                checker.prefetch_perms(notes)
-            sub_files = self.object.submission_files.all().order_by("path", "name")
-
-            context["note_formset"] = self.note_formset(
-                instance=self.object,
-                prefix="note_formset",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            )  # TODO: This was set to `= formset`, maybe can delete that variable now?
-
+        
         if self.edition_formset is not None:
             context["edition_formset"] = self.edition_formset(instance=self.object, prefix="edition_formset")
         if self.curation_formset is not None:
@@ -1156,32 +1319,44 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 queryset=m.Submission.objects.filter(id=self.object.id), prefix="submission_editor_date_formset"
             )
 
-        # TODO: This needs to be added to post for when there are errors?
-
         # We generate the info section providing read-only access to the manuscript metadata and files
-        if (self.edition_formset is not None) or (self.curation_formset is not None) or (self.verification_formset is not None):
-            # This context dict is sent to our sub render_to_string call, it does not get added to our main render
-            manu_context_dict = {
-                "form": f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
-                "manuscript_helper": f.ManuscriptFormHelperMain(),
-                "author_formset": f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
-                "author_inline_helper": f.GenericInlineFormSetHelper(form_id="author"),
-                "data_source_formset": f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
-                "data_source_inline_helper": f.GenericInlineFormSetHelper(form_id="data_source"),
-                "keyword_formset": f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
-                "keyword_inline_helper": f.GenericInlineFormSetHelper(form_id="keyword"),
-                "in_sub_review": True,
-                "read_only": True,
-            }
+        # This context dict is sent to our sub render_to_string call, it does not get added to our main render
+        manu_context_dict = {
+            "form": f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
+            "manuscript_helper": f.ManuscriptFormHelperMain(),
+            "author_formset": f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
+            "author_inline_helper": f.GenericInlineFormSetHelper(form_id="author"),
+            "data_source_formset": f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
+            "data_source_inline_helper": f.GenericInlineFormSetHelper(form_id="data_source"),
+            "keyword_formset": f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
+            "keyword_inline_helper": f.GenericInlineFormSetHelper(form_id="keyword"),
+            "in_sub_review": True,
+            "read_only": True,
+        }
 
-            manu_html = render_to_string("main/form_content_manuscript.html", manu_context_dict)
-            context["manuscript_metadata_html"] = manu_html
-            context["object_id"] = self.object.id  # TODO: Do we need to do this?
-            context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
-            context["s_file_url_base"] = "../"
+        manu_html = render_to_string("main/form_content_manuscript.html", manu_context_dict)
+        context["manuscript_metadata_html"] = manu_html
+        context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
+        context["s_file_url_base"] = "../"
+        context["object_id"] = self.object.id
 
-        if self.note_helper is not None:
-            context["note_helper"] = self.note_helper
+        # TODO: If these are none I think the template blows up. Redundant?
+        if self.note_formset_author is not None:
+            context["note_formset_author"] = self.note_formset_author
+        if self.note_formset_editor is not None:
+            context["note_formset_editor"] = self.note_formset_editor
+        if self.note_formset_curator is not None:
+            context["note_formset_curator"] = self.note_formset_curator
+        if self.note_formset_verifier is not None:
+            context["note_formset_verifier"] = self.note_formset_verifier
+        if self.note_helper_author is not None:
+            context["note_helper_author"] = self.note_helper_author
+        if self.note_helper_editor is not None:
+            context["note_helper_editor"] = self.note_helper_editor
+        if self.note_helper_curator is not None:
+            context["note_helper_curator"] = self.note_helper_curator
+        if self.note_helper_verifier is not None:
+            context["note_helper_verifier"] = self.note_helper_verifier
 
         return render(request, self.template, context)
 
@@ -1192,24 +1367,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
 
         manuscript_display_name = self.object.manuscript.get_display_name()
 
-        if self.note_formset:
-            checkers = [
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            ]
-            notes = m.Note.objects.filter(parent_submission=self.object)
-            for checker in checkers:
-                checker.prefetch_perms(notes)
-            sub_files = self.object.submission_files.all().order_by("path", "name")
-
-            self.note_formset = self.note_formset(
-                request.POST,
-                instance=self.object,
-                prefix="note_formset",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
-            )  # TODO: This was set to `= formset`, maybe can delete that variable now?
         if self.edition_formset:
             self.edition_formset = self.edition_formset(request.POST, instance=self.object, prefix="edition_formset")
         if self.curation_formset:
@@ -1221,17 +1378,51 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if self.verification_formset:
             self.verification_formset = self.verification_formset(request.POST, instance=self.object, prefix="verification_formset")
 
+        ### NOTES SAVE (We save notes even if readonly) ###
+        if not self.read_only_note:
+            if self.note_formset_author is not None:
+                if self.note_formset_author.is_valid():
+                    self.note_formset_author.save()
+                else:
+                    for fr in self.note_formset_author.forms:
+                        if fr.is_valid():
+                            fr.save(True)
+
+            if self.note_formset_editor is not None:
+                if self.note_formset_editor.is_valid():
+                    self.note_formset_editor.save()
+                else:
+                    for fr in self.note_formset_editor.forms:
+                        if fr.is_valid():
+                            fr.save(True)
+
+            if self.note_formset_curator is not None:
+                if self.note_formset_curator.is_valid():
+                    self.note_formset_curator.save()
+                else:
+                    for fr in self.note_formset_curator.forms:
+                        if fr.is_valid():
+                            fr.save(True)
+
+            if self.note_formset_verifier is not None:
+                if self.note_formset_verifier.is_valid():
+                    self.note_formset_verifier.save()
+                else:
+                    for fr in self.note_formset_verifier.forms:
+                        if fr.is_valid():
+                            fr.save(True)
+
+            if self.read_only and (self.note_formset_author is not None or self.note_formset_editor is not None or self.note_formset_curator is not None or self.note_formset_verifier is not None):
+                return redirect(
+                    self.redirect
+                )
+
+        ### END NOTES SAVE ###
+
         # This code checks whether to attempt saving, seeing that each formset that exists is valid
         # If we have to add even more formsets, we should consider creating a list of formsets to check dynamically
         # NOTE: If you move this code after submission progressing, the saving of note phase will break.
         if not self.read_only:
-            if self.note_formset is not None:
-                if self.note_formset.is_valid():
-                    self.note_formset.save()
-                else:
-                    for fr in self.note_formset.forms:
-                        if fr.is_valid():
-                            fr.save(True)
 
             # This code handles the case where a curator-admin needs to edit their curation while a verification is available. If they don't change the verification, they can still save the curation.
             hide_v_errors = False
@@ -1246,13 +1437,15 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             # NOTE: The user.is_superuser and extra verification formset valid checks are in here to handle editing out of phase by curator-admins.
             #      Curator-admins need to be able to edit their curation while a verification is happening, and without this verification validation will stop saving.
             #      This fix just hides the validation errors, a better one may be needed. Maybe something that allows partial saves if not submitting.
+            
             if (
                 self.form.is_valid()
                 and (self.edition_formset is None or self.edition_formset.is_valid())
                 and (self.curation_formset is None or self.curation_formset.is_valid())
                 and (
                     self.verification_formset is None or self.verification_formset.is_valid() or hide_v_errors
-                )  # and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid())
+                ) and (self.submission_editor_date_formset is None or self.submission_editor_date_formset.is_valid()) 
+                # and (self.v_metadata_formset is None or self.v_metadata_formset.is_valid())
             ):
                 self.form.save()
 
@@ -1282,7 +1475,7 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                         if status == m.Submission.Status.IN_PROGRESS_CURATION:
                             role_text = "curation team"
                         else:
-                            role_text = "authors"
+                            role_text = "author"
                         self.msg = _("submission_reviewSubmitted_banner").format(role_text=role_text)
                         list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, self.msg)
@@ -1469,7 +1662,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                     raise
 
                 if request.POST.get("back_save"):
-                    return redirect("submission_notebook", id=self.object.id)
+                    if self.object.manuscript.is_containerized():
+                        return redirect("submission_notebook", id=self.object.id)
+                    else:
+                        return redirect("submission_uploadfiles", id=self.object.id)
 
                 if request.POST.get("submit_continue"):
                     list(messages.get_messages(request))  # Clears messages if there are any already.
@@ -1488,18 +1684,6 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                 if self.verification_formset:
                     logger.debug(self.verification_formset.errors)
 
-        else:  # readonly
-            if self.note_formset is not None:
-                if self.note_formset.is_valid():
-                    self.note_formset.save()
-                else:
-                    for fr in self.note_formset.forms:
-                        if fr.is_valid():
-                            fr.save(True)
-                return redirect(
-                    self.redirect
-                )  # This redirect was added mostly because the latest note was getting hidden after save. I'm not sure why that formset doesn't get updated with a new blank.
-
         context = {
             "form": self.form,
             "helper": self.helper,
@@ -1513,56 +1697,128 @@ class GenericSubmissionFormView(GenericCorereObjectView):
             "manuscript_display_name": manuscript_display_name,
             "s_status": self.object._status,
             "parent_id": self.object.manuscript.id,
-            "can_progress": self.can_progress,
+            "can_proceed": self.can_proceed,
+            "read_only_note": self.read_only_note,
+            "edition_status": self.edition_status,
+            "curation_status": self.curation_status,
+            "verification_status": self.verification_status
         }
 
-        if (self.edition_formset is not None) or (self.curation_formset is not None) or (self.verification_formset is not None):
-            # This context dict is sent to our sub render_to_string call, it does not get added to our main render
-            manu_context_dict = {
-                "form": f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
-                "manuscript_helper": f.ManuscriptFormHelperMain(),
-                "author_formset": f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
-                "author_inline_helper": f.GenericInlineFormSetHelper(form_id="author"),
-                "data_source_formset": f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
-                "data_source_inline_helper": f.GenericInlineFormSetHelper(form_id="data_source"),
-                "keyword_formset": f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
-                "keyword_inline_helper": f.GenericInlineFormSetHelper(form_id="keyword"),
-                "in_sub_review": True,
-                "read_only": True,
-            }
+        if not self.updating and (not self.can_proceed or self.object._status == m.Submission.Status.NEW or self.object._status == m.Submission.Status.REJECTED_EDITOR):
+            context["progress_bar_html"] = get_progress_bar_html_submission(self.progress_step, self.object.manuscript)
 
-            manu_html = render_to_string("main/form_content_manuscript.html", manu_context_dict)
-            context["manuscript_metadata_html"] = manu_html
-            context["object_id"] = self.object.id  # TODO: Do we need to do this?
-            context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
-            context["s_file_url_base"] = "../"
+        # We generate the info section providing read-only access to the manuscript metadata and files
+        # This context dict is sent to our sub render_to_string call, it does not get added to our main render
+        manu_context_dict = {
+            "form": f.ReadOnlyManuscriptForm(instance=self.object.manuscript),
+            "manuscript_helper": f.ManuscriptFormHelperMain(),
+            "author_formset": f.ReadOnlyAuthorFormSet(instance=self.object.manuscript, prefix="author_formset"),
+            "author_inline_helper": f.GenericInlineFormSetHelper(form_id="author"),
+            "data_source_formset": f.ReadOnlyDataSourceFormSet(instance=self.object.manuscript, prefix="data_source_formset"),
+            "data_source_inline_helper": f.GenericInlineFormSetHelper(form_id="data_source"),
+            "keyword_formset": f.ReadOnlyKeywordFormSet(instance=self.object.manuscript, prefix="keyword_formset"),
+            "keyword_inline_helper": f.GenericInlineFormSetHelper(form_id="keyword"),
+            "in_sub_review": True,
+            "read_only": True,
+        }
 
-        if not self.can_progress:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Add Submission Info", self.object)
+        manu_html = render_to_string("main/form_content_manuscript.html", manu_context_dict)
+        context["manuscript_metadata_html"] = manu_html
+        context["m_file_url_base"] = "../../../manuscript/" + str(self.object.manuscript.id) + "/"
+        context["s_file_url_base"] = "../"
+        context["object_id"] = self.object.id
 
         context["is_manu_curator"] = (
             request.user.groups.filter(name=c.GROUP_MANUSCRIPT_CURATOR_PREFIX + " " + str(self.object.manuscript.id)).exists()
             or request.user.is_superuser
         )  # Used to enable delete option for all notes in JS
 
-        if self.note_formset is not None:
-            # We re-init the note formset to not show the validation errors. There may be an easier and more efficient way
-            checkers = [
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
-                ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
-            ]
-            notes = m.Note.objects.filter(parent_submission=self.object)
-            for checker in checkers:
-                checker.prefetch_perms(notes)
-            sub_files = self.object.submission_files.all().order_by("path", "name")
+        ### NOTES ###
 
-            context["note_formset"] = f.NoteSubmissionFormset(
+        sub_files = None
+        checkers = None
+
+        if self.note_formset_author is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if not sub_files:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_author"] = self.selected_formset_author(
                 instance=self.object,
-                prefix="note_formset",
-                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files},
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.SUBMISSION),
+                prefix="note_formset_author",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
             )
+
+        if self.note_formset_editor is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_editor"] = self.selected_formset_editor(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.EDITION),
+                prefix="note_formset_editor",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        if self.note_formset_curator is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_curator"] = self.selected_formset_curator(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.CURATION),
+                prefix="note_formset_curator",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        if self.note_formset_verifier is not None:
+            if not checkers:
+                checkers = [
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_AUTHOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_EDITOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_CURATOR)),
+                    ObjectPermissionChecker(Group.objects.get(name=c.GROUP_ROLE_VERIFIER)),
+                ]
+                notes = m.Note.objects.filter(parent_submission=self.object)
+                for checker in checkers:
+                    checker.prefetch_perms(notes)
+            if sub_files is None:
+                sub_files = self.object.submission_files.all().order_by("path", "name")
+            context["note_formset_verifier"] = self.selected_formset_verifier(
+                instance=self.object,
+                queryset=m.Note.objects.filter(parent_submission=self.object, ref_cycle=m.Note.RefCycle.VERIFICATION),
+                prefix="note_formset_verifier",
+                form_kwargs={"checkers": checkers, "manuscript": self.object.manuscript, "submission": self.object, "sub_files": sub_files, "read_only": self.read_only_note},
+            )    
+
+        ### END NOTES ###
 
         if self.edition_formset is not None:
             context["edition_formset"] = self.edition_formset
@@ -1573,8 +1829,14 @@ class GenericSubmissionFormView(GenericCorereObjectView):
         if self.submission_editor_date_formset is not None:
             context["submission_editor_date_formset"] = self.submission_editor_date_formset
 
-        if self.note_helper is not None:
-            context["note_helper"] = self.note_helper
+        if self.note_helper_author is not None:
+            context["note_helper_author"] = self.note_helper_author
+        if self.note_helper_editor is not None:
+            context["note_helper_editor"] = self.note_helper_editor
+        if self.note_helper_curator is not None:
+            context["note_helper_curator"] = self.note_helper_curator
+        if self.note_helper_verifier is not None:
+            context["note_helper_verifier"] = self.note_helper_verifier
 
         return render(request, self.template, context)
 
@@ -1598,10 +1860,26 @@ class SubmissionCreateView(LoginRequiredMixin, GetOrGenerateObjectMixin, Transit
 # NOTE 2022: The edit logic in GenericSubmissionFormView is pretty complicated, and now that we moved most of the info from submission to manuscript
 #            maybe we should redo/simplify how we check these perms
 #            Also remember that even though we let curators/verifiers edit their reviews out of phase, we block the actual review status from being changed
-class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+#TODO: Maybe move more variables out of Generic into here that change for info. To make more clear
+class SubmissionReviewView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+    transition_method_name = "edit_noop"
+    page_help_text = _("submission_changes_helpText")  # Sometimes overwritten by GenericSubmissionFormView
+    template = "main/form_object_submission.html"
+
+    def general(self, request, *args, **kwargs):
+        self.page_title = _("submission_changes_pageTitle").format(
+            submission_version=self.object.version_id
+        )  # Sometimes overwritten by GenericSubmissionFormView
+        return super().general(request, *args, **kwargs)
+
+# Presented to author at beginning of flow
+class SubmissionInfoView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
     transition_method_name = "edit_noop"
     page_help_text = _("submission_info_helpText")  # Sometimes overwritten by GenericSubmissionFormView
     template = "main/form_object_submission.html"
+    read_only = True
+    read_only_note = True
+    progress_step = "Read Review"
 
     def general(self, request, *args, **kwargs):
         self.page_title = _("submission_info_pageTitle").format(
@@ -1609,6 +1887,18 @@ class SubmissionEditView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSu
         )  # Sometimes overwritten by GenericSubmissionFormView
         return super().general(request, *args, **kwargs)
 
+# Presented to userse editing out of phase
+class SubmissionUpdateView(LoginRequiredMixin, GetOrGenerateObjectMixin, GenericSubmissionFormView):
+    transition_method_name = "edit_noop"
+    page_help_text = _("submission_changes_helpText")  # Sometimes overwritten by GenericSubmissionFormView
+    template = "main/form_object_submission.html"
+    updating = True
+
+    def general(self, request, *args, **kwargs):
+        self.page_title = _("submission_changes_pageTitle").format(
+            submission_version=self.object.version_id
+        )  # Sometimes overwritten by GenericSubmissionFormView
+        return super().general(request, *args, **kwargs)
 
 class SubmissionReadView(LoginRequiredMixin, GetOrGenerateObjectMixin, TransitionPermissionMixin, GitFilesMixin, GenericSubmissionFormView):
     form = f.ReadOnlySubmissionForm
@@ -1784,7 +2074,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             context["dataverse_upload"] = self.dataverse_upload
 
         if not self.read_only and not self.dataverse_upload:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object)
+            context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object.manuscript)
 
         return render(request, self.template, context)
 
@@ -1867,7 +2157,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
             if not errors and request.POST.get("submit_continue"):
                 if list(self.files_dict_list):
                     if settings.SKIP_DOCKER or not self.object.manuscript.is_containerized():
-                        return redirect("submission_info", id=self.object.id)
+                        return redirect("submission_review", id=self.object.id)
                     elif settings.CONTAINER_DRIVER == "wholetale":
                         if self.object.files_changed:
                             wtc = w.WholeTaleCorere(request.COOKIES.get("girderToken"))
@@ -1933,7 +2223,7 @@ class SubmissionUploadFilesView(LoginRequiredMixin, GetOrGenerateObjectMixin, Tr
                 context["dataverse_upload"] = self.dataverse_upload
 
             if not self.read_only and not self.dataverse_upload:  # should never hit post if read_only but yea
-                context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object)
+                context["progress_bar_html"] = get_progress_bar_html_submission("Upload Files", self.object.manuscript)
 
             if errors:
                 context["errors"] = errors
@@ -2701,7 +2991,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
             context["notebook_url"] = self.object.manuscript.manuscript_localcontainerinfo.container_public_address()
 
         if not self.read_only:
-            context["progress_bar_html"] = get_progress_bar_html_submission("Run Code", self.object)
+            context["progress_bar_html"] = get_progress_bar_html_submission("Run Code", self.object.manuscript)
 
         return render(request, self.template, context)
 
@@ -2714,7 +3004,7 @@ class SubmissionNotebookView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gener
                 if self.form.is_valid():
                     self.form.save()  # This saves any launch issues reported by the author, for the curation team to review.
 
-            return redirect("submission_info", id=self.object.id)
+            return redirect("submission_review", id=self.object.id)
 
         if request.POST.get("back"):
             return redirect("submission_uploadfiles", id=self.object.id)

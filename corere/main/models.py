@@ -131,7 +131,7 @@ class Edition(AbstractCreateUpdateModel):
         NO_ISSUES = "no_issues", "No Issues"
 
     _status = FSMField(
-        max_length=15, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission approved by the editor"
+        max_length=15, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission approved by the editor"
     )
     report = models.TextField(default="", verbose_name="Details")
     submission = models.OneToOneField("Submission", on_delete=models.CASCADE, related_name="submission_edition")
@@ -211,7 +211,7 @@ class Curation(AbstractCreateUpdateModel):
         NO_ISSUES = "no_issues", "No Issues"
 
     _status = FSMField(
-        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission approved by the curator"
+        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission approved by the curator"
     )
     report = models.TextField(default="", verbose_name="Details")
     needs_verification = models.BooleanField(default=False, verbose_name="Needs Verification")
@@ -293,7 +293,7 @@ class Verification(AbstractCreateUpdateModel):
         SUCCESS = "success", "Success"
 
     _status = FSMField(
-        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Review", help_text="Was the submission able to be verified"
+        max_length=32, choices=Status.choices, default=Status.NEW, verbose_name="Result", help_text="Was the submission able to be verified"
     )
     submission = models.OneToOneField("Submission", on_delete=models.CASCADE, related_name="submission_verification")
     report = models.TextField(default="", verbose_name="Details")
@@ -483,6 +483,8 @@ class Submission(AbstractCreateUpdateModel):
 
     ##### Queries #####
 
+    #Note queries are used for our report generation mostly
+    
     def get_public_curator_notes_general(self):
         return self._get_public_general_notes_by_refcycle(Note.RefCycle.CURATION)
 
@@ -1077,9 +1079,66 @@ class Manuscript(AbstractCreateUpdateModel):
             first_save = True
             if settings.SKIP_EDITION:  # Set here because we want it to save with super
                 self.skip_edition = True
-
         if not first_save and settings.CONTAINER_DRIVER == "wholetale":
             orig = Manuscript.objects.get(pk=self.pk)
+
+            if not orig.is_containerized() and self.is_containerized():
+                # self.create_wt_groups()
+
+                wtc = w.WholeTaleCorere(admin=True)
+
+                # This section creates our wtc/wtm groups. If any users are already added to connected corere group, they are added.
+                # This code handles the cases where a manuscript gets flipped multiple times between containerized and not, as there will be groups already present.
+                editor_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)
+                try:
+                    wtm_group_editor = wtm.GroupConnector.objects.get(corere_group__name=editor_group_name)
+                except wtm.GroupConnector.DoesNotExist:
+                    wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
+                    wtm_group_editor = wtm.GroupConnector.objects.create(
+                        corere_group=group_manuscript_editor, wt_id=wtc_group_editor["_id"], manuscript=self
+                    )
+                editor_group_users = m.User.objects.filter(groups__name=editor_group_name)
+                for u in editor_group_users:
+                    wtc.invite_user_to_group(u.wt_id, wtm_group_editor.wt_id)
+
+                author_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)
+                try:        
+                    wtm_group_author = wtm.GroupConnector.objects.get(corere_group__name=author_group_name)
+                except wtm.GroupConnector.DoesNotExist:
+                    wtc_group_author = wtc.create_group_with_hash(author_group_name)
+                    wtm_group_author = wtm.GroupConnector.objects.create(
+                        corere_group=group_manuscript_author, wt_id=wtc_group_author["_id"], manuscript=self
+                    )
+                author_group_users = m.User.objects.filter(groups__name=author_group_name)
+                for u in author_group_users:
+                    wtc.invite_user_to_group(u.wt_id, wtm_group_author.wt_id)
+
+                curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
+                try:
+                    wtm_group_curator = wtm.GroupConnector.objects.get(corere_group__name=curator_group_name)
+                except wtm.GroupConnector.DoesNotExist:
+                    wtc_group_curator = wtc.create_group_with_hash(curator_group_name)
+                    wtm_group_curator = wtm.GroupConnector.objects.create(
+                        corere_group=group_manuscript_curator, wt_id=wtc_group_curator["_id"], manuscript=self
+                    )
+                curator_group_users = m.User.objects.filter(groups__name=curator_group_name)
+                for u in curator_group_users:
+                    wtc.invite_user_to_group(u.wt_id, wtm_group_curator.wt_id)
+
+                verifier_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)
+                try:
+                    wtm_group_verifier = wtm.GroupConnector.objects.get(corere_group__name=verifier_group_name)
+                except wtm.GroupConnector.DoesNotExist:
+                    wtc_group_verifier = wtc.create_group_with_hash(verifier_group_name)
+                    wtm_group_verifier = wtm.GroupConnector.objects.create(
+                        corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier["_id"], manuscript=self
+                    )
+                verifier_group_users = m.User.objects.filter(groups__name=verifier_group_name)
+                for u in verifier_group_users:
+                    wtc.invite_user_to_group(u.wt_id, wtm_group_verifier.wt_id)
+
+                #TODO: Maybe delete the groups if containerized is disabled and change this logic around doublechecking if things exist
+
 
             if orig.is_containerized() != self.is_containerized() or orig.compute_env != self.compute_env:
                 # This code will delete "nothing" if there was no container previously
@@ -1126,27 +1185,12 @@ class Manuscript(AbstractCreateUpdateModel):
             g.create_manuscript_repo(self)
             g.create_submission_repo(self)
 
-            if (
-                settings.CONTAINER_DRIVER == "wholetale"
-            ):  # NOTE: We don't check is_containerized() here because it'll be false until a compute_env is set. It means we create groups for manuscripts that won't be in wholetale but that's ok
-                # Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
-                wtc = w.WholeTaleCorere(admin=True)
-                wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
-                wtm_group_editor = wtm.GroupConnector.objects.create(
-                    corere_group=group_manuscript_editor, wt_id=wtc_group_editor["_id"], manuscript=self
-                )
-                wtc_group_author = wtc.create_group_with_hash(author_group_name)
-                wtm_group_author = wtm.GroupConnector.objects.create(
-                    corere_group=group_manuscript_author, wt_id=wtc_group_author["_id"], manuscript=self
-                )
-                wtc_group_curator = wtc.create_group_with_hash(curator_group_name)
-                wtm_group_curator = wtm.GroupConnector.objects.create(
-                    corere_group=group_manuscript_curator, wt_id=wtc_group_curator["_id"], manuscript=self
-                )
-                wtc_group_verifier = wtc.create_group_with_hash(verifier_group_name)
-                wtm_group_verifier = wtm.GroupConnector.objects.create(
-                    corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier["_id"], manuscript=self
-                )
+#TODO-WT-BYPASS: This is disabled because I think our new check on every save covers this case.
+#                ... If it does work as expected remove this code as well as the on_create logic for is_containerized
+#                ... Heck, move self.create_wt_groups() up above 
+            # if settings.CONTAINER_DRIVER == "wholetale" and self.is_containerized(on_create=True):  
+            #     # Create 4 WT groups for the soon to be created tale (after we get the author info). Also the wtm.GroupConnectors that connect corere groups and WT groups
+            #     self.create_wt_groups()
 
             group_manuscript_editor.user_set.add(
                 local.user
@@ -1154,6 +1198,7 @@ class Manuscript(AbstractCreateUpdateModel):
 
         if settings.CONTAINER_DRIVER == "wholetale" and self.is_containerized() and not self.manuscript_tales.all().exists():
             # We create our root tale for the manuscript after the compute env has been provided. This triggers before there were ever tales, and after tales were deleted due to compute_env switch.
+            
             wtm_group_editor = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)).wholetale_group
             wtm_group_author = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)).wholetale_group
             wtm_group_curator = Group.objects.get(name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)).wholetale_group
@@ -1190,7 +1235,33 @@ class Manuscript(AbstractCreateUpdateModel):
             # TODO-WT: We aren't handling the case where a compute env is changed and then a user attempts to run a compute env for a previous submission with a different env.
             #         I think my best bet is to make a custom error for this? "The environment type for this manuscript has changed. You cannot run submissions from before this change took place."
 
-    def is_containerized(self):
+    # def create_wt_groups(self):
+    #     wtc = w.WholeTaleCorere(admin=True)
+    #     editor_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, self)
+    #     wtc_group_editor = wtc.create_group_with_hash(editor_group_name)
+    #     wtm_group_editor = wtm.GroupConnector.objects.create(
+    #         corere_group=group_manuscript_editor, wt_id=wtc_group_editor["_id"], manuscript=self
+    #     )
+    #     author_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, self)
+    #     wtc_group_author = wtc.create_group_with_hash(author_group_name)
+    #     wtm_group_author = wtm.GroupConnector.objects.create(
+    #         corere_group=group_manuscript_author, wt_id=wtc_group_author["_id"], manuscript=self
+    #     )
+    #     curator_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, self)
+    #     wtc_group_curator = wtc.create_group_with_hash(curator_group_name)
+    #     wtm_group_curator = wtm.GroupConnector.objects.create(
+    #         corere_group=group_manuscript_curator, wt_id=wtc_group_curator["_id"], manuscript=self
+    #     )
+    #     verifier_group_name = c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, self)
+    #     wtc_group_verifier = wtc.create_group_with_hash(verifier_group_name)
+    #     wtm_group_verifier = wtm.GroupConnector.objects.create(
+    #         corere_group=group_manuscript_verifier, wt_id=wtc_group_verifier["_id"], manuscript=self
+    #     )
+
+    def is_containerized(self, on_create=False):
+        if on_create and not self.compute_env:
+            #For checks that set on_create we assume it is containerized if compute_env has yet to be set
+            return True
         if (
             not self.compute_env
             or self.compute_env == "Other"
@@ -1205,6 +1276,7 @@ class Manuscript(AbstractCreateUpdateModel):
     def get_latest_submission(self):
         return Submission.objects.get(manuscript=self, version_id=self.get_max_submission_version_id())
 
+    #NOTE: While this works, its an extra db call to do this before getting the latest submission.
     def has_submissions(self):
         return self.get_max_submission_version_id() != None
 
@@ -1862,57 +1934,68 @@ def add_history_info(sender, instance, **kwargs):
 # This function is called when a user is added/removed from a group, as well as a group from a user
 # Depending on the way this is called, the instance and pk_set will differ
 # If this errors out, I think trigger won't be cleared and will error on later saves
+# NOTE: This code will not add users to wt_groups for new manuscripts that have yet to have containerized set (default is off). It is handled manually in manuscript save
+# TODO-WT-BYPASS: I think these logger messages about "role groups" no longer apply as we check containerization beforehand. Maybe we didn't even need to check and could have just asked forgiveness?
 @receiver(signal=m2m_changed, sender=User.groups.through)
 def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_set, using, *args, **kwargs):
     if (
         settings.CONTAINER_DRIVER == "wholetale"
-    ):  # TODO-WT: Should I bypass this when self.compute_env != 'Other'? For now I'm just letting it happen. Probably should skip though if only for efficiency
-        wtc = w.WholeTaleCorere(admin=True)
+    ): 
         if model is Group and instance.wt_id and not hasattr(instance, "invite"):
             if action == "post_add":
                 logger.debug("add")
                 logger.debug(pk_set)
                 for pk in pk_set:
-                    try:
-                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.invite_user_to_group(instance.wt_id, wtm_group.wt_id)
-                        logger.debug(f"add {pk}")
-                    except wtm.GroupConnector.DoesNotExist:
-                        logger.debug(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
+                    group = Group.object.get(pk=pk)
+                    if _helper_is_group_one_with_containerized_manuscript(group):
+                        try:
+                            wtc = w.WholeTaleCorere(admin=True)
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                            wtc.invite_user_to_group(instance.wt_id, wtm_group.wt_id)
+                            logger.debug(f"add {pk}")
+                        except wtm.GroupConnector.DoesNotExist:
+                            logger.debug(f'Did not add {pk}. Probably because its a "Role Group" that isn\'t in WT')
             elif action == "post_remove":
                 logger.debug("remove")
                 for pk in pk_set:
-                    try:
-                        wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
-                        wtc.remove_user_from_group(instance.wt_id, wtm_group.wt_id)
-                        logger.debug(f"remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}")
-                    except wtm.GroupConnector.DoesNotExist:
-                        logger.debug(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')
+                    group = Group.object.get(pk=pk)
+                    if _helper_is_group_one_with_containerized_manuscript(group):
+                        try:
+                            wtc = w.WholeTaleCorere(admin=True)
+                            wtm_group = wtm.GroupConnector.objects.get(corere_group__id=pk)
+                            wtc.remove_user_from_group(instance.wt_id, wtm_group.wt_id)
+                            logger.debug(f"remove {pk}: wt_user_id {instance.wt_id} , wt_wt_id {wtm_group.wt_id}")
+                        except wtm.GroupConnector.DoesNotExist:
+                            logger.debug(f'Did not remove {pk}. Probably because its a "Role Group" that isn\'t in WT')
         if model is User:
             if action == "post_add":
                 logger.debug("add")
                 for pk in pk_set:
-                    user = User.objects.get(id=pk)
-                    logger.debug(f'invite {hasattr(user, "invite")}')  # we should expect a new user to have invite
-                    if user.wt_id and not hasattr(user, "invite"):
-                        try:
-                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
-                            logger.debug(f"add {instance.id}")
-                        except wtm.GroupConnector.DoesNotExist:
-                            logger.debug(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT')
+                    if _helper_is_group_one_with_containerized_manuscript(instance):
+                        user = User.objects.get(id=pk)
+                        logger.debug(f'invite {hasattr(user, "invite")}')  # we should expect a new user to have invite
+                        if user.wt_id and not hasattr(user, "invite"):
+                            try:
+                                wtc = w.WholeTaleCorere(admin=True)
+                                wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                                wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
+                                logger.debug(f"add {instance.id}")
+                            except wtm.GroupConnector.DoesNotExist:
+                                logger.debug(f'Did not add {instance.id}. Probably because its a "Role Group" that isn\'t in WT')
             elif action == "post_remove":
                 logger.debug("remove")
                 for pk in pk_set:
-                    user = User.objects.get(id=pk)
-                    logger.debug(f'invite {hasattr(user, "invite")}')  # we should expect a new user to have invite
-                    if user.wt_id and not hasattr(user, "invite"):
-                        try:
-                            wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
-                            wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
-                            logger.debug(f"remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}")
-                        except wtm.GroupConnector.DoesNotExist:
-                            logger.debug(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT')
+                    if _helper_is_group_one_with_containerized_manuscript(instance):
+                        user = User.objects.get(id=pk)
+                        logger.debug(f'invite {hasattr(user, "invite")}')  # we should expect a new user to have invite
+                        if user.wt_id and not hasattr(user, "invite"):
+                            try:
+                                wtc = w.WholeTaleCorere(admin=True)
+                                wtm_group = wtm.GroupConnector.objects.get(corere_group=instance)
+                                wtc.invite_user_to_group(user.wt_id, wtm_group.wt_id)
+                                logger.debug(f"remove {instance.id}: wt_user_id {user.wt_id} , wt_wt_id {wtm_group.wt_id}")
+                            except wtm.GroupConnector.DoesNotExist:
+                                logger.debug(f'Did not remove {instance.id}. Probably because its a "Role Group" that isn\'t in WT')
 
     else:
         update_groups = []
@@ -1938,3 +2021,15 @@ def signal_handler_when_role_groups_change(instance, action, reverse, model, pk_
                         logger.info("Updating the oauth docker container's list of allowed emails, after changes on this group: " + str(group.name))
                         if not settings.SKIP_DOCKER:
                             d.update_oauthproxy_container_authenticated_emails(manuscript)
+
+#TODO: We should probably extend the default Group model and make this a function of it
+#      ... or maybe move to constants, though that would mean importing models to constants
+def _helper_is_group_one_with_containerized_manuscript(group):
+    split_name = group.name.split()
+    if len(split_name) == 3:
+        [_, assigned_obj, m_id] = split_name
+        if assigned_obj == "Manuscript":
+            manuscript = Manuscript.objects.get(id=m_id)
+            return manuscript.is_containerized()
+    else:
+        return False

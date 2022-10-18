@@ -1093,7 +1093,7 @@ class NoteForm(forms.ModelForm):
     # Checker is for passing prefeteched django-guardian permissions
     # https://django-guardian.readthedocs.io/en/stable/userguide/performance.html?highlight=cache#prefetching-permissions
     # Other args are also passed in for performance improvements across all the notes
-    def __init__(self, *args, checkers, manuscript, submission, sub_files, **kwargs):
+    def __init__(self, *args, checkers, manuscript, submission, sub_files, read_only, **kwargs):
         # We have to populate the value of the creator before the super because it is based off an existing field
         # We are basing of an existing field so it correctly populates the default value for creating new notes (to the users name)
         # The best way found to do this was to do it before the super, otherwise it becomes uneditable?
@@ -1167,7 +1167,7 @@ class NoteForm(forms.ModelForm):
 
         if self.instance.id:  # if based off existing note
             # if self.instance.creator != user and not (user.has_any_perm(c.PERM_MANU_CURATE, manuscript) and self.fields['scope'] and self.fields['scope'].initial == 'private'):
-            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance):
+            if not user.has_any_perm(c.PERM_NOTE_CHANGE_N, self.instance) or read_only:
                 for fkey, fval in self.fields.items():
                     # self.deny_edit = True
                     fval.disabled = True  # not sure this is doing anything
@@ -1282,6 +1282,7 @@ class BaseNoteFormSet(BaseInlineFormSet):
     def get_queryset(self):
         if not hasattr(self, "_queryset"):
             self._queryset = get_objects_for_user(CrequestMiddleware.get_request().user, c.PERM_NOTE_VIEW_N, klass=self.queryset.filter())
+#TODO NOTE: Make sure this filtering actually works to prevent private notes. If we keep this query logic at all...
             if not self._queryset.ordered:
                 self._queryset = self._queryset.order_by(self.model._meta.pk.name)
         return self._queryset
@@ -1312,21 +1313,60 @@ class BaseNoteFormSet(BaseInlineFormSet):
     #         # print("")
 
 
-class NoteFormSetHelper(FormHelper):
+class GenericNoteFormSetHelper(FormHelper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.form_method = "post"
         self.form_class = "form-inline"
         self.template = "bootstrap4/table_inline_formset.html"
         self.form_tag = False
-        self.form_id = "note"
         self.render_required_fields = True
 
+class AuthorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "author_note"
 
-NoteSubmissionFormset = inlineformset_factory(
+class EditorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "editor_note"
+
+class CuratorNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "curator_note"
+
+class VerifierNoteFormSetHelper(GenericNoteFormSetHelper):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.form_id = "verifier_note"
+
+NoteSubmissionFormsetInPhase = inlineformset_factory(
     m.Submission,
     m.Note,
     extra=1,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    fields=("creator", "text"),
+    widgets={"text": Textarea(attrs={"rows": 1, "placeholder": "Write your new note..."})},
+)
+
+NoteSubmissionFormsetInPhaseReadOnly = inlineformset_factory(
+    m.Submission,
+    m.Note,
+    extra=0,
+    form=NoteForm,
+    formset=BaseNoteFormSet,
+    can_delete=False,
+    fields=("creator", "text"),
+    widgets={"text": Textarea(attrs={"rows": 1, "placeholder": "Write your new note..."})},
+)
+
+NoteSubmissionFormsetOutOfPhase = inlineformset_factory(
+    m.Submission,
+    m.Note,
+    extra=0,
     form=NoteForm,
     formset=BaseNoteFormSet,
     fields=("creator", "text"),
@@ -1556,6 +1596,12 @@ class SubmissionEditorDateForm(forms.ModelForm):
             "editor_submit_date": SelectDateWidget(years=range(2020, datetime.date.today().year + 1)),
         }
 
+    def clean(self):
+        editor_submit_date = self.cleaned_data.get("editor_submit_date")
+
+        if not editor_submit_date and not 'editor_submit_date' in self.errors.as_data():
+            self.add_error("editor_submit_date", "This field is required.") #We only add this error if there are no other ones (e.g. date is invalid)
+    
     # def __init__ (self, *args, **kwargs):
     #     super(SubmissionEditorDateForm, self).__init__(*args, **kwargs)
     #     self.layout = Layout(

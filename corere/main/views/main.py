@@ -125,15 +125,16 @@ def manuscript_landing(request, id=None):
 
     # Submission button logic in top button row. Original from datatables.py
 
+    createSubmissionButton = False
+    createSubmissionButtonRejected = False
     editSubmissionButton = False
+    editSubmissionButtonRejected = False
     reviewSubmissionButtonMain = False
     reviewSubmissionButtonMore = False
     updateReviewSubmissionButtonMain = False
     updateReviewSubmissionButtonMore = False
     sendReportButton = False
     returnSubmissionButton = False
-    latest_submission_id = None
-    createSubmissionButton = False
     launchContainerCurrentSubButton = False
     dataverseUploadManuscriptButtonMain = False
     dataverseUploadManuscriptButtonMore = False
@@ -142,20 +143,31 @@ def manuscript_landing(request, id=None):
     notifyManuscriptButtonMore = False
 
     submission_count = manuscript.manuscript_submissions.count()
+    latest_submission_id = ""
+    rejected_submission_id = ""
 
     if has_transition_perm(manuscript.notify_noop, request.user):
         notifyManuscriptButtonMore = True
 
     if has_transition_perm(manuscript.add_submission_noop, request.user):
-        createSubmissionButton = True
+        if not manuscript.has_submissions():
+            createSubmissionButton = True                    
+        else:
+            latest_submission = manuscript.get_latest_submission()
+            createSubmissionButtonRejected = True
+
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                rejected_submission_id = latest_submission.id
+            else:
+                rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
     else:
         try:
-            latestSubmission = manuscript.get_latest_submission()
-            latest_submission_id = latestSubmission.id
+            latest_submission = manuscript.get_latest_submission()
+            latest_submission_id = latest_submission.id
 
             # TODO: I want a different label for edit/review even if they are the same page in the end
 
-            if has_transition_perm(latestSubmission.send_report, request.user):
+            if has_transition_perm(latest_submission.send_report, request.user):
                 sendReportButton = True
 
             if has_transition_perm(manuscript.dataverse_upload_noop, request.user):
@@ -174,12 +186,12 @@ def manuscript_landing(request, id=None):
                         dataverseUploadManuscriptButtonMore = True
                     else:
                         dataverseUploadManuscriptButtonMain = True
-            if has_transition_perm(latestSubmission.finish_submission, request.user):
+            if has_transition_perm(latest_submission.finish_submission, request.user):
                 returnSubmissionButton = True
             if (
-                has_transition_perm(latestSubmission.add_edition_noop, request.user)
-                or has_transition_perm(latestSubmission.add_curation_noop, request.user)
-                or has_transition_perm(latestSubmission.add_verification_noop, request.user)
+                has_transition_perm(latest_submission.add_edition_noop, request.user)
+                or has_transition_perm(latest_submission.add_curation_noop, request.user)
+                or has_transition_perm(latest_submission.add_verification_noop, request.user)
             ):
                 if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:
                     reviewSubmissionButtonMore = True
@@ -187,7 +199,7 @@ def manuscript_landing(request, id=None):
                     reviewSubmissionButtonMain = True
             else:
                 try:
-                    if has_transition_perm(latestSubmission.submission_edition.edit_noop, request.user):
+                    if has_transition_perm(latest_submission.submission_edition.edit_noop, request.user):
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:
                             updateReviewSubmissionButtonMore = True
                         else:
@@ -197,8 +209,8 @@ def manuscript_landing(request, id=None):
 
                 try:
                     if has_transition_perm(
-                        latestSubmission.submission_curation.edit_noop, request.user
-                    ):  # and latestSubmission._status == m.Submission.Status.IN_PROGRESS_CURATION
+                        latest_submission.submission_curation.edit_noop, request.user
+                    ):  # and latest_submission._status == m.Submission.Status.IN_PROGRESS_CURATION
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:
                             updateReviewSubmissionButtonMore = True
                         else:
@@ -208,8 +220,8 @@ def manuscript_landing(request, id=None):
 
                 try:
                     if has_transition_perm(
-                        latestSubmission.submission_verification.edit_noop, request.user
-                    ):  # and latestSubmission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION
+                        latest_submission.submission_verification.edit_noop, request.user
+                    ):  # and latest_submission._status == m.Submission.Status.IN_PROGRESS_VERIFICATION
                         if returnSubmissionButton or sendReportButton or dataversePullCitationButtonMain or dataverseUploadManuscriptButtonMain:
                             updateReviewSubmissionButtonMore = True
                         else:
@@ -230,24 +242,34 @@ def manuscript_landing(request, id=None):
                 or dataverseUploadManuscriptButtonMore
                 or updateReviewSubmissionButtonMain
                 or updateReviewSubmissionButtonMore
-            ) and has_transition_perm(latestSubmission.edit_noop, request.user):
-                editSubmissionButton = True
+            ) and has_transition_perm(latest_submission.edit_noop, request.user):
+                if latest_submission._status != m.Submission.Status.REJECTED_EDITOR and latest_submission.version_id == 1:
+                    editSubmissionButton = True                    
+                else:
+                    editSubmissionButtonRejected = True
             # Similar logic repeated in main page view for showing the sub button for the manuscript level
-            if latestSubmission.manuscript.compute_env != "Other" and settings.CONTAINER_DRIVER == "wholetale":
-                dominant_corere_group = w.get_dominant_group_connector(request.user, latestSubmission).corere_group
+            if latest_submission.manuscript.compute_env != "Other" and settings.CONTAINER_DRIVER == "wholetale":
+                dominant_corere_group = w.get_dominant_group_connector(request.user, latest_submission).corere_group
                 if dominant_corere_group:
                     if dominant_corere_group.name.startswith("Author"):
-                        if has_transition_perm(latestSubmission.edit_noop, request.user):
+                        if has_transition_perm(latest_submission.edit_noop, request.user):
                             launchContainerCurrentSubButton = True
                     else:
-                        if has_transition_perm(latestSubmission.view_noop, request.user):
+                        if has_transition_perm(latest_submission.view_noop, request.user):
                             launchContainerCurrentSubButton = True
+
+
+            if latest_submission._status == m.Submission.Status.REJECTED_EDITOR or latest_submission._status == m.Submission.Status.RETURNED:
+                rejected_submission_id = latest_submission.id
+            else:
+                rejected_submission_id = m.Submission.objects.get(manuscript=manuscript, version_id=latest_submission.version_id-1).id
 
         except m.Submission.DoesNotExist:
             pass #TODO: When do we hit this?
 
     args = {
         "user": request.user,
+        "rejected_submission_id": rejected_submission_id,
         "latest_submission_id": latest_submission_id,  # Will be None if no submissions
         "manuscript_id": id,
         "submission_count": submission_count,
@@ -279,14 +301,16 @@ def manuscript_landing(request, id=None):
         # 'ADD_MANUSCRIPT_PERM_STRING': c.perm_path(c.PERM_MANU_ADD_M),
         "page_title": _("manuscript_landing_pageTitle"),
         "create_sub_allowed": str(has_transition_perm(manuscript.add_submission_noop, request.user)).lower,
+        "createSubmissionButton": createSubmissionButton,
+        "createSubmissionButtonRejected": createSubmissionButtonRejected,
         "editSubmissionButton": editSubmissionButton,
+        "editSubmissionButtonRejected": editSubmissionButtonRejected,
         "reviewSubmissionButtonMain": reviewSubmissionButtonMain,
         "reviewSubmissionButtonMore": reviewSubmissionButtonMore,
         "updateReviewSubmissionButtonMain": updateReviewSubmissionButtonMain,
         "updateReviewSubmissionButtonMore": updateReviewSubmissionButtonMore,
         "sendReportButton": sendReportButton,
         "returnSubmissionButton": returnSubmissionButton,
-        "createSubmissionButton": createSubmissionButton,
         "launchContainerCurrentSubButton": launchContainerCurrentSubButton,
         "dataverseUploadManuscriptButtonMain": dataverseUploadManuscriptButtonMain,
         "dataverseUploadManuscriptButtonMore": dataverseUploadManuscriptButtonMore,

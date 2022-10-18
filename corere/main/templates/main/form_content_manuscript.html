@@ -37,8 +37,13 @@
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="location.href='/manuscript/{{manuscript_id}}/'">
         <input type="submit" name="submit_continue" value="Create and Continue" title="Create your new manuscript and proceed to upload files" aria-label="Create your new manuscript and proceed to upload files">
     {% elif from_submission %}
+        {% if rejected_manuscript %}
+            <input type="submit" value="Back" name="submit_back" title="Return to rejected submission info page" aria-label="Return to rejected submission info page">
+            <input type="submit" name="submit_continue_submission" value="Save and Continue" title="Save your updated manuscript info and proceed to upload data/code files" aria-label="Save your updated manuscript info and proceed to upload data/code files">
+        {% else %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your submission. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
         <input type="submit" name="submit_continue_submission" value="Save and Continue" title="Save your updated manuscript info and proceed to upload data/code files" aria-label="Save your updated manuscript info and proceed to upload data/code files">
+        {% endif %}
     {% elif m_status == "new" %}
         <input type=button value="Home" title="Return to manuscript landing page" aria-label="Return to manuscript landing page" onClick="val = confirm('You must complete these forms to create your manuscript. Are you sure you\'d like to return home?'); if(val){location.href='/manuscript/{{manuscript_id}}/';}">
         <input type="submit" name="submit_continue" value="Save and Continue" title="Save your updated manuscript info and proceed to upload files" aria-label="Save your updated manuscript info and proceed to upload files">

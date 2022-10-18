@@ -46,7 +46,9 @@ urlpatterns = [
     path("manuscript/<int:id>/remind/", classes.ManuscriptRemindView.as_view(), name="manuscript_remind"),
 
     # TODO: Maybe switch all submission endpoints to be manuscript/<mid>/submission/<version_id>/...
-    path("submission/<int:id>/info/", classes.SubmissionEditView.as_view(), name="submission_info"),
+    path("submission/<int:id>/info/", classes.SubmissionInfoView.as_view(), name="submission_info"),
+    path("submission/<int:id>/review/", classes.SubmissionReviewView.as_view(), name="submission_review"),
+    path("submission/<int:id>/update/", classes.SubmissionUpdateView.as_view(), name="submission_update"),
     # path('submission/<int:id>/editfiles/', classes.SubmissionEditFilesView.as_view(), name="submission_editfiles"),
     path("submission/<int:id>/uploadfiles/", classes.SubmissionUploadFilesView.as_view(), name="submission_uploadfiles"),
     path(

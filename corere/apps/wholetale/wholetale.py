@@ -176,7 +176,7 @@ class WholeTale:
             self.gc.post("group/{}/invitation".format(group_id), parameters={"level": self.AccessType.READ, "quiet": True}, data={"userId": user_id})
         except requests.HTTPError as e:
             if e.response.status_code == 400 and json.loads(e.responseText)["message"] == "User is already in this group.":
-                logger.warning(f"Whole tale user {user_id} was added to group {group_id}, of which they were already a member.")
+                logger.warning(f"Whole tale user {user_id} was added to group {group_id}, of which they were already a member. This may be an expected outcome because a manuscript was switched back and forth from being containerized.")
                 return
             raise e
 

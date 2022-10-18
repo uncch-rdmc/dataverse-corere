@@ -111,17 +111,28 @@ def get_pretty_user_list_by_group_prefix(group):
 
 
 # TODO: Write one of these for manuscript? Even there really isn't logic?
-def get_progress_bar_html_submission(progress_step_text, submission):
-    if (
-        submission._status == m.Submission.Status.NEW
-        or submission._status == m.Submission.Status.REJECTED_EDITOR
-        or submission._status == m.Submission.Status.RETURNED
-    ):
-        if submission.manuscript.is_containerized():
+# TODO: Maybe switch this to allow passing submission or manuscript, because the cases where we have the sub we don't need to do the manuscript logic
+#   ... We could almost get away with just passing submission, but the case where we are creating a sub after the 1st means we need manuscript
+def get_progress_bar_html_submission(progress_step_text, manuscript):
+    if not manuscript.has_submissions():
+        if manuscript.is_containerized():
             return generate_progress_bar_html(c.progress_list_container_submission, progress_step_text)
         else:
             return generate_progress_bar_html(c.progress_list_external_submission, progress_step_text)
 
+    latest_submission = manuscript.get_latest_submission()
+
+    #... this doesn't catch what happens on a new submission after the 1st I think
+    if latest_submission._status != m.Submission.Status.RETURNED and latest_submission._status != m.Submission.Status.REJECTED_EDITOR and latest_submission.version_id == 1:
+        if manuscript.is_containerized():
+            return generate_progress_bar_html(c.progress_list_container_submission, progress_step_text)
+        else:
+            return generate_progress_bar_html(c.progress_list_external_submission, progress_step_text)
+    else:
+        if manuscript.is_containerized():
+            return generate_progress_bar_html(c.progress_list_container_submission_rejected, progress_step_text)
+        else:
+            return generate_progress_bar_html(c.progress_list_external_submission_rejected, progress_step_text)
 
 def generate_progress_bar_html(step_list, last_active_step):
     list_html = '<ol class="progtrckr" data-progtrckr-steps="' + str(len(step_list)) + '">'

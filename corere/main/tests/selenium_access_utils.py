@@ -4,7 +4,7 @@
 
 # Tests the state of our accesss dictionaries
 def check_access(test, browser, manuscript=None, submission=None, assert_dict=None):
-    # return #TODO DISABLE TEST CODE
+    #return #TODO DISABLE TEST CODE
     if assert_dict == None:
         raise Exception("assert_dict must be set for check_access")
     if manuscript != None and submission != None:
@@ -23,37 +23,63 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
 
     for url_post, status_dict in assert_dict.items():
         full_url = test.live_server_url + url_pre + url_post
-        for method, status_code in status_dict.items():
-            # print("")
-            # print(full_url)
-            # print("...")
-
+        for method, expected_status_code in status_dict.items():
             try:
-
                 if method.startswith("GET"): #TODO: Add debug for GET
                     browser.get(full_url)
-                    # for request in browser.requests:
-                    #     if(request.response):
-                    #         print("{} - {}".format(request.url, request.response.status_code))
                     for request in browser.requests:
                         if request.url == full_url and request.response:
-                            test.assertEqual(status_code, request.response.status_code, msg=method + " " + full_url)
+                            returned_status_code = request.response.status_code
                             del browser.requests
+                            
                 elif method.startswith("POST"):
-                    # This is for posting without a body, which we use in a few places to progress the manuscript etc.
-                    # We'll need something more verbose if we want to pass a body
+                    # # This is for posting without a body, which we use in a few places to progress the manuscript etc.
+                    # # We'll need something more verbose if we want to pass a body
 
-                    #NOTE: Comment the below call/assert out if you are not running headless. Currently it'll blow up
-                    result_status = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
-                    test.assertEqual(status_code, result_status, msg="POST " + full_url)
+                    #continue #NOTE: Enable this continue to bypass post testing. This is needed when not running all your browsers headless
+                    result = call_request_method(browser, "POST", full_url, debug=method.endswith("-DEBUG"))
+                    returned_status_code = result["status"]
+
 
                 # elif method == "POST-DEBUG":
                 #     result_status = call_request_method(browser, "POST", full_url, debug=True)
                 #     test.assertEqual(status_code, result_status, msg=method + " " + full_url)
 
-
                 else:
                     raise Exception("NO OTHER METHODS SUPPORTED")
+
+                #TODO: How slow is this? should it be disabled?
+                #TODO: This was previously outside post, but the code calls a post. Can I add a version for get?
+                if returned_status_code != expected_status_code and returned_status_code == 500:
+
+                    if method.startswith("GET"):
+                        html_body = str(request.response._body.decode('unicode-escape'))
+                    elif method.startswith("POST"):
+                        html_body = call_request_method(browser, "POST", full_url, print_html=True)
+
+                    try:
+                        html_error = 'Traceback (most recent call last):' + html_body.split('Traceback (most recent call last):',1)[1] #get all starting at traceback
+                        html_error = html_error.split('</textarea>',1)[0]
+                        print("")
+                        print("=== Error text from HTML ===")
+                        print("")
+
+                        print(html_error) #NOTE: I tried using unquote here to fix things like &#x27;NoteFormFormSet&#x27; , but I think it should be done on the javascript side instead
+                        print("")
+                        print("=== End error text ===")
+                        print("")
+                    except IndexError:
+                        print("No error presented on the 500 page that could be found by our selenium test.")
+
+
+                    #print(result)
+                    # print(call_request_method(browser, "POST", full_url, print_html=True))
+
+
+
+                test.assertEqual(expected_status_code, returned_status_code, msg=method + " " + full_url)
+
+
 
             except Exception as e:
                 # This block was disabled as we now just disable cors for our selenium tests
@@ -105,14 +131,25 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
     #     test.assertEqual(response.status_code, status_code, msg=method + ": " + full_url)
 
 
-def call_request_method(browser, method, endpoint, debug=False):
-    fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
+def call_request_method(browser, method, endpoint, debug=False, print_html=False):
+    if print_html:
+        fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then((response) => {return response.text();})"
+    else:
+        fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'})"
+    # NOTE: These calls below are failed attempts to return both the status and the response text at the same time. This requires a better understanding of JS promises than I have.
+    # This was in an attempt to get the html body back so it could be printed when there is a 500.
+    # Even if this worked it may have been too slow waiting for the response text each time before returning it.
+    # If we do want to go down this road later we may have to pass the status codes in here and check in the JS.
+    # ... or just call the same function again on a 500 error and just return the text. I may do that shortly
+
+    # fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then((response) => {return [response.status, response.text()];})"
+    # fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then(response => response.text().then(text => return {status: response.status, body: data})))"
     result = browser.execute_script(fetch_javascript)
     if debug:
         # print("DEBUG")
         # print(fetch_javascript)
         print("DEBUG: " + str(result))
-    return result["status"]
+    return result
     # TODO: see manuscript_landing.postToSubUrl and the .then() section if we want to go to the endpoint after.
 
 
@@ -329,7 +366,7 @@ m_dict_yes_curator_access.update(
 
 # TODO: access on some of these change with phase
 s_dict_admin_access = {
-    "info/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
+    "review/": {"GET": 200},  # TODO-FIX: Not testing post because it 500s at some phases. Investigate
     "uploadfiles/": {"GET": 200, "POST": 200},  # TODO: Post disabled because it returns literally nothing, probably due to changing the file datatable to be more restrictive on when its visible    
     "confirmfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 405, "POST": 404},  # Test with files to get actual 200
@@ -375,7 +412,7 @@ s_dict_yes_access_curator__in_phase.update(
 )
 
 s_dict_no_access = {
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},
     "confirmfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 404, "POST": 404},
@@ -409,7 +446,7 @@ s_dict_no_access_anon = dict.fromkeys(s_dict_no_access, {"GET": 302, "POST": 200
 s_dict_author_access__out_of_phase = s_dict_no_access.copy()
 s_dict_author_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -435,7 +472,7 @@ s_dict_author_access__in_phase.update(
 s_dict_editor_access__out_of_phase = s_dict_no_access.copy()
 s_dict_editor_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -449,7 +486,7 @@ s_dict_editor_access__out_of_phase.update(
 s_dict_editor_access__in_phase = s_dict_no_access.copy()
 s_dict_editor_access__in_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -483,7 +520,7 @@ s_dict_no_access_curator__in_phase.update(
 s_dict_verifier_access__out_of_phase = s_dict_no_access.copy()
 s_dict_verifier_access__out_of_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe the 500 is a phase issue. Or a lack of files?
 
@@ -497,7 +534,7 @@ s_dict_verifier_access__out_of_phase.update(
 s_dict_verifier_access__in_phase = s_dict_no_access.copy()
 s_dict_verifier_access__in_phase.update(
     {
-        "info/": {"GET": 200, "POST": 200},
+        "review/": {"GET": 200, "POST": 200},
         "view/": {"GET": 200, "POST": 200},
         "viewfiles/": {"GET": 200, "POST": 500},  # TODO-FIX: Maybe its a phase issue (happens during NEW). Or a lack of files?
         "downloadfile/": {"GET": 404, "POST": 405},  # Need a query string to not 404
@@ -513,7 +550,7 @@ s_dict_verifier_access__in_phase.update(
 
 s_dict_yes_general_access__previous = {
     "view/": {"GET": 200, "POST": 200},
-    "info/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
+    "review/": {"GET": 200, "POST": 200}, #TODO: POST was 200 for verifier but 500 for curator_admin
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
     "uploadfiles/": {"GET": 404, "POST": 404}, #I guess uploading files should 404 for everyone? The submission is over? #Nope, 200 for curator admin, 404 for verifier... tho this may be because verifier could never upload?
     "uploader/": {"GET": 404, "POST": 404},
@@ -522,7 +559,7 @@ s_dict_yes_general_access__previous = {
 
 s_dict_yes_full_access__previous = {
     "view/": {"GET": 200, "POST": 200},
-    "info/": {"GET": 200, "POST": 500}, #TODO: Why 500?
+    "review/": {"GET": 200, "POST": 500}, #TODO: Why 500?
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: why 500?
     "uploadfiles/": {"GET": 200, "POST": 200},
     "uploader/": {"GET": 405, "POST": 404},
@@ -531,14 +568,14 @@ s_dict_yes_full_access__previous = {
 
 # s_dict_previous_submission_read_access = {
 #     "view/": {"GET": 200, "POST": 200}, #Should out of phase be able to post notes in view?
-#     "info/": {"GET": 404, "POST": 404},
+#     "review/": {"GET": 404, "POST": 404},
 #     "viewfiles/": {"GET": 200, "POST": 404},
 #     "uploadfiles/": {"GET": 404, "POST": 404}
 # }
 
 s_dict_no_curator_access__previous = {
     "view/": {"GET": 404, "POST": 404},
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 200, "POST": 500}, #TODO: Why can curator not view but can viewfiles. Fix with other normal curator fixes
     "uploadfiles/": {"GET": 404, "POST": 404},
     "uploader/": {"GET": 404, "POST": 404},
@@ -547,7 +584,7 @@ s_dict_no_curator_access__previous = {
 
 s_dict_no_access__previous = {
     "view/": {"GET": 404, "POST": 404},
-    "info/": {"GET": 404, "POST": 404},
+    "review/": {"GET": 404, "POST": 404},
     "viewfiles/": {"GET": 404, "POST": 404},
     "uploadfiles/": {"GET": 404, "POST": 404},     
     "uploader/": {"GET": 404, "POST": 404},
@@ -557,7 +594,7 @@ s_dict_no_access__previous = {
 #TODO: All posts 200??
 s_dict_anon_no_access__previous = {
     "view/": {"GET": 302, "POST": 200},
-    "info/": {"GET": 302, "POST": 200},
+    "review/": {"GET": 302, "POST": 200},
     "viewfiles/": {"GET": 302, "POST": 200},
     "uploadfiles/": {"GET": 302, "POST": 200},
     "uploader/": {"GET": 302, "POST": 200},
