@@ -35,7 +35,7 @@
     })
 </script>
 
-{% if s_version > 1%}
+{% comment %} {% if s_version > 1%} {% endcomment %}
 <script type="text/javascript">
     $(function () {
         var launch_issues_text_box = document.getElementById('id_launch_issues');
@@ -58,7 +58,7 @@
 </script>
 
 <script src="{% static 'main/submission_datatable.js' %}" type="text/javascript"></script>
-{% endif %}
+{% comment %} {% endif %} {% endcomment %}
 
 {% include "main/page_header.html" %}    
 <form id="generic_object_form" action="" method="post" enctype="multipart/form-data">

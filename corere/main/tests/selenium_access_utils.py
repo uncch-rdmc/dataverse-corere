@@ -2,7 +2,7 @@
 # - https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
 #   - It looks like you can eval javascript to do other request types...
 
-# Tests the state of our accesss dictionaries
+# Tests the state of our accesss dictionaries. Note that this requires cors to be disabled. Also running not-headless breaks POST calls.
 def check_access(test, browser, manuscript=None, submission=None, assert_dict=None):
     #return #TODO DISABLE TEST CODE
     if assert_dict == None:
@@ -71,40 +71,9 @@ def check_access(test, browser, manuscript=None, submission=None, assert_dict=No
                     except IndexError:
                         print("No error presented on the 500 page that could be found by our selenium test.")
 
-
-                    #print(result)
-                    # print(call_request_method(browser, "POST", full_url, print_html=True))
-
-
-
                 test.assertEqual(expected_status_code, returned_status_code, msg=method + " " + full_url)
 
-
-
             except Exception as e:
-                # This block was disabled as we now just disable cors for our selenium tests
-
-                # #TODO: We are catching these post errors that seem to be blowing up because of CORS under the hood.
-                # #      I'm not quite sure what caused these, it could have been template refactor but honestly may just be chrome updating?
-                # #
-                # #      Here is some more verbose error messaging when calling these via the console on our curator selenium browser:
-
-                #             #fetch('http://localhost:60492/manuscript/1/uploader/', {method: 'POST',credentials: 'include'})
-                #             #Promise {<pending>}
-                #             #localhost/:1 Access to fetch at 'http://localhost:60492/manuscript/1/uploader/' from origin 'http://localhost:61565' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.
-                #             #VM323:1          POST http://localhost:60492/manuscript/1/uploader/ net::ERR_FAILED 502
-                #             #(anonymous) @ VM323:1
-                #             #VM323:1                  Uncaught (in promise) TypeError: Failed to fetch
-                #             #    at <anonymous>:1:1
-                #             #(anonymous) @ VM323:1
-                #             #fetch('http://localhost:60492/manuscript/1/uploader/', {method: 'POST',credentials: 'include', mode: 'no-cors'})
-                #             #Promise {<pending>}
-                #             #VM371:1          POST http://localhost:60492/manuscript/1/uploader/ net::ERR_ABORTED 502 (Bad Gateway)
-
-                # if(method == 'POST' and hasattr(e, 'msg') and (e.msg.startswith('javascript error') or e.msg.startswith('unexpected alert open'))):
-                #     print("Exception with javascript and post on url {}. This seems to be a CORS issue, maybe manifesting in the recent version of chrome. Bypassing for now".format(full_url))
-                #     pass #unneeded?
-
                 print("Exception calling {} on url {}".format(method, full_url))
                 print(e.__dict__)
                 raise e
@@ -146,12 +115,8 @@ def call_request_method(browser, method, endpoint, debug=False, print_html=False
     # fetch_javascript = "return fetch('" + endpoint + "', {method: '" + method + "',credentials: 'include'}).then(response => response.text().then(text => return {status: response.status, body: data})))"
     result = browser.execute_script(fetch_javascript)
     if debug:
-        # print("DEBUG")
-        # print(fetch_javascript)
         print("DEBUG: " + str(result))
     return result
-    # TODO: see manuscript_landing.postToSubUrl and the .then() section if we want to go to the endpoint after.
-
 
 ###############################
 ###############################
@@ -363,6 +328,9 @@ m_dict_yes_curator_access.update(
 #############################
 ##### Submission Access #####
 #############################
+
+# TODO: Missing endpoints:
+# - info/
 
 # TODO: access on some of these change with phase
 s_dict_admin_access = {
