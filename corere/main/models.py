@@ -1742,7 +1742,7 @@ class Note(AbstractCreateUpdateModel):
                     self.ref_cycle = self.RefCycle.CURATION  # If later and not assigned as either curator or verifier we default to curator
                 else:
                     logger.error(
-                        "Non curator/verifier should never be editing notes out of phase. Note {} , User {} .".format(self.id, local.user.username)
+                        "Non curator/verifier should never be editing notes out of phase. Note {} , User {} .".format(self.id, local.user.email)
                     )
                     raise Exception("Non curator/verifier should never be editing notes out of phase")
             else:

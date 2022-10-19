@@ -89,6 +89,5 @@ urlpatterns = [
     path("site_actions/invitecurator/", users.invite_curator, name="invitecurator"),
     path("site_actions/inviteverifier/", users.invite_verifier, name="inviteverifier"),
     # path('switch_role/', main.switch_role, name="switch_role"),
-    # TODO: We need to think better about how we handle this table. It exposes all users usernames (which are emails) and roles. There should probably be a different endpoint for just authors
     path("user_table/", datatables.UserJson.as_view(), name="user_table"),
 ]

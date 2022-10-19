@@ -566,7 +566,9 @@ def account_user_details(request):
 
     if request.method == "POST":
         if form.is_valid():
-            form.save()
+            user = form.save()
+            user.username = user.email
+            user.save()
             msg = _("user_infoUpdated_banner")
             list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, msg)
@@ -727,6 +729,6 @@ def helper_generate_select_table_info(role_name, group_substring):
     for u in users:
         # {key1: "foo", key2: someObj}
         count = u.groups.filter(name__contains=group_substring).exclude(name__endswith=c.GROUP_COMPLETED_SUFFIX).count()
-        table_dict += "['" + u.username + "','" + str(count) + "'],"
+        table_dict += "['" + u.email + "','" + str(count) + "'],"
     table_dict += "]"
     return table_dict

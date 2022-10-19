@@ -1,6 +1,6 @@
 {% load static %}
 
-<script> username = '{{ user.get_username }}' </script>
+<script> user_email = '{{ user.email }}' </script>
 {% comment %} 
 Grabbed from: https://stackoverflow.com/questions/25651204/
 This code creates fake disabled buttons/inputs upon submit while hiding the real ones. This is because if we disable the real buttons then the value of the button does not pass in the form body.
