@@ -34,7 +34,7 @@
 <h6 class="my-3">{{role_name}}s assigned to Manuscript</h6>
 <table class="table table-striped table-bordered">
     <tr>
-        <th>Email</th>
+        <th>User</th>
         {% if role_name != "Author" or can_remove_author %}
             <th>Total {{role_name}} Assignments</th>
             <th>Unassign</th>
@@ -42,7 +42,7 @@
     </tr>
     {% for u in assigned_users %}
     <tr>
-        <td>{{ u.email }}</td>
+        <td>{{u.first_name}} {{u.last_name}} ({{ u.email }})</td>
         {% if role_name != "Author" or can_remove_author %}
             <td>{{ u|groups_contain_count_no_completed:group_substring }}</td>
             <td> <button class="btn btn-secondary btn-sm" type="button" onclick="unassign('{{id}}','{{role_name|lower}}','{{u.id}}')" title="Unassign {{ u.email }} as a {{role_name|lower}} from the manuscript" aria-label="Unassign {{ u.email }} as a {{role_name|lower}} from the manuscript"><span class="fas fa-user-minus"></span></button></td>

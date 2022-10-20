@@ -729,6 +729,6 @@ def helper_generate_select_table_info(role_name, group_substring):
     for u in users:
         # {key1: "foo", key2: someObj}
         count = u.groups.filter(name__contains=group_substring).exclude(name__endswith=c.GROUP_COMPLETED_SUFFIX).count()
-        table_dict += "['" + u.email + "','" + str(count) + "'],"
+        table_dict += "['" + u.username + "','" + u.email + "|" + u.first_name + " " + u.last_name + "|"+str(count) + "'],"
     table_dict += "]"
     return table_dict

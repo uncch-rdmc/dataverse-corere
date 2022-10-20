@@ -12,7 +12,7 @@ export POSTGRES_PASSWORD=
 export EMAIL_HOST_USER=
 export EMAIL_HOST_PASSWORD=
 
-#After installation/change, call manage.py createsuperuser --noinput to enable superuser
+# After installation/change, call manage.py createsuperuser --noinput to enable superuser
 export DJANGO_SUPERUSER_USERNAME=
 export DJANGO_SUPERUSER_EMAIL=
 export DJANGO_SUPERUSER_PASSWORD=
