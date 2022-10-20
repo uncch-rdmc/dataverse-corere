@@ -166,7 +166,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        authors = authors + user.email + ", "
+                        authors = authors + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
                     
             return authors.rstrip(', ')
@@ -179,7 +179,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        editors = editors + user.email + ", "
+                        editors = editors + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return editors.rstrip(', ')
@@ -192,7 +192,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        curators = curators + user.email + ", "
+                        curators = curators + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return curators.rstrip(', ')
@@ -205,7 +205,7 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        verifiers = verifiers + user.email + ", "
+                        verifiers = verifiers + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return verifiers.rstrip(', ')
