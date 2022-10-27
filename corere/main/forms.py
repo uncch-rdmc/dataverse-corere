@@ -146,7 +146,6 @@ class UserDetailsFormHelper(FormHelper):
                 ),
                 css_class="row",
             ),
-            "username",
             "email",
         )
 
@@ -242,7 +241,7 @@ class VerifierAddForm(forms.Form):
 class EditUserForm(forms.ModelForm):
     class Meta:
         model = m.User
-        fields = ["username", "email", "first_name", "last_name"]
+        fields = ["email", "first_name", "last_name"]
 
 
 # Note: not used on Authors, as we always want them assigned when created

@@ -36,7 +36,7 @@
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {{ user.get_username }} <span class="notification_count badge bg-danger align-middle">{% live_notify_badge %}</span>
+            {{ user.email }} <span class="notification_count badge bg-danger align-middle">{% live_notify_badge %}</span>
           </a>
           <div class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
             {% register_notify_callbacks callbacks='fill_notification_badge,fill_notification_list,custom_show_additional' fetch='10' %} {% comment %} this is disabled during development to not fill up my logs {% endcomment %}

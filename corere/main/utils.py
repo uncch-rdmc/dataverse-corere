@@ -67,7 +67,7 @@ def get_role_name_for_form(user, manuscript, session, create):
         if user.groups.filter(name=c.GROUP_ROLE_EDITOR).exists():
             return "Editor"
         else:
-            logger.error("User " + user.username + " requested role name to create a manuscript, when they do not have the group.")
+            logger.error("User " + user.email + " requested role name to create a manuscript, when they do not have the group.")
             raise Http404()
 
     group_base_string = " Manuscript " + str(manuscript.id)
@@ -79,7 +79,7 @@ def get_role_name_for_form(user, manuscript, session, create):
     # else:
     logger.info(
         "User "
-        + user.username
+        + user.email
         + " active_role is not available for them on manuscript "
         + str(manuscript.id)
         + ". This may be because they have different roles for different manuscripts."
@@ -95,7 +95,7 @@ def get_role_name_for_form(user, manuscript, session, create):
     elif user.groups.filter(name="Author" + group_base_string).exists():
         return "Author"
     else:
-        logger.error("User " + user.username + " requested role for manuscript " + str(manuscript.id) + " that they have no roles on")
+        logger.error("User " + user.email + " requested role for manuscript " + str(manuscript.id) + " that they have no roles on")
         raise Http404()
 
 

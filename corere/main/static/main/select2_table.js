@@ -1,12 +1,18 @@
 function generateResultTable(data) {
-    var count = user_table_map.get(data.text)
+    if(data.text == "Searching…") {
+      return ""
+    }
+    console.log(user_table_map.get(data.text));
+    console.log(user_table_map.get(data.text).split("|",3))
+    info = user_table_map.get(data.text).split("|",3);
   
     var result = $(
       '<div class="row">' +
-      '<div class="col-md-6 col-xs-6">' + data.text + '</div>' +
-      '<div class="col-md-6 col-xs-6">' + count + ' Assignments</div>' +
+      '<div class="col-md-6 col-xs-6">' + info[1] +' (' + info[0] + ')</div>' +
+      '<div class="col-md-6 col-xs-6">' + info[2] + ' Assignments</div>' +
       '</div>'
     );
+
     return result;
 }
 
@@ -15,4 +21,5 @@ $(function() {
       width: '100%',
       templateResult: generateResultTable
     });
+
   })

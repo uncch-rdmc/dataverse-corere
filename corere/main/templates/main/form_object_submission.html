@@ -341,7 +341,7 @@
                     if(elem.firstElementChild.tagName == 'TD'){
                         creator_selectbox = elem.firstElementChild.firstElementChild.firstElementChild
 
-                        if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.get_username }}') {
+                        if(creator_selectbox.options[creator_selectbox.selectedIndex].text != '{{ user.email }}') {
                             for(let celem of elem.childNodes) {
                                 if(celem.tagName == 'TD') {
                                     if(celem.id.endsWith('DELETE')) {
@@ -355,8 +355,8 @@
             }
 
             {% comment %}
-            // Gets the last note tr, and from that sets the display of the creator dropdown to the user.get_username
-            // This was required to set the field to be the username. 
+            // Gets the last note tr, and from that sets the display of the creator dropdown to the user.email
+            // This was required to set the field to be the email. 
             // Setting the selection on the backend conflicts with disabling the field, and hacking validation was a pain/unsafe.
             // That being said, this is pretty brittle as well.
 
@@ -364,7 +364,7 @@
             {% endcomment %}
 
             var lastTr = tables[i].lastElementChild.lastElementChild;
-            lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.get_username }}'
+            lastTr.firstElementChild.firstElementChild.firstElementChild.firstElementChild.textContent='{{ user.email }}'
         }
     }
 

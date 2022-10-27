@@ -11,7 +11,7 @@
     {% comment %} This timestamp allows us to cache the table until there are changes. Note this doesn't work for self signed ssl (e.g. local development) and chrome. Works for other browsers. {% endcomment %}
     var MANUSCRIPT_LIST_JSON_URL = '{% url "manuscript_table" %}?_={% manuscript_commit_timestamp %}'; 
 
-    {% comment %} //TODO: We search username across all columns because multi-column OR searches are a pain. If it causes false positives investigate further. {% endcomment %}
+    {% comment %} //TODO: We search emails across all columns because multi-column OR searches are a pain. If it causes false positives investigate further. {% endcomment %}
     $(document).ready(function() {;
         dt_man_ajax = $.ajax({
             url: MANUSCRIPT_LIST_JSON_URL,
@@ -126,7 +126,7 @@
                 table.columns( 5 ).search( "New|Awaiting Initial Submission|Awaiting Author Resubmission|Editor Reviewing|Processing Submission|Pending Dataverse Publish|Published To Dataverse", true, false, false ).draw();
                 {% comment %} We check not editor so admin still sees all {% endcomment %}
                 {% if request.user|has_group:GROUP_ROLE_CURATOR and not request.user|has_group:GROUP_ROLE_EDITOR %}
-                table.search( "{{request.user.username}}" ).draw();
+                table.search( "{{request.user.email}}" ).draw();
                 {% endif %}
                 document.getElementById('manuscript_table_loading').style.display = "none";
                 document.getElementById('manuscript_table_holder').style.display = "block";
@@ -159,7 +159,7 @@
                         //Implicit globals are not best practice
                         table.search( "" ).draw();
                     } else {
-                        table.search( "{{request.user.username}}" ).draw();
+                        table.search( "{{request.user.email}}" ).draw();
                     }
                 });
                 mine_toggle.bootstrapToggle()
@@ -375,8 +375,8 @@
                     ]
                 })
                 .on( 'select', function ( e, dt, type, indexes ) {
-                    username = dt.rows( { selected: true } ).data()[0][2]
-                    $('#manuscript_table').DataTable().search(username).draw();
+                    email = dt.rows( { selected: true } ).data()[0][2]
+                    $('#manuscript_table').DataTable().search(email).draw();
                     if(! $('#manuscript_table').hasClass("visibleMe")) {
                         $('#manuscript_table').addClass("visibleMe")
                     }

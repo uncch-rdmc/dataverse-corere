@@ -166,12 +166,12 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        authors = authors + user.username + ", "
+                        authors = authors + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
                     
             return authors.rstrip(', ')
             # return ", ".join(
-            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_AUTHOR_PREFIX, manuscript)).values_list("email", flat=True)))
             # )
         if column[0] == "editors":
             editors = ""
@@ -179,12 +179,12 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        editors = editors + user.username + ", "
+                        editors = editors + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return editors.rstrip(', ')
             # return ", ".join(
-            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_EDITOR_PREFIX, manuscript)).values_list("email", flat=True)))
             # )
         if column[0] == "curators":
             curators = ""
@@ -192,12 +192,12 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        curators = curators + user.username + ", "
+                        curators = curators + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return curators.rstrip(', ')
             # return ", ".join(
-            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, manuscript)).values_list("username", flat=True)))
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_CURATOR_PREFIX, manuscript)).values_list("email", flat=True)))
             # )
         if column[0] == "verifiers":
             verifiers = ""
@@ -205,12 +205,12 @@ class ManuscriptJson(CorereBaseDatatableView):
             for user in self.all_users_list:
                 for group in user.groups.all():
                     if group.name == group_name:
-                        verifiers = verifiers + user.username + ", "
+                        verifiers = verifiers + user.first_name + " " + user.last_name + " (" + user.email + "), "
                         break
 
             return verifiers.rstrip(', ')
             # return ", ".join(
-            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, manuscript)).values_list("username", flat=True)))
+            #     list(set(m.User.objects.filter(groups__name=c.generate_group_name(c.GROUP_MANUSCRIPT_VERIFIER_PREFIX, manuscript)).values_list("email", flat=True)))
             # )
         # elif column[0] == "created_at":
         #     return "{0}".format(manuscript.created_at.strftime("%b %d %Y %H:%M"))  #%H:%M:%S"
@@ -416,7 +416,7 @@ class SubmissionJson(CorereBaseDatatableView):
 
 
 def helper_user_columns(user):
-    columns = [["selected", ""], ["id", "ID"], ["username", "username"], ["roles", "Roles"], ["assigned_manuscripts", "Assigned Manuscripts"]]
+    columns = [["selected", ""], ["id", "ID"], ["email", "email"], ["roles", "Roles"], ["assigned_manuscripts", "Assigned Manuscripts"]]
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists()):
     #     columns.append(['curators', "Curators"])
     # if(user.groups.filter(name=c.GROUP_ROLE_CURATOR).exists() or user.groups.filter(name=c.GROUP_ROLE_VERIFIER).exists()):
