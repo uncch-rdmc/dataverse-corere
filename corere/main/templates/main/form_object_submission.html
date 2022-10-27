@@ -128,8 +128,12 @@
                     {% crispy form helper %}
 
                     <h5 class="title-text">Notes</h5>
+                    {% if note_formset_author|length %}
                     {{ note_formset_author.non_form_errors }}
                     {% crispy note_formset_author note_helper_author %}
+                    {% else %}
+                    No notes provided by author
+                    {% endif %}
                     {% comment %} <div id="s_files_list_holder">
                         {% include "file_datatable/file_datatable.html" with obj_id=object_id obj_type='submission' read_only=True file_url_base=s_file_url_base%}
                         <a href="../notebook/" target="_blank">Launch Container</a>

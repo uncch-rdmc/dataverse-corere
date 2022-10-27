@@ -1500,7 +1500,10 @@ class GenericSubmissionFormView(GenericCorereObjectView):
                             self.msg = _("submission_reviewSubmittedAcceptedCuratorNoReview_banner")
                         else:
                             # No verification needed, submission rejected by curator
-                            self.msg = _("submission_reviewSubmittedRejectedCuratorNoReview_banner")
+                            if self.object.manuscript.skip_edition:
+                                self.msg = _("submission_reviewSubmittedRejectedCuratorNoReview_banner_skipEdition")
+                            else:
+                                self.msg = _("submission_reviewSubmittedRejectedCuratorNoReview_banner")
                         list(messages.get_messages(request))  # Clears messages if there are any already.
                         messages.add_message(request, messages.SUCCESS, self.msg)
 
@@ -2672,9 +2675,14 @@ class SubmissionSendReportView(LoginRequiredMixin, GetOrGenerateObjectMixin, Gen
                 logger.error("TransitionNotAllowed: " + str(e))
                 raise
             ### Messaging ###
-            self.msg = _("submission_sendReport_banner").format(
-                manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
-            )
+            if self.object.manuscript.skip_edition:
+                self.msg = _("submission_sendReport_banner_skipEdition").format(
+                    manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
+                )
+            else:
+                self.msg = _("submission_sendReport_banner").format(
+                    manuscript_id=self.object.manuscript.id, manuscript_display_name=self.object.manuscript.get_display_name()
+                )
             list(messages.get_messages(request))  # Clears messages if there are any already.
             messages.add_message(request, messages.SUCCESS, self.msg)
             
@@ -3247,9 +3255,15 @@ def _helper_submit_submission_and_redirect(request, submission):
         submission.save()
 
         ## Messaging ###
-        msg = _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(
-            manuscript_id=submission.manuscript.id, manuscript_display_name=submission.manuscript.get_display_name()
-        )
+        if submission.manuscript.skip_edition:
+            msg = _("submission_objectTransferEditorBeginSuccess_banner_forAuthor_skipEdition").format(
+                manuscript_id=submission.manuscript.id, manuscript_display_name=submission.manuscript.get_display_name()
+            )
+        else:
+            msg = _("submission_objectTransferEditorBeginSuccess_banner_forAuthor").format(
+                manuscript_id=submission.manuscript.id, manuscript_display_name=submission.manuscript.get_display_name()
+            )
+
         list(messages.get_messages(request))  # Clears messages if there are any already.
         messages.add_message(request, messages.SUCCESS, msg)
         logger.info(msg)

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-10-01 22:57+0000\n"
+"POT-Creation-Date: 2022-10-27 20:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -122,190 +122,202 @@ msgstr "Your {object_type}: #{object_id} has been updated."
 msgid "generic_objectCreated_banner"
 msgstr "Your new {object_type} has been created."
 
-#: corere/main/views/classes.py:287
+#: corere/main/views/classes.py:288
 msgid "manuscript_additionalInfoDuringSubmissionFlowHelpText_banner"
 msgstr "Please fill out or update the additional info regarding your Manuscript."
 
-#: corere/main/views/classes.py:444
+#: corere/main/views/classes.py:460
 msgid "manuscript_create_pageTitle"
 msgstr "Create New Manuscript"
 
-#: corere/main/views/classes.py:452 corere/main/views/classes.py:459
+#: corere/main/views/classes.py:468 corere/main/views/classes.py:475
 msgid "manuscript_edit_pageTitle"
 msgstr "Edit Manuscript"
 
-#: corere/main/views/classes.py:453 corere/main/views/classes.py:461
+#: corere/main/views/classes.py:469 corere/main/views/classes.py:477
 msgid "manuscript_edit_helpText"
 msgstr "Enter the details about your manuscript"
 
-#: corere/main/views/classes.py:467
+#: corere/main/views/classes.py:490
 msgid "manuscript_view_pageTitle"
 msgstr "View Manuscript"
 
-#: corere/main/views/classes.py:477
+#: corere/main/views/classes.py:500
 msgid "manuscript_uploadFiles_pageTitle"
 msgstr "File Access for Manuscript"
 
-#: corere/main/views/classes.py:481
+#: corere/main/views/classes.py:504
 msgid "manuscript_uploadFilesNew_helpText"
 msgstr "Please upload your manuscript files (manuscript and appendix)"
 
-#: corere/main/views/classes.py:546
+#: corere/main/views/classes.py:569
 msgid "manuscript_noFiles_error"
 msgstr "You must upload some files to the manuscript."
 
-#: corere/main/views/classes.py:775
+#: corere/main/views/classes.py:798
 msgid "manuscript_viewFiles_pageTitle"
 msgstr "View Files for Manuscript"
 
-#: corere/main/views/classes.py:967
+#: corere/main/views/classes.py:990
 msgid "manuscript_reminderSent_banner"
 msgstr "Your have notified the {banner_role_text}(s) of this manuscript that it is ready for their action."
 
-#: corere/main/views/classes.py:973
+#: corere/main/views/classes.py:996
 msgid "manuscript_reminderSent_notification_forRemindee"
 msgstr "Manuscript #{object_id}: {object_title} is ready for your input. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:1060 corere/main/views/classes.py:1089
-#: corere/main/views/classes.py:1121
+#: corere/main/views/classes.py:1093 corere/main/views/classes.py:1124
+#: corere/main/views/classes.py:1157
 msgid "submission_review_helpText"
 msgstr "Review Submission {submission_version} for Manuscript"
 
-#: corere/main/views/classes.py:1061
+#: corere/main/views/classes.py:1094
 msgid "submission_editionReview_helpText"
 msgstr "Please give your editor info for this submission"
 
-#: corere/main/views/classes.py:1090
+#: corere/main/views/classes.py:1125
 msgid "submission_curationReview_helpText"
 msgstr "Please give your curator info for this submission"
 
-#: corere/main/views/classes.py:1122
+#: corere/main/views/classes.py:1158
 msgid "submission_verificationReview_helpText"
 msgstr "Please give your verifier info for this submission"
 
-#: corere/main/views/classes.py:1437 corere/main/views/classes.py:1451
-#: corere/main/views/classes.py:1470
+#: corere/main/views/classes.py:1483 corere/main/views/classes.py:1497
+#: corere/main/views/classes.py:1519
 msgid "submission_reviewSubmitted_banner"
 msgstr "Your review has been submitted and the manuscript has been handed off to the {role_text}."
 
-#: corere/main/views/classes.py:1454
+#: corere/main/views/classes.py:1500
 msgid "submission_reviewSubmittedAcceptedCuratorNoReview_banner"
 msgstr "Your review has been submitted, accepting the manuscript without the need for verification. Please create a dataset for the data in Dataverse."
 
-#: corere/main/views/classes.py:1457
+#: corere/main/views/classes.py:1504
+msgid "submission_reviewSubmittedRejectedCuratorNoReview_banner_skipEdition"
+msgstr "Your review has been submitted, rejecting the manuscript without the need for verification. Please click 'Send Report', even though there is no editor for the manuscript. Then download the report and send it manually outside CORE2."
+
+#: corere/main/views/classes.py:1506
 msgid "submission_reviewSubmittedRejectedCuratorNoReview_banner"
 msgstr "Your review has been submitted, rejecting the manuscript without the need for verification. Please send the report to the editor."
 
-#: corere/main/views/classes.py:1488 corere/main/views/classes.py:1561
-#: corere/main/views/classes.py:3189
+#: corere/main/views/classes.py:1537 corere/main/views/classes.py:1610
+#: corere/main/views/classes.py:3272
 msgid "submission_objectTransfer_notification_forEditorCuratorVerifier"
 msgstr "Manuscript #{object_id}: {object_title} has been assigned to you. Please review this submission as your earliest convenience. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:1516
+#: corere/main/views/classes.py:1565
 msgid "submission_objectReady_notification_forCurator"
 msgstr "Manuscript #{object_id}: {object_title} is ready for review by a curator. It is currently assigned to {object_assignees}. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:1590
+#: corere/main/views/classes.py:1639
 msgid "submission_objectReviewed_notification_forCurator"
 msgstr "Manuscript #{object_id}: {object_title} review has been completed, and is ready for return to the editors. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:1800
+#: corere/main/views/classes.py:1858
 msgid "submission_create_pageTitle"
 msgstr "Create Submission for Manuscript"
 
-#: corere/main/views/classes.py:1801 corere/main/views/classes.py:1830
+#: corere/main/views/classes.py:1859 corere/main/views/classes.py:1889
 msgid "submission_info_helpText"
 msgstr "Please look over the reviews of your previous submission and correct changes on the subsequent pages"
 
-#: corere/main/views/classes.py:1819
+#: corere/main/views/classes.py:1877 corere/main/views/classes.py:1904
 msgid "submission_changes_helpText"
 msgstr "Please enter a summary of the changes made for this submission"
 
-#: corere/main/views/classes.py:1823
+#: corere/main/views/classes.py:1881 corere/main/views/classes.py:1909
 msgid "submission_changes_pageTitle"
 msgstr "Edit Submission {submission_version} Info for Manuscript"
 
-#: corere/main/views/classes.py:1837
+#: corere/main/views/classes.py:1896
 msgid "submission_info_pageTitle"
 msgstr "Submission {submission_version} Info for Manuscript"
 
-#: corere/main/views/classes.py:1849
+#: corere/main/views/classes.py:1921
 msgid "submission_view_pageTitle"
 msgstr "View Submission {submission_version} Info for Manuscript"
 
-#: corere/main/views/classes.py:1970
+#: corere/main/views/classes.py:2042
 msgid "submission_uploadFiles_helpText"
 msgstr "Please upload your submission files (code, data, etc)"
 
-#: corere/main/views/classes.py:1980
+#: corere/main/views/classes.py:2052
 msgid "submission_viewFiles_pageTitle"
 msgstr "View Submission {submission_version} Files for Manuscript"
 
-#: corere/main/views/classes.py:1982
+#: corere/main/views/classes.py:2054
 msgid "submission_completeFiles_pageTitle"
 msgstr "Review Submitted Files for Manuscript"
 
-#: corere/main/views/classes.py:1983
+#: corere/main/views/classes.py:2055
 msgid "submission_completeFiles_helpText"
 msgstr "Please confirm the submission files and then click 'Upload To Dataverse'. This will create a new dataset on dataverse {dataverse} installation {installation}. Uploading may take some time due to file size and the need to wait for ingest."
 
-#: corere/main/views/classes.py:1987
+#: corere/main/views/classes.py:2059
 msgid "submission_uploadFiles_pageTitle"
 msgstr "Upload Submission {submission_version} Files for Manuscript"
 
-#: corere/main/views/classes.py:2140
+#: corere/main/views/classes.py:2212
 msgid "submission_noFiles_error"
 msgstr "You must upload some files to the submission."
 
-#: corere/main/views/classes.py:2531
+#: corere/main/views/classes.py:2603
 msgid "submission_reconcileFiles_helpText"
 msgstr "Please upload your submission files (code, data, etc)"
 
-#: corere/main/views/classes.py:2539
+#: corere/main/views/classes.py:2611
 msgid "submission_reconcileFiles_pageTitle"
 msgstr "Upload Submission {submission_version} Files for Manuscript"
 
-#: corere/main/views/classes.py:2606
+#: corere/main/views/classes.py:2679
+msgid "submission_sendReport_banner_skipEdition"
+msgstr "Please download the report for manuscript #{manuscript_id}: {manuscript_display_name} via the 'More Actions' drowndown, and send it to the editor."
+
+#: corere/main/views/classes.py:2683
 msgid "submission_sendReport_banner"
 msgstr "The report for manuscript #{manuscript_id}: {manuscript_display_name} has been sent to the editor, for them to review and then assign the author."
 
-#: corere/main/views/classes.py:2614
+#: corere/main/views/classes.py:2691
 msgid "submission_objectTransfer_notification_forEditorAccepted"
 msgstr "Manuscript #{object_id}: {object_title} has been accepted by the curation team. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:2621
+#: corere/main/views/classes.py:2698
 msgid "submission_objectTransfer_notification_forEditorRejected"
 msgstr "Manuscript #{object_id}: {object_title} has been rejected by the curation team. Please review the information about the review and assign the author. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:2656
+#: corere/main/views/classes.py:2733
 msgid "submission_objectTransferEditorReturnFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} could not be handed to editors, please contact the administrator."
 
-#: corere/main/views/classes.py:2695
+#: corere/main/views/classes.py:2772
 msgid "submission_objectComplete_banner"
 msgstr "Manuscript #{manuscript_id}: {manuscript_display_name} has been completed."
 
-#: corere/main/views/classes.py:2703
+#: corere/main/views/classes.py:2780
 msgid "manuscript_update_notification_forAuthor"
 msgstr "Manuscript #{object_id}: {object_title} was accepted! You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:2731
+#: corere/main/views/classes.py:2808
 msgid "submission_objectTransferAuthorSuccess_banner"
 msgstr "Manuscript #{manuscript_id}: {manuscript_display_name} was returned to the authors."
 
-#: corere/main/views/classes.py:2739
+#: corere/main/views/classes.py:2816
 msgid "manuscript_objectTransferAuthor_notification_forAuthor"
 msgstr "Manuscript #{object_id}: {object_title} has been assigned to you. Please upload a new submission. You can access the manuscript at {object_url}"
 
-#: corere/main/views/classes.py:2772
+#: corere/main/views/classes.py:2849
 msgid "submission_objectTransferAuthorFailure_banner"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} could not be returned to the authors, please contact the administrator."
 
-#: corere/main/views/classes.py:2886
+#: corere/main/views/classes.py:2963
 msgid "submission_notebook_pageTitle"
 msgstr "Submission {submission_version} Notebook for Manuscript"
 
-#: corere/main/views/classes.py:3181
+#: corere/main/views/classes.py:3259
+msgid "submission_objectTransferEditorBeginSuccess_banner_forAuthor_skipEdition"
+msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} was handed to the curators for review."
+
+#: corere/main/views/classes.py:3263
 msgid "submission_objectTransferEditorBeginSuccess_banner_forAuthor"
 msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_name} was handed to the editors for review."
 
@@ -313,7 +325,7 @@ msgstr "Your Submission for Manuscript #{manuscript_id}: {manuscript_display_nam
 msgid "index_pageTitle"
 msgstr "Manuscripts"
 
-#: corere/main/views/main.py:290
+#: corere/main/views/main.py:302
 msgid "manuscript_landing_pageTitle"
 msgstr "Manuscript"
 
@@ -356,19 +368,19 @@ msgstr "Assign Verifier to Manuscript"
 msgid "user_accountDetails_pageTitle"
 msgstr "Edit Account Details"
 
-#: corere/main/views/users.py:570
+#: corere/main/views/users.py:572
 msgid "user_infoUpdated_banner"
 msgstr "User info has been updated."
 
-#: corere/main/views/users.py:616
+#: corere/main/views/users.py:618
 msgid "user_loggedOut_banner"
 msgstr "You have succesfully logged out of CORE2. To log out of Globus, "
 
-#: corere/main/views/users.py:625
+#: corere/main/views/users.py:627
 msgid "notifications_pageTitle"
 msgstr "Notifications"
 
-#: corere/main/views/users.py:670
+#: corere/main/views/users.py:672
 msgid "user_inviteRole_banner"
 msgstr "You have invited {email} to CORE2 as an {role}."
 
