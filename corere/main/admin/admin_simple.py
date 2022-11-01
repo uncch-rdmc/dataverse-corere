@@ -1,9 +1,9 @@
-from corere.main.admin.admin import *
+from corere.main.admin.admin_base import *
 from django.contrib.admin import AdminSite
 from corere.apps.wholetale import models as wtm
 import notifications as notifications
 
-class SimpleAdminSite(AdminSite):
+class SimpleAdminSite(BaseAdminSite):
     site_header = "CORE2 Admin Site"
     site_title = "CORE2 Admin Site"
     index_title = "Welcome to CORE2 Admin Site"

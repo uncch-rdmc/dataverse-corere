@@ -1,13 +1,30 @@
 #General initialization inherited by the two admin sites
 
+from django.shortcuts import render
+
 from django.contrib import admin
 from corere.main import models as m
 from django.conf import settings
 from django.contrib.auth.models import Permission, Group
 from guardian.admin import GuardedModelAdminMixin
 from simple_history.admin import SimpleHistoryAdmin
+from django.urls import path
 from .forms import GroupAdminForm
 
+class BaseAdminSite(admin.AdminSite):
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('test/<int:id>', self.admin_view(self.test_view) , name='recipecalc'),
+        ]
+        return custom_urls + urls
+    
+    def test_view(self, request, id):
+        context = {
+            "has_permission": True, #Shows username header text. TODO: We are leveraging other user checks via "admin_view", so setting this true this is ok?
+            "title": "A fun test"
+        }  
+        return render(request, "admin/custom_test.html", context)
 
 class GuardedModelAdminCustom(GuardedModelAdminMixin, SimpleHistoryAdmin):
     obj_perms_manage_template = "admin/guardian_obj_perms_manage_custom.html"
@@ -62,38 +79,3 @@ class HistoryAdmin(admin.ModelAdmin):
         self.has_add_permission = has_add_permission
         # return the result
         return template_response
-
-admin.site.register(m.Manuscript, GuardedModelAdminCustom)
-admin.site.register(m.Submission, GuardedModelAdminCustom)
-admin.site.register(m.Edition, GuardedModelAdminCustom)
-admin.site.register(m.Curation, GuardedModelAdminCustom)
-admin.site.register(m.Verification, GuardedModelAdminCustom)
-admin.site.register(m.Note, GuardedModelAdminCustom)
-admin.site.register(m.GitFile, GuardedModelAdminCustom)
-admin.site.register(m.DataverseInstallation, GuardedModelAdminCustom)
-# admin.site.register(m.VerificationMetadata, GuardedModelAdminCustom)
-# admin.site.register(m.VerificationMetadataSoftware, GuardedModelAdminCustom)
-admin.site.register(m.VerificationMetadataBadge, GuardedModelAdminCustom)
-admin.site.register(m.VerificationMetadataAudit, GuardedModelAdminCustom)
-
-# admin.site.unregister(User)
-admin.site.register(m.User, UserAdmin)
-admin.site.unregister(Group)
-admin.site.register(Group, GroupAdmin)
-admin.site.register(Permission)
-
-# TODO: If we make the local implementation an app, then this should move
-if settings.CONTAINER_DRIVER != "wholetale":
-    admin.site.register(m.LocalContainerInfo)
-
-admin.site.register(m.HistoricalManuscript, HistoryAdmin)
-admin.site.register(m.HistoricalSubmission, HistoryAdmin)
-admin.site.register(m.HistoricalEdition, HistoryAdmin)
-admin.site.register(m.HistoricalCuration, HistoryAdmin)
-admin.site.register(m.HistoricalVerification, HistoryAdmin)
-admin.site.register(m.HistoricalUser, HistoryAdmin)
-admin.site.register(m.HistoricalNote, HistoryAdmin)
-# admin.site.register(m.HistoricalVerificationMetadata, HistoryAdmin)
-# admin.site.register(m.HistoricalVerificationMetadataSoftware, HistoryAdmin)
-admin.site.register(m.HistoricalVerificationMetadataBadge, HistoryAdmin)
-admin.site.register(m.HistoricalVerificationMetadataAudit, HistoryAdmin)

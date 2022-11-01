@@ -20,6 +20,7 @@ from django.conf import settings
 from django.views.generic.base import RedirectView
 import notifications.urls
 from corere.main.admin.admin_simple import simple_admin_site
+from corere.main.admin.admin_full import full_admin_site
 
 handler400 = "corere.main.views.errors.handler400"
 handler403 = "corere.main.views.errors.handler403"
@@ -28,7 +29,7 @@ handler405 = "corere.main.views.errors.handler405"
 handler500 = "corere.main.views.errors.handler500"
 
 urlpatterns = [
-    path("admin_full/", admin.site.urls),
+    path("admin_full/", full_admin_site.urls),
     path("admin/", simple_admin_site.urls),
     path("", include("corere.main.urls")),
     url(r"^auth/", include("rest_framework_social_oauth2.urls")),  # Social OAuth2
